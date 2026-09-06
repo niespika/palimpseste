@@ -554,6 +554,22 @@ describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et u
     assert.match(b.ecartes.find((e) => e.exerciceId === 'exe-1')!.detail, /crans 4 de la séquence du palier A/)
   })
 
+  it('⭐ C7-L7 — un objet PAR COMPÉTENCE d\'abord : deux objets d\'Argumentation ne s\'affament pas l\'un l\'autre sous PB2', () => {
+    const r = [
+      retenue({ exerciceId: 'arg-1', objet: 'argument', cranNumero: 1, devoirs: ['a1'] }),
+      retenue({ exerciceId: 'obj-1', objet: 'objection', cranNumero: 1, devoirs: ['o1'] }),
+      retenue({ exerciceId: 'tra-1', objet: 'transition', cranNumero: 1, devoirs: ['t1'] }, { ciblables: ['structure'] }),
+    ]
+    const b = bornerLaMethode(r as never, ['argumentation', 'structure'] as never, paliers as never, false)
+    assert.deepEqual(b.objetsEnMethode, ['argument', 'transition'])
+    // À trois, le second objet d'Argumentation vient après celui de la Structure.
+    const trois = bornerLaMethode(r as never, ['argumentation', 'structure'] as never, paliers as never, false, 3)
+    assert.deepEqual(trois.objetsEnMethode, ['argument', 'transition', 'objection'])
+    // Une seule compétence atteinte : les objets se suivent par nom, comme avant.
+    const seule = bornerLaMethode(r.slice(0, 2) as never, ['argumentation'] as never, paliers as never, false)
+    assert.deepEqual(seule.objetsEnMethode, ['argument', 'objection'])
+  })
+
   it('un seul devoir par objet : celui qui couvre le plus de crans de la séquence ; un exercice par cran', () => {
     const r = [
       retenue({ exerciceId: 'a1-c1', objet: 'argument', cranNumero: 1, devoirs: ['d1'] }),

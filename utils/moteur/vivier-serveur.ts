@@ -139,8 +139,8 @@ interface LigneExercice {
   cotexte_materiau_id: string | null
   /** ⭐ C7-L6 — la souche de l'`id_import` retrouve le devoir d'un cran 2. */
   id_import: string | null
-  /** ⭐ C7-L6 — les devoirs que les cas servent. */
-  exercices_cas: Array<{ materiau_id: string | null }> | null
+  /** ⭐ C7-L6 — les devoirs que les cas servent ; ⭐ C7-L7 — et LA CLÉ de la grille, sur la même jointure. */
+  exercices_cas: Array<{ materiau_id: string | null; probleme?: string | null }> | null
   exercices_types: { code: string; nature: string; grain: string | null
     exclusions_parcours: string[] | null } | null
 }
@@ -149,7 +149,7 @@ const COLONNES_EXERCICE =
   'id, lieu, statut, bloque, cran, classe_id, genre, modes_par_competence, '
   + 'observable_isole_competence, '
   + 'materiau_source_texte_id, materiau_source_sujet_id, materiau_cible_texte_id, '
-  + 'materiau_cible_sujet_id, cotexte_materiau_id, id_import, exercices_cas(materiau_id), '
+  + 'materiau_cible_sujet_id, cotexte_materiau_id, id_import, exercices_cas(materiau_id, probleme), '
   + 'exercices_types!inner(code, nature, grain, exclusions_parcours)'
 
 /**
@@ -214,6 +214,16 @@ export async function lireLesInstances(
       ? ((objet.parCran[cran.n]?.couverture as { exerce?: string[] } | undefined)?.exerce ?? [])
       : []
 
+    // ⭐⭐ C7-L7 — LA CLÉ DE L'INSTANCE, ET SON OBSERVABLE, lus dans la doctrine
+    //    dérivée en base (`exercices_problemes`) — jamais dans le `09-`. Une clé
+    //    sans observable (`observable_route = false`) rend `observable: null`.
+    const cle = (l.exercices_cas ?? []).map((c) => c?.probleme ?? null).find((p): p is string => !!p) ?? null
+    const probleme = cle ? d.problemes[cle] ?? null : null
+    if (cle && !probleme) incidents.push(`clé « ${cle} » (exercice ${l.id.slice(0, 8)}) absente de la doctrine dérivée.`)
+    const observable = probleme && probleme.observableRoute && probleme.observableCode
+      ? { code: probleme.observableCode, competence: probleme.observableCompetence ?? l.observable_isole_competence ?? '' }
+      : null
+
     instances.push({
       exerciceId: l.id,
       objet: type.code,
@@ -239,6 +249,8 @@ export async function lireLesInstances(
         cran ? cran.isole : undefined),
       materiaux: materiauxDeLInstance,
       devoirs: devoirsDeLInstance(l.id_import, l.exercices_cas, materiaux.fabriquesParImport),
+      cle,
+      observable,
       coTexte,
     })
   }

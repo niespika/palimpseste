@@ -34,6 +34,8 @@
 import { ciblesPossibles, type Candidat, type ExercicePose } from '../routeur/semaine'
 import { motifDeFermeture, statutDeService, type PorteDUnObjet, type StatutDeService }
   from '../registre/porte'
+import { cyclesEcoules as cyclesEcoulesDepuis } from '../routeur/cycles'
+import { ordonnerParObjet, type ContexteObjets } from './objets'
 import type { Competence, Couverture, Geste, Grain, Parcours } from '../routeur/types'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -114,6 +116,20 @@ export interface InstanceDuVivier {
    *    instance sans devoir (examens, instances de la voie du professeur).
    */
   devoirs: string[]
+  /**
+   * ⭐⭐ C7-L7 — LA CLÉ de l'instance (`exercices_cas.probleme`, la clé
+   *    `objet.constituant.variante` de la grille du `09-`) et L'OBSERVABLE qu'elle
+   *    porte, lu dans la doctrine dérivée en base (`exercices_problemes` :
+   *    `observable_code`, `observable_competence`, `observable_route`). « Choisir
+   *    la clé, c'est choisir l'observable » (`01-` v5.11 §4, couche 3).
+   *    `cle` nul : une instance de la banque 1.4 — elle passe comme hier.
+   *    `observable` nul avec une clé : la clé n'a aucun observable (19 sur 205 —
+   *    `observable_route = false`) ; la règle 4 ne peut pas la classer, elle passe
+   *    APRÈS celles qui en ont un, motif journalisé. Facultatifs : un lecteur
+   *    d'avant ce lot n'en porte pas.
+   */
+  cle?: string | null
+  observable?: { code: string; competence: string } | null
   /**
    * ⭐⭐ LE CO-TEXTE des crans de production — `exercices.cotexte_materiau_id`.
    *
@@ -207,6 +223,14 @@ export type MotifDEcart =
   // ⭐ C7-L6 — la semaine de méthode est bornée à deux objets par élève, et à un
   //   seul devoir par objet (`01-` v5.9 §5) ; le reste attend le cycle suivant.
   | 'methode_hors_quota'
+  // ⭐ C7-L7 — l'objet, quand il se sert (`01-` v5.11 §4, couche 3). Ces écarts se
+  //   posent À LA POSE, par objet ; ils sont comptés au bilan et journalisés sur
+  //   la décision (`alternatives_ecartees.objet.ecartes`).
+  | 'objet_tenu'                 // règle 5 : tous les crans de la bande sont tenus — il sort du centre
+  | 'objet_un_par_cycle'         // règle 2 : un exercice par objet ouvert et par cycle, PB5 et pull compris
+  | 'objet_entree_hors_budget'   // règle 3 (iii) : la séquence de méthode ne tient plus sous le plafond
+  | 'objet_sans_cran_ouvert'     // règle 2 : la bande n'a plus de cran non tenu que la porte ouvre
+  | 'sans_observable'            // piège 18 : la clé ne porte aucun observable — classée après, jamais élue d'abord
   | 'deja_deposee'
   | 'aucune_competence_ciblable'
 
@@ -552,20 +576,11 @@ export interface Vivier {
 
 // ── ⭐ C7-L6 — LA QUARANTAINE DES DEVOIRS ─────────────────────────────────────
 
-/** Le lundi (UTC) de la semaine d'une date ISO, en `YYYY-MM-DD`. */
-export function lundiDe(iso: string): string {
-  const d = new Date(iso)
-  const j = (d.getUTCDay() + 6) % 7
-  d.setUTCDate(d.getUTCDate() - j)
-  return d.toISOString().slice(0, 10)
-}
-
-/** Les cycles (semaines entières) écoulés entre le lundi d'un dépôt et le lundi du cycle posé. */
-export function cyclesEcoules(dernierDepotAt: string, cycleLundi: string): number {
-  const a = Date.parse(`${lundiDe(dernierDepotAt)}T00:00:00Z`)
-  const b = Date.parse(`${cycleLundi}T00:00:00Z`)
-  return Math.floor((b - a) / (7 * 86_400_000))
-}
+// ⭐ C7-L7 — le compte des cycles vit à `utils/routeur/cycles.ts` : le registre
+//    (« deux et deux » à un cycle d'écart) le lit aussi, et `reussites.ts` ne peut
+//    pas importer ce fichier sans boucler (vivier → porte → reussites). Les deux
+//    noms restent exportés d'ici pour les appelants d'hier.
+export { lundiDe, cyclesEcoules } from '../routeur/cycles'
 
 /**
  * Le devoir de l'instance que la quarantaine retient, s'il y en a un : celui
@@ -580,7 +595,7 @@ export function devoirEnQuarantaine(
   for (const id of devoirs) {
     const at = devoirsServis.get(id)
     if (!at) continue
-    const n = cyclesEcoules(at, cycleLundi)
+    const n = cyclesEcoulesDepuis(at, cycleLundi)
     if (n >= cycles) continue
     if (!pire || at > pire.dernierDepotAt) pire = { devoir: id, dernierDepotAt: at, cyclesEcoules: n }
   }
@@ -813,9 +828,26 @@ export function bornerLaMethode(
     const rangs = r.ciblables.map((c) => prioriteDesCompetences.indexOf(c)).filter((i) => i >= 0)
     return rangs.length ? Math.min(...rangs) : Number.MAX_SAFE_INTEGER
   }
-  const objets = [...new Set(enMethode.map((r) => r.instance.objet))]
+  const parRang = [...new Set(enMethode.map((r) => r.instance.objet))]
     .map((o) => ({ o, rang: Math.min(...enMethode.filter((r) => r.instance.objet === o).map(rangDe)) }))
     .sort((a, b) => a.rang - b.rang || a.o.localeCompare(b.o))
+  // ⭐ C7-L7 — « les deux premiers de la liste de priorité » : la liste est une
+  //    liste de COMPÉTENCES, et PB2 — jamais deux fois de suite la même — ne laisse
+  //    avancer deux séquences de méthode que si elles alternent. Deux objets de la
+  //    même compétence s'affament l'un l'autre (mesuré le 06/09 en bac à sable :
+  //    argument + objection ⇒ UN exercice posé sur soixante minutes). D'où : un
+  //    objet par compétence atteinte, dans l'ordre de la liste, puis les suivants.
+  const objets: typeof parRang = []
+  const restants = [...parRang]
+  while (restants.length) {
+    const vus = new Set<number>()
+    for (const x of [...restants]) {
+      if (vus.has(x.rang)) continue
+      vus.add(x.rang)
+      objets.push(x)
+      restants.splice(restants.indexOf(x), 1)
+    }
+  }
   const gardes = objets.slice(0, max).map((x) => x.o)
   const out: InstanceRetenue[] = retenus.filter((r) => r.porte !== 'methode')
   const ecartes: EcartDuVivier[] = []
@@ -887,6 +919,16 @@ export function candidatsPour(
   dejaPoses: readonly ExercicePose[],
   /** `01-` §6, R1 — l'Expression prend EN PLUS une secondaire à C, sur `produire`. */
   expressionEnSecondaire = false,
+  /**
+   * ⭐⭐ C7-L7 — L'ORDRE PAR OBJET (`01-` v5.11 §4, couche 3), derrière
+   *    `gabarit_actif`. Absent : les candidats sortent comme hier, à l'octet, et
+   *    PB1-PB3 les départagent. Présent : chaque candidat reçoit son `ordre`
+   *    — méthode entamée, puis un exercice par objet ouvert (règle 4), puis
+   *    l'objet neuf si sa séquence tient, puis les sondes des objets tenus — et
+   *    ce que la règle écarte ne sort pas, motif journalisé. ⛔ Aucune boucle à
+   *    côté de la phase B : c'est ELLE qui pose, ceci ne fait qu'ordonner.
+   */
+  objets: ContexteObjets | null = null,
 ): Candidat[] {
   const consommes = new Set(dejaPoses.map((e) => e.candidat.exerciceId))
   const out: Candidat[] = []
@@ -920,7 +962,7 @@ export function candidatsPour(
       ciblesSecondaires: secondaires,
     })
   }
-  return out
+  return objets ? ordonnerParObjet(out, vivier, competence, dejaPoses, objets) : out
 }
 
 /** `01-` §5, phase C — ce qu'un exercice posé offre en SUBSTRAT. */

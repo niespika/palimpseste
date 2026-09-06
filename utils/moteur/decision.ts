@@ -36,6 +36,7 @@ import type { EtatEscalade } from '../routeur/escalade'
 import type { ExercicePose, SondePosee } from '../routeur/semaine'
 import type { Competence, Lettre, Palier } from '../routeur/types'
 import type { BorneAmont, InstanceRetenue } from './vivier'
+import { journalDeLObjet, type ContexteObjets } from './objets'
 
 // ════════════════════════════════════════════════════════════════════════════
 // LE TIRAGE — « un départage non journalisé rend le routeur irreproductible »
@@ -304,6 +305,12 @@ export interface ContexteDeDecision {
   paliers: ReadonlyMap<Competence, Lettre>
   /** Les compétences que R2 a écartées, et le journal de la liste de priorité. */
   alternatives: unknown
+  /**
+   * ⭐⭐ C7-L7 — l'ordre par objet, quand la porte du gabarit est ouverte : la
+   *    décision journalise l'état de l'objet, l'observable élu et son motif, et
+   *    les objets écartés (`01-` §11 ; prompt, piège 24). `null` : porte fermée.
+   */
+  objets?: ContexteObjets | null
 }
 
 /**
@@ -361,6 +368,10 @@ export function lignesDeDecision(
         methode: r?.methode ?? null,
         // « sans devoir frais » : servi quand même, et le motif le dit.
         devoir_manquant: r?.degrade ? r.instance.objet : null,
+        // ⭐⭐ C7-L7 — l'état de l'objet, l'observable élu et son motif, les objets
+        //    écartés et pourquoi (`01-` §11, amendement du 06/09). Le jsonb, jamais
+        //    une colonne : `routeur_decisions` en a dix-sept, et ce lot n'en ajoute aucune.
+        objet: r && ctx.objets ? journalDeLObjet(ctx.objets, r, p.candidat.competence) : null,
       },
       sondes_retenues: avecLaSondeDuRegistre(sondesDeLExercicePose(
         p.candidat.exerciceId, p.candidat.competence, p.candidat.cran,

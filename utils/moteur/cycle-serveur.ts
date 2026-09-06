@@ -31,7 +31,7 @@ import { lireLaPorteDesCrans } from '@/utils/registre/porte-serveur'
 import type { createAdminClient } from '@/utils/supabase/admin'
 import { addDaysUTC, lundiOnOrBefore, toISODate } from '@/utils/calendrier-grille'
 import {
-  lireLesDecisions, lireLesEscalades, lireLesInscriptions, lireLesInscriptionsDesEleves,
+  lireLesDecisions, lireLesEscalades, lireLesFiches, lireLesInscriptions, lireLesInscriptionsDesEleves,
   lireLesInterrupteurs,
   lireLesMesures, lireLesNiveaux, lireLOptOut, lireLeProfil, lirePagine,
 } from '@/utils/routeur/donnees'
@@ -41,21 +41,27 @@ import {
 } from '@/utils/routeur/ciblage'
 import { jugerLaLettre } from '@/utils/routeur/lettres'
 import { mesuresQuiComptent, parDate } from '@/utils/routeur/mesure'
-import { historiqueDesCibles, signalDeCiblage } from '@/utils/routeur/profil'
+import { fenetreDEvidence, historiqueDesCibles, signalDeCiblage } from '@/utils/routeur/profil'
 import { controlesDeLaCompetence } from '@/utils/routeur/proportions'
 import { ordonnerLesSondes, type CandidateSonde } from '@/utils/routeur/sondes'
 import { poserLaSemaine, poserLesSondes, type SondePosee } from '@/utils/routeur/semaine'
+import { etatDesObservables } from '@/utils/routeur/observables'
+import { observablesRequis } from '@/utils/routeur/fiche-observables'
 import { COMPETENCES } from '@/utils/chaine/types'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import type { Competence, Lettre, Segment } from '@/utils/routeur/types'
 import { lireLesSegments, segmentDuCycle } from './calendrier-serveur'
-import { poserLeColdStart, cloturerLaCalibrationDesEleves,
+import { instrumentDuRouteur, poserLeColdStart, cloturerLaCalibrationDesEleves,
   type BilanDuColdStart, type BilanDeLaCloture } from './etat-serveur'
 import type { DecoupeEnSegments } from '@/utils/routeur/segments'
 import {
   bornerLaMethode, candidatsPour, constituerLeVivier, substratsDeLaSemaine,
   type EcartDuVivier, type InstanceRetenue, type MotifDEcart,
 } from './vivier'
+import {
+  compterLesMesuresParObservable, contexteDesObjets, cransPortesParLaBanque, objetsNeufsParCycle,
+  observablesParCompetence, type ContexteObjets,
+} from './objets'
 import {
   lireLesCoursVus, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
@@ -238,6 +244,12 @@ export async function poserLesSemainesDuRouteur(
   const doctrine = await chargerDoctrineDepuisBase(admin as never)
   const { instances, incidents } = await lireLesInstances(admin, doctrine)
   bilan.erreurs.push(...incidents)
+  // ⭐ C7-L7 — LES FICHES, une fois pour tous, jamais par élève (piège 20) : la
+  //    règle 4 lit « non acquis » sur les observables REQUIS de la fiche.
+  const fiches = await lireLesFiches(admin).catch((e: Error) => {
+    bilan.erreurs.push(`fiches des compétences : ${e.message} — l'ordre par objet lit sans requis.`)
+    return new Map<Competence, string>()
+  })
   const positions = await lireLesPositionsDeLecture(admin, eleves)
   bilan.erreurs.push(...positions.incidents)
   const dejaDeposees = await lireLesInstancesDejaDeposees(admin, eleves)
@@ -372,6 +384,7 @@ export async function poserLesSemainesDuRouteur(
           devoirsServis: devoirsServis.parEleve.get(eleveId) ?? new Map(),
           inscriptions: inscriptionsParEleve.get(eleveId) ?? [],
           coursVus: unionDesCoursVus(coursVus.parClasse, classesDesEleves.get(eleveId) ?? []),
+          fiches,
         })
       } catch (e) {
         // « Une lecture ratée n'est pas une base vide » : on remonte, on ne tait pas.
@@ -483,6 +496,8 @@ export interface ContextePose {
   devoirsServis?: Map<string, string>
   inscriptions: Awaited<ReturnType<typeof lireLesInscriptions>>
   coursVus: Set<string>
+  /** ⭐ C7-L7 — les fiches des compétences (`competences_fiches.contenu`), lues UNE FOIS pour tous. */
+  fiches?: Map<Competence, string>
 }
 
 interface PoseDUnEleve {
@@ -543,6 +558,13 @@ export interface CompositionDUnEleve {
   decisions: Awaited<ReturnType<typeof lireLesDecisions>>
   /** Le journal du tirage, à passer tel quel à `lignesDeDecision`. */
   journal: ReturnType<typeof journalDuTirage>
+  /**
+   * ⭐⭐ C7-L7 — L'ORDRE PAR OBJET, derrière `gabarit_actif` : l'état de chaque
+   *    objet (dérivé du registre et des objets déjà servis), les observables de
+   *    la fenêtre d'évidence, le compte des mesures par observable, le plafond.
+   *    `null` porte fermée : la pose est celle d'hier, à l'octet.
+   */
+  objets: ContexteObjets | null
 }
 
 export async function composerPourUnEleve(
@@ -562,7 +584,7 @@ export async function composerPourUnEleve(
       vivier: { retenus: [], ecartes: [] },
       listeComplete: [], journalPriorite: null, expressionEnSecondaire: false,
       paliers: new Map(), etats: [], escalades: new Map(), mesures: [], decisions: [],
-      journal: journalDuTirage(hasard),
+      journal: journalDuTirage(hasard), objets: null,
     }
   }
 
@@ -651,6 +673,37 @@ export async function composerPourUnEleve(
   const pa3 = secondeInscriptionPA3(liste, etats)
   if (pa3) listeComplete.push(pa3)
 
+  // ── ⭐⭐ C7-L7 — L'OBJET : QUAND IL SE SERT (`01-` v5.11 §4, couche 3) ────────
+  //    Derrière `gabarit_actif`, comme la porte qu'il prolonge : « un lot lit LE
+  //    SIEN ». L'état d'un objet se DÉRIVE du registre que la porte a déjà lu et
+  //    des objets déjà servis sous le gabarit — aucune seconde lecture des dépôts
+  //    (piège 1). « Non acquis » est celui de `etatDesObservables` sur la fenêtre
+  //    d'évidence (piège 20) ; les fiches sont lues une fois pour tous.
+  let objets: ContexteObjets | null = null
+  if (porte.actif) {
+    const etatsDe = (comp: Competence) => {
+      const instrument = instrumentDuRouteur(comp)
+      if (!instrument) return null
+      const n = niveaux.find((x) => x.competence === comp)
+      const comptent = mesuresQuiComptent(parDate(mesures.filter((m) => m.competence === comp)),
+        n?.statutRecettePoseLe ?? null)
+      let requis: string[] = []
+      try { requis = observablesRequis(c.fiches?.get(comp) ?? '').requis } catch { requis = [] }
+      return etatDesObservables(fenetreDEvidence(comptent), instrument, requis)
+        .map((e) => ({ code: e.code, acquis: e.acquis }))
+    }
+    objets = contexteDesObjets({
+      registre: porte.registre,
+      dejaServis: porte.dejaServis,
+      paliers,
+      cransParObjet: cransPortesParLaBanque(c.instances),
+      observables: observablesParCompetence(COMPETENCES, etatsDe),
+      mesuresParCode: compterLesMesuresParObservable(mesures),
+      plafond: budget.budget.plafond,
+      situation: budget.situation,
+    })
+  }
+
   return {
     budget,
     motifNonServi: null,
@@ -665,7 +718,24 @@ export async function composerPourUnEleve(
     mesures,
     decisions,
     journal,
+    objets,
   }
+}
+
+/**
+ * ⭐⭐ C7-L6 / C7-L7 — CE QUE LA PHASE B REÇOIT, pour la semaine COMME pour le
+ *    pull : le vivier borné par la semaine de méthode — deux objets la première
+ *    semaine, ensuite un objet neuf par cycle en TC, deux en HLP et en bi-classe
+ *    (`01-` §4, règle 3 ; §5, amendement du 06/09). Le cran 2 n'y entre que si son
+ *    écran est servi : il l'est sur cette branche (`C7`, les pièces).
+ * ⛔ UN SEUL DOMICILE : le pull de C6-L3 appelle ceci, pas une copie (piège 12).
+ */
+export function retenusPourLaPose(
+  compo: Pick<CompositionDUnEleve, 'vivier' | 'listeComplete' | 'paliers' | 'objets'>, cran2Servi = true,
+): ReturnType<typeof bornerLaMethode> {
+  const max = compo.objets ? objetsNeufsParCycle(compo.objets) : undefined
+  return bornerLaMethode(compo.vivier.retenus, compo.listeComplete.map((e) => e.competence), compo.paliers,
+    cran2Servi, max)
 }
 
 async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<PoseDUnEleve> {
@@ -690,11 +760,10 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
     out.dejaServi = true
     return out
   }
-  // ⭐ C7-L6 — LA SEMAINE DE MÉTHODE, BORNÉE À DEUX OBJETS ET UN DEVOIR PAR OBJET
-  //    (`01-` v5.9 §5). Le cran 2 n'y entre que si son écran est servi : il
-  //    l'est sur cette branche (`C7`, les pièces) — derrière `gabarit_actif`,
+  // ⭐ C7-L6 / C7-L7 — LA SEMAINE DE MÉTHODE, BORNÉE (`01-` §5 ; §4, règle 3) —
+  //    partagée avec le pull par `retenusPourLaPose`, derrière `gabarit_actif`,
   //    que la porte lit déjà.
-  const methode = bornerLaMethode(vivier.retenus, listeComplete.map((e) => e.competence), paliers, true)
+  const methode = retenusPourLaPose(compo)
   const retenus = methode.retenus
   out.ecartsDuVivier = [...vivier.ecartes, ...methode.ecartes]
   out.vivierVide = retenus.length === 0
@@ -711,10 +780,16 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   // ⭐ LE QUATRIÈME CANAL DE TIRAGE. Les trois autres — `R3`, `sondes`,
   //   `phase_c` — étaient branchés depuis C4-L12 ; `phase_b` manquait, et c'est
   //   lui qui disperse les exercices entre deux élèves de même profil.
+  // ⭐⭐ C7-L7 — l'ordre par objet entre par `candidatsPour`, jamais par une boucle
+  //    à côté : UNE SEULE phase B, pour la semaine comme pour le pull (piège 10).
   const semaine = poserLaSemaine(listeComplete, budget.budget,
-    (comp, dejaPoses) => candidatsPour(retenus, comp, dejaPoses, expressionEnSecondaire),
+    (comp, dejaPoses) => candidatsPour(retenus, comp, dejaPoses, expressionEnSecondaire, compo.objets),
     journal.tirer<string>('phase_b'))
   out.exercicesPoses = semaine.exercices.length
+  // Les objets que la règle a écartés, comptés au bilan comme les écarts du vivier.
+  for (const e of compo.objets?.journal.ecartes.values() ?? []) {
+    out.ecartsDuVivier.push({ exerciceId: `objet:${e.objet}`, motif: e.motif, detail: e.detail })
+  }
   if (semaine.ecart.souSLePlancher) {
     out.ecart = { manque: semaine.ecart.manque, assignees: semaine.minutesAssignees,
       plancher: semaine.ecart.minutesPlancher }
@@ -751,6 +826,8 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
       tirages: journal.journal,
       paliers,
       alternatives: journalPriorite,
+      // ⭐ C7-L7 — l'état de l'objet, l'observable élu et son motif, au journal.
+      objets: compo.objets,
     },
     // ⭐ C7-L6 — « sans devoir frais, le routeur sert quand même » : servi `degrade`.
     new Set(retenus.filter((r) => r.degrade).map((r) => r.instance.exerciceId)))

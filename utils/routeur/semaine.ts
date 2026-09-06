@@ -74,6 +74,17 @@ export interface Candidat {
   dureeMin: number
   /** Les cibles secondaires que PB4 peut ajouter. */
   ciblesSecondaires: Competence[]
+  /**
+   * ⭐⭐ C7-L7 — L'ORDRE PAR OBJET, posé par `candidatsPour` sous `gabarit_actif`
+   *    (`01-` v5.11 §4, couche 3). `rang` : plus petit d'abord — la méthode
+   *    entamée, puis les objets ouverts dans l'ordre de la règle 4, puis l'objet
+   *    neuf, puis les sondes. `objet` : le terme que PB3 gagne — « pas deux
+   *    exercices de suite sur le même objet » (règle 6). `motif` : ce que la
+   *    règle 4 a lu de son observable, pour le journal.
+   *    ⛔ Absent, la phase B est celle d'hier, à l'octet : PB1 sur le grain,
+   *    PB3 sur le cran, le mode et le grain, puis le tirage.
+   */
+  ordre?: { rang: number; objet: string; motif: string }
 }
 
 export interface ExercicePose {
@@ -278,20 +289,33 @@ export function poserLaSemaine(
       // préférer celui qui CHANGE de cran, de mode ou de grain.
       const rangGrain: Record<Grain, number> = { micro: 0, meso: 1, macro: 2 }
       const precedent = exercices[exercices.length - 1]?.candidat
+      // ⭐⭐ C7-L7 — SOUS LE GABARIT, LE GRAIN EST L'OBJET (phrase = micro, argument
+      //    = méso) : PB1 servirait toujours `phrase`. La règle 4 dit autre chose —
+      //    l'objet ouvert dont l'observable est non acquis, puis le moins mesuré,
+      //    puis le tirage —, et c'est `Candidat.ordre.rang` qui la porte. Quand
+      //    des candidats en portent un : le rang remplace PB1, PB3 gagne un
+      //    quatrième terme — l'objet, « pas deux exercices de suite sur le même
+      //    objet » (règle 6) —, et le tirage garde le dernier mot. ⛔ Sans `ordre`
+      //    (porte fermée, instance sans clé), rien ne change : PB1 et PB3 d'hier.
+      const parObjet = candidats.some((c) => c.ordre !== undefined)
+      const rangDe = (c: Candidat) => parObjet
+        ? (c.ordre?.rang ?? Number.MAX_SAFE_INTEGER)
+        : rangGrain[c.grain]
       const change = (c: Candidat) => precedent
         ? Number(c.cran !== precedent.cran) + Number(c.mode !== precedent.mode)
           + Number(c.grain !== precedent.grain)
+          + (parObjet ? Number((c.ordre?.objet ?? null) !== (precedent.ordre?.objet ?? null)) : 0)
         : 0
       const tries = [...candidats].sort((a, b) =>
-        rangGrain[a.grain] - rangGrain[b.grain] || change(b) - change(a))
+        rangDe(a) - rangDe(b) || change(b) - change(a))
 
       // ⭐ CE QUE CHAQUE RÈGLE LAISSE DERRIÈRE ELLE. `memeGrain` est ce que PB1
       //   n'a pas tranché ; `exAequo` est ce que PB3 ne tranche pas NON PLUS —
       //   même grain ET même valeur de `change`. PB3 n'a donc départagé que si
       //   le second ensemble est STRICTEMENT PLUS PETIT que le premier.
-      const meilleurGrain = rangGrain[tries[0].grain]
+      const meilleurGrain = rangDe(tries[0])
       const meilleurChange = change(tries[0])
-      const memeGrain = tries.filter((c) => rangGrain[c.grain] === meilleurGrain)
+      const memeGrain = tries.filter((c) => rangDe(c) === meilleurGrain)
       const exAequo = memeGrain.filter((c) => change(c) === meilleurChange)
       const aDepartage = memeGrain.length > exAequo.length
 

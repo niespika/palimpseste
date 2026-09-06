@@ -18,11 +18,20 @@
 //                   C7-L5 qui le lira au moteur ; ces lignes rendent `null`.
 //   toute paire   : LE SECOND CAS est réussi seul ; le premier informe l'escalade.
 // « Deux et deux » (décision 19) : deux réussites au cran d'en dessous débloquent
-// le cran suivant ; deux échecs de suite au même cran déclenchent les sondes.
+// le cran suivant ; deux échecs au même cran déclenchent les sondes.
+// ⭐ C7-L7 (06/09, `10-` §7 amendé ; `01-` §8.10) — « deux et deux » se compte
+//    SUR DEUX DEVOIRS DIFFÉRENTS, À UN CYCLE D'ÉCART AU MOINS : deux réussites
+//    le même jour sur le même texte n'en sont qu'une ; et les sondes partent
+//    DÈS DEUX ÉCHECS, consécutifs ou non — « l'élève ne séjourne pas aux crans
+//    de reconnaissance ». Le devoir d'un dépôt est `exercices_cas.materiau_id`,
+//    ou la souche de l'`id_import` au cran 2 ; un dépôt sans devoir connu (la
+//    banque 1.4) est SON PROPRE devoir — deux textes de la banque 1.4 sont deux
+//    textes. Le cycle d'écart se compte comme la quarantaine (`cycles.ts`).
 // ⚠️ Les deux nombres « se revoient sur corpus, pas avant » : ils vivent ici.
 // ============================================================================
 import type { Version } from '../chaine/types'
 import { issueDesVerdicts, type VerdictCran } from '../chaine/juge-cran'
+import { cyclesEcoules, lundiDe } from '../routeur/cycles'
 
 export type Issue = 'reussi' | 'rate'
 export type Variante = 'a' | 'b' | null
@@ -56,6 +65,12 @@ export interface DepotPourLeRegistre {
    */
   constituant?: string | null
   joint?: boolean
+  /**
+   * ⭐ C7-L7 — LES DEVOIRS que le dépôt sert (`exercices_cas.materiau_id`, ou la
+   *    souche de l'`id_import` au cran 2 — `devoirsDeLInstance`). Absent ou vide
+   *    (un lecteur d'avant ce lot, la banque 1.4) : le dépôt est son propre devoir.
+   */
+  devoirs?: string[]
 }
 
 export interface LigneRegistre {
@@ -71,6 +86,12 @@ export interface LigneRegistre {
   /** Les issues dans l'ordre du temps — la fin dit la série en cours. */
   serie: Issue[]
   dernierAt: string | null
+  /**
+   * ⭐ C7-L7 — chaque réussite avec sa date et ses devoirs, pour que « deux et
+   *    deux » se compte sur deux devoirs à un cycle d'écart. Facultatif : une
+   *    ligne de décor d'avant ce lot n'en porte pas, et compte alors comme hier.
+   */
+  reussitesDatees?: Array<{ at: string; devoirs: string[] }>
 }
 
 // ── L'issue d'un dépôt ───────────────────────────────────────────────────────
@@ -132,9 +153,16 @@ export function deriverLeRegistre(depots: readonly DepotPourLeRegistre[]): Ligne
     const k = cle(d.objet, d.cran, d.variante, constituant)
     const l = lignes.get(k) ?? {
       objet: d.objet, cran: d.cran, variante: d.variante, constituant, joint,
-      reussites: 0, echecs: 0, serie: [], dernierAt: null,
+      reussites: 0, echecs: 0, serie: [], dernierAt: null, reussitesDatees: [],
     }
-    if (issue === 'reussi') l.reussites += 1; else l.echecs += 1
+    if (issue === 'reussi') {
+      l.reussites += 1
+      // Un dépôt sans devoir connu est son propre devoir : deux textes de la
+      // banque 1.4 sont deux textes, et on ne ferme pas la porte sur une absence.
+      l.reussitesDatees!.push({ at: d.at, devoirs: d.devoirs?.length ? [...d.devoirs] : [d.depotId] })
+    } else {
+      l.echecs += 1
+    }
     l.serie.push(issue)
     l.dernierAt = d.at
     lignes.set(k, l)
@@ -142,11 +170,48 @@ export function deriverLeRegistre(depots: readonly DepotPourLeRegistre[]): Ligne
   return [...lignes.values()]
 }
 
+/**
+ * ⭐ C7-L7 — « Deux et deux » sur DEUX DEVOIRS DIFFÉRENTS, À UN CYCLE D'ÉCART AU
+ *    MOINS (`10-` §7 amendé le 06/09 ; `01-` §8.10) : « deux réussites le même
+ *    jour sur le même texte n'en sont qu'une, et la paire compte déjà pour une ».
+ *    Le compte rendu est le nombre de réussites QUI COMPTENT : toutes quand il
+ *    existe une paire sur deux devoirs disjoints à un cycle d'écart, UNE sinon
+ *    (une réussite existe, elle ne redouble pas). Le cycle se compte en lundis,
+ *    comme la quarantaine — jamais en jours.
+ */
+export function reussitesQuiComptent(
+  reussites: ReadonlyArray<{ at: string; devoirs: readonly string[] }>,
+): number {
+  if (reussites.length < 2) return reussites.length
+  for (let i = 0; i < reussites.length; i++) {
+    for (let j = i + 1; j < reussites.length; j++) {
+      const a = reussites[i]!, b = reussites[j]!
+      const memeDevoir = a.devoirs.some((d) => b.devoirs.includes(d))
+      if (memeDevoir) continue
+      const [tot, tard] = a.at <= b.at ? [a, b] : [b, a]
+      if (cyclesEcoules(tot.at, lundiDe(tard.at)) >= 1) return reussites.length
+    }
+  }
+  return 1
+}
+
 function reussitesAuCran(registre: readonly LigneRegistre[], objet: string, cran: number): number {
   // Les variantes (a) et (b) d'un cran comptent ensemble ; au cran 2, SEULE la
   // ligne du joint compte pour « cran 2 réussi sur l'objet » (`10-` §2 bis.1).
-  return registre.filter((l) => l.objet === objet && l.cran === cran && l.joint !== false)
-    .reduce((n, l) => n + l.reussites, 0)
+  const lignes = registre.filter((l) => l.objet === objet && l.cran === cran && l.joint !== false)
+  // Une ligne d'avant ce lot (sans dates) compte comme hier : ses réussites, telles quelles.
+  if (lignes.some((l) => !l.reussitesDatees)) return lignes.reduce((n, l) => n + l.reussites, 0)
+  return reussitesQuiComptent(lignes.flatMap((l) => l.reussitesDatees ?? []))
+}
+
+/** ⭐ C7-L7 — un cran est TENU sur un objet quand « deux et deux » y est atteint. */
+export function cranTenu(registre: readonly LigneRegistre[], objet: string, cran: number): boolean {
+  return reussitesAuCran(registre, objet, cran) >= REUSSITES_POUR_DEBLOQUER
+}
+
+/** Le nombre de réussites qui comptent à un cran — pour les motifs en clair. */
+export function reussitesCompteesAuCran(registre: readonly LigneRegistre[], objet: string, cran: number): number {
+  return reussitesAuCran(registre, objet, cran)
 }
 
 /**
@@ -176,17 +241,17 @@ export function cransDebloques(registre: readonly LigneRegistre[], objet: string
 }
 
 /**
- * Les crans où une SONDE DE MONTÉE est due — deux échecs DE SUITE, à la fin de la
- * série, sur le même objet et le même cran (`10-` §7, décisions 14 et 19). La
+ * Les crans où une SONDE DE MONTÉE est due — DEUX ÉCHECS, CONSÉCUTIFS OU NON,
+ * sur le même objet et le même cran (`10-` §7, décisions 14 et 19, amendée le
+ * 06/09 : « l'élève ne doit pas séjourner aux crans de reconnaissance »). La
  * sonde se sert au cran d'au-dessus de l'échelle ; ce module dit seulement OÙ
- * l'élève stagne.
+ * l'élève stagne. ⭐ C7-L7 : un `filter` sur la série, plus la fin de la série.
  */
 export function cransOuLEleveStagne(registre: readonly LigneRegistre[], objet: string): number[] {
   const crans = new Set<number>()
   for (const l of registre) {
     if (l.objet !== objet) continue
-    const fin = l.serie.slice(-ECHECS_POUR_SONDER)
-    if (fin.length === ECHECS_POUR_SONDER && fin.every((x) => x === 'rate')) crans.add(l.cran)
+    if (l.serie.filter((x) => x === 'rate').length >= ECHECS_POUR_SONDER) crans.add(l.cran)
   }
   return [...crans].sort((a, b) => a - b)
 }

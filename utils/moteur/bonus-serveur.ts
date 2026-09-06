@@ -47,7 +47,7 @@ import 'server-only'
 import type { createAdminClient } from '@/utils/supabase/admin'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { lireLaPorte } from '@/utils/deroule/acces'
-import { lireLeProfil, lireLesInscriptions } from '@/utils/routeur/donnees'
+import { lireLeProfil, lireLesFiches, lireLesInscriptions } from '@/utils/routeur/donnees'
 import { budgetDeLEleve } from '@/utils/routeur/budget'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import { poserLaSemaine, type Candidat, type ExercicePose } from '@/utils/routeur/semaine'
@@ -62,7 +62,7 @@ import {
   lireLesCoursVus, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
 import { lignesDeDecision } from './decision'
-import { composerPourUnEleve, dureesDesExercices, type ContextePose } from './cycle-serveur'
+import { composerPourUnEleve, dureesDesExercices, retenusPourLaPose, type ContextePose } from './cycle-serveur'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -190,6 +190,9 @@ function posesDeLaSemaine(
     //    (PB2), son cran/mode/grain (PB3), sa DURÉE (PB6) et son TOUR (PB5) —, et
     //    seuls les exercices de CETTE passe partent au journal. On ne va donc pas
     //    relire la règle d'origine dans `regle_declenchee` pour la jeter ensuite.
+    // ⭐ C7-L7 — l'OBJET du déjà-posé, lui, se lit : « un exercice par objet
+    //    ouvert et par cycle » vaut pour le pull (piège 12), et PB3 compare l'objet.
+    candidat.ordre = { rang: 0, objet: inst.objet, motif: 'déjà posé cette semaine' }
     out.push({ candidat, regle: 'R1', departageParPB3: false, tirage: false, tour: d.tour })
   }
   return out
@@ -294,10 +297,15 @@ export async function servirUnExerciceDePlus(
     lireLesInscriptions(admin, eleveId),
   ])
   incidents.push(...iInst)
-  const [positions, dejaDeposees, coursVus] = await Promise.all([
+  const [positions, dejaDeposees, coursVus, fiches] = await Promise.all([
     lireLesPositionsDeLecture(admin, [eleveId]),
     lireLesInstancesDejaDeposees(admin, [eleveId]),
     lireLesCoursVus(admin, inscriptions.map((i) => i.classeId), aujourdHui),
+    // ⭐ C7-L7 — les fiches, pour « non acquis » (règle 4) ; illisibles ⇒ sans requis, et on le dit.
+    lireLesFiches(admin).catch((e: Error) => {
+      incidents.push(`fiches des compétences : ${e.message} — l'ordre par objet lit sans requis.`)
+      return new Map<Competence, string>()
+    }),
   ])
   incidents.push(...positions.incidents, ...dejaDeposees.incidents, ...coursVus.incidents)
 
@@ -313,6 +321,7 @@ export async function servirUnExerciceDePlus(
     devoirsServis: (await lireLesDevoirsServis(admin, [eleveId])).parEleve.get(eleveId) ?? new Map(),
     inscriptions,
     coursVus: unionDesCoursVus(coursVus.parClasse, inscriptions.map((i) => i.classeId)),
+    fiches,
   }
 
   // ── LE CYCLE TEL QU'IL EST — ce qui a été posé, et ce que le bonus a mangé ─
@@ -339,17 +348,22 @@ export async function servirUnExerciceDePlus(
   const quota = quotaOptionnel(compo.budget.budget.optionnel, minutesBonus)
   if (quota.epuise) return refus('quota_epuise', quota, incidents)
   if (compo.listeComplete.length === 0) return refus('liste_vide', quota, incidents)
-  if (compo.vivier.retenus.length === 0) return refus('vivier_vide', quota, incidents)
+  // ⭐ C7-L6 / C7-L7 — LA MÊME BORNE QUE LA SEMAINE : la méthode bornée, et
+  //    l'ordre par objet — « un bonus est un exercice normal » (`01-` §5), il
+  //    respecte « un exercice par objet ouvert et par cycle » (piège 12).
+  const retenus = retenusPourLaPose(compo).retenus
+  if (retenus.length === 0) return refus('vivier_vide', quota, incidents)
 
   // ── LA PHASE B, REPRISE — et elle pose UN exercice, au plus ──────────────
   // ⛔ Le plafond passé ici EST la borne du quota : `minutes de la semaine +
   //    reliquat`. PB6 s'arrête dessus, et « jamais au-delà » n'a pas d'autre
   //    domicile.
+  if (compo.objets) compo.objets.plafond = minutesSemaine + quota.restant
   const passe = poserLaSemaine(
     compo.listeComplete,
     { ...compo.budget.budget, plafond: minutesSemaine + quota.restant },
-    (comp, poses) => candidatsPour(compo.vivier.retenus, comp, poses,
-      compo.expressionEnSecondaire),
+    (comp, poses) => candidatsPour(retenus, comp, poses,
+      compo.expressionEnSecondaire, compo.objets),
     compo.journal.tirer<string>('phase_b'),
     { dejaPoses, maxAPoser: 1 },
   )
@@ -364,13 +378,14 @@ export async function servirUnExerciceDePlus(
   //    case servie est au-dessus de la bande du palier — et c'est juste : « à ne
   //    pas confondre avec les sondes de montée, qui sont dans la case choisie en
   //    phase A et qui vivent sur l'exercice lui-même ».
-  const [ligne] = lignesDeDecision([elu], [], compo.vivier.retenus, {
+  const [ligne] = lignesDeDecision([elu], [], retenus, {
     eleveId,
     cycleLundi,
     etatEscalade: { lu_at: maintenant, par_competence: {} },
     tirages: compo.journal.journal,
     paliers: compo.paliers,
     alternatives: compo.journalPriorite,
+    objets: compo.objets,
   })
 
   const { data: dec, error: eDec } = await admin
