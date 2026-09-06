@@ -46,7 +46,8 @@ function probleme(enonce: string | null): string {
 export function consigneDuCran2(geste: string | null | undefined): string | null {
   const g = (geste ?? '').trim()
   if (g === '') return null
-  return `Lis les documents ci-joints : le sujet, et les pièces, chacune à sa place. ${g}`
+  // ⭐ 06/09 (nuit) — « le cran 2 est un texte à trou » : le texte à compléter, puis le geste « Complète … » tel quel.
+  return `Lis les documents ci-joints : le sujet, et le texte à compléter. ${g}`
 }
 
 /**

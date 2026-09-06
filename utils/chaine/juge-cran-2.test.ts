@@ -40,7 +40,7 @@ test('au cran 2, le juge reçoit l’objet ASSEMBLÉ — la pièce de l’élèv
   assert.match(m, /— ce que l'argument conclut :\nIl faut interdire le téléphone en classe\./)
   assert.match(m, /l'objet assemblé/)
   // L'assemblage : conclusion, preuve, puis LA PIÈCE DE L'ÉLÈVE en dernier (le garant), marquée.
-  const assemble = /Il faut interdire[^]*?regardent l'écran plus que le tableau\.\n\n\[la pièce de l'élève : Or ce qui capte le regard[^]*?\]/
+  const assemble = /Il faut interdire[^]*?regardent l'écran plus que le tableau\. \[la pièce de l'élève : Or ce qui capte le regard[^]*?\]/
   assert.match(m, assemble)
   assert.match(m, /le test de la fiche/)
   assert.match(m, /Peut-on retirer le « donc »/)

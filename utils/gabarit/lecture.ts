@@ -21,7 +21,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireLaPorteGabarit } from './porte'
 import { pourquoiDuTemoin } from './candidats'
 import type { Variante } from './consigne'
-import { constituantDeLaGrille, lireLesPieces, observablesDuConstituant, type Piece } from './pieces'
+import { constituantDeLaGrille, lireLesPieces, observablesDuConstituant, type Morceau } from './pieces'
 
 export interface GabaritDuDepot {
   /** La porte est ouverte ET l'exercice est au format 1.5. */
@@ -126,7 +126,8 @@ export async function lireLeGabaritDuDepot(
 
 export interface CasDuCran2 {
   constituant: string
-  pieces: Piece[]
+  /** Le devoir en morceaux, dans l'ordre — dont le trou (`texte: null`). */
+  pieces: Morceau[]
 }
 
 export interface Cran2DuDepot {

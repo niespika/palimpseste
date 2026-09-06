@@ -3,14 +3,21 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   assemblerLObjet, composerLesPieces, constituantDeLaGrille, demandeDuGeste, lireLesPieces,
-  nomDuConstituant, observablesDuConstituant, placeDeLaPieceVide,
+  nomDuConstituant, observablesDuConstituant, placeDeLaPieceVide, separerLeTrou,
 } from './pieces'
 
-// Les pièces réelles de `ex-gab-transition-annonce-vide-c2` (gabarit-c2.json, 06/09).
+// Les pièces réelles de `ex-gab-transition-annonce-vide-c2` (gabarit-c2.json, 06/09) —
+// la PREMIÈRE forme (des blocs nommés), gardée pour le repli sans trou.
 const TRANSITION = [
   { nom: 'ce que le premier paragraphe a établi',
     texte: "L'uniforme peut réduire les différences visibles entre les élèves. Tous portent la même tenue, ce qui peut donner une impression d'égalité." },
   { nom: 'ce que le second va faire', texte: "Il faut donc se demander si cette égalité d'apparence suffit vraiment." },
+]
+// ⭐ La forme à TROU (06/09, nuit) : le devoir en morceaux, dans l'ordre, dont le trou (`texte: null`).
+const A_TROU = [
+  { nom: 'le devoir, avant le trou', texte: "Tous portent la même tenue, ce qui peut donner une impression d'égalité." },
+  { nom: 'ce qui, dans le premier paragraphe, ne tient pas encore et oblige à passer au second', texte: null },
+  { nom: 'le devoir, après le trou', texte: "Il faut donc se demander si cette égalité d'apparence suffit vraiment." },
 ]
 const GESTE_TRANSITION = "Voici ce que le premier paragraphe a établi, et ce que le second va faire. Écris ce qui, dans le premier, ne tient pas encore et oblige à passer au second."
 const GESTE_PLAN = "Voici les thèses des parties, dans le désordre. Mets-les dans l'ordre, et écris entre chacune le « car » ou le « mais » qui oblige à passer à la suivante."
@@ -20,6 +27,14 @@ test('les pièces se lisent avec tolérance : un tableau de {nom, texte} non vid
   assert.deepEqual(lireLesPieces(JSON.stringify(TRANSITION)), TRANSITION)
   assert.deepEqual(lireLesPieces([{ nom: 'a', texte: '' }, { nom: '', texte: 'b' }, 'x', null, { nom: ' c ', texte: ' d ' }]),
     [{ nom: 'c', texte: 'd' }])
+  // ⭐ le trou se lit : `texte: null` est gardé, avec son nom.
+  assert.deepEqual(lireLesPieces(A_TROU), A_TROU)
+  assert.deepEqual(separerLeTrou('transition', A_TROU),
+    { pieces: [A_TROU[0], A_TROU[2]], place: 1, trou: A_TROU[1]!.nom })
+  assert.deepEqual(separerLeTrou('argument', [{ nom: 'x', texte: 'a' }, { nom: 'le garant', texte: null }]),
+    { pieces: [{ nom: 'x', texte: 'a' }], place: 1, trou: 'le garant' })
+  // sans trou déclaré : le repli par objet, et `trou` nul.
+  assert.deepEqual(separerLeTrou('transition', TRANSITION), { pieces: TRANSITION, place: 1, trou: null })
   assert.deepEqual(lireLesPieces(null), [])
   assert.deepEqual(lireLesPieces('pas du json'), [])
 })
@@ -48,16 +63,23 @@ test('composer : le constituant du cas, la demande, la place, les pièces', () =
   const s = composerLesPieces('transition', { constituant: 'la limite', pieces: TRANSITION }, GESTE_TRANSITION)
   assert.equal(s.constituant, 'la limite')
   assert.equal(s.place, 1)
+  assert.equal(s.trou, null)
+  // ⭐ à trou : la place et le nom viennent des données, le geste « Complète … » est rendu entier.
+  const t = composerLesPieces('transition', { constituant: 'la limite', pieces: A_TROU }, 'Complète la transition en écrivant ce qui, dans le premier paragraphe, ne tient pas encore et oblige à passer au second.')
+  assert.equal(t.place, 1)
+  assert.equal(t.trou, A_TROU[1]!.nom)
+  assert.deepEqual(t.pieces, [A_TROU[0], A_TROU[2]])
+  assert.match(t.demande!, /^Complète la transition/)
   assert.match(s.demande!, /^Écris ce qui, dans le premier/)
   assert.deepEqual(s.pieces, TRANSITION)
   assert.equal(composerLesPieces('transition', { constituant: 'la limite', pieces: TRANSITION }, null).demande, null)
 })
 
-test('l’assemblage met la pièce de l’élève à sa place, une pièce par paragraphe — une dérivation, rien en base', () => {
+test('l’assemblage met la pièce de l’élève à sa place, en un texte continu — une dérivation, rien en base', () => {
   const objet = assemblerLObjet(TRANSITION, 1, "  Mais il ne supprime pas les différences de revenus.  ")
-  assert.deepEqual(objet.split('\n\n'), [TRANSITION[0]!.texte, 'Mais il ne supprime pas les différences de revenus.', TRANSITION[1]!.texte])
+  assert.equal(objet, [TRANSITION[0]!.texte, 'Mais il ne supprime pas les différences de revenus.', TRANSITION[1]!.texte].join(' '))
   const marque = assemblerLObjet(TRANSITION, 1, 'X', { avant: '[', apres: ']' })
-  assert.match(marque, /\n\n\[X\]\n\n/)
+  assert.match(marque, / \[X\] /)
   assert.equal(assemblerLObjet(TRANSITION, 99, 'X').endsWith('X'), true)
   assert.equal(assemblerLObjet(TRANSITION, -3, 'X').startsWith('X'), true)
   assert.equal(assemblerLObjet([], 0, 'seule'), 'seule')

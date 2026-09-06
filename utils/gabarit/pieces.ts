@@ -9,16 +9,18 @@
 //    fait »). Les pièces viennent de `exercices_cas.pieces` (`[{nom, texte}]`,
 //    format 1.5, `08-` §5) ; le geste vient de `exercices_pieces` (dérivée du
 //    `09-`) et se RECOPIE — il ne se génère pas (`10-` §3).
-// ⚠️ OÙ VA LA PLACE VIDE — le format ne le dit pas (des pièces `{nom, texte}`
-//    seulement). C'est un CHOIX D'ÉCRAN, tranché ici (prompt du 06/09) : la
-//    place vide se met à l'endroit du constituant dans l'ordre de la fiche —
-//    argument : conclusion · preuve · GARANT ⇒ en dernier ; transition : bilan ·
-//    LIMITE · annonce ⇒ au milieu ; phrase : avant · LA PHRASE · après ; exemple,
-//    objection, paragraphe ⇒ en dernier ; plan : les thèses, puis l'ordre écrit
-//    en dessous. Mesuré sur `gabarit-c2.json` (38 exercices, 06/09) : une
-//    `phrase` n'a parfois qu'UNE pièce (« ce qui vient après » seule), et trois
-//    `paragraphe` en ont trois au lieu de quatre — la règle lit les NOMS, pas un
-//    nombre attendu.
+// ⭐⭐ 06/09 (nuit) — LE CRAN 2 EST UN TEXTE À TROU (`10-` v0.9 §2 bis.1, `08-`
+//    v1.10 §5, décision de Louis sur la relecture des 38 exercices dérivés) :
+//    `exercices_cas.pieces` est le DEVOIR EN MORCEAUX, dans l'ordre du texte, et
+//    EXACTEMENT UN morceau a `texte: null` — c'est le trou, son `nom` est la
+//    pièce que l'élève écrit, en mots d'élève. La place du trou vient donc des
+//    DONNÉES, plus d'un choix d'écran. ⚠️ L'ancienne règle par objet (la place
+//    vide « à l'endroit du constituant dans l'ordre de la fiche ») reste en repli
+//    pour un cas SANS trou — la première forme, retirée du bac à sable le 06/09.
+//    Mesuré sur `gabarit-c2.json` (24 exercices à trou, 06/09) : un morceau fait
+//    de 39 à 519 caractères, 21 trous au milieu, 3 en fin de texte, 0 en tête.
+//    L'objet assemblé est UN texte continu : les morceaux se recollent par une
+//    espace, jamais par un saut de paragraphe.
 // ⛔ « Les noms des constituants sont des mots de concepteur » (`09-` §0) : ce
 //    que l'élève lit sur la place vide est la DEMANDE du geste (« Écris ce qui
 //    fait que cet appui-là soutient cette conclusion-là »), jamais « le garant ».
@@ -27,6 +29,12 @@
 export interface Piece {
   nom: string
   texte: string
+}
+
+/** Un morceau tel que la base le porte : `texte: null` est LE TROU (`08-` v1.10 §5). */
+export interface Morceau {
+  nom: string
+  texte: string | null
 }
 
 /** Ce que l'écran sert pour un cas de cran 2 — les pièces, et la place vide. */
@@ -38,6 +46,8 @@ export interface PiecesServies {
   /** L'index de la place vide parmi les pièces : 0 = avant la première, `pieces.length` = après la dernière. */
   place: number
   pieces: Piece[]
+  /** Le nom du trou, en mots d'élève (« ce qui fait que cet appui soutient cette conclusion ») ; `null` sans trou déclaré. */
+  trou: string | null
 }
 
 /** La fiche dit que la pièce et l'objet se confondent (`mot`, `phrase`). */
@@ -46,21 +56,40 @@ const PIECE_EST_L_OBJET = /se confondent/i
 // ── Les pièces, lues avec tolérance ─────────────────────────────────────────
 
 /**
- * `exercices_cas.pieces` — un tableau de `{nom, texte}`, les deux non vides ;
- * tout le reste est ignoré. `[]` sur toute autre forme.
+ * `exercices_cas.pieces` — un tableau de `{nom, texte}` : le nom non vide, le
+ * texte non vide OU `null` (le trou) ; tout le reste est ignoré. `[]` sur
+ * toute autre forme.
  */
-export function lireLesPieces(brut: unknown): Piece[] {
+export function lireLesPieces(brut: unknown): Morceau[] {
   const liste = typeof brut === 'string' ? tenteJson(brut) : brut
   if (!Array.isArray(liste)) return []
-  const out: Piece[] = []
+  const out: Morceau[] = []
   for (const p of liste) {
     if (!p || typeof p !== 'object') continue
     const { nom, texte } = p as { nom?: unknown; texte?: unknown }
-    if (typeof nom !== 'string' || typeof texte !== 'string') continue
-    if (nom.trim() === '' || texte.trim() === '') continue
+    if (typeof nom !== 'string' || nom.trim() === '') continue
+    if (texte === null) { out.push({ nom: nom.trim(), texte: null }); continue }
+    if (typeof texte !== 'string' || texte.trim() === '') continue
     out.push({ nom: nom.trim(), texte: texte.trim() })
   }
   return out
+}
+
+/**
+ * ⭐ Le trou, séparé des morceaux : les pièces (texte non nul), la place du
+ *    trou parmi elles, et son nom. Sans trou déclaré, la place vient de la
+ *    règle par objet (repli), et `trou` vaut `null`.
+ */
+export function separerLeTrou(objet: string, morceaux: readonly Morceau[]): { pieces: Piece[]; place: number; trou: string | null } {
+  const pieces: Piece[] = []
+  let place = -1
+  let trou: string | null = null
+  for (const m of morceaux) {
+    if (m.texte === null) { if (place < 0) { place = pieces.length; trou = m.nom }; continue }
+    pieces.push({ nom: m.nom, texte: m.texte })
+  }
+  if (place < 0) place = placeDeLaPieceVide(objet, pieces)
+  return { pieces, place, trou }
 }
 
 function tenteJson(s: string): unknown {
@@ -105,26 +134,22 @@ export function placeDeLaPieceVide(objet: string, pieces: readonly Piece[]): num
   }
 }
 
-/** Les pièces d'un cas, composées pour l'écran. */
+/** Les pièces d'un cas, composées pour l'écran — le trou lu dans les données. */
 export function composerLesPieces(
-  objet: string, cas: { constituant: string; pieces: readonly Piece[] }, geste: string | null,
+  objet: string, cas: { constituant: string; pieces: readonly Morceau[] }, geste: string | null,
 ): PiecesServies {
-  const pieces = [...cas.pieces]
-  return {
-    constituant: cas.constituant,
-    demande: demandeDuGeste(geste),
-    place: placeDeLaPieceVide(objet, pieces),
-    pieces,
-  }
+  const { pieces, place, trou } = separerLeTrou(objet, cas.pieces)
+  return { constituant: cas.constituant, demande: demandeDuGeste(geste), place, pieces, trou }
 }
 
 // ── L'assemblage — ce que le juge reçoit ────────────────────────────────────
 
 /**
- * L'objet ASSEMBLÉ : les pièces servies dans l'ordre, la pièce de l'élève à sa
- * place — une pièce par paragraphe. C'est une DÉRIVATION, faite au moment de
- * juger et de montrer : rien de tout cela ne s'écrit en base (la production de
- * l'élève reste la pièce seule, `texte_v1` / `texte_vf`).
+ * L'objet ASSEMBLÉ : les morceaux servis dans l'ordre, la pièce de l'élève à sa
+ * place — UN texte continu, les morceaux recollés par une espace (le cran 2 est
+ * un texte à trou). C'est une DÉRIVATION, faite au moment de juger et de
+ * montrer : rien de tout cela ne s'écrit en base (la production de l'élève
+ * reste la pièce seule, `texte_v1` / `texte_vf`).
  * @param marque entoure la pièce de l'élève — pour que le juge sache laquelle est la sienne.
  */
 export function assemblerLObjet(
@@ -134,7 +159,7 @@ export function assemblerLObjet(
   const p = Math.max(0, Math.min(place, pieces.length))
   const textes = pieces.map((x) => x.texte)
   const sienne = `${marque.avant}${pieceDeLEleve.trim()}${marque.apres}`
-  return [...textes.slice(0, p), sienne, ...textes.slice(p)].filter((t) => t.trim() !== '').join('\n\n')
+  return [...textes.slice(0, p), sienne, ...textes.slice(p)].filter((t) => t.trim() !== '').join(' ')
 }
 
 // ── Le constituant de la grille — pour l'observable (décision 17) ───────────

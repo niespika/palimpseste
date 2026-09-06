@@ -25,7 +25,7 @@ import { cibleDansLeMateriau, verdictDeLaZone } from '@/utils/deroule/designatio
 import { lireLaPorteJugeDocuments } from '@/utils/juge/porte'
 import type { ChoixServiAuJuge, PieceServieAuJuge, ZoneServieAuJuge } from './juge-cran'
 import { lireLeCran2 } from '@/utils/gabarit/lecture'
-import { placeDeLaPieceVide } from '@/utils/gabarit/pieces'
+import { separerLeTrou } from '@/utils/gabarit/pieces'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
 
@@ -909,8 +909,9 @@ async function avecLesPieces(
   return cas.map((c) => {
     const p = c2.parCas.get(c.ordre)
     if (!p) return c
+    const { pieces, place } = separerLeTrou(a.objet, p.pieces)   // ⭐ le trou vient des données
     const piece: PieceServieAuJuge = {
-      constituant: p.constituant, pieces: p.pieces, place: placeDeLaPieceVide(a.objet, p.pieces),
+      constituant: p.constituant, pieces, place,
       geste: c2.geste, test: c2.test, constituantGrille: c2.constituantGrille, observables: c2.observables,
     }
     return { ...c, piece }

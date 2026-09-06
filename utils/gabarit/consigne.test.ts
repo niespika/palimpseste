@@ -38,9 +38,9 @@ test('les trois règles : surligne jamais recopie ; le 9 demande ; le 7 corrige 
   assert.match(c(7)!, /corrige-le/)
 })
 
-test('le cran 2 : « Lis les documents ci-joints : le sujet, et les pièces, chacune à sa place. » puis le geste, TEL QUEL', () => {
+test('le cran 2 : « Lis les documents ci-joints : le sujet, et le texte à compléter. » puis le geste, TEL QUEL', () => {
   const G = "Voici ce que l'argument conclut, et ce sur quoi il s'appuie. Écris ce qui fait que cet appui-là soutient cette conclusion-là."
-  assert.equal(consigneDuCran2(G), `Lis les documents ci-joints : le sujet, et les pièces, chacune à sa place. ${G}`)
+  assert.equal(consigneDuCran2(G), `Lis les documents ci-joints : le sujet, et le texte à compléter. ${G}`)
   assert.equal(consigneDuGabarit({ cran: 2, variante: null, enonce: null, insertion: false, geste: G }), consigneDuCran2(G))
   assert.equal(consigneDuGabarit({ cran: 2, variante: null, enonce: null, insertion: false, geste: `  ${G}  ` }), consigneDuCran2(G))
   // ⛔ Le geste ne se génère pas : sans geste, pas de consigne dérivée — l'appelant retombe sur celle du dépôt.
