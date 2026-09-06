@@ -811,26 +811,73 @@ export const OBJETS_EN_METHODE_MAX = 2
  * sort est écarté `methode_hors_quota`. Les instances hors méthode passent
  * telles quelles. PUR : la pose (phase B) reçoit ce qu'il rend.
  */
+/**
+ * ⭐ 07/09 (Louis) — L'OBJET NEUF S'ÉLIT PAR LA RÈGLE 4, COMME L'OUVERT. « Il faut
+ *    que l'objet soit décidé selon les mêmes grands principes que le reste » : à
+ *    rang de compétence égal, l'objet dont l'observable est NON ACQUIS, puis LE
+ *    MOINS MESURÉ, puis LE TIRAGE — plus jamais l'alphabet. Et le devoir, à
+ *    couverture égale, se TIRE aussi : « premier par identifiant » mettait toute
+ *    la classe sur le même texte. Sans `election`, l'ordre d'hier (nom, identifiant)
+ *    reste, pour que la bornée soit reproductible hors du routeur.
+ */
+export interface ElectionDeLaMethode {
+  /** Le score de la règle 4 d'un objet, sur ses instances en méthode d'une compétence : plus petit d'abord. */
+  score?: (retenues: readonly InstanceRetenue[], competence: Competence | null) => readonly [number, number]
+  /** Le départage des ex æquo — objets, puis devoirs —, journalisé par l'appelant. */
+  tirer?: (exAequo: readonly string[]) => string
+}
+
 export function bornerLaMethode(
   retenus: readonly InstanceRetenue[],
   prioriteDesCompetences: readonly Competence[],
   paliers: ReadonlyMap<Competence, string | null>,
   cran2Servi = false,
   max = OBJETS_EN_METHODE_MAX,
-): { retenus: InstanceRetenue[]; ecartes: EcartDuVivier[]; objetsEnMethode: string[] } {
+  election: ElectionDeLaMethode = {},
+): { retenus: InstanceRetenue[]; ecartes: EcartDuVivier[]; objetsEnMethode: string[]
+  elections: Array<{ objet: string; rang: number; score: readonly [number, number] | null; tirage: boolean }> } {
   const enMethode = retenus.filter((r) => r.porte === 'methode')
-  if (enMethode.length === 0) return { retenus: [...retenus], ecartes: [], objetsEnMethode: [] }
+  if (enMethode.length === 0) return { retenus: [...retenus], ecartes: [], objetsEnMethode: [], elections: [] }
 
   // L'ordre des objets : celui de la liste de priorité, par la première
   // compétence ciblable de l'objet ; les objets qu'aucune compétence n'atteint
-  // viennent après, par nom.
+  // viennent après. À rang égal : le score de la règle 4, puis le tirage — et,
+  // sans élection, le nom.
   const rangDe = (r: InstanceRetenue) => {
     const rangs = r.ciblables.map((c) => prioriteDesCompetences.indexOf(c)).filter((i) => i >= 0)
     return rangs.length ? Math.min(...rangs) : Number.MAX_SAFE_INTEGER
   }
-  const parRang = [...new Set(enMethode.map((r) => r.instance.objet))]
-    .map((o) => ({ o, rang: Math.min(...enMethode.filter((r) => r.instance.objet === o).map(rangDe)) }))
-    .sort((a, b) => a.rang - b.rang || a.o.localeCompare(b.o))
+  const cmpScore = (a: readonly [number, number] | null, b: readonly [number, number] | null) =>
+    a && b ? (a[0] - b[0] || a[1] - b[1]) : 0
+  const scores = new Map<string, readonly [number, number] | null>()
+  const objetsBruts = [...new Set(enMethode.map((r) => r.instance.objet))].map((o) => {
+    const siennes = enMethode.filter((r) => r.instance.objet === o)
+    const rang = Math.min(...siennes.map(rangDe))
+    const comp = prioriteDesCompetences[rang] ?? null
+    const score = election.score ? election.score(siennes, comp) : null
+    scores.set(o, score)
+    return { o, rang, score }
+  }).sort((a, b) => a.rang - b.rang || cmpScore(a.score, b.score) || (election.tirer ? 0 : a.o.localeCompare(b.o)))
+  // Les ex æquo (même rang, même score) se départagent au tirage, un par un.
+  const parRang: typeof objetsBruts = []
+  const tires = new Set<string>()
+  let i = 0
+  while (i < objetsBruts.length) {
+    let j = i + 1
+    while (j < objetsBruts.length && objetsBruts[j]!.rang === objetsBruts[i]!.rang
+      && cmpScore(objetsBruts[j]!.score, objetsBruts[i]!.score) === 0) j += 1
+    const lot = objetsBruts.slice(i, j)
+    if (lot.length > 1 && election.tirer) {
+      const reste = lot.map((x) => x.o)
+      while (reste.length) {
+        const elu = reste.length > 1 ? election.tirer(reste) : reste[0]!
+        if (reste.length > 1) tires.add(elu)
+        parRang.push(lot.find((x) => x.o === elu)!)
+        reste.splice(reste.indexOf(elu), 1)
+      }
+    } else parRang.push(...lot)
+    i = j
+  }
   // ⭐ C7-L7 — « les deux premiers de la liste de priorité » : la liste est une
   //    liste de COMPÉTENCES, et PB2 — jamais deux fois de suite la même — ne laisse
   //    avancer deux séquences de méthode que si elles alternent. Deux objets de la
@@ -849,6 +896,7 @@ export function bornerLaMethode(
     }
   }
   const gardes = objets.slice(0, max).map((x) => x.o)
+  const elections = objets.map((x, n) => ({ objet: x.o, rang: n, score: scores.get(x.o) ?? null, tirage: tires.has(x.o) }))
   const out: InstanceRetenue[] = retenus.filter((r) => r.porte !== 'methode')
   const ecartes: EcartDuVivier[] = []
 
@@ -876,15 +924,20 @@ export function bornerLaMethode(
       return sequenceDeMethode(cible ? (paliers.get(cible) ?? null) : null, cran2Servi)
     }
     // Le devoir unique : celui qui couvre le plus de crans de sa séquence ; à
-    // égalité, le devoir jamais servi, puis le premier par identifiant.
+    // égalité, le devoir jamais servi, puis LE TIRAGE (07/09) — et, sans élection,
+    // le premier par identifiant.
     const couverture = (l: InstanceRetenue[]) => {
       const seq = sequenceDe(l)
       return new Set(l.map((r) => r.instance.cranNumero).filter((n) => n !== null && seq.includes(n))).size
     }
-    const devoir = [...parDevoir.entries()].sort((a, b) =>
+    const classes = [...parDevoir.entries()].sort((a, b) =>
       couverture(b[1]) - couverture(a[1])
       || (a[1][0]!.devoir.dernierDepotAt ?? '').localeCompare(b[1][0]!.devoir.dernierDepotAt ?? '')
-      || a[0].localeCompare(b[0]))[0]![0]
+      || a[0].localeCompare(b[0]))
+    const tete = classes[0]!
+    const exAequo = classes.filter((x) => couverture(x[1]) === couverture(tete[1])
+      && (x[1][0]!.devoir.dernierDepotAt ?? '') === (tete[1][0]!.devoir.dernierDepotAt ?? '')).map((x) => x[0])
+    const devoir = exAequo.length > 1 && election.tirer ? election.tirer(exAequo) : tete[0]
     const retenuesDuDevoir = parDevoir.get(devoir) ?? []
     const cible = cibleDe(retenuesDuDevoir)
     const palier = cible ? (paliers.get(cible) ?? null) : null
@@ -906,7 +959,7 @@ export function bornerLaMethode(
       out.push({ ...r, methode: { objet, devoir: devoir === '∅' ? null : devoir, sequence, rang: sequence.indexOf(n) } })
     }
   }
-  return { retenus: out, ecartes, objetsEnMethode: gardes }
+  return { retenus: out, ecartes, objetsEnMethode: gardes, elections }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

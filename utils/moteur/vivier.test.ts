@@ -605,6 +605,54 @@ describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et u
     assert.deepEqual(b.ecartes.map((e) => e.exerciceId).sort(), ['a1-c1b', 'a2-c1', 'a2-c3'])
   })
 
+  it('⭐ 07/09 — l\'objet neuf s\'élit par la règle 4 : à rang égal, le score, puis le tirage — plus l\'alphabet', () => {
+    const r = [
+      retenue({ exerciceId: 'arg-1', objet: 'argument', cranNumero: 1, devoirs: ['a1'] }),
+      retenue({ exerciceId: 'obj-1', objet: 'objection', cranNumero: 1, devoirs: ['o1'] }),
+      retenue({ exerciceId: 'exe-1', objet: 'exemple', cranNumero: 1, devoirs: ['e1'] }, { ciblables: ['structure'] }),
+      retenue({ exerciceId: 'tra-1', objet: 'transition', cranNumero: 1, devoirs: ['t1'] }, { ciblables: ['structure'] }),
+    ]
+    // Le score : l'objection porte un observable NON ACQUIS (0), l'argument un acquis (1) ; la
+    // transition est la moins mesurée de la Structure. L'alphabet aurait dit argument, exemple.
+    const score = (l: readonly { instance: { objet: string } }[]) => {
+      const o = l[0]!.instance.objet
+      return ({ argument: [1, 4], objection: [0, 2], exemple: [1, 3], transition: [1, 1] } as Record<string, [number, number]>)[o]!
+    }
+    const b = bornerLaMethode(r as never, ['argumentation', 'structure'] as never, paliers as never, false, 2, { score: score as never })
+    assert.deepEqual(b.objetsEnMethode, ['objection', 'transition'])
+    assert.deepEqual(b.elections.map((e) => [e.objet, e.score, e.tirage]),
+      [['objection', [0, 2], false], ['transition', [1, 1], false], ['argument', [1, 4], false], ['exemple', [1, 3], false]])
+    // Les ex æquo se tirent : même score partout, le tirage prend le DERNIER de la liste.
+    const dernier = (l: readonly string[]) => l[l.length - 1]!
+    const t = bornerLaMethode(r as never, ['argumentation', 'structure'] as never, paliers as never, false, 2,
+      { score: (() => [0, 0]) as never, tirer: dernier })
+    assert.deepEqual(t.objetsEnMethode, ['objection', 'transition'])
+    // Dans chaque lot d'ex æquo, le dernier restant n'est pas tiré : deux tirages sur quatre objets.
+    assert.deepEqual(t.elections.map((e) => [e.objet, e.tirage]),
+      [['objection', true], ['transition', true], ['argument', false], ['exemple', false]])
+    // Sans élection : l'ordre d'hier, reproductible.
+    assert.deepEqual(bornerLaMethode(r as never, ['argumentation', 'structure'] as never, paliers as never).objetsEnMethode,
+      ['argument', 'exemple'])
+  })
+
+  it('⭐ 07/09 — le devoir, à couverture égale, se TIRE : plus « le premier par identifiant »', () => {
+    const r = [
+      retenue({ exerciceId: 'a1-c1', objet: 'argument', cranNumero: 1, devoirs: ['d1'] }),
+      retenue({ exerciceId: 'a1-c3', objet: 'argument', cranNumero: 3, devoirs: ['d1'] }),
+      retenue({ exerciceId: 'a2-c1', objet: 'argument', cranNumero: 1, devoirs: ['d2'] }),
+      retenue({ exerciceId: 'a2-c3', objet: 'argument', cranNumero: 3, devoirs: ['d2'] }),
+      retenue({ exerciceId: 'a3-c1', objet: 'argument', cranNumero: 1, devoirs: ['d3'] }),
+    ]
+    const tires: string[][] = []
+    const dernier = (l: readonly string[]) => { tires.push([...l]); return l[l.length - 1]! }
+    const b = bornerLaMethode(r as never, ['argumentation'] as never, paliers as never, false, 2, { tirer: dernier })
+    // d3 ne couvre qu'un cran : hors du tirage ; d1 et d2 à égalité, le tirage prend d2.
+    assert.deepEqual(tires, [['d1', 'd2']])
+    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['a2-c1', 'a2-c3'])
+    assert.deepEqual(bornerLaMethode(r as never, ['argumentation'] as never, paliers as never).retenus.map((x) => x.instance.exerciceId),
+      ['a1-c1', 'a1-c3'])
+  })
+
   it('les instances hors méthode passent telles quelles', () => {
     const r = [{ ...retenue({ exerciceId: 'x', objet: 'argument', cranNumero: 5 }), porte: 'ouvert' as const }]
     const b = bornerLaMethode(r as never, ['argumentation'] as never, paliers as never)

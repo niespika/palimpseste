@@ -198,6 +198,28 @@ function scoreDeLObservable(
 }
 
 /**
+ * ⭐ 07/09 — LE SCORE DE LA RÈGLE 4 D'UN OBJET QUI ENTRE EN MÉTHODE : celui de sa
+ *    meilleure instance (observable non acquis, puis le moins mesuré). C'est ce que
+ *    `bornerLaMethode` reçoit pour élire l'objet neuf « selon les mêmes grands
+ *    principes que le reste » (Louis) — plus l'alphabet. L'élection se journalise
+ *    par objet (`journal.elections`, clé `methode|<objet>`).
+ */
+export function scoreDeLObjetEnMethode(
+  ctx: ContexteObjets, retenues: readonly InstanceRetenue[], competence: Competence | null,
+): readonly [number, number] {
+  let meilleur: ReturnType<typeof scoreDeLObservable> | null = null
+  for (const r of retenues) {
+    const comp = (competence ?? r.ciblables[0] ?? 'structure') as Competence
+    const s = scoreDeLObservable(r, comp, ctx)
+    if (!meilleur || s.palier < meilleur.palier || (s.palier === meilleur.palier && (s.mesures ?? 0) < (meilleur.mesures ?? 0))) meilleur = s
+  }
+  if (!meilleur) return [3, 0]
+  ctx.journal.elections.set(`methode|${meilleur.election.objet}`, { ...meilleur.election, regle: 'methode',
+    motif: `entrée en méthode — ${meilleur.election.motif}` })
+  return [meilleur.palier, meilleur.mesures ?? 0]
+}
+
+/**
  * L'ordre par objet (`01-` v5.11 §4, couche 3). Reçoit les candidats d'UNE
  * compétence tels que `candidatsPour` les a construits, et rend ceux que la règle
  * laisse, chacun avec son `ordre`. Ce qu'elle écarte se journalise par objet.

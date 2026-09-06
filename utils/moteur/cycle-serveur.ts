@@ -59,7 +59,7 @@ import {
   type EcartDuVivier, type InstanceRetenue, type MotifDEcart,
 } from './vivier'
 import {
-  compterLesMesuresParObservable, contexteDesObjets, cransPortesParLaBanque, objetsNeufsParCycle,
+  compterLesMesuresParObservable, contexteDesObjets, cransPortesParLaBanque, objetsNeufsParCycle, scoreDeLObjetEnMethode,
   observablesParCompetence, type ContexteObjets,
 } from './objets'
 import {
@@ -733,11 +733,18 @@ export async function composerPourUnEleve(
  * ⛔ UN SEUL DOMICILE : le pull de C6-L3 appelle ceci, pas une copie (piège 12).
  */
 export function retenusPourLaPose(
-  compo: Pick<CompositionDUnEleve, 'vivier' | 'listeComplete' | 'paliers' | 'objets'>, cran2Servi = true,
+  compo: Pick<CompositionDUnEleve, 'vivier' | 'listeComplete' | 'paliers' | 'objets' | 'journal'>, cran2Servi = true,
 ): ReturnType<typeof bornerLaMethode> {
   const max = compo.objets ? objetsNeufsParCycle(compo.objets) : undefined
+  // ⭐ 07/09 — sous le gabarit, l'objet neuf et son devoir s'élisent par la règle 4
+  //    puis le tirage (journalisé « methode »), jamais par l'alphabet ni l'identifiant.
+  const objets = compo.objets
+  const election = objets
+    ? { score: (l: readonly InstanceRetenue[], c: Competence | null) => scoreDeLObjetEnMethode(objets, l, c),
+      tirer: compo.journal.tirer<string>('methode') }
+    : {}
   return bornerLaMethode(compo.vivier.retenus, compo.listeComplete.map((e) => e.competence), compo.paliers,
-    cran2Servi, max)
+    cran2Servi, max, election)
 }
 
 async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<PoseDUnEleve> {
