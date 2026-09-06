@@ -9036,6 +9036,6 @@ le veut.
 - [ ] **C7L7-16 — le premier objet « tenu » en production**. Condition : le juge du cran ouvert (`juge_documents_actif`) — sans lui, aucune réussite au-dessus du 3 (mesuré le 04/09 : 0 « ouvert » au-dessus du 3 sur 480 dépôts).
 - [x] **C7L7-17 — fait quand (1b) entier** : tenu le 06/09 (nuit) après les trois décisions de Louis — PB2 sur l'observable (Q1), le cran d'en dessous exigé par le registre passe la bande (Q2, lecture de la séance à confirmer), le trio entier sous le gabarit (Q3).
 - [x] **C7L7-20 — la méthode est l'exception à PB2** (Louis, 07/09) : rejoué en bac à sable — semaine 2, `objection` 1 → 3 enchaînés sur le même devoir, 4 décisions ; un objet ouvert reste sous PB2 (test). Tout retiré, vérifié par requête.
-- [ ] **C7L7-21 — la lecture de Q2 portée au `01-` §4** (« ne sortent pas d'E-D » contredit sous le gabarit). Condition : une passe de conception ; je n'ai rien marqué.
+- [x] **C7L7-21 — la lecture de Q2 portée au `01-` §4** — « go » de Louis le 07/09 : `01-routeur.md` v5.12 dans l'arbre de travail du dépôt de conception (non commité, on n'y commite que sur demande) ; le manifeste du lot au `07-` dit encore v5.11.
 - [ ] **C7L7-18 — le pull réel au bouton** (`/eleve/semaine`, « en faire plus ») après une semaine posée sous le gabarit. Condition : la branche déployée, un élève de test.
 - [ ] **C7L7-19 — la suite entière de `npm test`** porte un rouge hors lot (`utils/fabrique/verifie-import-gabarit.test.ts`, le cran 2 isole — fixture régénérée). Condition : la fabrique met à jour l'exemple de son test (Q6).
