@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}
+a{color:#6B5A46}a:hover{color:#4a3a28}
+.dv-turn{padding:44px 48px 34px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 22px;flex-wrap:wrap}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-cap{font:500 15px 'Caveat',cursive;color:#8a6f4e}
+.dv-opts{display:flex;flex-wrap:wrap;gap:38px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px;max-width:1120px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-note{margin:2px 0 0;font:500 14.5px/1.5 'Caveat',cursive;color:#8a6f4e;max-width:1000px}
+.dv-row{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.dv-scr{font:600 9px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#a49c8e;margin:0 0 6px}
+.dv-next{margin:28px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+
+.wf{padding:0;color:#2f2a23}
+.wf-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #e6e1d6;background:#f7f4ee}
+.wf-h1{font-size:15px;font-weight:700;color:#2f2a23}
+.wf-dates{font-size:10.5px;color:#8b8478}
+.wf-nav{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:10px;color:#8b8478}
+.wf-nav span{border:1px solid #dcd6c9;border-radius:6px;padding:4px 7px;background:#fff}
+.wf-eyebrow{font:600 9px system-ui;letter-spacing:.11em;text-transform:uppercase;color:#a49c8e}
+.wf-box{border:1px solid #e2ddd2;border-radius:9px;background:#fff}
+.wf-sec{display:flex;flex-direction:column;gap:8px}
+.wf-fold{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid #e2ddd2;border-radius:9px;background:#faf9f5;font-size:11.5px;color:#6b6459}
+.wf-fold b{font-weight:600;color:#3f3a32;flex:1;font-size:11.5px}
+.wf-bars{display:flex;gap:4px}
+.wf-bars i{height:7px;flex:1;border-radius:99px;background:#e4dfd4}
+.wf-bars i.on{background:#737F5E}
+.wf-big{font-size:17px;font-weight:700;color:#2f2a23}
+.wf-task{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e2ddd2;border-radius:9px;background:#fff;min-height:44px}
+.wf-p{width:26px;height:26px;border-radius:50%;background:#e7dfce;border:1px solid #d9cfba;flex:none}
+.wf-p.b{background:#e3e6da;border-color:#cdd3c1}
+.wf-task b{display:block;font-size:12px;font-weight:600;color:#2f2a23}
+.wf-task span{display:block;font-size:10px;color:#8b8478;margin-top:2px}
+.wf-due{margin-left:auto;font-size:9.5px;color:#8b8478;border:1px solid #e2ddd2;border-radius:99px;padding:3px 8px;white-space:nowrap}
+.wf-due.hot{color:#8a5a2e;border-color:#e0cba8;background:#fdf6ea}
+.wf-done{opacity:.55}
+.wf-btn{font-size:12px;font-weight:600;padding:11px 14px;border-radius:9px;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px}
+.wf-btn.parc{background:#6B5A46;color:#F1EADD}
+.wf-btn.ghost{background:#fff;border:1px solid #dcd6c9;color:#6b6459}
+.wf-seg{display:flex;border:1px solid #dcd6c9;border-radius:9px;overflow:hidden;background:#fff;font-size:11.5px}
+.wf-seg span{flex:1;text-align:center;padding:9px 10px;color:#8b8478}
+.wf-seg span.on{background:#6B5A46;color:#F1EADD;font-weight:600}
+.wf-li{font-size:11px;color:#6b6459;display:flex;gap:7px;padding:2px 0}
+.wf-li i{color:#a49c8e;font-style:normal}
+.wf-chip{font-size:9.5px;padding:3px 8px;border-radius:99px;border:1px solid #cfc9bd;color:#6b6459;background:#faf9f5;white-space:nowrap}
+.wf-chip.ok{border-color:#c2cbb1;background:#f2f4ec;color:#4e5a3c}
+.wf-chip.att{border-color:#e0cba8;background:#fdf6ea;color:#8a5a2e}
+.wf-strip{display:flex;gap:5px}
+.wf-day{flex:1;border:1px solid #e2ddd2;border-radius:8px;padding:6px 2px;text-align:center;background:#fff}
+.wf-day u{display:block;font:600 9px system-ui;color:#a49c8e;text-decoration:none}
+.wf-day b{display:block;font-size:11px;color:#3f3a32;margin-top:1px}
+.wf-day em{display:block;width:6px;height:6px;border-radius:50%;background:#e4dfd4;margin:4px auto 0}
+.wf-day em.on{background:#737F5E}
+.wf-day em.due{background:#AC8552}
+.wf-day.today{border-color:#6B5A46;background:#f7f4ee}
+.sk{height:7px;border-radius:3px;background:#e4dfd4}
+.sk.w70{width:70%}.sk.w50{width:50%}.sk.w85{width:85%}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t3">
+  <div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Tour 3 — <a class="dv-oid" href="#2a">2a</a> avec le toggle Travail / Bilan de <a class="dv-oid" href="#1b">1b</a>, et l'ordinateur rééquilibré</span><span class="dv-cap">le bilan n'est plus dans le rail : il prend la grande colonne quand c'est son tour</span></div>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="3a" data-screen-label="3a Toggle travail bilan rail leger">
+      <div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Deux vues, un rail léger — le rail ne porte plus que ce qui sert <b>maintenant</b> (2 blocs max), le contenu de la vue occupe toute la largeur utile</div>
+
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Ordinateur / tablette paysage · 1040 — vue Travail</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-dates">8 → 14 septembre</span><span class="wf-nav"><span>◀ précédente</span><span>suivante ▶</span></span></div>
+              <div style="padding:14px 20px;display:flex;align-items:center;gap:18px;border-bottom:1px solid #eee9de;background:#faf9f5">
+                <div class="wf-seg" style="width:300px"><span class="on">Travail · 2 à faire</span><span>Bilan</span></div>
+                <span class="wf-big" style="font-size:15px">3 faits sur 5</span>
+                <div class="wf-bars" style="flex:1;max-width:300px"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+                <span style="font-size:11px;color:#8b8478">+1 demandé en plus</span>
+              </div>
+              <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 270px;gap:24px;align-items:start">
+                <div style="display:flex;flex-direction:column;gap:16px">
+                  <div class="wf-sec">
+                    <span class="wf-eyebrow">À faire</span>
+                    <div class="wf-task" style="padding:14px;gap:12px"><span class="wf-p" style="width:34px;height:34px"></span><span style="flex:1;min-width:0"><b style="font-size:13.5px">Commentaire — Rousseau</b><span>Fragments · Argumentation · ~35 min</span></span><span class="wf-due hot">à rendre mer. 10</span><span class="wf-btn parc" style="padding:9px 14px;min-height:0;font-size:11.5px">Commencer</span></div>
+                    <div class="wf-task" style="padding:14px;gap:12px"><span class="wf-p b" style="width:34px;height:34px"></span><span style="flex:1;min-width:0"><b style="font-size:13.5px">Reprise de synthèse</b><span>Codex · Synthèse · demandé en plus</span></span><span class="wf-due">dim. 14</span><span class="wf-btn ghost" style="padding:9px 14px;min-height:0;font-size:11.5px">Reprendre</span></div>
+                  </div>
+                  <div class="wf-sec">
+                    <span class="wf-eyebrow">Déjà fait · 3</span>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                      <div class="wf-task wf-done" style="padding:10px"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Dissertation blanche</b><span>lundi</span></span><span class="wf-chip ok">✓</span></div>
+                      <div class="wf-task wf-done" style="padding:10px"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Fiche de lecture</b><span>mardi</span></span><span class="wf-chip ok">✓</span></div>
+                      <div class="wf-task wf-done" style="padding:10px"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Explication — extrait 4</b><span>mardi</span></span><span class="wf-chip ok">✓</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <span class="wf-eyebrow">Ce que la semaine travaille</span>
+                    <b style="font-size:12.5px">Argumentation</b>
+                    <span class="wf-li"><i>·</i>Tu réussis déjà la reprise de thèse.</span>
+                    <b style="font-size:12.5px;margin-top:2px">Synthèse</b>
+                    <span style="font-size:10.5px;color:#8b8478">17 points regardés <a href="#3a">détail</a></span>
+                  </div>
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+                    <span class="wf-eyebrow">En faire plus</span>
+                    <span style="font-size:11px;color:#6b6459">Il te reste 20 min de bonus.</span>
+                    <div class="wf-btn parc">Demander un exercice</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur / tablette paysage · 1040 — vue Bilan</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-dates">8 → 14 septembre</span><span class="wf-nav"><span>◀ précédente</span><span>suivante ▶</span></span></div>
+              <div style="padding:14px 20px;display:flex;align-items:center;gap:18px;border-bottom:1px solid #eee9de;background:#faf9f5">
+                <div class="wf-seg" style="width:300px"><span>Travail · 2 à faire</span><span class="on">Bilan</span></div>
+                <span style="font-size:11.5px;color:#6b6459">4 compétences mesurées sur 6</span>
+                <span style="font-size:10.5px;color:#8a5a2e;background:#fdf6ea;border:1px solid #e0cba8;border-radius:99px;padding:4px 10px;margin-left:auto">1 copie pas encore corrigée</span>
+              </div>
+              <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 250px;gap:24px;align-items:start">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span class="wf-eyebrow">Choisis une compétence</span>
+
+                  <div style="border:1px solid #dcd6c9;border-radius:9px;overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:#f7f4ee"><span style="font-size:13px;font-weight:600;color:#3f3a32;flex:1">▾ Argumentation</span><span style="font-size:10px;color:#8b8478">3 exercices</span><span class="wf-chip att">à reprendre</span></div>
+                    <div style="padding:14px 13px;border-top:1px solid #e6e1d6;display:grid;grid-template-columns:1fr 1fr;gap:18px">
+                      <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-chip ok" style="align-self:flex-start">Tu as réussi</span><span class="wf-li"><i>·</i>la reprise de thèse <em style="color:#a49c8e">— là où tu avais du mal jusqu'ici</em></span></div>
+                      <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-chip att" style="align-self:flex-start">À reprendre</span><span class="wf-li"><i>·</i>l'ancrage des exemples <em style="color:#a49c8e">— c'était pourtant un point fort</em></span></div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid #e2ddd2;border-radius:9px;background:#fff"><span style="font-size:13px;color:#3f3a32;flex:1">▸ Synthèse</span><span style="font-size:10px;color:#8b8478">2 exercices</span><span class="wf-chip ok">réussi</span></div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid #e2ddd2;border-radius:9px;background:#fff"><span style="font-size:13px;color:#3f3a32;flex:1">▸ Expression</span><span style="font-size:10px;color:#8b8478">3 exercices</span><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid #e2ddd2;border-radius:9px;background:#fff"><span style="font-size:13px;color:#3f3a32;flex:1">▸ Structure</span><span style="font-size:10px;color:#8b8478">1 exercice</span><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px dashed #e2ddd2;border-radius:9px;opacity:.6"><span style="font-size:13px;color:#3f3a32;flex:1">Questionnement</span><span style="font-size:9.5px;color:#a49c8e">pas mesurée cette semaine</span></div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px dashed #e2ddd2;border-radius:9px;opacity:.6"><span style="font-size:13px;color:#3f3a32;flex:1">Lecture</span><span style="font-size:9.5px;color:#a49c8e">pas mesurée cette semaine</span></div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <span class="wf-eyebrow">Ta semaine</span>
+                    <span class="wf-big" style="font-size:14px">5 sur 5 faits</span>
+                    <div class="wf-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+                    <span style="font-size:10.5px;color:#8b8478">+1 demandé en plus</span>
+                  </div>
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+                    <span class="wf-eyebrow">En faire plus</span>
+                    <span style="font-size:11px;color:#6b6459">Il te reste 20 min de bonus.</span>
+                    <div class="wf-btn parc">Demander un exercice</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dv-row" style="margin-top:6px">
+        <div>
+          <p class="dv-scr">Téléphone · 375 — Travail</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:10px 14px 0"><span class="wf-dates">8 → 14 septembre</span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:13px">
+                <div class="wf-seg"><span class="on">Travail · 2</span><span>Bilan</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><div class="wf-bars" style="flex:1"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span style="font-size:10px;color:#8b8478;white-space:nowrap">3/5</span></div>
+                <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments · ~35 min</span></span><span class="wf-due hot">mer. 10</span></div>
+                <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · en plus</span></span><span class="wf-due">dim. 14</span></div>
+                <div class="wf-fold"><b>▸ Déjà fait</b><span>3</span></div>
+                <div class="wf-fold"><b>▸ Ce que la semaine travaille</b><span>2</span></div>
+                <div class="wf-btn ghost">En faire plus ?</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 375 — Bilan</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:10px 14px 0"><span class="wf-dates">8 → 14 septembre</span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:10px">
+                <div class="wf-seg"><span>Travail · 2</span><span class="on">Bilan</span></div>
+                <div class="wf-box" style="padding:10px 11px;font-size:10.5px;color:#8a5a2e;background:#fdf6ea;border-color:#e0cba8">1 copie pas encore corrigée : ce bilan ne la compte pas.</div>
+                <div class="wf-fold" style="background:#fff;border-bottom:none;border-bottom-left-radius:0;border-bottom-right-radius:0"><b>▾ Argumentation</b><span class="wf-chip att">à reprendre</span></div>
+                <div class="wf-box" style="margin-top:-10px;border-top-left-radius:0;border-top-right-radius:0;padding:11px 12px;display:flex;flex-direction:column;gap:6px">
+                  <span class="wf-chip ok" style="align-self:flex-start">Tu as réussi</span>
+                  <span class="wf-li"><i>·</i>la reprise de thèse — là où tu avais du mal</span>
+                  <span class="wf-chip att" style="align-self:flex-start;margin-top:3px">À reprendre</span>
+                  <span class="wf-li"><i>·</i>l'ancrage des exemples</span>
+                </div>
+                <div class="wf-fold"><b>▸ Synthèse</b><span class="wf-chip ok">réussi</span></div>
+                <div class="wf-fold"><b>▸ Expression</b><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                <div class="wf-fold"><b>▸ Structure</b><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                <div class="wf-fold" style="border-style:dashed;opacity:.6"><b>Questionnement</b><span style="font-size:9.5px;color:#a49c8e">non mesurée</span></div>
+                <div class="wf-fold" style="border-style:dashed;opacity:.6"><b>Lecture</b><span style="font-size:9.5px;color:#a49c8e">non mesurée</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="dv-note">→ le rail tombe à 2 blocs et 270 px ; la colonne de gauche gagne la place : lignes d'exercices plus hautes, avec durée et bouton d'action, et les « déjà fait » sur deux colonnes · en vue Bilan les 6 compétences sont dans la grande colonne, et la compétence ouverte étale ses deux écarts côte à côte · le rail y devient le rappel du volume (5/5) — le seul chiffre encore utile à ce moment</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes : « le bilan devrait s'ouvrir tout seul quand la semaine est finie » · « enlève le bouton Commencer, la ligne entière est cliquable » · « <a class="dv-oid" href="#3a">3a</a> en rendu charte »</p>
+</section>
+
+<section class="dv-turn" id="t2">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Tour 2 — <a class="dv-oid" href="#1a">1a</a> avec le bilan dans le rail, enroulable par compétence</span><span class="dv-cap">6 compétences : une seule ouverte à la fois, l'élève choisit quoi voir</span></div>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="2a" data-screen-label="2a Action d'abord + bilan roulable">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Rail de droite : « ce que la semaine travaille » <b>+</b> le bilan · chaque compétence est une ligne enroulable, sa pastille dit s'il y a quelque chose à voir</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 375</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:10px 14px 4px"><span class="wf-dates">8 → 14 septembre · semaine en cours</span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:14px">
+                <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:9px">
+                  <span class="wf-big">2 exercices à faire</span>
+                  <div class="wf-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+                  <span style="font-size:10.5px;color:#8b8478">3 faits sur 5 · +1 demandé en plus</span>
+                </div>
+                <div class="wf-sec">
+                  <span class="wf-eyebrow">À faire</span>
+                  <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments · Argumentation</span></span><span class="wf-due hot">mer. 10</span></div>
+                  <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · demandé en plus</span></span><span class="wf-due">dim. 14</span></div>
+                </div>
+                <div class="wf-fold"><b>▸ Déjà fait cette semaine</b><span>3</span></div>
+
+                <div class="wf-sec">
+                  <span class="wf-eyebrow">Ton bilan · par compétence</span>
+                  <div class="wf-fold" style="background:#fff;border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:none"><b>▾ Argumentation</b><span class="wf-chip att">à reprendre</span></div>
+                  <div class="wf-box" style="margin-top:-8px;border-top-left-radius:0;border-top-right-radius:0;padding:11px 12px;display:flex;flex-direction:column;gap:6px">
+                    <span class="wf-li"><span class="wf-chip ok">réussi</span></span>
+                    <span class="wf-li"><i>·</i>la reprise de thèse — là où tu avais du mal</span>
+                    <span class="wf-li"><span class="wf-chip att">à reprendre</span></span>
+                    <span class="wf-li"><i>·</i>l'ancrage des exemples</span>
+                  </div>
+                  <div class="wf-fold"><b>▸ Synthèse</b><span class="wf-chip ok">réussi</span></div>
+                  <div class="wf-fold"><b>▸ Expression</b><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                  <div class="wf-fold"><b>▸ Structure</b><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                  <div class="wf-fold" style="opacity:.6"><b>▸ Questionnement</b><span style="font-size:9.5px;color:#a49c8e">non mesurée</span></div>
+                  <div class="wf-fold" style="opacity:.6"><b>▸ Lecture</b><span style="font-size:9.5px;color:#a49c8e">non mesurée</span></div>
+                </div>
+
+                <div class="wf-fold"><b>▸ Ce que la semaine travaille</b><span>2 compétences</span></div>
+                <div class="wf-btn ghost">En faire plus ?</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur / tablette paysage · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-dates">8 → 14 septembre</span><span class="wf-nav"><span>◀ précédente</span><span>suivante ▶</span></span></div>
+              <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 330px;gap:22px;align-items:start">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div style="display:flex;align-items:baseline;gap:12px"><span class="wf-big">2 exercices à faire</span><span style="font-size:11px;color:#8b8478">3 faits sur 5 · +1 en plus</span></div>
+                  <div class="wf-bars" style="max-width:420px"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+                  <div class="wf-sec">
+                    <span class="wf-eyebrow">À faire</span>
+                    <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments · Argumentation</span></span><span class="wf-chip">Argumentation</span><span class="wf-due hot">mer. 10</span></div>
+                    <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · demandé en plus</span></span><span class="wf-chip">Synthèse</span><span class="wf-due">dim. 14</span></div>
+                  </div>
+                  <div class="wf-fold"><b>▸ Déjà fait cette semaine</b><span>3</span></div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <span class="wf-eyebrow">Ce que la semaine travaille</span>
+                    <b style="font-size:12.5px">Argumentation</b>
+                    <span class="wf-li"><i>·</i>Tu réussis déjà la reprise de thèse.</span>
+                    <b style="font-size:12.5px;margin-top:2px">Synthèse</b>
+                    <span style="font-size:10.5px;color:#8b8478">17 points regardés en tout <a href="#2a">détail</a></span>
+                  </div>
+
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+                    <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-eyebrow" style="flex:1">Ton bilan</span><span style="font-size:9.5px;color:#a49c8e">6 compétences</span></div>
+                    <div class="wf-box" style="padding:9px 11px;font-size:10px;color:#8a5a2e;background:#fdf6ea;border-color:#e0cba8">Une copie n'est pas encore corrigée.</div>
+
+                    <div style="border:1px solid #dcd6c9;border-radius:8px;overflow:hidden">
+                      <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;background:#f7f4ee"><span style="font-size:11.5px;font-weight:600;color:#3f3a32;flex:1">▾ Argumentation</span><span class="wf-chip att">à reprendre</span></div>
+                      <div style="padding:10px 11px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #e6e1d6">
+                        <span class="wf-li"><span class="wf-chip ok">réussi</span></span>
+                        <span class="wf-li"><i>·</i>la reprise de thèse — là où tu avais du mal jusqu'ici</span>
+                        <span class="wf-li"><span class="wf-chip att">à reprendre</span></span>
+                        <span class="wf-li"><i>·</i>l'ancrage des exemples — c'était un point fort</span>
+                      </div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid #e2ddd2;border-radius:8px"><span style="font-size:11.5px;color:#3f3a32;flex:1">▸ Synthèse</span><span class="wf-chip ok">réussi</span></div>
+                    <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid #e2ddd2;border-radius:8px"><span style="font-size:11.5px;color:#3f3a32;flex:1">▸ Expression</span><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                    <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid #e2ddd2;border-radius:8px"><span style="font-size:11.5px;color:#3f3a32;flex:1">▸ Structure</span><span style="font-size:9.5px;color:#a49c8e">comme d'habitude</span></div>
+                    <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid #e2ddd2;border-radius:8px;opacity:.6"><span style="font-size:11.5px;color:#3f3a32;flex:1">▸ Questionnement</span><span style="font-size:9.5px;color:#a49c8e">non mesurée</span></div>
+                    <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid #e2ddd2;border-radius:8px;opacity:.6"><span style="font-size:11.5px;color:#3f3a32;flex:1">▸ Lecture</span><span style="font-size:9.5px;color:#a49c8e">non mesurée</span></div>
+                  </div>
+
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+                    <span class="wf-eyebrow">En faire plus</span>
+                    <span style="font-size:11px;color:#6b6459">Il te reste 20 min de bonus.</span>
+                    <div class="wf-btn parc">Demander un exercice</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ le rail porte les deux blocs de méta, l'un au-dessus de l'autre · les 6 compétences tiennent en 6 lignes ; la pastille (« à reprendre » / « réussi » / « comme d'habitude » / « non mesurée ») permet de choisir sans ouvrir · une seule ouverte à la fois, celle qui instruit le plus est ouverte par défaut · les deux dernières sont grisées, pas cachées</p>
+      <p class="dv-note">⚠️ le 6<sup>e</sup> nom (« Lecture ») est à confirmer · sur téléphone le rail retombe sous la liste, même mécanique d'enroulement</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes : « ouvre plutôt toutes les compétences mesurées » · « mets le bilan en haut du rail, avant ce que la semaine travaille » · « <a class="dv-oid" href="#2a">2a</a> en rendu charte »</p>
+</section>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Tour 1 — « Ma semaine » (élève) : quatre façons de désempiler</span><span class="dv-cap">même contenu qu'aujourd'hui, quatre hiérarchies · téléphone + ordinateur/tablette</span></div>
+
+  <div class="dv-opts">
+
+    <!-- ══════════════ 1a ══════════════ -->
+    <div class="dv-opt" id="1a" data-screen-label="1a Action d'abord">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>« L'action d'abord » — la page est une liste de travail ; tout le méta (compétences, bilan) passe en second, replié ou en rail</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 375</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:10px 14px 4px"><span class="wf-dates">8 → 14 septembre · semaine en cours</span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:14px">
+
+                <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:9px">
+                  <span class="wf-big">2 exercices à faire</span>
+                  <div class="wf-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+                  <span style="font-size:10.5px;color:#8b8478">3 faits sur 5 · +1 demandé en plus</span>
+                </div>
+
+                <div class="wf-sec">
+                  <span class="wf-eyebrow">À faire</span>
+                  <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments · Argumentation</span></span><span class="wf-due hot">mer. 10</span></div>
+                  <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · demandé en plus</span></span><span class="wf-due">dim. 14</span></div>
+                </div>
+
+                <div class="wf-fold"><b>▸ Déjà fait cette semaine</b><span>3</span></div>
+                <div class="wf-fold"><b>▸ Ce que la semaine travaille</b><span>2 compétences</span></div>
+                <div class="wf-btn ghost">En faire plus ?</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur / tablette paysage · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-dates">8 → 14 septembre</span><span class="wf-nav"><span>◀ précédente</span><span>suivante ▶</span></span></div>
+              <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div style="display:flex;align-items:baseline;gap:12px"><span class="wf-big">2 exercices à faire</span><span style="font-size:11px;color:#8b8478">3 faits sur 5 · +1 en plus</span></div>
+                  <div class="wf-bars" style="max-width:420px"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+                  <div class="wf-sec">
+                    <span class="wf-eyebrow">À faire</span>
+                    <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments · Argumentation</span></span><span class="wf-chip">Argumentation</span><span class="wf-due hot">mer. 10</span></div>
+                    <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · demandé en plus</span></span><span class="wf-chip">Synthèse</span><span class="wf-due">dim. 14</span></div>
+                  </div>
+                  <div class="wf-fold"><b>▸ Déjà fait cette semaine</b><span>3</span></div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <span class="wf-eyebrow">Ce que la semaine travaille</span>
+                    <b style="font-size:12.5px">Argumentation</b>
+                    <span class="wf-li"><i>·</i>Tu réussis déjà : la reprise de thèse</span>
+                    <span style="font-size:10.5px;color:#8b8478">On regarde 6 points <a href="#1a">voir</a></span>
+                    <b style="font-size:12.5px;margin-top:4px">Synthèse</b>
+                    <span style="font-size:10.5px;color:#8b8478">On regarde 11 points <a href="#1a">voir</a></span>
+                  </div>
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+                    <span class="wf-eyebrow">En faire plus</span>
+                    <span style="font-size:11px;color:#6b6459">Il te reste 20 min de bonus.</span>
+                    <div class="wf-btn parc">Demander un exercice</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ un seul chiffre en tête (« 2 à faire »), les 5 blocs d'aujourd'hui deviennent 2 + 2 replis · sur ordi le méta part dans un rail de droite, jamais dans le flux · tablette portrait = colonne unique du téléphone, élargie</p>
+    </div>
+
+    <!-- ══════════════ 1b ══════════════ -->
+    <div class="dv-opt" id="1b" data-screen-label="1b Deux temps segmentes">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>« Deux temps, deux vues » — un segment <b>Travail</b> / <b>Bilan</b> : la page ne montre jamais les deux en même temps</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 375 — onglet Travail</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:10px 14px 0"><span class="wf-dates">8 → 14 septembre</span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:13px">
+                <div class="wf-seg"><span class="on">Travail · 2</span><span>Bilan</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><div class="wf-bars" style="flex:1"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span style="font-size:10px;color:#8b8478;white-space:nowrap">3/5</span></div>
+                <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments</span></span><span class="wf-due hot">mer. 10</span></div>
+                <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · en plus</span></span><span class="wf-due">dim. 14</span></div>
+                <div class="wf-task wf-done"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Dissertation blanche</b><span>fait lundi</span></span><span class="wf-chip ok">✓</span></div>
+                <div class="wf-fold"><b>▸ 2 autres exercices faits</b></div>
+                <div class="wf-btn ghost">En faire plus ?</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 375 — onglet Bilan</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:10px 14px 0"><span class="wf-dates">1<sup>er</sup> → 7 septembre</span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:13px">
+                <div class="wf-seg"><span>Travail · 5</span><span class="on">Bilan</span></div>
+                <div class="wf-box" style="padding:11px;font-size:10.5px;color:#8a5a2e;background:#fdf6ea;border-color:#e0cba8">Une copie n'est pas encore corrigée : ce bilan ne la compte pas.</div>
+                <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+                  <b style="font-size:13px">Argumentation</b>
+                  <span class="wf-li"><span class="wf-chip ok">réussi</span></span>
+                  <span class="wf-li"><i></i>la reprise de thèse — là où tu avais du mal</span>
+                  <span class="wf-li"><span class="wf-chip att">à reprendre</span></span>
+                  <span class="wf-li"><i></i>l'ancrage des exemples</span>
+                </div>
+                <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+                  <b style="font-size:13px">Synthèse</b>
+                  <span style="font-size:11px;color:#8b8478">Tu as tenu le fil directeur, comme d'habitude.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:4px">
+        <p class="dv-scr">Ordinateur / tablette paysage · 1040 — onglet Travail</p>
+        <div class="dv-card" style="width:1040px">
+          <div class="wf">
+            <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-dates">8 → 14 septembre</span><span class="wf-nav"><span>◀ précédente</span><span>suivante ▶</span></span></div>
+            <div style="padding:16px 20px;display:flex;align-items:center;gap:18px;border-bottom:1px solid #eee9de">
+              <div class="wf-seg" style="width:280px"><span class="on">Travail · 2</span><span>Bilan</span></div>
+              <span class="wf-big" style="font-size:15px">3 faits sur 5</span>
+              <div class="wf-bars" style="flex:1;max-width:340px"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              <span style="font-size:11px;color:#8b8478">+1 demandé en plus</span>
+              <div class="wf-btn ghost" style="margin-left:auto;padding:8px 12px;min-height:0">En faire plus ?</div>
+            </div>
+            <div style="padding:18px 20px;display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start">
+              <div class="wf-sec">
+                <span class="wf-eyebrow">Tes exercices</span>
+                <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments · Argumentation</span></span><span class="wf-due hot">mer. 10</span></div>
+                <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · demandé en plus</span></span><span class="wf-due">dim. 14</span></div>
+                <div class="wf-task wf-done"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Dissertation blanche</b><span>fait lundi</span></span><span class="wf-chip ok">✓</span></div>
+                <div class="wf-fold"><b>▸ 2 autres exercices faits</b></div>
+              </div>
+              <div class="wf-box" style="padding:14px;display:flex;flex-direction:column;gap:9px">
+                <span class="wf-eyebrow">Ce que la semaine travaille</span>
+                <b style="font-size:12.5px">Argumentation · 3 exercices</b>
+                <span class="wf-li"><i>·</i>Tu réussis déjà la reprise de thèse.</span>
+                <div style="display:flex;flex-wrap:wrap;gap:5px"><span class="wf-chip">thèse</span><span class="wf-chip">exemples</span><span class="wf-chip">transitions</span><span class="wf-chip">+3</span></div>
+                <b style="font-size:12.5px;margin-top:5px">Synthèse · 2 exercices</b>
+                <div style="display:flex;flex-wrap:wrap;gap:5px"><span class="wf-chip">reformulation</span><span class="wf-chip">hiérarchie</span><span class="wf-chip">+9</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ le vrai désempilement : récap et bilan ne coexistent plus jamais · les 11 dimensions de la Synthèse deviennent des pastilles « +9 » au lieu d'un mur de puces · le segment porte le compteur, donc l'élève sait où aller</p>
+    </div>
+
+    <!-- ══════════════ 1c ══════════════ -->
+    <div class="dv-opt" id="1c" data-screen-label="1c Fil des jours">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>« Le fil des jours » — la semaine est un calendrier : les exercices se rangent sous leur échéance, le méta devient un panneau</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 375</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:14px">
+                <div class="wf-strip">
+                  <div class="wf-day"><u>L</u><b>8</b><em class="on"></em></div>
+                  <div class="wf-day"><u>M</u><b>9</b><em class="on"></em></div>
+                  <div class="wf-day today"><u>M</u><b>10</b><em class="due"></em></div>
+                  <div class="wf-day"><u>J</u><b>11</b><em></em></div>
+                  <div class="wf-day"><u>V</u><b>12</b><em class="due"></em></div>
+                  <div class="wf-day"><u>S</u><b>13</b><em></em></div>
+                  <div class="wf-day"><u>D</u><b>14</b><em class="due"></em></div>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-big" style="font-size:14px">2 à faire</span><span style="font-size:10.5px;color:#8b8478">· 3 faits sur 5</span></div>
+
+                <div class="wf-sec">
+                  <span class="wf-eyebrow">Aujourd'hui · mercredi 10</span>
+                  <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments</span></span><span class="wf-due hot">pour ce soir</span></div>
+                </div>
+                <div class="wf-sec">
+                  <span class="wf-eyebrow">Vendredi 12</span>
+                  <div class="wf-task wf-done"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Fiche de lecture</b><span>Codex · fait</span></span><span class="wf-chip ok">✓</span></div>
+                </div>
+                <div class="wf-sec">
+                  <span class="wf-eyebrow">Dimanche 14</span>
+                  <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>demandé en plus</span></span></div>
+                </div>
+                <div class="wf-fold"><b>▸ Ce que la semaine travaille</b></div>
+                <div class="wf-fold"><b>▸ Ton bilan</b><span>dimanche</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Ordinateur / tablette paysage · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-dates">8 → 14 septembre</span><span class="wf-nav"><span>◀</span><span>Cette semaine</span><span>▶</span></span></div>
+              <div style="padding:16px 20px 20px">
+                <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:12px"><span class="wf-big">2 exercices à faire</span><span style="font-size:11px;color:#8b8478">3 faits sur 5 · +1 demandé en plus</span><span class="wf-btn ghost" style="margin-left:auto;padding:8px 12px;min-height:0">En faire plus ?</span></div>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">
+                  <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-eyebrow">Lun 8</span><div class="wf-task wf-done" style="flex-direction:column;align-items:flex-start;gap:6px;padding:9px"><span class="wf-p"></span><span><b>Dissertation</b><span>fait</span></span></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-eyebrow">Mar 9</span><div class="wf-box" style="height:56px;border-style:dashed"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-eyebrow" style="color:#6B5A46">Mer 10 · auj.</span><div class="wf-task" style="flex-direction:column;align-items:flex-start;gap:6px;padding:9px;border-color:#d9cfba;background:#faf9f5"><span class="wf-p"></span><span><b>Commentaire</b><span>Rousseau</span></span></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-eyebrow">Jeu 11</span><div class="wf-box" style="height:56px;border-style:dashed"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-eyebrow">Ven 12</span><div class="wf-task wf-done" style="flex-direction:column;align-items:flex-start;gap:6px;padding:9px"><span class="wf-p b"></span><span><b>Fiche</b><span>fait</span></span></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-eyebrow">Sam 13</span><div class="wf-box" style="height:56px;border-style:dashed"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><span class="wf-eyebrow">Dim 14</span><div class="wf-task" style="flex-direction:column;align-items:flex-start;gap:6px;padding:9px"><span class="wf-p b"></span><span><b>Synthèse</b><span>en plus</span></span></div></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px">
+                  <div class="wf-box" style="padding:13px;display:flex;flex-direction:column;gap:8px"><span class="wf-eyebrow">Ce que la semaine travaille</span><b style="font-size:12.5px">Argumentation · Synthèse</b><span class="wf-li"><i>·</i>Tu réussis déjà la reprise de thèse.</span><span style="font-size:10.5px;color:#8b8478">17 points regardés en tout <a href="#1c">détail</a></span></div>
+                  <div class="wf-box" style="padding:13px;display:flex;flex-direction:column;gap:8px"><span class="wf-eyebrow">Ton bilan</span><span style="font-size:11px;color:#8b8478">Il s'ouvrira quand tes copies seront corrigées — dimanche.</span><div class="sk w70"></div><div class="sk w50"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ répond au vrai manque : « quand ? » · attention, beaucoup d'exercices n'ont pas d'échéance → il faudrait une colonne « sans date » · le méta descend tout en bas, il risque de ne jamais être lu</p>
+    </div>
+
+    <!-- ══════════════ 1d ══════════════ -->
+    <div class="dv-opt" id="1d" data-screen-label="1d Repli minimal">
+      <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>« Repli minimal » — on ne change ni l'ordre ni les blocs actuels : un seul est ouvert à la fois, les autres sont des lignes repliées</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 375</p>
+          <div class="dv-card" style="width:375px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-nav"><span>◀</span><span>▶</span></span></div>
+              <div style="padding:10px 14px 0"><span class="wf-dates">8 → 14 septembre · toutes les classes</span></div>
+              <div style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:10px">
+                <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:8px"><span class="wf-big">3 exercices faits sur 5</span><div class="wf-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span style="font-size:10.5px;color:#8b8478">+1 demandé en plus</span></div>
+                <div class="wf-fold" style="background:#fff"><b>▾ Tes exercices</b><span>5</span></div>
+                <div style="display:flex;flex-direction:column;gap:8px;padding:0 2px">
+                  <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments</span></span><span class="wf-due hot">mer. 10</span></div>
+                  <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>en plus</span></span><span class="wf-due">dim. 14</span></div>
+                  <div class="wf-task wf-done"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Dissertation blanche</b><span>fait</span></span><span class="wf-chip ok">✓</span></div>
+                  <div style="font-size:10.5px;color:#8b8478;padding-left:4px">voir les 2 autres</div>
+                </div>
+                <div class="wf-fold"><b>▸ Ce que la semaine travaille</b><span>2</span></div>
+                <div class="wf-fold"><b>▸ Ton bilan</b><span>dim.</span></div>
+                <div class="wf-fold"><b>▸ En faire plus</b><span>20 min</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Ordinateur / tablette paysage · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Ma semaine</span><span class="wf-dates">8 → 14 septembre</span><span class="wf-nav"><span>◀ précédente</span><span>suivante ▶</span></span></div>
+              <div style="padding:18px 20px;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
+                <div class="wf-box" style="padding:14px;display:flex;align-items:center;gap:16px"><span class="wf-big">3 exercices faits sur 5</span><div class="wf-bars" style="flex:1"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span style="font-size:11px;color:#8b8478">+1 en plus</span></div>
+                <div class="wf-fold" style="background:#fff"><b>▾ Tes exercices</b><span>5</span></div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div class="wf-task"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Commentaire — Rousseau</b><span>Fragments · Argumentation</span></span><span class="wf-due hot">mer. 10</span></div>
+                  <div class="wf-task"><span class="wf-p b"></span><span style="flex:1;min-width:0"><b>Reprise de synthèse</b><span>Codex · demandé en plus</span></span><span class="wf-due">dim. 14</span></div>
+                  <div class="wf-task wf-done"><span class="wf-p"></span><span style="flex:1;min-width:0"><b>Dissertation blanche</b><span>fait lundi</span></span><span class="wf-chip ok">✓</span></div>
+                </div>
+                <div class="wf-fold"><b>▸ Ce que la semaine travaille</b><span>Argumentation · Synthèse</span></div>
+                <div class="wf-fold"><b>▸ Ton bilan de la semaine</b><span>dimanche</span></div>
+                <div class="wf-fold"><b>▸ En faire plus</b><span>20 min restantes</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ le moins risqué : rien à réécrire côté données, seul l'habillage change · mais la page reste une pile, et l'élève doit encore choisir où cliquer</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes : « pars de <a class="dv-oid" href="#1b">1b</a> mais avec le fil des jours de <a class="dv-oid" href="#1c">1c</a> en tête » · « <a class="dv-oid" href="#1a">1a</a> avec le bilan aussi dans le rail » · « montre-moi les états vides et la semaine passée » · « passe <a class="dv-oid" href="#1b">1b</a> en rendu charte »</p>
+</section>
+
+</x-dc>
+</body>
+</html>

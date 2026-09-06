@@ -195,6 +195,12 @@ déjà fermé quand la séance suivante l'a ouvert.*
    **14/09** *(bascule de `profil_provisoire` — avant ce jour **aucune lettre ne s'affiche**)*.
    **Mesurer l'état de chacun AVANT de conclure quoi que ce soit** : `assiduite_hebdo`,
    `routeur_decisions` et `quazian_quizzes` étaient tous à **0 ligne en prod** au 30/08.
+1 bis. ⛔⛔ **LUNDI 7/09 AU MATIN — `C9`, les trois lots du retour non écrit** *(`PLAN_DE_CHANTIER.md` §2 et §3,
+   mémoire `project_retours_non_ecrits_attente_muette`)*. Mesuré le 05/09 : **34 dépôts maison rendus
+   SANS retour, 15 élèves, écran MUET** ; Louis ne les rejoue pas. Ordre imposé : **après** la bascule
+   vers le gabarit *(dimanche, sur son « go »)*, **avant** le routeur de lundi 18:00 UTC.
+   C9-L1 l'écran dit l'état · C9-L2 la file rejoue ou échoue visiblement · C9-L3 les causes amont.
+   **Remesurer d'abord** : `exercices_depots?statut=eq.v1_remis` joint à `exercices_retours`, en prod.
 2. **Les restes de la campagne C — QUATRE entrées, aucune datée** *(§4)*.
    · **`C-RLS-8`** *(`garderEleve` ne lit pas le rôle)* et **`C-RLS-9`** *(quizz à classe effacée)* :
      **mesurés INERTES le 29/08, avec leur raison**. ⭐ `C-RLS-9` l'est **structurellement** — la
