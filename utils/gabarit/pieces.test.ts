@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   assemblerLObjet, composerLesPieces, constituantDeLaGrille, demandeDuGeste, lireLesPieces,
   nomDuConstituant, observablesDuConstituant, placeDeLaPieceVide, separerLeTrou,
+  composerLePlan, formeDuTrou, lireLePlan,
 } from './pieces'
 
 // Les pièces réelles de `ex-gab-transition-annonce-vide-c2` (gabarit-c2.json, 06/09) —
@@ -119,4 +120,36 @@ test('les observables du constituant : ceux de la grille pour ce constituant, d�
   assert.deepEqual(observablesDuConstituant(grille, 'garant').map((o) => o.code), ['garant_present', 'garant_circulaire'])
   assert.deepEqual(observablesDuConstituant(grille, null).map((o) => o.code), ['garant_present', 'garant_circulaire', 'preuve_circulaire'])
   assert.deepEqual(observablesDuConstituant(grille, 'conclusion'), [])
+})
+
+// ── ⭐ 06/09 — le plan : le trou est un ORDRE ──
+
+// Les thèses RÉELLES de `ex-gab-plan-ordre-liste-c2` (banque du 06/09 au matin), dans le désordre.
+const THESES = [
+  { nom: 'une thèse', texte: 'la liberté de plaisanter ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable' },
+  { nom: 'une thèse', texte: 'cette liberté ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable' },
+  { nom: 'une thèse', texte: "une émission humoristique doit pouvoir plaisanter sur presque tout car le rire permet de critiquer les habitudes sans donner immédiatement une leçon" },
+]
+
+test('la forme du trou : un ordre sur le plan, un blanc ailleurs — et `composerLesPieces` la porte', () => {
+  assert.equal(formeDuTrou('plan'), 'ordre')
+  assert.equal(formeDuTrou('argument'), 'trou')
+  assert.equal(composerLesPieces('plan', { constituant: "l'ordre, écrit", pieces: THESES }, GESTE_PLAN).forme, 'ordre')
+  assert.equal(composerLesPieces('transition', { constituant: 'la limite', pieces: A_TROU }, null).forme, 'trou')
+})
+
+test('le plan assemblé : une phrase par partie, le mot qui lie en tête, majuscule et point — et il se relit', () => {
+  const etat = { ordre: [2, 0, 1], liaisons: ['', 'mais', 'donc'] }
+  const texte = composerLePlan(THESES, etat)
+  assert.equal(texte,
+    "Une émission humoristique doit pouvoir plaisanter sur presque tout car le rire permet de critiquer les habitudes sans donner immédiatement une leçon. "
+    + 'Mais la liberté de plaisanter ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable. '
+    + 'Donc cette liberté ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable.')
+  assert.deepEqual(lireLePlan(texte, THESES), etat)
+  // Sans mot qui lie : la thèse seule, avec sa majuscule.
+  assert.equal(composerLePlan(THESES, { ordre: [0], liaisons: [''] }).startsWith('La liberté de plaisanter'), true)
+  // Un texte qui n'est pas un plan composé par l'écran : `null`, l'écran repart de zéro.
+  assert.equal(lireLePlan('', THESES), null)
+  assert.equal(lireLePlan('Un texte libre sans les thèses.', THESES), null)
+  assert.equal(lireLePlan(composerLePlan(THESES, etat), []), null)
 })

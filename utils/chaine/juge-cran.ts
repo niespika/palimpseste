@@ -54,6 +54,8 @@ export interface PieceServieAuJuge {
   /** Le constituant tel que la grille l'écrit ; `null` = la pièce est l'objet. */
   constituantGrille: string | null
   observables: Array<{ code: string; competence: string | null }>
+  /** ⭐ 06/09 — `ordre` : le trou est un ORDRE (le plan) ; la copie EST l'objet assemblé. Absent = `trou`. */
+  forme?: 'trou' | 'ordre'
 }
 
 /** La zone que l'élève a désignée dans le devoir d'élève, et ce que la porte de zone en dit. */
@@ -172,6 +174,17 @@ export function questionDuCran(cran: number, piece?: PieceServieAuJuge | null): 
   switch (cran) {
     case 2: {
       const c = piece?.constituant ?? 'la pièce'
+      if (piece?.forme === 'ordre') {
+        return [
+          "L'élève devait METTRE LES THÈSES DANS L'ORDRE et écrire, entre chacune, le mot qui oblige à passer à la suivante (« car », « mais », « donc »).",
+          "Tu juges LE PLAN qu'il a rendu : les thèses servies font foi, l'ORDRE et les MOTS QUI LIENT sont les siens.",
+          "RÉUSSI si l'ordre est nécessaire — chaque partie répond à la limite de la précédente, et la dernière répond — et si chaque mot qui lie dit ce rapport ; un plan qu'on peut permuter sans dommage est raté.",
+          `⛔ Tu ne mesures et ne commentes QUE les observables de ce constituant : ${piece ? observablesEnTexte(piece) : "ceux de l'ordre"}.`,
+          "Le plan attendu est UNE bonne forme parmi d'autres : un autre ordre qui se justifie a réussi.",
+          "« probleme_present » : vrai si l'ordre ne tient pas ou si un mot qui lie dit autre chose. « probleme_vu » : lequel, en une phrase simple.",
+          "« passage » : un extrait VERBATIM de SON plan — un mot qui lie et ce qui l'entoure.",
+        ].join('\n')
+      }
       return [
         `L'élève devait ÉCRIRE UNE SEULE PIÈCE de l'objet — ${c} — à sa place entre les pièces servies.`,
         "Tu juges L'OBJET ASSEMBLÉ : les pièces servies font foi, seule la sienne est en question.",
@@ -235,6 +248,16 @@ export function assemblerLeJuge(e: EntreeJuge): {
   for (const c of e.cas) {
     const n = e.cas.length > 1 ? ` (cas ${c.ordre})` : ''
     // ⭐ 06/09 — AU CRAN 2 : les pièces servies, l'objet assemblé, le test.
+    if (c.piece && c.piece.forme === 'ordre') {
+      // ⭐ Le plan : les thèses servies dans le désordre ; la copie EST l'objet assemblé.
+      const theses = c.piece.pieces.map((p, i) => `— thèse ${i + 1} (${p.nom}) :\n${p.texte}`).join('\n\n')
+      blocs.push(
+        ...bloc(`les thèses servies${n} — dans le désordre, telles que l'élève les a reçues`, theses),
+        ...bloc(`le test de la fiche${n} — la grille du jugement`, c.piece.test),
+        ...bloc(`le plan attendu${n} — ce qu'on tient pour vrai, une bonne forme parmi d'autres`, c.reponseAttendue),
+      )
+      continue
+    }
     if (c.piece) {
       const pieces = c.piece.pieces.map((p) => `— ${p.nom} :\n${p.texte}`).join('\n\n')
       const assemble = assemblerLObjet(c.piece.pieces, c.piece.place, e.production,
@@ -263,7 +286,9 @@ export function assemblerLeJuge(e: EntreeJuge): {
   if (e.version === 'vf' && e.productionV1) {
     blocs.push(...bloc("la copie de l'élève — première version, déjà commentée", e.productionV1))
   }
-  const laCopie = e.cas.some((c) => c.piece) ? "la pièce de l'élève" : "la copie de l'élève"
+  const laCopie = e.cas.some((c) => c.piece?.forme === 'ordre')
+    ? "le plan de l'élève — les thèses dans l'ordre qu'il a choisi, avec ses mots qui lient"
+    : e.cas.some((c) => c.piece) ? "la pièce de l'élève" : "la copie de l'élève"
   blocs.push(...bloc(
     e.version === 'vf' ? `${laCopie} — VERSION FINALE, celle que tu juges` : laCopie,
     e.production))

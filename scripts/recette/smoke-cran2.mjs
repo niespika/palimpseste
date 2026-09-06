@@ -55,12 +55,48 @@ const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 200 })
 const u = users.find((x) => x.email === env.TEST_ELEVE_EMAIL)
 if (!u) throw new Error('élève de test introuvable : ' + env.TEST_ELEVE_EMAIL)
 
+const DECOR_PLAN = 'decor-plan-ordre-liste-c2'   // ⚠️ DÉCOR : un exercice de plan cloné, retiré par --retire
 if (args.includes('--retire')) {
   const { data } = await admin.from('exercices_depots').delete().eq('eleve_id', u.id).eq('assigne_at', MARQUE).select('id')
-  console.log('retirés :', data?.length ?? 0)
+  console.log('dépôts retirés :', data?.length ?? 0)
+  const { data: dp } = await admin.from('exercices').select('id').eq('id_import', DECOR_PLAN)
+  for (const e of dp ?? []) {
+    await admin.from('exercices_depots').delete().eq('exercice_id', e.id)
+    await admin.from('exercices_cas').delete().eq('exercice_id', e.id)
+    const { error } = await admin.from('exercices').delete().eq('id', e.id)
+    console.log('exercice de décor retiré :', e.id, error?.message ?? 'ok')
+  }
   process.exit(0)
 }
-const souche = `ex-gab-${CLE.replace(/\./g, '-')}-c2`
+if (args.includes('--decor-plan')) {
+  // ⭐ Le plan n'est plus en banque (« attend un écran à concevoir ») : on clone un cran 2 existant,
+  //    on lui donne le type `plan`, le sujet de l'ancienne banque et ses trois thèses, dans le désordre.
+  const { data: deja } = await admin.from('exercices').select('id').eq('id_import', DECOR_PLAN).maybeSingle()
+  if (!deja) {
+    const { data: modele } = await admin.from('exercices').select('*').like('id_import', 'ex-gab-transition-%-c2').limit(1).maybeSingle()
+    const { data: type } = await admin.from('exercices_types').select('id').eq('code', 'plan').maybeSingle()
+    const { data: sujet } = await admin.from('exercices_sujets').select('id').ilike('enonce', '%émission humoristique%').maybeSingle()
+    if (!modele || !type || !sujet) throw new Error('décor du plan : modèle, type ou sujet introuvable')
+    const { id: _id, created_at: _c, updated_at: _u, import_id: _i, ...reste } = modele
+    const { data: neuf, error } = await admin.from('exercices').insert({
+      ...reste, id_import: DECOR_PLAN, type_id: type.id, materiau_source_sujet_id: sujet.id, consigne_instanciee: '',
+      modes_par_competence: { structure: ['composer'] },
+    }).select('id').single()
+    if (error) throw new Error('décor du plan : ' + error.message)
+    const { error: eCas } = await admin.from('exercices_cas').insert({
+      exercice_id: neuf.id, ordre: 1, constituant: "l'ordre, écrit", defaut: null, distracteurs: null, pourquoi_juste: null, probleme: null,
+      pieces: [
+        { nom: 'une thèse', texte: 'la liberté de plaisanter ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable' },
+        { nom: 'une thèse', texte: 'cette liberté ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable' },
+        { nom: 'une thèse', texte: 'une émission humoristique doit pouvoir plaisanter sur presque tout car le rire permet de critiquer les habitudes sans donner immédiatement une leçon' },
+      ],
+      reponse_attendue: "Une émission humoristique doit pouvoir plaisanter sur presque tout car le rire permet de critiquer les habitudes sans donner immédiatement une leçon. Mais la liberté de plaisanter ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable. Donc cette liberté ne signifie pas que les humoristes peuvent humilier gratuitement une personne reconnaissable.",
+    })
+    if (eCas) throw new Error('décor du plan, le cas : ' + eCas.message)
+    console.log('exercice de décor créé :', neuf.id)
+  } else console.log('exercice de décor déjà là :', deja.id)
+}
+const souche = args.includes('--decor-plan') ? DECOR_PLAN : `ex-gab-${CLE.replace(/\./g, '-')}-c2`
 const { data: exs } = await admin.from('exercices').select('id, id_import, cran, type_id, genre, statut').eq('id_import', souche)
 const ex = exs?.[0]
 if (!ex) throw new Error(`aucun exercice ${souche} en bac à sable — la banque gabarit-c2.json n'est pas déposée`)
@@ -117,6 +153,8 @@ async function capture(etat, { lire = false } = {}) {
     await metrics(w); await dors(400)
     if (w < 1024) { await montreLeVolet(lire); await dors(450) }
     await cdp.evalue('window.scrollTo(0,0); true')
+    // ⚠️ `.page-tourne` fond en 220 ms : capturer plus tôt donne un écran « grisé » (Louis, 06/09).
+    await dors(350)
     const m = JSON.parse(await cdp.evalue('JSON.stringify({ interne: window.innerWidth, doc: document.documentElement.scrollWidth })'))
     if (m.doc > m.interne) deborde.push(`${etat} @${w} : déborde de ${m.doc - m.interne} px`)
     const shot = await cdp.envoie('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })
@@ -133,7 +171,8 @@ async function lire() {
     const geste = /Ta thèse en une phrase/i.test(t) ? 'restitution' : /degré de confiance/i.test(t) ? 'confiance' : /Dans quelles conditions as-tu travaillé/i.test(t) ? 'conditions' : null
     return { boutons, textareas: ta, geste,
       // ⭐ le texte à trou : le champ « Écris ici » posé dans le fil, la légende « ce bloc = telle chose ».
-      trou: !!document.querySelector('textarea[placeholder="Écris ici"]'),
+      trou: !!document.querySelector('textarea[placeholder="Écris ici"]') || !!document.querySelector('[data-plan]'),
+      plan: !!document.querySelector('[data-plan]'), lienVide: [...document.querySelectorAll('[data-plan] input')].filter((x) => x.value.trim() === '').length,
       legende: /c’est ce que tu écris/i.test(t), guide: /De quoi t.aider/i.test(t),
       consigne2: /le texte à compléter/i.test(t), ilManque: /il manque/i.test(t),
       piecesDansLesDocuments: /LES PIÈCES|Le texte à compléter/.test([...document.querySelectorAll('h3')].map((h) => h.textContent).join('|')),
@@ -190,9 +229,15 @@ try {
     if (e.lu) { await clique(e.lu); e = await attendQue((x) => !x.lu) }
     if (!e.reprendre) throw new Error('pas de bouton pour reprendre le texte — boutons : ' + JSON.stringify(e.boutons))
     await clique(e.reprendre); await dors(800); await capture('vf-ecrire')
-    const i = (await lire()).textareas.findIndex((x) => x.trou || x.rows >= 9)
-    if (i < 0) throw new Error('pas de champ pour la version finale')
-    await tape(i, VF(PIECES[objet] ?? PIECES.defaut)); await dors(300); await capture('vf-ecrite')
+    if ((await lire()).plan) {
+      // Le plan en version finale : l'ordre est relu du texte ; on change le second mot qui lie.
+      await cdp.evalue(`(() => { const x = [...document.querySelectorAll('[data-plan] input')][1]; x.focus(); x.select(); return true })()`)
+      await cdp.envoie('Input.insertText', { text: 'c\'est pourquoi' }); await dors(300); await capture('vf-ecrite')
+    } else {
+      const i = (await lire()).textareas.findIndex((x) => x.trou || x.rows >= 9)
+      if (i < 0) throw new Error('pas de champ pour la version finale')
+      await tape(i, VF(PIECES[objet] ?? PIECES.defaut)); await dors(300); await capture('vf-ecrite')
+    }
     await clique('Enregistrer'); await dors(800); await capture('vf-rendre')
     const r = (await lire()).rendre; if (!r) throw new Error('pas de bouton Rendre — boutons : ' + JSON.stringify((await lire()).boutons))
     await clique(r); await attendQue((x) => x.preparation || x.retour, 60); await capture('vf-rendue')
@@ -219,13 +264,29 @@ try {
   await capture('ouvert-ecrire')
 
   // ── Écrire la pièce, enregistrer, les gestes, rendre ──
-  const idx = e.textareas.findIndex((x) => x.trou)
-  if (idx < 0) throw new Error('pas de champ « Écris ici »')
-  await tape(idx, PIECES[objet] ?? PIECES.defaut); await dors(400); await capture('piece-ecrite')
-  await clique('Enregistrer'); await attendQue((x) => !x.textareas.some((y) => y.trou))
+  if (e.plan) {
+    // Le plan : la troisième thèse en premier (deux clics « Monter »), puis « mais » et « donc ».
+    await cdp.evalue(`(() => { const b = [...document.querySelectorAll('[data-plan] button[aria-label="Monter cette partie"]')]; b[2]?.click(); return true })()`)
+    await dors(200)
+    await cdp.evalue(`(() => { const b = [...document.querySelectorAll('[data-plan] button[aria-label="Monter cette partie"]')]; b[1]?.click(); return true })()`)
+    await dors(200)
+    const mots = ['mais', 'donc']
+    for (let i = 0; i < 2; i++) {
+      await cdp.evalue(`(() => { const x = [...document.querySelectorAll('[data-plan] input')][${i}]; x.focus(); return true })()`)
+      await cdp.envoie('Input.insertText', { text: mots[i] }); await dors(150)
+    }
+    await dors(300); await capture('plan-ordonne')
+    await clique('Enregistrer'); await attendQue((x) => !x.plan)
+  } else {
+    const idx = e.textareas.findIndex((x) => x.trou)
+    if (idx < 0) throw new Error('pas de champ « Écris ici »')
+    await tape(idx, PIECES[objet] ?? PIECES.defaut); await dors(400); await capture('piece-ecrite')
+    await clique('Enregistrer'); await attendQue((x) => !x.textareas.some((y) => y.trou))
+  }
   for (let pas = 0; pas < 8; pas++) {
     e = await lire()
     if (e.geste) {
+      await capture(`se-juger-${e.geste}`)
       if (e.geste === 'confiance') await cdp.evalue(`(() => { for (const f of document.querySelectorAll('fieldset')) { const b = f.querySelector('button'); if (b) b.click() } return true })()`)
       else if (e.geste === 'conditions') await cdp.evalue(`(() => { const b = [...document.querySelectorAll('button[aria-pressed]')].find((x) => x.offsetParent !== null && /temps|vite|pu/.test(x.textContent)); if (b) b.click(); return true })()`)
       else { const i = (await lire()).textareas.findIndex((x) => x.rows < 9); await tape(i < 0 ? 0 : i, 'La pièce qui manquait est le lien entre les deux.') }

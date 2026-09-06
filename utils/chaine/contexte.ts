@@ -25,7 +25,7 @@ import { cibleDansLeMateriau, verdictDeLaZone } from '@/utils/deroule/designatio
 import { lireLaPorteJugeDocuments } from '@/utils/juge/porte'
 import type { ChoixServiAuJuge, PieceServieAuJuge, ZoneServieAuJuge } from './juge-cran'
 import { lireLeCran2 } from '@/utils/gabarit/lecture'
-import { separerLeTrou } from '@/utils/gabarit/pieces'
+import { formeDuTrou, separerLeTrou } from '@/utils/gabarit/pieces'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
 
@@ -913,6 +913,7 @@ async function avecLesPieces(
     const piece: PieceServieAuJuge = {
       constituant: p.constituant, pieces, place,
       geste: c2.geste, test: c2.test, constituantGrille: c2.constituantGrille, observables: c2.observables,
+      forme: formeDuTrou(a.objet),
     }
     return { ...c, piece }
   })

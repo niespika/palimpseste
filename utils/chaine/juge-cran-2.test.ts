@@ -109,3 +109,40 @@ test('sans observable connu, la borne parle du constituant — jamais d’une li
   assert.match(m, /les observables de ce constituant, et eux seuls\./)
   assert.equal(m.includes('et eux seuls : .'), false)
 })
+
+// ── ⭐ 06/09 — le plan : le trou est un ORDRE ──
+
+const PLAN: PieceServieAuJuge = {
+  constituant: "l'ordre, écrit",
+  pieces: [
+    { nom: 'une thèse', texte: 'la liberté de plaisanter ne signifie pas que les humoristes peuvent humilier' },
+    { nom: 'une thèse', texte: 'une émission humoristique doit pouvoir plaisanter sur presque tout' },
+  ],
+  place: 2, geste: null, test: 'Peut-on permuter I et II sans dommage ?', constituantGrille: 'ordre',
+  observables: [{ code: 'plan_tenu', competence: 'structure' }], forme: 'ordre',
+}
+const PRODUCTION_PLAN = 'Une émission humoristique doit pouvoir plaisanter sur presque tout. Mais la liberté de plaisanter ne signifie pas que les humoristes peuvent humilier.'
+
+test('au cran 2 du PLAN, le juge reçoit les thèses dans le désordre et juge le plan rendu — sans réassembler', () => {
+  const p = assemblerLeJuge({ ...ENTREE, production: PRODUCTION_PLAN,
+    cas: [{ ...ENTREE.cas[0]!, reponseAttendue: PRODUCTION_PLAN, piece: PLAN }] })
+  assert.match(p.message, /les thèses servies — dans le désordre/)
+  assert.match(p.message, /thèse 1 \(une thèse\)/)
+  assert.match(p.message, /le plan attendu/)
+  assert.match(p.message, /le plan de l'élève — les thèses dans l'ordre qu'il a choisi/)
+  assert.equal(p.message.includes("l'objet assemblé"), false)
+  assert.match(questionDuCran(2, PLAN), /METTRE LES THÈSES DANS L'ORDRE/)
+  assert.match(questionDuCran(2, PLAN), /plan_tenu \(structure\)/)
+})
+
+test('le retour du PLAN : les thèses servies, la borne « l’ordre et les mots qui lient » — et rien porte fermée', () => {
+  const base = { ...BASE, coucheType: { ...BASE.coucheType,
+    casServis: [{ ordre: 1, materiau: null, reponseAttendue: PRODUCTION_PLAN, piece: PLAN }] } }
+  const ouvert = assemblerRetour(GABARIT, { ...base, documentsAuJuge: true }).message
+  assert.match(ouvert, /les thèses servies au cas 1 — dans le désordre/)
+  assert.match(ouvert, /L'ÉLÈVE N'A ÉCRIT QUE L'ORDRE DES THÈSES ET LES MOTS QUI LIENT/)
+  assert.match(ouvert, /plan_tenu\./)
+  assert.equal(ouvert.includes("l'objet assemblé"), false)
+  const ferme = assemblerRetour(GABARIT, { ...base, documentsAuJuge: false }).message
+  assert.equal(ferme.includes('thèses servies'), false)
+})

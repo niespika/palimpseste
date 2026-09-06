@@ -502,18 +502,28 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
     //    est de lui.
     const pieces = (e.coucheType.casServis ?? []).flatMap((c) => c.piece ? [{ cas: c, piece: c.piece }] : [])
     if (pieces.length) {
-      const blocsPieces = pieces.flatMap(({ cas: c, piece: p }) => [
-        { nom: `les pièces servies au cas ${c.ordre} — chacune sous son nom, dans l'ordre`,
-          contenu: p.pieces.map((x) => `— ${x.nom} :\n${x.texte}`).join('\n\n') },
-        { nom: `l'objet assemblé au cas ${c.ordre} — les pièces servies, et la place de la pièce de l'élève`,
-          contenu: assemblerLObjet(p.pieces, p.place, '[ici, la pièce de l\'élève — sa copie, ci-dessous]') },
-        ...(p.test ? [{ nom: `le test de la fiche au cas ${c.ordre}`, contenu: p.test }] : []),
-      ])
+      const blocsPieces = pieces.flatMap(({ cas: c, piece: p }) => p.forme === 'ordre'
+        // ⭐ Le plan : les thèses dans le désordre ; la copie EST le plan assemblé.
+        ? [
+          { nom: `les thèses servies au cas ${c.ordre} — dans le désordre, telles que l'élève les a reçues`,
+            contenu: p.pieces.map((x, i) => `— thèse ${i + 1} (${x.nom}) :\n${x.texte}`).join('\n\n') },
+          ...(p.test ? [{ nom: `le test de la fiche au cas ${c.ordre}`, contenu: p.test }] : []),
+        ]
+        : [
+          { nom: `les pièces servies au cas ${c.ordre} — chacune sous son nom, dans l'ordre`,
+            contenu: p.pieces.map((x) => `— ${x.nom} :\n${x.texte}`).join('\n\n') },
+          { nom: `l'objet assemblé au cas ${c.ordre} — les pièces servies, et la place de la pièce de l'élève`,
+            contenu: assemblerLObjet(p.pieces, p.place, '[ici, la pièce de l\'élève — sa copie, ci-dessous]') },
+          ...(p.test ? [{ nom: `le test de la fiche au cas ${c.ordre}`, contenu: p.test }] : []),
+        ])
       const observables = pieces[0]!.piece.observables
       morceaux.push(messageAvecMateriau(blocsPieces, [
-        "CE CRAN EST UN CRAN 2 : L'ÉLÈVE N'A ÉCRIT QU'UNE PIÈCE DE L'OBJET — "
-        + `${pieces[0]!.piece.constituant} — à sa place entre les pièces servies. Les pièces servies`,
-        "ne sont PAS de lui : n'en cite rien, ne les juge pas, elles font foi.",
+        pieces[0]!.piece.forme === 'ordre'
+          ? "CE CRAN EST UN CRAN 2 : L'ÉLÈVE N'A ÉCRIT QUE L'ORDRE DES THÈSES ET LES MOTS QUI LIENT — "
+            + `${pieces[0]!.piece.constituant}. Les thèses elles-mêmes lui ont été servies : n'en cite rien, ne les juge pas, elles font foi.`
+          : "CE CRAN EST UN CRAN 2 : L'ÉLÈVE N'A ÉCRIT QU'UNE PIÈCE DE L'OBJET — "
+            + `${pieces[0]!.piece.constituant} — à sa place entre les pièces servies. Les pièces servies\n`
+            + "ne sont PAS de lui : n'en cite rien, ne les juge pas, elles font foi.",
         '',
         '⛔ CE CRAN ISOLE. Ton retour ne parle QUE de ce que sa pièce engage — '
         + (observables.length

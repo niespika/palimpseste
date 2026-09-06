@@ -48,6 +48,19 @@ export interface PiecesServies {
   pieces: Piece[]
   /** Le nom du trou, en mots d'élève (« ce qui fait que cet appui soutient cette conclusion ») ; `null` sans trou déclaré. */
   trou: string | null
+  /**
+   * ⭐ 06/09 — LA FORME DU TROU. `trou` : un blanc dans le texte, l'élève écrit
+   *    la pièce. `ordre` : le trou est UN ORDRE (`10-` v0.9 : « le plan, dont le
+   *    trou est un ordre ») — les pièces sont les thèses, dans le désordre ;
+   *    l'élève les met dans l'ordre et écrit entre chacune le mot qui lie
+   *    (« car », « mais », « donc »). Sa production est le plan assemblé.
+   */
+  forme: 'trou' | 'ordre'
+}
+
+/** Les objets dont le trou est un ordre — le plan (`10-` v0.9 ; `09-` §7 : « l'ordre, écrit »). */
+export function formeDuTrou(objet: string): 'trou' | 'ordre' {
+  return objet === 'plan' ? 'ordre' : 'trou'
 }
 
 /** La fiche dit que la pièce et l'objet se confondent (`mot`, `phrase`). */
@@ -139,7 +152,66 @@ export function composerLesPieces(
   objet: string, cas: { constituant: string; pieces: readonly Morceau[] }, geste: string | null,
 ): PiecesServies {
   const { pieces, place, trou } = separerLeTrou(objet, cas.pieces)
-  return { constituant: cas.constituant, demande: demandeDuGeste(geste), place, pieces, trou }
+  return { constituant: cas.constituant, demande: demandeDuGeste(geste), place, pieces, trou, forme: formeDuTrou(objet) }
+}
+
+// ── Le plan : l'ordre et les mots qui lient ─────────────────────────────────
+
+/** L'état du plan à l'écran : l'ordre des thèses (indices dans `pieces`) et le mot qui lie devant chacune (vide devant la première). */
+export interface EtatDuPlan {
+  ordre: number[]
+  liaisons: string[]
+}
+
+const majuscule = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const sansPointFinal = (s: string) => s.trim().replace(/[.]+$/, '')
+
+/**
+ * ⭐ LE PLAN ASSEMBLÉ — la production de l'élève, dérivée de l'ordre et des mots
+ *    qui lient : « Thèse A. Mais thèse B. Donc thèse C. » — une phrase par
+ *    partie, le mot qui lie en tête, une majuscule, un point. C'est CE TEXTE qui
+ *    s'enregistre (`texte_v1` / `texte_vf`) et que le juge lit ; l'ordre et les
+ *    mots n'ont pas d'autre domicile.
+ */
+export function composerLePlan(theses: readonly Piece[], etat: EtatDuPlan): string {
+  const phrases: string[] = []
+  etat.ordre.forEach((idx, pos) => {
+    const these = theses[idx]
+    if (!these) return
+    const mot = (etat.liaisons[pos] ?? '').trim()
+    const corps = sansPointFinal(these.texte)
+    phrases.push(`${majuscule(mot === '' ? corps : `${mot} ${corps}`)}.`)
+  })
+  return phrases.join(' ')
+}
+
+/**
+ * ⭐ LE PLAN RELU — l'ordre et les mots retrouvés dans un texte enregistré, pour
+ *    reprendre l'écran là où il en était. Chaque thèse se cherche telle quelle
+ *    (à la majuscule initiale près) ; le mot qui lie est ce qui précède la thèse
+ *    dans sa phrase. `null` si une thèse manque : le texte n'est pas un plan
+ *    composé par l'écran, et l'écran repart de zéro.
+ */
+export function lireLePlan(texte: string, theses: readonly Piece[]): EtatDuPlan | null {
+  const t = texte ?? ''
+  const trouvees: Array<{ idx: number; debut: number }> = []
+  theses.forEach((these, idx) => {
+    const corps = sansPointFinal(these.texte)
+    const bas = t.toLowerCase().indexOf(corps.toLowerCase())
+    if (bas < 0) return
+    trouvees.push({ idx, debut: bas })
+  })
+  if (trouvees.length !== theses.length || theses.length === 0) return null
+  trouvees.sort((a, b) => a.debut - b.debut)
+  const ordre = trouvees.map((x) => x.idx)
+  const liaisons = trouvees.map((x, pos) => {
+    if (pos === 0) return ''
+    const prec = trouvees[pos - 1]!
+    const finPrec = prec.debut + sansPointFinal(theses[prec.idx]!.texte).length
+    // Entre la fin de la thèse précédente et le début de celle-ci : « . Mais » → « mais ».
+    return t.slice(finPrec, x.debut).replace(/^[\s.]+/, '').trim().toLowerCase()
+  })
+  return { ordre, liaisons }
 }
 
 // ── L'assemblage — ce que le juge reçoit ────────────────────────────────────

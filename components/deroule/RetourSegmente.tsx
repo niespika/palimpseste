@@ -228,15 +228,17 @@ export function RetourSegmente({
               {pont}
             </div>
           )}
-          {/* La navigation, sous le point : précédent, suivant. Sur la dernière
-              page, il n'y a plus que le chemin arrière. */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {pageCourante > 0 && (
-              <button type="button" onClick={() => tourner(pageCourante - 1)} className={bouton}>
-                ← Précédent
-              </button>
-            )}
-            {pageCourante < derniere && (
+          {/* La navigation, sous le point : précédent, suivant. ⚠️ Sur la dernière
+              page elle vient APRÈS la validation et l'encart de reprise (voir
+              plus bas) : Louis, 06/09 — « le bouton Précédent en haut de la partie
+              de droite, ça fait un débalancement ». */}
+          {pageCourante < derniere && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {pageCourante > 0 && (
+                <button type="button" onClick={() => tourner(pageCourante - 1)} className={bouton}>
+                  ← Précédent
+                </button>
+              )}
               <button
                 type="button" onClick={() => tourner(pageCourante + 1)}
                 disabled={point !== null && !pointsLus.has(point.id)}
@@ -245,8 +247,8 @@ export function RetourSegmente({
               >
                 {pageCourante + 1 < nbPoints ? 'Point suivant →' : 'Pour finir →'}
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </section>
 
         {pageCourante === derniere && (
@@ -255,6 +257,14 @@ export function RetourSegmente({
             <ValidationDeLecture depotId={depotId} retour={retour} />
             {retour.luLe && apresLecture}
             {ancien}
+            {/* Le chemin arrière, EN DERNIER — sous la validation et la reprise. */}
+            {pageCourante > 0 && (
+              <div className="flex">
+                <button type="button" onClick={() => tourner(pageCourante - 1)} className={bouton}>
+                  ← Précédent
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

@@ -59,6 +59,7 @@ import { GestesDeLaRemise } from './GestesDeLaRemise'
 import { SeJuger } from './SeJuger'
 import { RetourSegmente } from './RetourSegmente'
 import { TexteATrou } from './TexteATrou'
+import { PlanAOrdonner } from './PlanAOrdonner'
 import { SignalerUnProbleme } from './SignalerUnProbleme'
 import type { VueDuDeroule } from '@/utils/deroule/vue'
 import type { TelemetrieSaisie, Temps } from '@/utils/deroule/types'
@@ -1059,6 +1060,23 @@ function ColonneTravail({
         {casCourant?.pieces?.demande && (
           <p className="font-corps text-[15.5px] leading-snug text-encre-douce">{casCourant.pieces.demande}</p>
         )}
+        {/* ⭐ 06/09 — LE PLAN : le trou est un ORDRE. Les thèses à déplacer, le mot
+            qui lie devant chacune ; la production est le plan assemblé. */}
+        {casCourant?.pieces?.forme === 'ordre' ? (
+          <PlanAOrdonner
+            key={`plan-${cleDuCas}`}
+            ref={champ}
+            depotId={vue.depotId}
+            theses={casCourant.pieces.pieces}
+            valeurInitiale={(versionDuChamp === 'vf' ? vue.texteVf : vue.texteV1) ?? ''}
+            telemetrieInitiale={(versionDuChamp === 'vf' ? vue.telemetrie.vf : vue.telemetrie.v1) ?? null}
+            lectureSeule={!modifiable}
+            onEnregistrer={enregistrer}
+            onEtat={surEtatDuChamp}
+            apresEnregistrement={() => tournerLaPage(true)}
+            suite={phraseDeSuite}
+          />
+        ) : (
         <ChampDeRedaction
           /* ⭐ 04/09 — sur une paire, le champ CHANGE avec le cas : `key` le remonte. */
           key={cleDuCas}
@@ -1077,6 +1095,7 @@ function ColonneTravail({
             ? (champ) => <TexteATrou pieces={casCourant.pieces!}>{champ}</TexteATrou>
             : undefined}
         />
+        )}
       </div>
 
       {/* ── PAGE « CRÉDENCE » — seule, avec son bouton « Enregistrer » ─────── */}
@@ -1475,6 +1494,19 @@ function RetourDUnTexte({
                 {vue.retourChaud?.actionRevision && (
                   <EncartDeRevision vue={vue}>{vue.retourChaud.actionRevision}</EncartDeRevision>
                 )}
+                {vue.cas[0]?.pieces?.forme === 'ordre' ? (
+                  <PlanAOrdonner
+                    depotId={vue.depotId}
+                    theses={vue.cas[0].pieces.pieces}
+                    valeurInitiale={vue.texteVf ?? vue.texteV1 ?? ''}
+                    telemetrieInitiale={vue.telemetrie.vf ?? null}
+                    lectureSeule={false}
+                    onEnregistrer={enregistrer}
+                    onEtat={surEtatDuChamp}
+                    apresEnregistrement={() => tournerLaPage(true)}
+                    suite="Ensuite : rendre ta version finale."
+                  />
+                ) : (
                 <ChampDeRedaction
                   depotId={vue.depotId}
                   valeurInitiale={vue.texteVf ?? vue.texteV1 ?? ''}
@@ -1492,6 +1524,7 @@ function RetourDUnTexte({
                     ? (champ) => <TexteATrou pieces={vue.cas[0]!.pieces!}>{champ}</TexteATrou>
                     : undefined}
                 />
+                )}
               </div>
               {etapeVf === 'rendre' && (
                 <PageDeRemise
@@ -2035,13 +2068,30 @@ function Attente({ vue }: { vue: VueDuDeroule }) {
     )
   }
   if (!etat.enCours) return null
+  // ⭐ 06/09 (Louis) — « il faut prévoir un écran "ton retour est en construction" » :
+  //    une PAGE, avec son titre, et non un encart posé sur une colonne vide.
   return (
-    <Encart>
-      <p className="text-sm text-encre">
-        <strong>Ton retour est en préparation.</strong> Cet écran se met à jour tout seul — tu
-        n’as rien à recharger.
+    <div className="page-tourne flex flex-col gap-4 rounded-xl border border-bordure bg-surface-retrait
+                    px-5 py-6 sm:px-7 sm:py-8">
+      <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-pigment">
+        Ton retour est en construction
       </p>
-    </Encart>
+      <p className="font-titre text-[24px] font-semibold leading-tight text-encre">
+        Ta copie est partie à la lecture.
+      </p>
+      <p className="font-corps text-[16px] leading-relaxed text-encre-douce">
+        Ton retour se prépare — cela prend une ou deux minutes. Cet écran se met à jour tout seul,
+        tu n’as rien à recharger ; tu peux aussi fermer la page et revenir plus tard, ton retour
+        t’attendra ici.
+      </p>
+      <p aria-hidden className="font-ui text-[13px] text-muet">
+        <span className="inline-block animate-pulse">● ● ●</span>
+      </p>
+      <p className="text-sm text-encre">
+        <strong>En attendant :</strong> ne réécris pas ta réponse — c’est celle-là que ton
+        retour commentera.
+      </p>
+    </div>
   )
 }
 
