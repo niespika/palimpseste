@@ -1067,12 +1067,24 @@ export function controleImport(
             v.refuse(oc, 'le cran 2 exige des `pieces` — les constituants servis, chacun avec son '
               + 'nom et son texte', 12)
           } else {
+            // ⭐ 06/09 — LE CRAN 2 EST UN TEXTE À TROU (`10-` v0.9 §2 bis.1, `08-` v1.10 §5) :
+            //    les pièces sont le devoir en morceaux, dans l'ordre du texte, et
+            //    EXACTEMENT UN morceau a `texte: null` — le trou que l'élève comble.
+            let trous = 0
             for (const pc of pieces) {
-              if (!estObjet(pc) || !nonVide(pc.nom) || !nonVide(pc.texte)) {
+              if (!estObjet(pc) || !nonVide(pc.nom)) {
                 v.refuse(oc, 'une pièce porte un `nom` et un `texte`', 12)
+              } else if (pc.texte === null) {
+                trous += 1
+                clesInconnues(v, oc, pc, 'piece')
+              } else if (!nonVide(pc.texte)) {
+                v.refuse(oc, 'une pièce porte un `nom` et un `texte` — ou `texte: null` pour le trou', 12)
               } else {
                 clesInconnues(v, oc, pc, 'piece')
               }
+            }
+            if (trous !== 1) {
+              v.refuse(oc, `le cran 2 est un texte à trou : exactement une pièce à \`texte: null\`, ${trous} reçue(s)`, 12)
             }
           }
           if (declare(e.guide)) {

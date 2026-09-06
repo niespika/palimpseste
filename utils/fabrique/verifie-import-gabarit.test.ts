@@ -119,7 +119,7 @@ test('le cran 2 exige un constituant et des pièces nommées, et perd son guide'
     const e = b.exercices[0]
     e.cran = 2; delete e.variante; e.materiau_cible = null; e.guide = null
     e.cas = [{ materiau: null, defaut: null, distracteurs: null, constituant: 'le garant',
-      pieces: [{ nom: 'la conclusion', texte: '…' }, { nom: 'la preuve', texte: '…' }],
+      pieces: [{ nom: 'la conclusion', texte: '…' }, { nom: 'le garant', texte: null }, { nom: 'la preuve', texte: '…' }],
       reponse_attendue: 'la pièce attendue' }]
     b.materiaux = []
     f(e)
@@ -130,6 +130,9 @@ test('le cran 2 exige un constituant et des pièces nommées, et perd son guide'
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'x' }] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'x', texte: 'y', z: 1 }] }), doctrine), 2))
+  // ⭐ 06/09 — le cran 2 est un TEXTE À TROU : exactement une pièce à `texte: null`.
+  assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'a', texte: 'x' }, { nom: 'b', texte: 'y' }] }), doctrine), 12))
+  assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'a', texte: null }, { nom: 'b', texte: null }] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.guide = 'un guide' }), doctrine), 12))
   // et hors du cran 2, constituant et pièces sont refusés
   assert.ok(aRefus(controleImport(casse((b) => { b.exercices[0].cas[0].constituant = 'x' }), doctrine), 12))
