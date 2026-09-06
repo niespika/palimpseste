@@ -570,6 +570,25 @@ describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et u
     assert.deepEqual(seule.objetsEnMethode, ['argument', 'objection'])
   })
 
+  it('⭐ C7-L7 (07/09) — la séquence suit le palier de la compétence du DEVOIR retenu, pas de la première compétence de l\'objet', () => {
+    // `exemple` porte des clés de Structure (D) et d'Expression (B) ; la liste met l'Expression en tête.
+    const r = [
+      retenue({ exerciceId: 's-1', objet: 'exemple', cranNumero: 1, devoirs: ['dev-s'] }, { ciblables: ['structure'] }),
+      retenue({ exerciceId: 's-3', objet: 'exemple', cranNumero: 3, devoirs: ['dev-s'] }, { ciblables: ['structure'] }),
+      retenue({ exerciceId: 's-4', objet: 'exemple', cranNumero: 4, devoirs: ['dev-s'] }, { ciblables: ['structure'] }),
+      retenue({ exerciceId: 'e-1', objet: 'exemple', cranNumero: 1, devoirs: ['dev-e'] }, { ciblables: ['expression'] }),
+      retenue({ exerciceId: 'e-3', objet: 'exemple', cranNumero: 3, devoirs: ['dev-e'] }, { ciblables: ['expression'] }),
+    ]
+    const paliers2 = new Map<string, string | null>([['structure', 'D'], ['expression', 'B']])
+    const b = bornerLaMethode(r as never, ['expression', 'structure'] as never, paliers2 as never, true)
+    // Le devoir de Structure couvre trois crans de SA séquence (1·3·2·4) contre deux pour celui d'Expression (1·3·2) : c'est lui.
+    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['s-1', 's-3', 's-4'])
+    assert.deepEqual(b.retenus[0]!.methode, { objet: 'exemple', devoir: 'dev-s', sequence: [1, 3, 2, 4], rang: 0 })
+    // Le devoir d'Expression seul : la séquence de B.
+    const e = bornerLaMethode(r.slice(3) as never, ['expression', 'structure'] as never, paliers2 as never, true)
+    assert.deepEqual(e.retenus[0]!.methode?.sequence, [1, 3, 2])
+  })
+
   it('un seul devoir par objet : celui qui couvre le plus de crans de la séquence ; un exercice par cran', () => {
     const r = [
       retenue({ exerciceId: 'a1-c1', objet: 'argument', cranNumero: 1, devoirs: ['d1'] }),

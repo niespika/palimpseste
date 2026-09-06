@@ -859,23 +859,36 @@ export function bornerLaMethode(
         detail: `semaine de méthode bornée à ${max} objets : « ${objet} » attend le cycle suivant (\`01-\` §5).` })
       continue
     }
-    // Le palier : celui de la première compétence ciblable atteinte par la priorité.
-    const cible = prioriteDesCompetences.find((c) => siennes.some((r) => r.ciblables.includes(c)))
-      ?? siennes[0]!.ciblables[0] ?? null
-    const palier = cible ? (paliers.get(cible) ?? null) : null
-    const sequence = sequenceDeMethode(palier, cran2Servi)
-    // Le devoir unique : celui qui couvre le plus de crans de la séquence ; à
-    // égalité, le devoir jamais servi, puis le premier par identifiant.
+    // ⭐ C7-L7 (07/09) — LE PALIER EST CELUI DE LA COMPÉTENCE DU DEVOIR RETENU, pas
+    //    de la première compétence de l'objet que la liste atteint. Sous le gabarit,
+    //    un devoir porte UNE clé, donc UNE compétence ; un objet peut en porter deux
+    //    (mesuré : `exemple`, des clés de Structure et d'Expression — la séquence de
+    //    B était posée pour des exercices de Structure à D). Chaque devoir reçoit donc
+    //    la séquence de SA compétence, et c'est avec elle qu'on compte sa couverture.
     const parDevoir = new Map<string, InstanceRetenue[]>()
     for (const r of siennes) for (const id of (r.devoir.ids.length ? r.devoir.ids : ['∅'])) {
       parDevoir.set(id, [...(parDevoir.get(id) ?? []), r])
     }
-    const couverture = (l: InstanceRetenue[]) => new Set(l.map((r) => r.instance.cranNumero).filter((n) => n !== null && sequence.includes(n))).size
+    const cibleDe = (l: InstanceRetenue[]) => prioriteDesCompetences.find((c) => l.some((r) => r.ciblables.includes(c)))
+      ?? l[0]!.ciblables[0] ?? null
+    const sequenceDe = (l: InstanceRetenue[]) => {
+      const cible = cibleDe(l)
+      return sequenceDeMethode(cible ? (paliers.get(cible) ?? null) : null, cran2Servi)
+    }
+    // Le devoir unique : celui qui couvre le plus de crans de sa séquence ; à
+    // égalité, le devoir jamais servi, puis le premier par identifiant.
+    const couverture = (l: InstanceRetenue[]) => {
+      const seq = sequenceDe(l)
+      return new Set(l.map((r) => r.instance.cranNumero).filter((n) => n !== null && seq.includes(n))).size
+    }
     const devoir = [...parDevoir.entries()].sort((a, b) =>
       couverture(b[1]) - couverture(a[1])
       || (a[1][0]!.devoir.dernierDepotAt ?? '').localeCompare(b[1][0]!.devoir.dernierDepotAt ?? '')
       || a[0].localeCompare(b[0]))[0]![0]
     const retenuesDuDevoir = parDevoir.get(devoir) ?? []
+    const cible = cibleDe(retenuesDuDevoir)
+    const palier = cible ? (paliers.get(cible) ?? null) : null
+    const sequence = sequenceDe(retenuesDuDevoir)
     const vues = new Set<string>()
     for (const r of siennes) {
       const n = r.instance.cranNumero

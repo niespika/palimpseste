@@ -9029,7 +9029,8 @@ le veut.
 - [x] **C7L7-11 — ⑤ le pull, la reprise à l'identique** (en mémoire, après la semaine 2 : 4 exercices, 41 min, quota 30) : le pull dit `objet_un_par_cycle` sur `argument` et `exemple`, et « rien ne tient » — la méthode d'`objection` est posée entière (1·3, le 2 fermé par la porte) : c'est le motif attendu. ⚠️ `servirUnExerciceDePlus` n'a pas été appelé hors Next (`next/navigation`).
 - [x] **C7L7-12 — porte fermée, à l'octet** : sans `ordre`, `poserLaSemaine` choisit par PB1 (le micro), sans tirage — test ; `gabarit_actif` OFF ⇒ `composerPourUnEleve` rend `objets: null` et rien n'ordonne.
 - [x] **C7L7-13 — la dérivation** : instruments 2.76 → 2.80 (version et empreinte) ; doctrine `--sql` rejoué en bac à sable (13 lignes de `exercices_types_crans`, le cran 2 isole), 17/17 IDENTIQUE ; fixture régénérée.
-- [x] **C7L7-14 — les 154 tests de C7-L6 restent verts** ; 188 moteur + registre ; 493 avec le routeur (PB2 sur l'observable, le trio entier, les prérequis de la bande) ; `tsc` propre.
+- [x] **C7L7-22 — la séquence de méthode au palier du DEVOIR retenu** (Louis, 07/09) : `exemple` recevait la séquence de B (Expression) pour des exercices de Structure à D ; chaque devoir reçoit désormais la séquence de sa compétence (test).
+- [x] **C7L7-14 — les 154 tests de C7-L6 restent verts** ; 189 moteur + registre ; 494 avec le routeur (PB2 sur l'observable, le trio entier, les prérequis de la bande) ; `tsc` propre.
 
 ### Reste à jouer — décoché, avec sa condition de reprise
 - [ ] **C7L7-15 — la première pose réelle sous la règle**, lundi 14/09 après 18:00 UTC, lue par `banc-objet.mjs --prod` (compteurs ① et ②). Condition : la branche sur `main` avant, sur décision de Louis.
