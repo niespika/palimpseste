@@ -538,7 +538,9 @@ export function banqueDeConsignes(
   const c = d.crans[cran]
   const o = d.objets[objet]
   if (!c || !o) return []
-  if (c.isole) {
+  // ⭐ 06/09 — le cran 2 ISOLE et PRODUIT (`02-` v6.7 §2.2) : ses consignes restent celles
+  //    de la production (patron + guide), les routes du `04-` ne le connaissent pas.
+  if (c.isole && c.geste !== 'produire') {
     const out: Array<{ consigne: string; appui: string; observable: RouteDoctrine }> = []
     for (const r of observablesIsoles(d, objet, mode, cran)) {
       const bloc = d.consignesIsolees[`${r.competence}|${r.section}`]?.[cran]

@@ -121,8 +121,14 @@ export interface ContexteDepot {
   statutsRecette: Record<Competence, StatutRecette>
   /** La couche compétence, lue en base (`competences_correspondance`). */
   correspondance: Record<string, Array<{ observable_code: string; dimension_eleve: string }>>
-  /** La couche type — « Ce qui est servable ici », lue de la doctrine dérivée. */
-  servable: Array<{ competence: string; observable_nom: string }>
+  /**
+   * La couche type — « Ce qui est servable ici », lue de la doctrine dérivée.
+   * ⭐ 06/09/2026 — `observable_code` s'ajoute au nom : le « se juger » apparie ses
+   *    questions par `competence|observable_code` (`competences_correspondance`), et
+   *    il recevait le NOM (« L'attache ») là où il lui fallait le CODE
+   *    (`attache_presente`) — aucune question ne s'appariait.
+   */
+  servable: Array<{ competence: string; observable_nom: string; observable_code: string }>
   /**
    * Aux TROIS CRANS DE PRODUCTION (2, 6, 8), `exercices_routes` ne porte rien —
    * « les trois crans de production, QUE LES TABLES NE PEUVENT PAS PORTER »
@@ -553,12 +559,12 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   let servable: ContexteDepot['servable'] = []
   if (cran != null && tousLesModes.length) {
     const { data: routes } = await admin
-      .from('exercices_routes').select('competence, observable_nom')
+      .from('exercices_routes').select('competence, observable_nom, observable_code')
       .eq('objet_code', type.code).eq('cran', cran).in('mode', tousLesModes)
     const vus = new Set<string>()
-    servable = ((routes ?? []) as unknown as Array<{ competence: string; observable_nom: string }>)
+    servable = ((routes ?? []) as unknown as Array<{ competence: string; observable_nom: string; observable_code: string }>)
       .filter((r) => {
-        const c = `${r.competence}|${r.observable_nom}`
+        const c = `${r.competence}|${r.observable_code}`
         if (vus.has(c)) return false
         vus.add(c)
         return true
@@ -729,7 +735,7 @@ export async function lireStatutsRecette(
 async function couvertureDuCran(
   admin: Admin, typeId: string, cran: number, modes: readonly string[],
   competences: readonly string[],
-): Promise<Array<{ competence: string; observable_nom: string }>> {
+): Promise<Array<{ competence: string; observable_nom: string; observable_code: string }>> {
   const { data, error } = await admin
     .from('exercices_types_crans').select('couverture_observables')
     // ⚠️ Le numéro, jamais `String(cran)` : `exercices_types_crans.cran` était
@@ -741,18 +747,19 @@ async function couvertureDuCran(
     return []
   }
   const brut = (data as unknown as { couverture_observables: unknown } | null)?.couverture_observables as
-    { observables?: Array<{ nom?: string; mode?: string; competence?: string }> } | null
+    { observables?: Array<{ nom?: string; code?: string; mode?: string; competence?: string }> } | null
   const liste = Array.isArray(brut?.observables) ? brut!.observables! : []
   const vus = new Set<string>()
-  const out: Array<{ competence: string; observable_nom: string }> = []
+  const out: Array<{ competence: string; observable_nom: string; observable_code: string }> = []
   for (const o of liste) {
-    if (!o?.competence || !o?.nom) continue
+    if (!o?.competence || !(o?.code || o?.nom)) continue
     if (competences.length && !competences.includes(o.competence)) continue
     if (modes.length && o.mode && !modes.includes(o.mode)) continue
-    const cle = `${o.competence}|${o.nom}`
+    const code = o.code ?? o.nom!
+    const cle = `${o.competence}|${code}`
     if (vus.has(cle)) continue
     vus.add(cle)
-    out.push({ competence: o.competence, observable_nom: o.nom })
+    out.push({ competence: o.competence, observable_nom: o.nom ?? code, observable_code: code })
   }
   return out
 }

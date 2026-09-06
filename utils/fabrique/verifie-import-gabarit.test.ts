@@ -118,7 +118,9 @@ test('le cran 2 exige un constituant et des pièces nommées, et perd son guide'
   const deux = (f: (e: any) => void) => casse((b) => {
     const e = b.exercices[0]
     e.cran = 2; delete e.variante; e.materiau_cible = null; e.guide = null
+    // ⭐ 06/09 — le cran 2 ISOLE : le cas porte la clé « pièce absente » de son trou.
     e.cas = [{ materiau: null, defaut: null, distracteurs: null, constituant: 'le garant',
+      probleme: 'argument.garant.absent',
       pieces: [{ nom: 'la conclusion', texte: '…' }, { nom: 'le garant', texte: null }, { nom: 'la preuve', texte: '…' }],
       reponse_attendue: 'la pièce attendue' }]
     b.materiaux = []
@@ -127,6 +129,8 @@ test('le cran 2 exige un constituant et des pièces nommées, et perd son guide'
   const ok = controleImport(deux(() => {}), doctrine)
   assert.equal(ok.code, 0, ok.refus.join('\n'))
   assert.ok(aRefus(controleImport(deux((e) => { delete e.cas[0].constituant }), doctrine), 12))
+  // ⭐ 06/09 — sans la clé « pièce absente », le cran 2 n'isole rien : refus (le cran isole ⇒ `probleme` exigé)
+  assert.ok(aRefus(controleImport(deux((e) => { delete e.cas[0].probleme }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'x' }] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'x', texte: 'y', z: 1 }] }), doctrine), 2))

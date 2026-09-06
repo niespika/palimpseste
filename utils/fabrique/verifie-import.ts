@@ -848,7 +848,12 @@ export function controleImport(
         clesInconnues(v, `${ou} — observable_isole`, obs, 'observable')
         const routes = (d.routes[`${objet}|${modeEx}`] ?? [])
           .filter((r) => r.code === obs.code && r.competence === obs.competence)
-        if (routes.length === 0) {
+        if (gabarit && cran === 2) {
+          // ⭐ 06/09 — LE CRAN 2 ISOLE (`02-` v6.7 §2.2, `10-` v0.11 §2 bis.1) : les routes
+          //    du `04-` ne connaissent pas le cran 2, et sa consigne est celle du `10-` §3.
+          //    Ce que le cran 2 isole se lit sur la clé « pièce absente » portée en
+          //    `probleme` — contrôlée plus bas (existence, objet admis, observable routé).
+        } else if (routes.length === 0) {
           v.refuse(ou, `l'observable \`${obs.code}\` (${obs.competence}) n'est routé `
             + `ni pour \`${objet}\`, ni pour \`${modeEx}\` (\`04-\`)`, 15)
         } else if (!routes.some((r) => r.crans.includes(cran))) {

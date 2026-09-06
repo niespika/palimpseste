@@ -1104,7 +1104,8 @@ async function construireSeJuger(
   // Ce que l'exercice TESTE : la couverture, moins ce qui n'est qu'observable.
   const couverture: CouvertureTestee[] = evaluees.map((c) => ({
     competence: c,
-    observables: ctx.servable.filter((s) => s.competence === c).map((s) => s.observable_nom),
+    // ⭐ 06/09 — le CODE, pas le nom : la banque de questions s'apparie par `competence|observable_code`.
+    observables: ctx.servable.filter((s) => s.competence === c).map((s) => s.observable_code),
   }))
 
   const fenetres: Record<string, Mesure[]> = {}

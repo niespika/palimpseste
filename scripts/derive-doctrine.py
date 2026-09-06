@@ -72,7 +72,13 @@ RACINE_DEFAUT = (os.environ.get("PALIMPSESTE_RACINE_CONCEPTION")
 OUTIL = "scripts/derive-doctrine.py 1.4"
 
 # Les six crans qui isolent, dans l'ordre où le `04-` §0 les nomme.
-CRANS_QUI_ISOLENT = (1, 3, 4, 5, 7, 9)
+CRANS_QUI_ISOLENT = (1, 2, 3, 4, 5, 7, 9)
+# ⭐ 06/09/2026 — LE CRAN 2 ISOLE (`02-` v6.7 §2.2). Le trou du texte à trou est une
+#    ABSENCE : l'observable qu'un exercice du cran 2 isole est celui de la clé
+#    `objet.constituant.absent(e)` de la pièce du trou. Les routes du `04-` ne
+#    connaissent pas le cran 2 : sa couverture se lit sur la grille du `09-`.
+VARIANTES_D_ABSENCE = ("absent", "absente", "vide")
+CONTENUS = ("mot", "phrase", "transition", "paragraphe")
 CRANS_DE_PRODUCTION = (2, 6, 8)
 
 # Les sources dont l'empreinte se conserve — celles que la doctrine lit.
@@ -436,7 +442,28 @@ def lignes(d):
             if c.geste == "diagnostiquer":
                 duree *= 2
             cible = [] if c.materiau_cible == "null" else list(d.cible_provenances)
-            if cran in CRANS_QUI_ISOLENT:
+            if cran == 2:
+                # Le cran 2 : les clés « pièce absente » de l'objet, et de ses objets
+                # contenus à un grain plus fin (la portabilité du `09-` §0, lue
+                # comme au contrôle d'import). Le nom de l'observable vient des routes.
+                noms = {(r.competence, r.code): r.observable
+                        for rs in d.routes.values() for r in rs}
+                def _rang(oc):
+                    g = d.objets[oc].grain
+                    return 0 if (g == "micro" and oc == "mot") else 1 if g == "micro" else 2 if g == "meso" else 3
+                obs = sorted({(p.competence, p.observable_code,
+                               noms.get((p.competence, p.observable_code), p.observable_code),
+                               "composer")
+                              for p in d.problemes
+                              if p.route and p.variante in VARIANTES_D_ABSENCE
+                              and (p.objet == code
+                                   or (p.objet in CONTENUS and p.objet in d.objets
+                                       and _rang(p.objet) < _rang(code)))})
+                couv = {"valeur": "isole",
+                        "source": "09-Objets.md — les clés « pièce absente » (le cran 2 est un texte à trou)",
+                        "observables": [{"competence": a, "code": b, "nom": n, "mode": m}
+                                        for (a, b, n, m) in obs]}
+            elif cran in CRANS_QUI_ISOLENT:
                 obs = sorted({(r.competence, r.code, r.observable, mode)
                               for (ob, mode), rs in d.routes.items() if ob == code
                               for r in rs if cran in r.crans})
