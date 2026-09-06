@@ -340,7 +340,13 @@ export async function soumettreNote(
     return { due: new Date().toISOString(), state: 0, cardStateId }
   }
 
-  const scheduler = fsrs()
+  // ⚠️ Pas de paliers courts (1 min / 10 min). Ils supposent un écran qui ressert
+  // la carte dans la même séance, ce que Quazian ne fait pas : avec eux, toute
+  // carte notée « Bien » redevenait due dix minutes après la séance, et comme le
+  // palier atteint (`learning_steps`) n'est pas persisté en base, elle y
+  // restait à jamais — 273 cartes sur 554 mesurées coincées en prod le 05/09.
+  // Chaque note produit désormais directement un intervalle long.
+  const scheduler = fsrs({ enable_short_term: false })
   const maintenant = new Date()
 
   // Reconstruire la carte FSRS depuis l'état RÉEL en base (jamais l'état du client).
