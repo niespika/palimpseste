@@ -6,6 +6,12 @@
 // (ancrage.citation des points du retour chaud) en quatre cases : dans la copie
 // seulement · dans la copie ET dans le matériau (recopié) · dans le matériau
 // seulement (fuite) · nulle part. Par cran.
+// ⭐ C7-L8 (07/09) — une colonne de plus : « copie ET matériau » se partage en
+//    DANS LE PASSAGE À CORRIGER (légitime : aux crans 3·5·7 la copie EST une
+//    réécriture du passage — `casPourLeRetour[].passageMarque`, le même domicile
+//    que l'écran et le juge) et HORS du passage (ce que la pièce (4) du lot
+//    écarte). Le « fait quand » 1 : 0 « copie ET matériau » HORS passage sur la
+//    première semaine après l'ouverture.
 import fs from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 const env = fs.readFileSync('.env.local', 'utf8')
@@ -33,7 +39,7 @@ const { data: retours, error } = await admin.from('exercices_retours')
 if (error) { console.error(error); process.exit(1) }
 console.log(`${retours.length} retour(s) chaud(s)`)
 
-const cases = () => ({ copie: 0, recopie: 0, fuite: 0, nulle: 0, points: 0, sansCit: 0 })
+const cases = () => ({ copie: 0, recopie: 0, recopiePassage: 0, fuite: 0, nulle: 0, points: 0, sansCit: 0 })
 const parCran = {}; const tot = cases(); let sansMateriau = 0, depots = 0
 const fuites = []
 for (const r of retours) {
@@ -42,6 +48,7 @@ for (const r of retours) {
   if (!ctx) continue
   depots++
   const mat = [ctx.materiau, ...(ctx.casPourLeRetour ?? []).map((c) => c.materiau)].filter(Boolean).join('\n')
+  const passages = (ctx.casPourLeRetour ?? []).map((c) => c.passageMarque || c.passageFautif).filter(Boolean)
   if (!mat) sansMateriau++
   const copie = ctx.productionV1 ?? ''
   const k = `cran ${ctx.cran ?? '?'}`
@@ -52,14 +59,15 @@ for (const r of retours) {
     const cit = p?.ancrage?.citation
     if (!cit) { parCran[k].sansCit++; tot.sansCit++; continue }
     const dansCopie = dedans(cit, copie), dansMat = mat ? dedans(cit, mat) : false
-    const c = dansCopie && dansMat ? 'recopie' : dansCopie ? 'copie' : dansMat ? 'fuite' : 'nulle'
+    const dansPassage = dansMat && passages.some((p) => dedans(cit, p))
+    const c = dansCopie && dansMat ? (dansPassage ? 'recopiePassage' : 'recopie') : dansCopie ? 'copie' : dansMat ? 'fuite' : 'nulle'
     parCran[k][c]++; tot[c]++
-    if (c === 'fuite' || c === 'recopie') fuites.push({ id: r.depot_id.slice(0, 8), date: String(r.created_at).slice(0, 10), cran: ctx.cran, objet: ctx.objet, c, cit: String(cit).replace(/\s+/g, ' ').slice(0, 90) })
+    if (c === 'fuite' || c === 'recopie' || c === 'recopiePassage') fuites.push({ id: r.depot_id.slice(0, 8), date: String(r.created_at).slice(0, 10), cran: ctx.cran, objet: ctx.objet, c, cit: String(cit).replace(/\s+/g, ' ').slice(0, 90) })
   }
 }
-const ligne = (k, v) => `${k.padEnd(9)} | ${String(v.points).padStart(6)} | ${String(v.sansCit).padStart(8)} | ${String(v.copie).padStart(12)} | ${String(v.recopie).padStart(19)} | ${String(v.fuite).padStart(15)} | ${String(v.nulle).padStart(9)}`
+const ligne = (k, v) => `${k.padEnd(9)} | ${String(v.points).padStart(6)} | ${String(v.sansCit).padStart(8)} | ${String(v.copie).padStart(12)} | ${String(v.recopie).padStart(22)} | ${String(v.recopiePassage).padStart(23)} | ${String(v.fuite).padStart(15)} | ${String(v.nulle).padStart(9)}`
 console.log(`\n${depots} dépôt(s) lus · ${sansMateriau} sans matériau en contexte\n`)
-console.log('cran      | points | sans cit | copie seule  | copie ET matériau   | matériau seul  | nulle part')
+console.log('cran      | points | sans cit | copie seule  | copie ET mat. HORS pass. | copie ET mat. DANS pass. | matériau seul  | nulle part')
 for (const k of Object.keys(parCran).sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)))) console.log(ligne(k, parCran[k]))
 console.log(ligne('TOTAL', tot))
 console.log('\nexemples (recopié ou fuite) :')

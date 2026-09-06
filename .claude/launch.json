@@ -4,7 +4,10 @@
     {
       "name": "palimpseste",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": true
     },
@@ -16,8 +19,26 @@
     {
       "name": "palimpseste-etayage",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3100"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3100"
+      ],
       "port": 3100
+    },
+    {
+      "name": "palimpseste-webpack",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "dev",
+        "--webpack",
+        "--port",
+        "3200"
+      ],
+      "port": 3200
     }
   ]
 }
