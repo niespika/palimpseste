@@ -355,6 +355,12 @@ export function lignesDeDecision(
         tour_de_pb5: p.tour,
         // ⭐ C7-L5 — ce que la porte du registre a dit de cette instance.
         porte_registre: r?.porte ?? null,
+        // ⭐ C7-L6 — le devoir servi et la date du dernier dépôt de l'élève dessus
+        //   (`01-` v5.9 §8.10, « ce qu'elle journalise ») ; la méthode bornée (§5).
+        devoir: r ? { ids: r.devoir.ids, dernier_depot_at: r.devoir.dernierDepotAt } : null,
+        methode: r?.methode ?? null,
+        // « sans devoir frais » : servi quand même, et le motif le dit.
+        devoir_manquant: r?.degrade ? r.instance.objet : null,
       },
       sondes_retenues: avecLaSondeDuRegistre(sondesDeLExercicePose(
         p.candidat.exerciceId, p.candidat.competence, p.candidat.cran,

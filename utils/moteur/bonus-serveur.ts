@@ -59,7 +59,7 @@ import type { Competence } from '@/utils/routeur/types'
 import { lireLesSegments, segmentDuCycle } from './calendrier-serveur'
 import { candidatsPour, type InstanceDuVivier } from './vivier'
 import {
-  lireLesCoursVus, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
+  lireLesCoursVus, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
 import { lignesDeDecision } from './decision'
 import { composerPourUnEleve, dureesDesExercices, type ContextePose } from './cycle-serveur'
@@ -309,6 +309,8 @@ export async function servirUnExerciceDePlus(
     decoupe, modesAdmis: doctrine.modesAdmis, instances,
     positions: positions.parEleve.get(eleveId) ?? new Map(),
     dejaDeposees: dejaDeposees.parEleve.get(eleveId) ?? new Set(),
+    // ⭐ C7-L6 — le pull lit la même quarantaine que la semaine.
+    devoirsServis: (await lireLesDevoirsServis(admin, [eleveId])).parEleve.get(eleveId) ?? new Map(),
     inscriptions,
     coursVus: unionDesCoursVus(coursVus.parClasse, inscriptions.map((i) => i.classeId)),
   }

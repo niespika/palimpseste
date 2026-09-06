@@ -53,11 +53,11 @@ import { poserLeColdStart, cloturerLaCalibrationDesEleves,
   type BilanDuColdStart, type BilanDeLaCloture } from './etat-serveur'
 import type { DecoupeEnSegments } from '@/utils/routeur/segments'
 import {
-  candidatsPour, constituerLeVivier, substratsDeLaSemaine,
+  bornerLaMethode, candidatsPour, constituerLeVivier, substratsDeLaSemaine,
   type EcartDuVivier, type InstanceRetenue, type MotifDEcart,
 } from './vivier'
 import {
-  lireLesCoursVus, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
+  lireLesCoursVus, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
 import {
   journalDuTirage, journaliserLEscalade, lignesDeDecision, type LigneDeDecision,
@@ -241,6 +241,9 @@ export async function poserLesSemainesDuRouteur(
   const positions = await lireLesPositionsDeLecture(admin, eleves)
   bilan.erreurs.push(...positions.incidents)
   const dejaDeposees = await lireLesInstancesDejaDeposees(admin, eleves)
+  // ⭐ C7-L6 — les devoirs déjà servis, pour la quarantaine (`01-` v5.9 §8.10).
+  const devoirsServis = await lireLesDevoirsServis(admin, eleves)
+  bilan.erreurs.push(...devoirsServis.incidents)
   bilan.erreurs.push(...dejaDeposees.incidents)
 
   // ⭐ UNE SEULE LECTURE POUR TOUS — 30/08. C'était `lireLesInscriptions(admin, id)`
@@ -366,6 +369,7 @@ export async function poserLesSemainesDuRouteur(
           instances,
           positions: positions.parEleve.get(eleveId) ?? new Map(),
           dejaDeposees: dejaDeposees.parEleve.get(eleveId) ?? new Set(),
+          devoirsServis: devoirsServis.parEleve.get(eleveId) ?? new Map(),
           inscriptions: inscriptionsParEleve.get(eleveId) ?? [],
           coursVus: unionDesCoursVus(coursVus.parClasse, classesDesEleves.get(eleveId) ?? []),
         })
@@ -475,6 +479,8 @@ export interface ContextePose {
   instances: Awaited<ReturnType<typeof lireLesInstances>>['instances']
   positions: Map<string, number | null>
   dejaDeposees: Set<string>
+  /** ⭐ C7-L6 — devoir → date du dernier dépôt de l'élève dessus ; absent ⇒ pas de quarantaine. */
+  devoirsServis?: Map<string, string>
   inscriptions: Awaited<ReturnType<typeof lireLesInscriptions>>
   coursVus: Set<string>
 }
@@ -614,6 +620,10 @@ export async function composerPourUnEleve(
     positionsDeLecture: c.positions,
     instancesDejaDeposees: c.dejaDeposees,
     porte,
+    // ⭐ C7-L6 — la quarantaine des devoirs, quand le cycle a lu les devoirs servis.
+    //    ⛔ DERRIÈRE `gabarit_actif`, comme la porte : à OFF, la couche 4 sert comme hier.
+    devoirsServis: porte.actif ? (c.devoirsServis ?? null) : null,
+    cycleLundi: c.cycleLundi,
     // ⭐ L'UNION de ses inscriptions ACTIVES — la même lecture que les parcours
     //   et les cours vus. Un bi-classe reçoit ce qui est donné à l'une OU à
     //   l'autre ; l'instance sans classe revient à tout le monde.
@@ -680,8 +690,14 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
     out.dejaServi = true
     return out
   }
-  out.ecartsDuVivier = vivier.ecartes
-  out.vivierVide = vivier.retenus.length === 0
+  // ⭐ C7-L6 — LA SEMAINE DE MÉTHODE, BORNÉE À DEUX OBJETS ET UN DEVOIR PAR OBJET
+  //    (`01-` v5.9 §5). Le cran 2 n'y entre que si son écran est servi : il
+  //    l'est sur cette branche (`C7`, les pièces) — derrière `gabarit_actif`,
+  //    que la porte lit déjà.
+  const methode = bornerLaMethode(vivier.retenus, listeComplete.map((e) => e.competence), paliers, true)
+  const retenus = methode.retenus
+  out.ecartsDuVivier = [...vivier.ecartes, ...methode.ecartes]
+  out.vivierVide = retenus.length === 0
   if (compo.motifNonServi || !budget.budget) {
     // ⛔ LE PIÈGE DE LA VACUITÉ, condition de recette du `07-` §1.3 : « un élève
     //    dont aucune inscription active ne porte de parcours ne reçoit AUCUN
@@ -696,7 +712,7 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   //   `phase_c` — étaient branchés depuis C4-L12 ; `phase_b` manquait, et c'est
   //   lui qui disperse les exercices entre deux élèves de même profil.
   const semaine = poserLaSemaine(listeComplete, budget.budget,
-    (comp, dejaPoses) => candidatsPour(vivier.retenus, comp, dejaPoses, expressionEnSecondaire),
+    (comp, dejaPoses) => candidatsPour(retenus, comp, dejaPoses, expressionEnSecondaire),
     journal.tirer<string>('phase_b'))
   out.exercicesPoses = semaine.exercices.length
   if (semaine.ecart.souSLePlancher) {
@@ -722,20 +738,22 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
     }
   })
   const ordre = ordonnerLesSondes(candidates, journal.tirer<Competence>('sondes'))
-  const sondes = poserLesSondes(ordre, substratsDeLaSemaine(semaine.exercices, vivier.retenus),
+  const sondes = poserLesSondes(ordre, substratsDeLaSemaine(semaine.exercices, retenus),
     journal.tirer<string>('phase_c'))
   out.sondesPosees = sondes.posees.length
 
   // ── LA PERSISTANCE ───────────────────────────────────────────────────────
   const lignes = lignesDeDecision(semaine.exercices, sondes.posees as SondePosee[],
-    vivier.retenus, {
+    retenus, {
       eleveId: c.eleveId,
       cycleLundi: c.cycleLundi,
       etatEscalade: journaliserLEscalade(escalades, c.maintenant),
       tirages: journal.journal,
       paliers,
       alternatives: journalPriorite,
-    })
+    },
+    // ⭐ C7-L6 — « sans devoir frais, le routeur sert quand même » : servi `degrade`.
+    new Set(retenus.filter((r) => r.degrade).map((r) => r.instance.exerciceId)))
   const ecrites = await persister(admin, lignes, c)
   out.decisionsEcrites = ecrites.decisions
   out.depotsPoses = ecrites.depots

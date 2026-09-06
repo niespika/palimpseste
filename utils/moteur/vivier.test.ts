@@ -14,8 +14,9 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  candidatsPour, constituerLeVivier, couvertureDeLInstance, filtreDeParcours,
-  filtreDuCoursVu, filtreDuNonSpoiler, ParcoursVide, positionDeLecture,
+  bornerLaMethode, candidatsPour, constituerLeVivier, couvertureDeLInstance, cyclesEcoules,
+  devoirEnQuarantaine, filtreDeParcours,
+  filtreDuCoursVu, filtreDuNonSpoiler, lundiDe, ParcoursVide, positionDeLecture, sequenceDeMethode,
   substratsDeLaSemaine, type ContexteDuVivier, type InstanceDuVivier, type MateriauRattache,
 } from './vivier'
 import type { ExercicePose } from '../routeur/semaine'
@@ -33,7 +34,7 @@ const instance = (p: Partial<InstanceDuVivier> = {}): InstanceDuVivier => ({
   statut: 'concu', bloque: false, genre: null, exclusionsParcours: [],
   modesParCompetence: { argumentation: ['composer'], expression: ['composer'] },
   couverture: { argumentation: 'exerce', expression: 'exerce' },
-  coTexte: null,
+  coTexte: null, devoirs: [],
   materiaux: [materiau()], ...p,
 })
 
@@ -445,5 +446,134 @@ describe('C7-L5 — la porte des crans par objet (`10-` §7)', () => {
     assert.deepEqual(v.retenus.map((r) => [r.instance.exerciceId, r.porte]), [['arg-1', 'methode'], ['arg-4', 'methode']])
     assert.deepEqual(v.ecartes.map((e) => e.exerciceId), ['arg-2'])
     assert.match(v.ecartes[0]!.detail, /semaine de méthode/)
+  })
+})
+
+
+// ═══════════════════ ⭐ C7-L6 — le devoir, la quarantaine, la méthode bornée ═══════════════════
+
+describe('`01-` v5.9 §8.10 — la quarantaine des devoirs', () => {
+  it('le lundi et les cycles écoulés se comptent en semaines entières, en UTC', () => {
+    assert.equal(lundiDe('2026-09-03T14:00:00Z'), '2026-08-31')
+    assert.equal(lundiDe('2026-08-31T00:00:00Z'), '2026-08-31')
+    assert.equal(lundiDe('2026-09-06T23:59:00Z'), '2026-08-31')
+    assert.equal(cyclesEcoules('2026-08-31T12:00:00Z', '2026-09-07'), 1)
+    assert.equal(cyclesEcoules('2026-08-31T12:00:00Z', '2026-09-14'), 2)
+    assert.equal(cyclesEcoules('2026-09-03T12:00:00Z', '2026-08-31'), 0)
+  })
+
+  it('un devoir servi au cycle N est retenu au cycle N + 1, libre au cycle N + 2', () => {
+    const servis = new Map([['dev-a', '2026-08-31T12:00:00Z']])
+    assert.deepEqual(devoirEnQuarantaine(['dev-a'], servis, '2026-09-07'),
+      { devoir: 'dev-a', dernierDepotAt: '2026-08-31T12:00:00Z', cyclesEcoules: 1 })
+    assert.equal(devoirEnQuarantaine(['dev-a'], servis, '2026-09-14'), null)
+    // la même semaine : 0 cycle écoulé, retenu
+    assert.equal(devoirEnQuarantaine(['dev-a'], servis, '2026-08-31')!.cyclesEcoules, 0)
+    // un devoir jamais servi ne retient rien ; un autre devoir de la même clé non plus
+    assert.equal(devoirEnQuarantaine(['dev-b'], servis, '2026-09-07'), null)
+    // le nombre de cycles est un paramètre : à 1, N + 1 est libre
+    assert.equal(devoirEnQuarantaine(['dev-a'], servis, '2026-09-07', 1), null)
+  })
+
+  it('la couche 4 écarte `devoir_en_quarantaine`, avec la date, et journalise le devoir sur la retenue', () => {
+    const ctx = contexte({ devoirsServis: new Map([['dev-a', '2026-08-31T12:00:00Z']]), cycleLundi: '2026-09-07' })
+    const a = instance({ exerciceId: 'ex-a', devoirs: ['dev-a'] })
+    const b = instance({ exerciceId: 'ex-b', objet: 'transition', devoirs: ['dev-b'] })
+    const v = constituerLeVivier([a, b], ctx)
+    assert.deepEqual(v.retenus.filter((r) => !r.degrade).map((r) => r.instance.exerciceId), ['ex-b'])
+    assert.deepEqual(v.retenus[0]!.devoir, { ids: ['dev-b'], dernierDepotAt: null })
+    const e = v.ecartes.find((x) => x.exerciceId === 'ex-a')!
+    assert.equal(e.motif, 'devoir_en_quarantaine')
+    assert.match(e.detail, /2026-08-31/)
+    assert.deepEqual(v.devoirsManquants, ['argument'])
+    // ⭐ « sans devoir frais » : l'argument n'a plus rien de frais — ex-a revient, DÉGRADÉ
+    assert.equal(v.retenus.length, 2)
+    const degrade = v.retenus.find((r) => r.instance.exerciceId === 'ex-a')!
+    assert.equal(degrade.degrade, true)
+    assert.equal(degrade.devoir.dernierDepotAt, '2026-08-31T12:00:00Z')
+  })
+
+  it('quand un autre devoir du même objet est frais, rien n\'est dégradé et le manque n\'est pas signalé', () => {
+    const ctx = contexte({ devoirsServis: new Map([['dev-a', '2026-08-31T12:00:00Z']]), cycleLundi: '2026-09-07' })
+    const v = constituerLeVivier([
+      instance({ exerciceId: 'ex-a', devoirs: ['dev-a'] }),
+      instance({ exerciceId: 'ex-c', devoirs: ['dev-c'] }),
+    ], ctx)
+    assert.deepEqual(v.retenus.map((r) => r.instance.exerciceId), ['ex-c'])
+    assert.deepEqual(v.devoirsManquants, [])
+  })
+
+  it('⛔ la semaine de méthode est l\'exception : le même devoir se sert aux crans de la séquence', () => {
+    const porte = { actif: true, de: () => ({ objet: 'argument', ouverts: [], sondes: [], methode: true }) }
+    const ctx = contexte({ devoirsServis: new Map([['dev-a', '2026-09-01T12:00:00Z']]), cycleLundi: '2026-09-07', porte })
+    const v = constituerLeVivier([instance({ exerciceId: 'ex-a', devoirs: ['dev-a'], cranNumero: 3, cranCode: 'transformation_guidee', geste: 'transformer' })], ctx)
+    assert.deepEqual(v.retenus.map((r) => r.instance.exerciceId), ['ex-a'])
+    assert.equal(v.retenus[0]!.porte, 'methode')
+    assert.equal(v.retenus[0]!.degrade, false)
+  })
+
+  it('sans devoirs servis ni cycle, la couche 4 sert comme hier', () => {
+    const v = constituerLeVivier([instance({ exerciceId: 'ex-a', devoirs: ['dev-a'] })], contexte())
+    assert.equal(v.retenus.length, 1)
+    assert.deepEqual(v.devoirsManquants, [])
+  })
+})
+
+describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et un devoir', () => {
+  const retenue = (p: Partial<InstanceDuVivier>, extra: Partial<{ ciblables: string[]; devoirIds: string[] }> = {}) => ({
+    instance: instance(p), borne: { regime: 'hors_livre', bornes: [], seanceMaxExigee: null, motif: '' } as never,
+    ciblables: (extra.ciblables ?? ['argumentation']) as never, plafondCibles: 1, observableSeul: [] as never,
+    porte: 'methode' as const, devoir: { ids: extra.devoirIds ?? p.devoirs ?? [], dernierDepotAt: null }, degrade: false, methode: null,
+  })
+  const paliers = new Map<string, string | null>([['argumentation', 'D'], ['structure', 'C'], ['expression', 'A']])
+
+  it('la séquence suit le palier, et le 2 n\'y entre que si son écran est servi', () => {
+    assert.deepEqual(sequenceDeMethode('D', false), [1, 3, 4])
+    assert.deepEqual(sequenceDeMethode('E', true), [1, 3, 2, 4])
+    assert.deepEqual(sequenceDeMethode('C', true), [1, 3, 2])
+    assert.deepEqual(sequenceDeMethode('B', false), [1, 3])
+    assert.deepEqual(sequenceDeMethode('A', true), [4])
+    assert.deepEqual(sequenceDeMethode(null, false), [1, 3, 4])
+  })
+
+  it('deux objets au plus, dans l\'ordre de la priorité ; le troisième attend', () => {
+    const r = [
+      retenue({ exerciceId: 'arg-1', objet: 'argument', cranNumero: 1, devoirs: ['a1'] }),
+      retenue({ exerciceId: 'tra-1', objet: 'transition', cranNumero: 1, devoirs: ['t1'] }, { ciblables: ['structure'] }),
+      retenue({ exerciceId: 'exe-1', objet: 'exemple', cranNumero: 1, devoirs: ['e1'] }, { ciblables: ['expression'] }),
+    ]
+    const b = bornerLaMethode(r as never, ['expression', 'argumentation', 'structure'] as never, paliers as never, true)
+    assert.deepEqual(b.objetsEnMethode, ['exemple', 'argument'])
+    // l'argument (palier D) garde son cran 1 ; l'exemple (palier A) n'a que le 4 dans sa séquence : son 1 sort ;
+    // la transition, troisième objet, attend le cycle suivant.
+    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['arg-1'])
+    assert.deepEqual(b.retenus[0]!.methode, { objet: 'argument', devoir: 'a1', sequence: [1, 3, 2, 4], rang: 0 })
+    assert.deepEqual(b.ecartes.map((e) => [e.exerciceId, e.motif]).sort(),
+      [['exe-1', 'methode_hors_quota'], ['tra-1', 'methode_hors_quota']])
+    assert.match(b.ecartes.find((e) => e.exerciceId === 'tra-1')!.detail, /bornée à 2 objets/)
+    assert.match(b.ecartes.find((e) => e.exerciceId === 'exe-1')!.detail, /crans 4 de la séquence du palier A/)
+  })
+
+  it('un seul devoir par objet : celui qui couvre le plus de crans de la séquence ; un exercice par cran', () => {
+    const r = [
+      retenue({ exerciceId: 'a1-c1', objet: 'argument', cranNumero: 1, devoirs: ['d1'] }),
+      retenue({ exerciceId: 'a1-c1b', objet: 'argument', cranNumero: 1, devoirs: ['d1'] }),
+      retenue({ exerciceId: 'a1-c3', objet: 'argument', cranNumero: 3, devoirs: ['d1'] }),
+      retenue({ exerciceId: 'a1-c4', objet: 'argument', cranNumero: 4, devoirs: ['d1'] }),
+      retenue({ exerciceId: 'a2-c1', objet: 'argument', cranNumero: 1, devoirs: ['d2'] }),
+      retenue({ exerciceId: 'a2-c3', objet: 'argument', cranNumero: 3, devoirs: ['d2'] }),
+    ]
+    const b = bornerLaMethode(r as never, ['argumentation'] as never, paliers as never, false)
+    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['a1-c1', 'a1-c3', 'a1-c4'])
+    assert.deepEqual(b.retenus.map((x) => x.methode!.rang), [0, 1, 2])
+    assert.deepEqual(b.retenus[0]!.methode, { objet: 'argument', devoir: 'd1', sequence: [1, 3, 4], rang: 0 })
+    assert.deepEqual(b.ecartes.map((e) => e.exerciceId).sort(), ['a1-c1b', 'a2-c1', 'a2-c3'])
+  })
+
+  it('les instances hors méthode passent telles quelles', () => {
+    const r = [{ ...retenue({ exerciceId: 'x', objet: 'argument', cranNumero: 5 }), porte: 'ouvert' as const }]
+    const b = bornerLaMethode(r as never, ['argumentation'] as never, paliers as never)
+    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['x'])
+    assert.deepEqual(b.objetsEnMethode, [])
   })
 })

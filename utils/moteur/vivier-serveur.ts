@@ -53,7 +53,7 @@ interface LigneSujet {
  *    échouer la requête ENTIÈRE et viderait le vivier de tout le monde.
  */
 interface LigneMateriau {
-  id: string; statut: string
+  id: string; statut: string; id_import: string | null
 }
 
 async function lireLesMateriaux(admin: Admin): Promise<{
@@ -65,6 +65,8 @@ async function lireLesMateriaux(admin: Admin): Promise<{
    * pas, et le cours en fait partie. On n'en lit donc que l'état PROPRE.
    */
   fabriques: Map<string, { id: string; statut: string }>
+  /** ⭐ C7-L6 — `id_import` → `id` des matériaux fabriqués, pour retrouver le devoir d'un cran 2 par sa souche. */
+  fabriquesParImport: Map<string, string>
 }> {
   const [textes, sujets, texteCours, sujetCours, fabriques] = await Promise.all([
     lirePagine<LigneTexte>(admin, 'exercices_textes',
@@ -78,7 +80,7 @@ async function lireLesMateriaux(admin: Admin): Promise<{
       admin, 'exercices_sujets_cours', 'sujet_id, cours_declare, cours_id',
       ['sujet_id', 'cours_declare'], (q) => q),
     lirePagine<LigneMateriau>(admin, 'exercices_materiaux',
-      'id, statut', ['id'], (q) => q),
+      'id, statut, id_import', ['id'], (q) => q),
   ])
 
   const rattachements = (lignes: Array<{ cours_id: string | null }>) => ({
@@ -117,7 +119,9 @@ async function lireLesMateriaux(admin: Admin): Promise<{
   }
   const mFabriques = new Map<string, { id: string; statut: string }>()
   for (const m of fabriques) mFabriques.set(m.id, { id: m.id, statut: m.statut })
-  return { textes: mTextes, sujets: mSujets, fabriques: mFabriques }
+  const fabriquesParImport = new Map<string, string>()
+  for (const f of fabriques) if (f.id_import) fabriquesParImport.set(f.id_import, f.id)
+  return { textes: mTextes, sujets: mSujets, fabriques: mFabriques, fabriquesParImport }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -133,6 +137,10 @@ interface LigneExercice {
   materiau_cible_texte_id: string | null; materiau_cible_sujet_id: string | null
   /** ⭐⭐ Le CO-TEXTE des crans de production, désigné par l'instance. */
   cotexte_materiau_id: string | null
+  /** ⭐ C7-L6 — la souche de l'`id_import` retrouve le devoir d'un cran 2. */
+  id_import: string | null
+  /** ⭐ C7-L6 — les devoirs que les cas servent. */
+  exercices_cas: Array<{ materiau_id: string | null }> | null
   exercices_types: { code: string; nature: string; grain: string | null
     exclusions_parcours: string[] | null } | null
 }
@@ -141,7 +149,7 @@ const COLONNES_EXERCICE =
   'id, lieu, statut, bloque, cran, classe_id, genre, modes_par_competence, '
   + 'observable_isole_competence, '
   + 'materiau_source_texte_id, materiau_source_sujet_id, materiau_cible_texte_id, '
-  + 'materiau_cible_sujet_id, cotexte_materiau_id, '
+  + 'materiau_cible_sujet_id, cotexte_materiau_id, id_import, exercices_cas(materiau_id), '
   + 'exercices_types!inner(code, nature, grain, exclusions_parcours)'
 
 /**
@@ -228,10 +236,73 @@ export async function lireLesInstances(
         declarees, (cran?.geste ?? 'produire') as Geste, exerce,
         l.observable_isole_competence),
       materiaux: materiauxDeLInstance,
+      devoirs: devoirsDeLInstance(l.id_import, l.exercices_cas, materiaux.fabriquesParImport),
       coTexte,
     })
   }
   return { instances, incidents }
+}
+
+/**
+ * ⭐ C7-L6 — les devoirs d'une instance : les matériaux fabriqués de ses cas ;
+ *    à défaut (le cran 2 n'a pas de matériau), le devoir du cas A de sa clé,
+ *    par la souche de l'`id_import` — `ex-gab-<souche>-c2` → `mat-gab-<souche>-a`
+ *    (et `-b`, que le 7 sert). Vide pour une instance sans devoir.
+ */
+export function devoirsDeLInstance(
+  idImport: string | null, cas: ReadonlyArray<{ materiau_id: string | null }> | null,
+  fabriquesParImport: ReadonlyMap<string, string>,
+): string[] {
+  const ids = new Set<string>()
+  for (const c of cas ?? []) if (c?.materiau_id) ids.add(c.materiau_id)
+  if (ids.size === 0 && idImport) {
+    const m = /^ex-(gab-.+)-c2(?:-\d+)?$/.exec(idImport)
+    if (m) {
+      for (const suffixe of ['a', 'b']) {
+        const id = fabriquesParImport.get(`mat-${m[1]}-${suffixe}`)
+        if (id) ids.add(id)
+      }
+    }
+  }
+  return [...ids]
+}
+
+/**
+ * ⭐⭐ C7-L6 — LES DEVOIRS DÉJÀ SERVIS, par élève : devoir → date du dernier
+ *    dépôt (`assigne_at`), tous crans confondus, la voie du professeur comprise
+ *    (un texte vu est un texte vu). C'est ce que la quarantaine lit.
+ */
+export async function lireLesDevoirsServis(
+  admin: Admin, eleveIds: readonly string[],
+): Promise<{ parEleve: Map<string, Map<string, string>>; incidents: string[] }> {
+  const incidents: string[] = []
+  const parEleve = new Map<string, Map<string, string>>()
+  for (const id of eleveIds) parEleve.set(id, new Map())
+  if (eleveIds.length === 0) return { parEleve, incidents }
+  try {
+    const [depots, fabriques] = await Promise.all([
+      lirePagine<{ id: string; eleve_id: string; assigne_at: string; exercices: unknown }>(
+        admin, 'exercices_depots', 'id, eleve_id, assigne_at, exercices(id_import, exercices_cas(materiau_id))', ['id'],
+        (q) => (q as never as { in: (a: string, b: string[]) => unknown }).in('eleve_id', eleveIds as string[])),
+      lirePagine<{ id: string; id_import: string | null }>(admin, 'exercices_materiaux', 'id, id_import', ['id'], (q) => q),
+    ])
+    const parImport = new Map<string, string>()
+    for (const m of fabriques) if (m.id_import) parImport.set(m.id_import, m.id)
+    const un = <T,>(x: unknown): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x as T | null))
+    for (const d of depots) {
+      const ex = un<{ id_import: string | null; exercices_cas: Array<{ materiau_id: string | null }> | null }>(d.exercices)
+      const devoirs = devoirsDeLInstance(ex?.id_import ?? null, ex?.exercices_cas ?? null, parImport)
+      const m = parEleve.get(d.eleve_id)
+      if (!m) continue
+      for (const id of devoirs) {
+        const at = m.get(id)
+        if (!at || d.assigne_at > at) m.set(id, d.assigne_at)
+      }
+    }
+  } catch (e) {
+    incidents.push(`devoirs déjà servis : ${(e as Error).message} — la quarantaine ne s'applique pas`)
+  }
+  return { parEleve, incidents }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

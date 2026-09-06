@@ -106,6 +106,15 @@ export interface InstanceDuVivier {
   couverture: Record<string, Couverture>
   materiaux: MateriauRattache[]
   /**
+   * ⭐⭐ C7-L6 — LE DEVOIR (`01-` v5.9 §3 : « le devoir est l'unité de service, la
+   *    clé l'unité de mesure »). Les matériaux FABRIQUÉS que les cas de
+   *    l'instance servent (`exercices_cas.materiau_id`) ; au cran 2, qui n'a pas
+   *    de matériau, le devoir du cas A de sa clé, retrouvé par la souche de
+   *    l'`id_import` (`ex-gab-<souche>-c2` → `mat-gab-<souche>-a`). Vide pour une
+   *    instance sans devoir (examens, instances de la voie du professeur).
+   */
+  devoirs: string[]
+  /**
    * ⭐⭐ LE CO-TEXTE des crans de production — `exercices.cotexte_materiau_id`.
    *
    * ⛔ **IL N'ENTRE PAS DANS `materiaux`, ET C'EST VOULU.** Cette liste sert au
@@ -151,7 +160,25 @@ export interface ContexteDuVivier {
    *    débloque rien ». Absente ou inactive ⇒ la couche 4 sert comme hier.
    */
   porte?: { actif: boolean; de: (objet: string) => PorteDUnObjet } | null
+  /**
+   * ⭐⭐ C7-L6 — LES DEVOIRS DÉJÀ SERVIS à l'élève : devoir → date du dernier
+   *    dépôt (`assigne_at`, ISO). Avec `cycleLundi`, c'est ce que la quarantaine
+   *    lit (`01-` v5.9 §8.10). Absent ⇒ pas de quarantaine (la couche 4 sert
+   *    comme hier).
+   */
+  devoirsServis?: ReadonlyMap<string, string> | null
+  /** Le lundi du cycle posé (`YYYY-MM-DD`) — la quarantaine se compte en cycles. */
+  cycleLundi?: string | null
+  /** Les cycles d'attente avant qu'un devoir revienne — `QUARANTAINE_CYCLES` par défaut. */
+  quarantaineCycles?: number
 }
+
+/**
+ * `01-` v5.9 §8.10 — « un devoir servi à un élève au cycle N ne lui est pas
+ * resservi avant le cycle N + 2 — deux semaines par défaut (provisoire —
+ * réglage empirique) ». Le nombre vit ici, et nulle part ailleurs.
+ */
+export const QUARANTAINE_CYCLES = 2
 
 /** Pourquoi une instance n'est pas entrée au vivier. « Un vide expliqué. » */
 export type MotifDEcart =
@@ -174,6 +201,12 @@ export type MotifDEcart =
   // ⭐ C7-L5 — la porte du registre (`10-` §7) : le cran n'est pas ouvert sur cet
   //   objet, ou la semaine de méthode ne le sert pas. Derrière `gabarit_actif`.
   | 'porte_registre'
+  // ⭐ C7-L6 — le devoir a déjà été servi à l'élève il y a moins de deux cycles
+  //   (`01-` v5.9 §8.10). Jamais en semaine de méthode.
+  | 'devoir_en_quarantaine'
+  // ⭐ C7-L6 — la semaine de méthode est bornée à deux objets par élève, et à un
+  //   seul devoir par objet (`01-` v5.9 §5) ; le reste attend le cycle suivant.
+  | 'methode_hors_quota'
   | 'deja_deposee'
   | 'aucune_competence_ciblable'
 
@@ -482,11 +515,83 @@ export interface InstanceRetenue {
    *    l'ouvre ; `null` = porte inactive.
    */
   porte: StatutDeService | null
+  /**
+   * ⭐ C7-L6 — le devoir que l'instance sert, et la date du dernier dépôt de
+   *    l'élève dessus (`null` : jamais servi). Journalisé à la décision.
+   */
+  devoir: { ids: string[]; dernierDepotAt: string | null }
+  /**
+   * ⭐ C7-L6 — l'instance est servie DÉGRADÉE : son objet n'avait plus de devoir
+   *    frais, « le routeur sert quand même et signale » (`01-` v5.9 §3).
+   */
+  degrade: boolean
+  /**
+   * ⭐ C7-L6 — en semaine de méthode : l'objet, le devoir unique, la séquence du
+   *    palier et le rang de ce cran dans la séquence (`01-` v5.9 §5). `null` hors
+   *    méthode.
+   */
+  methode: { objet: string; devoir: string | null; sequence: number[]; rang: number } | null
 }
 
 export interface Vivier {
   retenus: InstanceRetenue[]
   ecartes: EcartDuVivier[]
+  /**
+   * ⭐ C7-L6 — les objets SANS DEVOIR FRAIS pour cet élève : toutes leurs
+   *    instances étaient en quarantaine, la plus ancienne est resservie
+   *    `degrade`. C'est le signal au professeur : « il manque un devoir sur
+   *    cet objet » — compté par objet, lu par la console de la fabrique.
+   */
+  devoirsManquants: string[]
+}
+
+// ── ⭐ C7-L6 — LA QUARANTAINE DES DEVOIRS ─────────────────────────────────────
+
+/** Le lundi (UTC) de la semaine d'une date ISO, en `YYYY-MM-DD`. */
+export function lundiDe(iso: string): string {
+  const d = new Date(iso)
+  const j = (d.getUTCDay() + 6) % 7
+  d.setUTCDate(d.getUTCDate() - j)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Les cycles (semaines entières) écoulés entre le lundi d'un dépôt et le lundi du cycle posé. */
+export function cyclesEcoules(dernierDepotAt: string, cycleLundi: string): number {
+  const a = Date.parse(`${lundiDe(dernierDepotAt)}T00:00:00Z`)
+  const b = Date.parse(`${cycleLundi}T00:00:00Z`)
+  return Math.floor((b - a) / (7 * 86_400_000))
+}
+
+/**
+ * Le devoir de l'instance que la quarantaine retient, s'il y en a un : celui
+ * servi le plus récemment, quand il l'a été il y a moins de `cycles` cycles.
+ * `null` quand l'instance peut être servie.
+ */
+export function devoirEnQuarantaine(
+  devoirs: readonly string[], devoirsServis: ReadonlyMap<string, string>,
+  cycleLundi: string, cycles = QUARANTAINE_CYCLES,
+): { devoir: string; dernierDepotAt: string; cyclesEcoules: number } | null {
+  let pire: { devoir: string; dernierDepotAt: string; cyclesEcoules: number } | null = null
+  for (const id of devoirs) {
+    const at = devoirsServis.get(id)
+    if (!at) continue
+    const n = cyclesEcoules(at, cycleLundi)
+    if (n >= cycles) continue
+    if (!pire || at > pire.dernierDepotAt) pire = { devoir: id, dernierDepotAt: at, cyclesEcoules: n }
+  }
+  return pire
+}
+
+/** La date du dernier dépôt de l'élève sur l'un des devoirs de l'instance — `null` sinon. */
+export function dernierDepotSur(
+  devoirs: readonly string[], devoirsServis: ReadonlyMap<string, string> | null | undefined,
+): string | null {
+  let max: string | null = null
+  for (const id of devoirs) {
+    const at = devoirsServis?.get(id)
+    if (at && (!max || at > max)) max = at
+  }
+  return max
 }
 
 /** Les statuts d'instance qui entrent au vivier (piège 30). */
@@ -511,6 +616,8 @@ export function constituerLeVivier(
 ): Vivier {
   const retenus: InstanceRetenue[] = []
   const ecartes: EcartDuVivier[] = []
+  // ⭐ C7-L6 — les instances mises en quarantaine, gardées pour le second passage.
+  const enQuarantaine: InstanceRetenue[] = []
   const ecarter = (exerciceId: string, motif: MotifDEcart, detail: string) =>
     ecartes.push({ exerciceId, motif, detail })
 
@@ -615,10 +722,141 @@ export function constituerLeVivier(
         continue
       }
     }
+    // ── ⭐⭐ C7-L6 — LA QUARANTAINE DU DEVOIR (`01-` v5.9 §8.10), après la porte :
+    //    « un devoir servi ne revient pas avant deux cycles ; la même clé, sur un
+    //    autre devoir, revient ». ⛔ JAMAIS EN SEMAINE DE MÉTHODE : elle fait
+    //    parcourir le même devoir aux crans de sa séquence, et c'est voulu.
+    //    Une instance écartée ici est GARDÉE de côté : si son objet n'a plus
+    //    aucun devoir frais, la plus ancienne revient, dégradée (second passage).
+    const devoir = { ids: inst.devoirs ?? [], dernierDepotAt: dernierDepotSur(inst.devoirs ?? [], ctx.devoirsServis) }
+    if (ctx.devoirsServis && ctx.cycleLundi && porte !== 'methode' && inst.devoirs?.length) {
+      const q = devoirEnQuarantaine(inst.devoirs, ctx.devoirsServis, ctx.cycleLundi,
+        ctx.quarantaineCycles ?? QUARANTAINE_CYCLES)
+      if (q) {
+        ecarter(inst.exerciceId, 'devoir_en_quarantaine',
+          `le devoir ${q.devoir.slice(0, 8)} a été servi à cet élève le ${q.dernierDepotAt.slice(0, 10)} `
+          + `(il y a ${q.cyclesEcoules} cycle(s), ${ctx.quarantaineCycles ?? QUARANTAINE_CYCLES} attendus) : `
+          + 'le même texte ne revient pas encore (`01-` §8.10).')
+        enQuarantaine.push({ instance: inst, borne: s.borne, ciblables, plafondCibles: plafond,
+          observableSeul, porte, devoir, degrade: true, methode: null })
+        continue
+      }
+    }
     retenus.push({ instance: inst, borne: s.borne, ciblables, plafondCibles: plafond,
-      observableSeul, porte })
+      observableSeul, porte, devoir, degrade: false, methode: null })
   }
-  return { retenus, ecartes }
+
+  // ── ⭐ C7-L6 — L'OBJET SANS DEVOIR FRAIS : « sans devoir frais, le routeur
+  //    sert quand même — la branche d'échec du §6, `degrade` — et signale au
+  //    professeur ». Par objet : aucune instance retenue et au moins une en
+  //    quarantaine ⇒ la plus anciennement servie revient, marquée `degrade`.
+  const devoirsManquants: string[] = []
+  const objetsServis = new Set(retenus.map((r) => r.instance.objet))
+  const parObjet = new Map<string, InstanceRetenue[]>()
+  for (const r of enQuarantaine) parObjet.set(r.instance.objet, [...(parObjet.get(r.instance.objet) ?? []), r])
+  for (const [objet, liste] of parObjet) {
+    if (objetsServis.has(objet)) continue
+    devoirsManquants.push(objet)
+    const plusAncienne = [...liste].sort((a, b) =>
+      (a.devoir.dernierDepotAt ?? '').localeCompare(b.devoir.dernierDepotAt ?? ''))[0]!
+    retenus.push(plusAncienne)
+    // L'écart reste au journal : il dit POURQUOI l'instance est servie dégradée.
+  }
+  return { retenus, ecartes, devoirsManquants: devoirsManquants.sort() }
+}
+
+// ── ⭐ C7-L6 — LA SEMAINE DE MÉTHODE, BORNÉE (`01-` v5.9 §5) ───────────────────
+
+/**
+ * La séquence de méthode d'un palier, EN CRANS — « E-D : la fiche → une paire au
+ * cran 1 → le 3 → le 2 → le 4 ; C-B : une paire au cran 1 → le 3 → la fiche →
+ * le 2 ; A : une sonde directe au 4 ou au 9 ». Le 2 n'entre « que si son écran
+ * est servi ». ⚠️ La porte (`porte.ts`) ne sert en méthode que 1·3·4 : le 9 d'A
+ * y attend que la porte l'ouvre — A reçoit le 4.
+ */
+export function sequenceDeMethode(palier: string | null, cran2Servi: boolean): number[] {
+  if (palier === 'A') return [4]
+  if (palier === 'B' || palier === 'C') return cran2Servi ? [1, 3, 2] : [1, 3]
+  return cran2Servi ? [1, 3, 2, 4] : [1, 3, 4]      // E, D — et sans palier connu
+}
+
+/** « Deux objets par élève, pas quatre » — le nombre vit ici. */
+export const OBJETS_EN_METHODE_MAX = 2
+
+/**
+ * Borne la semaine de méthode du vivier : au plus `OBJETS_EN_METHODE_MAX` objets
+ * en méthode — les deux premiers que la liste de priorité atteint —, et sur
+ * chacun UN SEUL devoir (celui dont les instances couvrent le plus de crans de
+ * la séquence), aux seuls crans de la séquence du palier de la cible. Ce qui
+ * sort est écarté `methode_hors_quota`. Les instances hors méthode passent
+ * telles quelles. PUR : la pose (phase B) reçoit ce qu'il rend.
+ */
+export function bornerLaMethode(
+  retenus: readonly InstanceRetenue[],
+  prioriteDesCompetences: readonly Competence[],
+  paliers: ReadonlyMap<Competence, string | null>,
+  cran2Servi = false,
+  max = OBJETS_EN_METHODE_MAX,
+): { retenus: InstanceRetenue[]; ecartes: EcartDuVivier[]; objetsEnMethode: string[] } {
+  const enMethode = retenus.filter((r) => r.porte === 'methode')
+  if (enMethode.length === 0) return { retenus: [...retenus], ecartes: [], objetsEnMethode: [] }
+
+  // L'ordre des objets : celui de la liste de priorité, par la première
+  // compétence ciblable de l'objet ; les objets qu'aucune compétence n'atteint
+  // viennent après, par nom.
+  const rangDe = (r: InstanceRetenue) => {
+    const rangs = r.ciblables.map((c) => prioriteDesCompetences.indexOf(c)).filter((i) => i >= 0)
+    return rangs.length ? Math.min(...rangs) : Number.MAX_SAFE_INTEGER
+  }
+  const objets = [...new Set(enMethode.map((r) => r.instance.objet))]
+    .map((o) => ({ o, rang: Math.min(...enMethode.filter((r) => r.instance.objet === o).map(rangDe)) }))
+    .sort((a, b) => a.rang - b.rang || a.o.localeCompare(b.o))
+  const gardes = objets.slice(0, max).map((x) => x.o)
+  const out: InstanceRetenue[] = retenus.filter((r) => r.porte !== 'methode')
+  const ecartes: EcartDuVivier[] = []
+
+  for (const objet of objets.map((x) => x.o)) {
+    const siennes = enMethode.filter((r) => r.instance.objet === objet)
+    if (!gardes.includes(objet)) {
+      for (const r of siennes) ecartes.push({ exerciceId: r.instance.exerciceId, motif: 'methode_hors_quota',
+        detail: `semaine de méthode bornée à ${max} objets : « ${objet} » attend le cycle suivant (\`01-\` §5).` })
+      continue
+    }
+    // Le palier : celui de la première compétence ciblable atteinte par la priorité.
+    const cible = prioriteDesCompetences.find((c) => siennes.some((r) => r.ciblables.includes(c)))
+      ?? siennes[0]!.ciblables[0] ?? null
+    const palier = cible ? (paliers.get(cible) ?? null) : null
+    const sequence = sequenceDeMethode(palier, cran2Servi)
+    // Le devoir unique : celui qui couvre le plus de crans de la séquence ; à
+    // égalité, le devoir jamais servi, puis le premier par identifiant.
+    const parDevoir = new Map<string, InstanceRetenue[]>()
+    for (const r of siennes) for (const id of (r.devoir.ids.length ? r.devoir.ids : ['∅'])) {
+      parDevoir.set(id, [...(parDevoir.get(id) ?? []), r])
+    }
+    const couverture = (l: InstanceRetenue[]) => new Set(l.map((r) => r.instance.cranNumero).filter((n) => n !== null && sequence.includes(n))).size
+    const devoir = [...parDevoir.entries()].sort((a, b) =>
+      couverture(b[1]) - couverture(a[1])
+      || (a[1][0]!.devoir.dernierDepotAt ?? '').localeCompare(b[1][0]!.devoir.dernierDepotAt ?? '')
+      || a[0].localeCompare(b[0]))[0]![0]
+    const retenuesDuDevoir = parDevoir.get(devoir) ?? []
+    const vues = new Set<string>()
+    for (const r of siennes) {
+      const n = r.instance.cranNumero
+      const dedans = retenuesDuDevoir.includes(r) && n !== null && sequence.includes(n)
+      // Un seul exercice par cran de la séquence (1(a) OU 1(b) : la paire est un exercice).
+      const cle = `${n}`
+      if (!dedans || vues.has(cle)) {
+        ecartes.push({ exerciceId: r.instance.exerciceId, motif: 'methode_hors_quota',
+          detail: !dedans
+            ? `méthode sur « ${objet} » : un seul devoir (${devoir === '∅' ? 'sans devoir' : devoir.slice(0, 8)}) aux crans ${sequence.join('·')} de la séquence du palier ${palier ?? '?'}.`
+            : `méthode sur « ${objet} » : le cran ${n} est déjà posé sur ce devoir.` })
+        continue
+      }
+      vues.add(cle)
+      out.push({ ...r, methode: { objet, devoir: devoir === '∅' ? null : devoir, sequence, rang: sequence.indexOf(n) } })
+    }
+  }
+  return { retenus: out, ecartes, objetsEnMethode: gardes }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
