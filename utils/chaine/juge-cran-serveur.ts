@@ -38,6 +38,7 @@ export function entreeDuContexte(ctx: ContexteDepot, version: Version, productio
     cas: ctx.casPourLeRetour.map((c) => ({
       ordre: c.ordre, materiau: c.materiau, versionCorrigee: c.versionCorrigee, defaut: c.defaut,
       reponseAttendue: c.reponseAttendue, passageFautif: c.passageFautif, zone: c.zone, choix: c.choix,
+      piece: c.piece ?? null,
     })),
     texteSupport: ctx.texteSupport?.texte ?? null,
   }
@@ -90,6 +91,9 @@ export async function jugerLeCran(
 ): Promise<{ verdict: VerdictCran | null; appels: number; alertes: string[] }> {
   const { ctx } = a
   if (ctx.cran == null || !JUGE_AUX_CRANS.has(ctx.cran)) return { verdict: null, appels: 0, alertes: [] }
+  // ⛔ 06/09 — au cran 2, SEUL LE GABARIT se juge : un cas sans pièces (la
+  //    banque 1.4) ne reçoit pas de juge, quelle que soit la porte.
+  if (ctx.cran === 2 && !ctx.casPourLeRetour.some((c) => c.piece)) return { verdict: null, appels: 0, alertes: [] }
   const r = await jugerUneEntree(admin, {
     entree: entreeDuContexte(ctx, a.version, a.production), modele: a.modele,
     attribution: { eleveId: ctx.eleveId, classeId: ctx.classeId, depotId: ctx.depotId, version: a.version },

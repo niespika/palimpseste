@@ -48,7 +48,8 @@ import { echeanceDeLaVersionFinale, finDeSemaineDeTravail } from './echeance'
 import { lireReleveDeLangue, nombreDeFautes, ancrerLigneALigne, phraseDeLaChasse,
   type AncrageFaute } from './langue'
 import { baliser, type Jeton } from './balisage'
-import { lireLeGabaritDuDepot, type GabaritDuDepot } from '@/utils/gabarit/lecture'
+import { lireLeGabaritDuDepot, lireLeCran2, type GabaritDuDepot } from '@/utils/gabarit/lecture'
+import { composerLesPieces, type PiecesServies } from '@/utils/gabarit/pieces'
 import { appuiDu1a, appuiDu1b } from '@/utils/gabarit/candidats'
 import {
   consigneDuGabarit, demandeUneDesignationAuGabarit, sansDocuments, varianteDuCas, type Variante,
@@ -113,6 +114,13 @@ export interface CasServi {
   zoneDonnee: [number, number] | null
   /** L'élève a-t-il répondu à la désignation — sélection OU « rien à signaler » ? */
   designationDonnee: boolean
+  /**
+   * ⭐ 06/09 — LE CRAN 2 DU GABARIT : les pièces servies, chacune à sa place,
+   *    et la place vide de celle que l'élève écrit (`10-` §2 bis.1). `null` à
+   *    tout autre cran, et au cran 2 de la banque 1.4. La règle est PURE
+   *    (`utils/gabarit/pieces.ts`) : l'écran affiche, il ne décide pas.
+   */
+  pieces: PiecesServies | null
 }
 
 /** Le retour, tel que la chaîne l'a écrit — SEGMENTÉ. On ne le découpe pas. */
@@ -597,6 +605,14 @@ export async function chargerLeDeroule(
   }
   // ── ⭐ C7-L5 — LA FICHE DE L'OBJET, pour la semaine de méthode ─────────────
   const fiche = gabarit.actif ? await lireLaFicheDeLObjet(admin, depot, avertissements) : null
+  // ── ⭐ 06/09 — LE CRAN 2 : les pièces et le geste, la porte ouverte seulement ──
+  //    Le geste vient de `exercices_pieces` (dérivée du `09-`), jamais du code ;
+  //    sans lui, la consigne dérivée n'existe pas et celle du dépôt est servie.
+  const cran2 = gabarit.actif && ctx.cran === 2
+    ? await lireLeCran2(admin, { exerciceId: depot.exercice_id, typeId: depot.exercice.type_id,
+      objet: ctx.objet, genre: depot.exercice.genre ?? null })
+    : null
+  if (cran2) avertissements.push(...cran2.incidents)
 
   const enonceDuCas = (ordre: number): string | null => {
     const cle = gabarit.clesParCas.get(ordre)
@@ -642,9 +658,13 @@ export async function chargerLeDeroule(
     const insertion = !!(mat?.version_corrigee && materiauBrut
       && pointDInsertion(materiauBrut, mat.version_corrigee))
     const consigneDerivee = gabarit.actif && ctx.cran != null
-      ? consigneDuGabarit({ cran: ctx.cran, variante: vCas, enonce: enonceDuCas(i + 1), insertion })
+      ? consigneDuGabarit({ cran: ctx.cran, variante: vCas, enonce: enonceDuCas(i + 1), insertion,
+        geste: cran2?.geste ?? null })
       : null
     consignesGabarit.push(consigneDerivee ?? '')
+    if (gabarit.actif && ctx.cran === 2 && !consigneDerivee) {
+      avertissements.push(`cas ${i + 1} : cran 2 sans geste dérivé — la consigne servie est celle du dépôt, pas celle du \`10-\` §3`)
+    }
 
     const offre = geste && credenceDemandee(geste as never) && ctx.cranCode
       ? offreDeCredence(ctx.cranCode as never, i + 1, depotId, {
@@ -725,6 +745,10 @@ export async function chargerLeDeroule(
         ? demandeUneDesignationAuGabarit(ctx.cran, vCas)
         : demandeUneDesignation(regimeDeMarquage(cran?.marquage as string | null)),
       ...lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1)),
+      // ⭐ 06/09 — les pièces du cran 2, composées par la règle pure.
+      pieces: cran2?.parCas.get(i + 1)
+        ? composerLesPieces(ctx.objet, cran2.parCas.get(i + 1)!, cran2.geste)
+        : null,
     })
   }
 
@@ -902,7 +926,9 @@ export async function chargerLeDeroule(
     contenuDemonstration: demonstration.demonstration
       ? lireLeContenu(demonstration.demonstration.forme, demonstration.demonstration.contenu)
       : null,
-    guide: guideServi,
+    // ⭐ 06/09 — au cran 2 du gabarit, LE GUIDE NE SE SERT PAS : les pièces le
+    //    remplacent (`08-` §5 : « `guide` disparaît au cran 2 »).
+    guide: cran2 ? null : guideServi,
     etalon: etalonServiIci,
     // ⭐ C5-L2 — SERVI PAR `lireContexte`, DONC SANS UNE LECTURE DE PLUS. La
     //    tranche et sa découpe se calculent une fois, au même endroit, et la

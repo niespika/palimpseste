@@ -15,19 +15,46 @@
 //    reçoivent toujours rien de tout cela. Le juge est un QUATRIÈME appel, à
 //    `phase` NULL comme la transcription — la contrainte d'`api_couts` n'admet
 //    que `p1`, `p2`, `retour` ou NULL —, et Calame reçoit son verdict.
-// ⚠️ AUX QUATRE CRANS QUE LA BANQUE DU 31/08 PEUT SERVIR : 4, 5, 7 et 9. Aux 6
-//    et 8 « la chaîne, déjà écrite » tranche par les seuils ; au 2 il faudrait
-//    les pièces, qui n'existent pas encore (`C7-L2`). Aux 1 et 3, personne ne
-//    juge (`reference_crans_1_3_personne_ne_juge`).
+// ⚠️ AUX QUATRE CRANS QUE LA BANQUE DU 31/08 PEUT SERVIR : 4, 5, 7 et 9 — ET,
+//    depuis le 06/09, AU CRAN 2 DU GABARIT : il reçoit l'objet ASSEMBLÉ (les
+//    pièces servies dans l'ordre, la pièce de l'élève à sa place), le test de
+//    la fiche et la pièce qu'on tient pour vraie ; il tranche « la pièce écrite
+//    fait-elle son travail avec les pièces servies » sur le SEUL constituant
+//    (`10-` §2 bis.1 : le cran 2 ISOLE ; §6 ; décision 17). ⛔ Un cran 2 SANS
+//    pièces (la banque 1.4) n'est pas jugé : `jugerLeCran` s'en assure. Aux 6
+//    et 8 « la chaîne, déjà écrite » tranche par les seuils. Aux 1 et 3,
+//    personne ne juge (`reference_crans_1_3_personne_ne_juge`).
 // ⭐ PUR. L'appel, la lecture et l'écriture vivent à `juge-cran-serveur.ts`.
 // ============================================================================
 import type { Version } from './types'
 import type { Forme } from './schema'
 import { messageAvecMateriau, type BlocMateriau } from './anti-injection'
 import { citationTient } from './citation-verifiee'
+import { assemblerLObjet, type Piece } from '../gabarit/pieces'
 
-/** Les crans où le juge tranche, sur la banque du 31/08. */
-export const JUGE_AUX_CRANS: ReadonlySet<number> = new Set([4, 5, 7, 9])
+/** Les crans où le juge tranche : la banque du 31/08 (4·5·7·9), et le cran 2 du gabarit. */
+export const JUGE_AUX_CRANS: ReadonlySet<number> = new Set([2, 4, 5, 7, 9])
+
+/**
+ * ⭐ 06/09 — AU CRAN 2 : la pièce que l'élève écrit, et ce qui l'entoure. Lue
+ *    par `lireLeCran2` (`utils/gabarit/lecture.ts`), servie au juge ET au
+ *    retour la porte ouverte. `observables` : ceux du constituant, et eux seuls.
+ */
+export interface PieceServieAuJuge {
+  /** Le constituant, tel que le cas le porte (« le garant »). */
+  constituant: string
+  /** Les pièces servies, dans l'ordre, sous leur nom. */
+  pieces: Piece[]
+  /** L'index de la place vide parmi les pièces. */
+  place: number
+  /** Le geste de la fiche, tel quel — la consigne du cran 2 en dépend. */
+  geste: string | null
+  /** Le test de la fiche — la grille du juge (`10-` §6). */
+  test: string | null
+  /** Le constituant tel que la grille l'écrit ; `null` = la pièce est l'objet. */
+  constituantGrille: string | null
+  observables: Array<{ code: string; competence: string | null }>
+}
 
 /** La zone que l'élève a désignée dans le devoir d'élève, et ce que la porte de zone en dit. */
 export interface ZoneServieAuJuge {
@@ -58,6 +85,8 @@ export interface CasPourLeJuge {
   passageFautif: string | null
   zone: ZoneServieAuJuge | null
   choix: ChoixServiAuJuge | null
+  /** ⭐ Cran 2 du gabarit — les pièces ; `null` partout ailleurs. */
+  piece?: PieceServieAuJuge | null
 }
 
 export interface EntreeJuge {
@@ -132,9 +161,28 @@ export const PREFIXE_JUGE = [
   '   « motif » : deux phrases au plus, qui disent pourquoi.',
 ].join('\n')
 
+/** Les observables du constituant, en une ligne — « garant_present, garant_circulaire (argumentation) ». */
+function observablesEnTexte(piece: PieceServieAuJuge): string {
+  if (!piece.observables.length) return 'ceux du constituant, tels que la fiche les décrit'
+  return piece.observables.map((o) => o.competence ? `${o.code} (${o.competence})` : o.code).join(', ')
+}
+
 /** La question posée au cran — la colonne « Ce qu'il tranche » du `10-` §6. */
-export function questionDuCran(cran: number): string {
+export function questionDuCran(cran: number, piece?: PieceServieAuJuge | null): string {
   switch (cran) {
+    case 2: {
+      const c = piece?.constituant ?? 'la pièce'
+      return [
+        `L'élève devait ÉCRIRE UNE SEULE PIÈCE de l'objet — ${c} — à sa place entre les pièces servies.`,
+        "Tu juges L'OBJET ASSEMBLÉ : les pièces servies font foi, seule la sienne est en question.",
+        "RÉUSSI si sa pièce fait son travail avec les pièces servies — elle passe le test de la fiche",
+        `sur ce seul constituant. ⛔ Tu ne mesures et ne commentes QUE les observables de ce constituant : ${piece ? observablesEnTexte(piece) : 'ceux de la pièce'}.`,
+        "Les autres observables de la compétence n'ont pas d'objet sur une pièce seule : tu ne les nommes pas.",
+        "La pièce attendue est UNE bonne forme parmi d'autres : une pièce qui fait le même travail par un autre chemin a réussi.",
+        "« probleme_present » : vrai si sa pièce ne fait pas ce travail. « probleme_vu » : ce qui lui manque, en une phrase simple.",
+        "« passage » : un extrait VERBATIM de SA pièce — jamais des pièces servies.",
+      ].join('\n')
+    }
     case 4: return [
       "L'élève devait trouver le problème dans le devoir d'élève et le NOMMER.",
       "RÉUSSI si le problème qu'il nomme — dans sa copie, ou par le candidat qu'il a choisi — est celui",
@@ -186,6 +234,19 @@ export function assemblerLeJuge(e: EntreeJuge): {
   ]
   for (const c of e.cas) {
     const n = e.cas.length > 1 ? ` (cas ${c.ordre})` : ''
+    // ⭐ 06/09 — AU CRAN 2 : les pièces servies, l'objet assemblé, le test.
+    if (c.piece) {
+      const pieces = c.piece.pieces.map((p) => `— ${p.nom} :\n${p.texte}`).join('\n\n')
+      const assemble = assemblerLObjet(c.piece.pieces, c.piece.place, e.production,
+        { avant: '[la pièce de l\'élève : ', apres: ']' })
+      blocs.push(
+        ...bloc(`les pièces servies${n} — chacune sous son nom, dans l'ordre`, pieces),
+        ...bloc(`l'objet assemblé${n} — les pièces servies, et la pièce de l'élève à sa place`, assemble),
+        ...bloc(`le test de la fiche${n} — la grille du jugement`, c.piece.test),
+        ...bloc(`la pièce attendue${n} — ce qu'on tient pour vrai, une bonne forme parmi d'autres`, c.reponseAttendue),
+      )
+      continue
+    }
     blocs.push(
       ...bloc(`le devoir d'élève${n} — le texte sur lequel l'exercice portait`, c.materiau),
       ...bloc(`l'énoncé du problème${n} — ce qu'on tient pour vrai`, c.defaut),
@@ -202,13 +263,15 @@ export function assemblerLeJuge(e: EntreeJuge): {
   if (e.version === 'vf' && e.productionV1) {
     blocs.push(...bloc("la copie de l'élève — première version, déjà commentée", e.productionV1))
   }
+  const laCopie = e.cas.some((c) => c.piece) ? "la pièce de l'élève" : "la copie de l'élève"
   blocs.push(...bloc(
-    e.version === 'vf' ? "la copie de l'élève — VERSION FINALE, celle que tu juges" : "la copie de l'élève",
+    e.version === 'vf' ? `${laCopie} — VERSION FINALE, celle que tu juges` : laCopie,
     e.production))
 
+  const piece = e.cas.find((c) => c.piece)?.piece ?? null
   const demande = [
     `LA QUESTION — cran ${e.cran}${e.version === 'vf' ? ', version finale' : ''}.`,
-    questionDuCran(e.cran),
+    questionDuCran(e.cran, piece),
     e.version === 'vf'
       ? 'La copie jugée est la VERSION FINALE, écrite après un premier retour ; la première version est jointe pour que tu voies ce qui a changé.'
       : '',

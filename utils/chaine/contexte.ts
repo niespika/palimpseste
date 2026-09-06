@@ -23,7 +23,9 @@ import type { SegmentMateriau } from '@/utils/deroule/marquage'
 import { enTexte } from './consigne'
 import { cibleDansLeMateriau, verdictDeLaZone } from '@/utils/deroule/designation'
 import { lireLaPorteJugeDocuments } from '@/utils/juge/porte'
-import type { ChoixServiAuJuge, ZoneServieAuJuge } from './juge-cran'
+import type { ChoixServiAuJuge, PieceServieAuJuge, ZoneServieAuJuge } from './juge-cran'
+import { lireLeCran2 } from '@/utils/gabarit/lecture'
+import { placeDeLaPieceVide } from '@/utils/gabarit/pieces'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
 
@@ -78,6 +80,13 @@ export interface CasServiAuRetour {
   defaut: string | null
   /** La CIBLE en texte : le passage que le diff désigne (`cibleDansLeMateriau`). */
   passageFautif: string | null
+  /**
+   * ⭐ 06/09 — AU CRAN 2 DU GABARIT : les pièces servies, la place vide, le geste,
+   *    le test et les observables du constituant (`lireLeCran2`). `null` partout
+   *    ailleurs, et au cran 2 de la banque 1.4. Servi au juge et, la porte
+   *    ouverte, au retour — qui ne parle alors QUE de ces observables (décision 17).
+   */
+  piece: PieceServieAuJuge | null
   /** La zone que l'élève a désignée (`exercices_metacognition.credence`), et son verdict de zone. */
   zone: ZoneServieAuJuge | null
   /** Au cran 4 : le candidat le plus chargé en jetons, et le bon (`index_correct`). */
@@ -667,7 +676,9 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       ? await patronDeProduction(admin, tousLesModes, cran)
       : null,
     etalonProduction: await etalonDeProduction(admin, exercice.id, cran),
-    casPourLeRetour: await casPourLeRetour(admin, exercice.id, depot.id),
+    // ⭐ 06/09 — au cran 2 du gabarit, chaque cas porte ses pièces (juge, retour).
+    casPourLeRetour: await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id),
+      { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
     jugeDocumentsActif: await lireLaPorteJugeDocuments(admin as never),
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
@@ -877,7 +888,32 @@ async function casPourLeRetour(
       passageFautif: cible ? brut.slice(cible[0], cible[1]) : null,
       zone: zoneServie(brut, cible, entree),
       choix: choixServi(entree),
+      piece: null,
     }
+  })
+}
+
+/**
+ * ⭐ 06/09 — LE CRAN 2 DU GABARIT : les pièces du cas, lues avec tolérance
+ *    (`lireLeCran2`), posées sur chaque cas qui en porte. Ailleurs, rien ne
+ *    change — et un cran 2 de la banque 1.4 (sans pièces) reste sans `piece`.
+ */
+async function avecLesPieces(
+  admin: Admin, cas: CasServiAuRetour[],
+  a: { exerciceId: string; typeId: string | null; objet: string; genre: string | null; cran: number | null },
+): Promise<CasServiAuRetour[]> {
+  if (a.cran !== 2) return cas
+  const c2 = await lireLeCran2(admin, a)
+  if (!c2) return cas
+  for (const i of c2.incidents) console.warn(`[chaine] ${i}`)
+  return cas.map((c) => {
+    const p = c2.parCas.get(c.ordre)
+    if (!p) return c
+    const piece: PieceServieAuJuge = {
+      constituant: p.constituant, pieces: p.pieces, place: placeDeLaPieceVide(a.objet, p.pieces),
+      geste: c2.geste, test: c2.test, constituantGrille: c2.constituantGrille, observables: c2.observables,
+    }
+    return { ...c, piece }
   })
 }
 

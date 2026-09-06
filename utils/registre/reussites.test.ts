@@ -92,3 +92,43 @@ test('deux échecs DE SUITE au même cran disent où l’élève stagne — un s
   assert.equal(cranSuivant(9), null)
   assert.equal(cranSuivant(42), null)
 })
+
+// ── ⭐ 06/09 — LE CRAN 2 : le juge tranche, × constituant, et le joint seul ouvre le 6 ──
+
+test('au cran 2, le juge tranche — et la ligne se range PAR CONSTITUANT', () => {
+  assert.equal(issueDuDepot(depot({ cran: 2, verdicts: { v1: verdict(true) }, constituant: 'le garant', joint: true })), 'reussi')
+  assert.equal(issueDuDepot(depot({ cran: 2, verdicts: { v1: verdict(false), vf: verdict(true, 'vf') } })), 'reussi')
+  assert.equal(issueDuDepot(depot({ cran: 2, verdicts: {} })), null)
+  const r = deriverLeRegistre([
+    depot({ cran: 2, verdicts: { v1: verdict(true) }, constituant: 'le garant', joint: true, at: '2026-09-01T10:00:00Z' }),
+    depot({ cran: 2, verdicts: { v1: verdict(true) }, constituant: 'la preuve', joint: false, at: '2026-09-02T10:00:00Z' }),
+    depot({ cran: 2, verdicts: { v1: verdict(false) }, constituant: 'le garant', joint: true, at: '2026-09-03T10:00:00Z' }),
+  ])
+  const deux = r.filter((l) => l.cran === 2)
+  assert.equal(deux.length, 2)
+  const garant = deux.find((l) => l.constituant === 'le garant')!
+  assert.deepEqual([garant.reussites, garant.echecs, garant.joint], [1, 1, true])
+  const preuve = deux.find((l) => l.constituant === 'la preuve')!
+  assert.deepEqual([preuve.reussites, preuve.echecs, preuve.joint], [1, 0, false])
+})
+
+test('« cran 2 réussi sur l’objet » se lit sur la pièce JOINT : deux réussites au joint ouvrent le 6, deux sur une autre pièce non', () => {
+  const surLeJoint = deriverLeRegistre([
+    depot({ cran: 2, verdicts: { v1: verdict(true) }, constituant: 'le garant', joint: true }),
+    depot({ cran: 2, verdicts: { v1: verdict(true) }, constituant: 'le garant', joint: true }),
+  ])
+  assert.deepEqual(cransDebloques(surLeJoint, 'argument'), [1, 2, 3, 6])
+  const surUneAutre = deriverLeRegistre([
+    depot({ cran: 2, verdicts: { v1: verdict(true) }, constituant: 'la preuve', joint: false }),
+    depot({ cran: 2, verdicts: { v1: verdict(true) }, constituant: 'la preuve', joint: false }),
+  ])
+  assert.deepEqual(cransDebloques(surUneAutre, 'argument'), [1, 2, 3])
+  // Un lecteur d'avant ce lot ne dit ni constituant ni joint : la ligne compte comme le joint
+  // (sur la banque du 06/09, la pièce servie EST le joint sur les 38 exercices).
+  const sansRien = deriverLeRegistre([
+    depot({ cran: 2, verdicts: { v1: verdict(true) } }),
+    depot({ cran: 2, verdicts: { v1: verdict(true) } }),
+  ])
+  assert.deepEqual(cransDebloques(sansRien, 'argument'), [1, 2, 3, 6])
+  assert.equal(sansRien[0]!.constituant, null)
+})

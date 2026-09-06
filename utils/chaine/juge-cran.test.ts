@@ -24,9 +24,9 @@ const ENTREE: EntreeJuge = {
   cas: [CAS],
 }
 
-test('le juge tranche aux quatre crans que la banque du 31/08 sert, et à eux seuls', () => {
-  assert.deepEqual([...JUGE_AUX_CRANS].sort(), [4, 5, 7, 9])
-  for (const c of [1, 2, 3, 6, 8]) assert.equal(JUGE_AUX_CRANS.has(c), false)
+test('le juge tranche aux quatre crans que la banque du 31/08 sert — et au cran 2 du gabarit depuis le 06/09', () => {
+  assert.deepEqual([...JUGE_AUX_CRANS].sort(), [2, 4, 5, 7, 9])
+  for (const c of [1, 3, 6, 8]) assert.equal(JUGE_AUX_CRANS.has(c), false)
 })
 
 test('« fait quand » : le prompt porte le devoir d’élève, l’énoncé, la version corrigée et la réponse attendue', () => {

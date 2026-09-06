@@ -58,6 +58,7 @@ import { DesignationDansLeMateriau } from './DesignationDansLeMateriau'
 import { GestesDeLaRemise } from './GestesDeLaRemise'
 import { SeJuger } from './SeJuger'
 import { RetourSegmente } from './RetourSegmente'
+import { LesPieces } from './LesPieces'
 import { SignalerUnProbleme } from './SignalerUnProbleme'
 import type { VueDuDeroule } from '@/utils/deroule/vue'
 import type { TelemetrieSaisie, Temps } from '@/utils/deroule/types'
@@ -760,6 +761,17 @@ function ColonneMatiere({
           </p>
         </Carte>
       )}
+
+      {/* ── ⭐ 06/09 — LES PIÈCES DU CRAN 2 (`10-` §2 bis.1, §3 : la section
+          « les pièces » du cadre « Les documents »). Chaque pièce à sa place et
+          sous son nom — les mots de la consigne, jamais ceux de la fiche —, et
+          la place vide de celle que l'élève écrit, nommée par la demande du
+          geste. La règle (la place, la demande) est pure : `utils/gabarit/pieces.ts`. */}
+      {casMontres.map((c) => c.pieces && (
+        <Carte key={`pieces-${c.ordre}`} titre="Les pièces">
+          <LesPieces pieces={c.pieces} />
+        </Carte>
+      ))}
 
       {/* ── LE MATÉRIAU DU CAS MONTRÉ, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE ── */}
       {casMontres.map((c) => (

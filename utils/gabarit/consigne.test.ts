@@ -1,7 +1,7 @@
 // C7-L3 — les consignes du gabarit, mot pour mot (`10-` §3), et les trois règles.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { consigneDuGabarit, demandeUneDesignationAuGabarit, marqueLePassage, sansDocuments } from './consigne'
+import { consigneDuCran2, consigneDuGabarit, demandeUneDesignationAuGabarit, marqueLePassage, sansDocuments } from './consigne'
 
 const E = "Entre ce qui sert d'appui à l'argument et la conclusion, il y a juste un « donc »."
 const c = (cran: number, variante: 'a' | 'b' | null = null, insertion = false) =>
@@ -38,8 +38,21 @@ test('les trois règles : surligne jamais recopie ; le 9 demande ; le 7 corrige 
   assert.match(c(7)!, /corrige-le/)
 })
 
-test('les crans de production n’ont pas encore leur consigne ici ; un énoncé absent ne casse rien', () => {
-  for (const cran of [2, 6, 8]) assert.equal(c(cran), null)
+test('le cran 2 : « Lis les documents ci-joints : le sujet, et les pièces, chacune à sa place. » puis le geste, TEL QUEL', () => {
+  const G = "Voici ce que l'argument conclut, et ce sur quoi il s'appuie. Écris ce qui fait que cet appui-là soutient cette conclusion-là."
+  assert.equal(consigneDuCran2(G), `Lis les documents ci-joints : le sujet, et les pièces, chacune à sa place. ${G}`)
+  assert.equal(consigneDuGabarit({ cran: 2, variante: null, enonce: null, insertion: false, geste: G }), consigneDuCran2(G))
+  assert.equal(consigneDuGabarit({ cran: 2, variante: null, enonce: null, insertion: false, geste: `  ${G}  ` }), consigneDuCran2(G))
+  // ⛔ Le geste ne se génère pas : sans geste, pas de consigne dérivée — l'appelant retombe sur celle du dépôt.
+  assert.equal(consigneDuCran2(null), null)
+  assert.equal(consigneDuCran2(''), null)
+  assert.equal(c(2), null)
+  // « voici », jamais « il manque » (`10-` §2 bis.1).
+  assert.equal(consigneDuCran2(G)!.includes('il manque'), false)
+})
+
+test('les crans 6 et 8 n’ont pas encore leur consigne ici ; un énoncé absent ne casse rien', () => {
+  for (const cran of [6, 8]) assert.equal(c(cran), null)
   assert.match(consigneDuGabarit({ cran: 3, variante: null, enonce: null, insertion: false })!, /« … »/)
 })
 

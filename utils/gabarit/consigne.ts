@@ -7,7 +7,11 @@
 // ⭐ Trois cases, jamais plus : « Les documents » (le cadre de l'écran, dont la
 //    consigne nomme la section : le devoir d'élève), `<le problème>` (l'énoncé
 //    du `09-`, tel quel), et — aux crans de production — le geste et le
-//    matériel, que ce lot ne sert pas encore.
+//    matériel. ⭐ 06/09 — LE CRAN 2 : « Lis les documents ci-joints : le sujet,
+//    et les pièces, chacune à sa place. `<Le geste sur la pièce>`. » — le geste
+//    est écrit à la main dans la fiche du `09-` (`exercices_pieces.geste`) et se
+//    RECOPIE, il ne se génère pas (`10-` §3) ; sans geste, pas de consigne
+//    dérivée. Les crans 6 et 8 restent « C7 à venir ».
 // ⭐ LE POINT D'INSERTION (`10-` §5) : là où la version corrigée AJOUTE au lieu
 //    de remplacer, la consigne le dit — « à l'endroit en gras, il manque quelque
 //    chose » se substitue à « le passage en gras a un problème » — aux crans
@@ -26,6 +30,8 @@ export interface EntreeConsigne {
   enonce: string | null
   /** Le diff du cas est-il une INSERTION (la version corrigée ajoute) ? */
   insertion: boolean
+  /** ⭐ Cran 2 — le geste sur la pièce, tel que la fiche l'écrit (`exercices_pieces.geste`). */
+  geste?: string | null
 }
 
 const LIS = 'Lis les documents ci-joints.'
@@ -36,14 +42,23 @@ function probleme(enonce: string | null): string {
   return e ? `« ${e} »` : '« … »'
 }
 
+/** La consigne du cran 2, à partir du geste — `null` sans geste. */
+export function consigneDuCran2(geste: string | null | undefined): string | null {
+  const g = (geste ?? '').trim()
+  if (g === '') return null
+  return `Lis les documents ci-joints : le sujet, et les pièces, chacune à sa place. ${g}`
+}
+
 /**
  * La consigne d'un cas du gabarit, ou `null` quand ce lot ne la sert pas
- * (crans 2, 6, 8 : le geste sur la pièce et le matériel, C7 à venir).
+ * (crans 6 et 8 : le geste et le matériel, C7 à venir — et le cran 2 sans geste).
  */
 export function consigneDuGabarit(e: EntreeConsigne): string | null {
   const { cran, variante, insertion } = e
   const p = probleme(e.enonce)
   switch (cran) {
+    case 2:
+      return consigneDuCran2(e.geste)
     case 1:
       if (variante === 'b') {
         return `Voici une erreur courante : ${p} Lequel de ces quatre devoirs d'élève la commet ?`

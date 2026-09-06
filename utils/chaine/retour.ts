@@ -23,7 +23,8 @@
 // ============================================================================
 
 import { messageAvecMateriau } from './anti-injection'
-import type { ChoixServiAuJuge, VerdictCran, ZoneServieAuJuge } from './juge-cran'
+import type { ChoixServiAuJuge, PieceServieAuJuge, VerdictCran, ZoneServieAuJuge } from './juge-cran'
+import { assemblerLObjet } from '../gabarit/pieces'
 import { citationTient, jugerLAncrage, type AncrageBrut } from './citation-verifiee'
 import { valider, type Forme, type Verdict } from './schema'
 import {
@@ -179,6 +180,8 @@ export interface CoucheType {
     passageFautif?: string | null
     zone?: ZoneServieAuJuge | null
     choix?: ChoixServiAuJuge | null
+    /** ⭐ 06/09 — cran 2 du gabarit : les pièces, servies la porte ouverte seulement. */
+    piece?: PieceServieAuJuge | null
   }>
 }
 
@@ -488,6 +491,39 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
         + "reste une version finale à écrire, et elle EST la réponse. Sers-t'en pour\n"
         + 'juger si SON passage a encore le problème, et pour nommer ce problème avec\n'
         + "les mots de l'énoncé — jamais pour lui dicter la phrase."))
+    }
+    // ⭐⭐ 06/09 — LE CRAN 2 DU GABARIT : les pièces servies et l'objet assemblé,
+    //    et LA BORNE de la décision 17 (`10-` §2 bis.1 : « le prompt du retour au
+    //    cran 2 ne mesure et ne commente que cet observable — jamais la
+    //    compétence entière, dont les autres observables n'ont pas d'objet sur
+    //    une pièce seule »). Derrière la même porte que le verdict : fermée, rien.
+    // ⚠️ La copie de l'élève est UNE PIÈCE : l'objet assemblé se donne pour
+    //    qu'elle soit lue à sa place, jamais pour être citée — seule sa pièce
+    //    est de lui.
+    const pieces = (e.coucheType.casServis ?? []).flatMap((c) => c.piece ? [{ cas: c, piece: c.piece }] : [])
+    if (pieces.length) {
+      const blocsPieces = pieces.flatMap(({ cas: c, piece: p }) => [
+        { nom: `les pièces servies au cas ${c.ordre} — chacune sous son nom, dans l'ordre`,
+          contenu: p.pieces.map((x) => `— ${x.nom} :\n${x.texte}`).join('\n\n') },
+        { nom: `l'objet assemblé au cas ${c.ordre} — les pièces servies, et la place de la pièce de l'élève`,
+          contenu: assemblerLObjet(p.pieces, p.place, '[ici, la pièce de l\'élève — sa copie, ci-dessous]') },
+        ...(p.test ? [{ nom: `le test de la fiche au cas ${c.ordre}`, contenu: p.test }] : []),
+      ])
+      const observables = pieces[0]!.piece.observables
+      morceaux.push(messageAvecMateriau(blocsPieces, [
+        "CE CRAN EST UN CRAN 2 : L'ÉLÈVE N'A ÉCRIT QU'UNE PIÈCE DE L'OBJET — "
+        + `${pieces[0]!.piece.constituant} — à sa place entre les pièces servies. Les pièces servies`,
+        "ne sont PAS de lui : n'en cite rien, ne les juge pas, elles font foi.",
+        '',
+        '⛔ CE CRAN ISOLE. Ton retour ne parle QUE de ce que sa pièce engage — '
+        + (observables.length
+          ? `les observables du constituant, et eux seuls : ${observables.map((o) => o.code).join(', ')}.`
+          : 'les observables de ce constituant, et eux seuls.'),
+        "Les autres observables de la compétence n'ont pas d'objet sur une pièce seule :",
+        'tu ne les nommes pas, tu ne les comptes ni en réussite ni en point de travail.',
+        'Tu juges UNE chose : sa pièce fait-elle son travail avec les pièces servies —',
+        'le test de la fiche, sur ce seul constituant.',
+      ].join('\n')))
     }
     if (e.verdictCran) {
       const v = e.verdictCran

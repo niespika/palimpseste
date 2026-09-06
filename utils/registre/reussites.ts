@@ -9,6 +9,11 @@
 //   1(a), 1(b), 3 : la majorité des jetons sur le bon candidat (`index_correct`).
 //   4(a), 9, 5, 7 : le juge du cran (`juge-cran.ts`), contre ce qu'on tient pour vrai.
 //   4(b)          : la zone est la cible ou la contient dans la tolérance (cas 2, 3, 4b).
+//   2             : ⭐ 06/09 — le juge du cran, sur l'objet ASSEMBLÉ, × CONSTITUANT
+//                   (`10-` §2 bis.1, §7) : « le registre lit "cran 2 réussi sur
+//                   l'objet" sur la pièce JOINT ; les autres pièces s'y inscrivent
+//                   à part, sous élève × objet × constituant ». C'est la ligne
+//                   élève × objet × 2 × joint qui ouvre le 6.
 //   6, 8          : les seuils des observables — ⚠️ NON DÉRIVÉ ICI : c'est le lot
 //                   C7-L5 qui le lira au moteur ; ces lignes rendent `null`.
 //   toute paire   : LE SECOND CAS est réussi seul ; le premier informe l'escalade.
@@ -41,12 +46,26 @@ export interface DepotPourLeRegistre {
   credence: unknown[]
   /** Le verdict de la porte de zone, par cas — `juste` compte seul (cas 2, 3). */
   zones: Array<{ cas: number; verdict: string | null }>
+  /**
+   * ⭐ 06/09 — AU CRAN 2 : le constituant que l'élève a écrit
+   *    (`exercices_cas.constituant`), et s'il est LE JOINT de la fiche
+   *    (`exercices_pieces.piece` sur cet objet). Absents — un lecteur d'avant ce
+   *    lot —, la ligne se range sous le constituant « inconnu » et compte comme
+   *    le joint : sur la banque du 06/09, la pièce servie EST le joint sur les
+   *    38 exercices, et un registre qui ignorerait ces dépôts fermerait le 6 à tort.
+   */
+  constituant?: string | null
+  joint?: boolean
 }
 
 export interface LigneRegistre {
   objet: string
   cran: number
   variante: Variante
+  /** ⭐ Cran 2 : le constituant de la ligne ; `null` ailleurs. Facultatif : une ligne d'avant ce lot n'en porte pas. */
+  constituant?: string | null
+  /** ⭐ Cran 2 : cette ligne est-elle celle du JOINT — celle qui compte pour « cran 2 réussi sur l'objet » ? Absent = oui. */
+  joint?: boolean
   reussites: number
   echecs: number
   /** Les issues dans l'ordre du temps — la fin dit la série en cours. */
@@ -88,7 +107,7 @@ export function issueDuDepot(d: DepotPourLeRegistre): Issue | null {
       }
       return issueDesVerdicts(d.verdicts)
     }
-    case 5: case 7: case 9:
+    case 2: case 5: case 7: case 9:
       return issueDesVerdicts(d.verdicts)
     default:
       return null
@@ -97,7 +116,8 @@ export function issueDuDepot(d: DepotPourLeRegistre): Issue | null {
 
 // ── Le registre ──────────────────────────────────────────────────────────────
 
-const cle = (objet: string, cran: number, variante: Variante) => `${objet}|${cran}|${variante ?? ''}`
+const cle = (objet: string, cran: number, variante: Variante, constituant: string | null) =>
+  `${objet}|${cran}|${variante ?? ''}|${constituant ?? ''}`
 
 /** Les lignes d'UN élève, dérivées de ses dépôts. Les dépôts sans issue ne comptent pas. */
 export function deriverLeRegistre(depots: readonly DepotPourLeRegistre[]): LigneRegistre[] {
@@ -106,9 +126,13 @@ export function deriverLeRegistre(depots: readonly DepotPourLeRegistre[]): Ligne
   for (const d of tries) {
     const issue = issueDuDepot(d)
     if (!issue) continue
-    const k = cle(d.objet, d.cran, d.variante)
+    // Le constituant ne range que le cran 2 ; le joint y est vrai sauf dit autrement.
+    const constituant = d.cran === 2 ? (d.constituant ?? null) : null
+    const joint = d.cran === 2 ? d.joint !== false : true
+    const k = cle(d.objet, d.cran, d.variante, constituant)
     const l = lignes.get(k) ?? {
-      objet: d.objet, cran: d.cran, variante: d.variante, reussites: 0, echecs: 0, serie: [], dernierAt: null,
+      objet: d.objet, cran: d.cran, variante: d.variante, constituant, joint,
+      reussites: 0, echecs: 0, serie: [], dernierAt: null,
     }
     if (issue === 'reussi') l.reussites += 1; else l.echecs += 1
     l.serie.push(issue)
@@ -119,8 +143,9 @@ export function deriverLeRegistre(depots: readonly DepotPourLeRegistre[]): Ligne
 }
 
 function reussitesAuCran(registre: readonly LigneRegistre[], objet: string, cran: number): number {
-  // Les variantes (a) et (b) d'un cran comptent ensemble.
-  return registre.filter((l) => l.objet === objet && l.cran === cran)
+  // Les variantes (a) et (b) d'un cran comptent ensemble ; au cran 2, SEULE la
+  // ligne du joint compte pour « cran 2 réussi sur l'objet » (`10-` §2 bis.1).
+  return registre.filter((l) => l.objet === objet && l.cran === cran && l.joint !== false)
     .reduce((n, l) => n + l.reussites, 0)
 }
 
