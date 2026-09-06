@@ -29,6 +29,7 @@ import { nouvelleTelemetrie, accumuler, type EvenementDeSaisie } from '@/utils/d
 import type { TelemetrieSaisie } from '@/utils/deroule/types'
 import { actionCollageBloque } from '@/app/deroule/actions'
 import type { PoigneeDuChamp } from './ChampDeRedaction'
+import { teinteDuMoment } from './TexteATrou'
 
 const AUTO_MS = 15_000
 const RANGS = ['I', 'II', 'III', 'IV', 'V', 'VI']
@@ -168,7 +169,9 @@ export function PlanAOrdonner({
                                focus:border-solid focus:border-pigment"
                   />
                 )}
-                <span className="rounded-[5px] border border-info/30 bg-info-teinte px-1.5 py-0.5">
+                {/* ⭐ La teinte suit LA THÈSE (son indice dans la banque), pas sa place :
+                    quand elle monte ou descend, elle garde sa couleur. */}
+                <span className={`rounded-[5px] border px-1.5 py-0.5 ${teinteDuMoment(idx).fond}`}>
                   {these.texte}
                 </span>
               </p>
@@ -196,11 +199,17 @@ export function PlanAOrdonner({
       {/* La légende — « ce bloc = telle chose » (Louis, 06/09). */}
       <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1 font-corps text-[14px] leading-snug text-encre-douce">
         <div className="contents">
-          <dt className="select-none font-ui text-[13px] text-info" aria-hidden>▮</dt>
-          <dd className="m-0">{theses[0]?.nom ?? 'une thèse'} — les flèches changent l’ordre.</dd>
+          <dt className="flex select-none items-center gap-0.5" aria-hidden>
+            {theses.map((_, i) => (
+              <span key={i} className={`inline-block size-3 rounded-[3px] border ${teinteDuMoment(i).puce}`} />
+            ))}
+          </dt>
+          <dd className="m-0">{theses[0]?.nom ?? 'une thèse'} — une couleur par thèse ; les flèches changent l’ordre.</dd>
         </div>
         <div className="contents">
-          <dt className="select-none font-ui text-[13px] text-pigment" aria-hidden>▢</dt>
+          <dt className="flex select-none items-center gap-1 font-ui text-[13px] text-pigment" aria-hidden>
+            <span className="inline-block size-3 rounded-[3px] border-2 border-dashed border-pigment/60 bg-pigment-teinte" />
+          </dt>
           <dd className="m-0 font-semibold text-encre">
             le mot qui lie
             <span className="font-normal text-encre-douce"> — « car », « mais », « donc »… : ce qui oblige à passer à la partie suivante. C’est ce que tu écris.</span>

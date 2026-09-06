@@ -31,6 +31,21 @@ import type { PiecesServies } from '@/utils/gabarit/pieces'
 /** Les repères de la légende — un par morceau servi, dans l'ordre du texte. */
 const REPERES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧']
 
+/**
+ * ⭐ UNE TEINTE PAR MOMENT (Louis, 06/09 : « il faut une couleur différente par
+ *    moment ») — les jetons `--moment-n` de `globals.css`, dans l'ordre du texte,
+ *    qui tournent au-delà de cinq. Les classes sont écrites EN TOUTES LETTRES :
+ *    Tailwind ne compose pas un nom de classe à l'exécution.
+ */
+export const TEINTES_DES_MOMENTS = [
+  { fond: 'bg-moment-1 border-moment-1-trait/30', trait: 'text-moment-1-trait', puce: 'bg-moment-1 border-moment-1-trait/40' },
+  { fond: 'bg-moment-2 border-moment-2-trait/30', trait: 'text-moment-2-trait', puce: 'bg-moment-2 border-moment-2-trait/40' },
+  { fond: 'bg-moment-3 border-moment-3-trait/30', trait: 'text-moment-3-trait', puce: 'bg-moment-3 border-moment-3-trait/40' },
+  { fond: 'bg-moment-4 border-moment-4-trait/30', trait: 'text-moment-4-trait', puce: 'bg-moment-4 border-moment-4-trait/40' },
+  { fond: 'bg-moment-5 border-moment-5-trait/30', trait: 'text-moment-5-trait', puce: 'bg-moment-5 border-moment-5-trait/40' },
+] as const
+export const teinteDuMoment = (i: number) => TEINTES_DES_MOMENTS[i % TEINTES_DES_MOMENTS.length]!
+
 export function TexteATrou({ pieces, children }: { pieces: PiecesServies; children: React.ReactNode }) {
   const place = Math.max(0, Math.min(pieces.place, pieces.pieces.length))
   const avant = pieces.pieces.slice(0, place)
@@ -41,9 +56,9 @@ export function TexteATrou({ pieces, children }: { pieces: PiecesServies; childr
       // ⚠️ Pas de `box-decoration-break: clone` : il encadrait CHAQUE LIGNE d'un
       //    morceau à part, et le texte se lisait haché (smoke du 06/09). Le cadre
       //    est continu : il s'ouvre au premier mot, se ferme au dernier.
-      className="rounded-[5px] border border-info/30 bg-info-teinte px-1.5 py-0.5"
+      className={`rounded-[5px] border px-1.5 py-0.5 ${teinteDuMoment(i).fond}`}
     >
-      <sup className="mr-1 select-none font-ui text-[11px] text-info" aria-hidden>{REPERES[i] ?? '·'}</sup>
+      <sup className={`mr-1 select-none font-ui text-[11px] ${teinteDuMoment(i).trait}`} aria-hidden>{REPERES[i] ?? '·'}</sup>
       {p.texte}
     </span>
   )
@@ -65,12 +80,17 @@ export function TexteATrou({ pieces, children }: { pieces: PiecesServies; childr
       <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1 font-corps text-[14px] leading-snug text-encre-douce">
         {pieces.pieces.map((p, i) => (
           <div key={`l${i}`} className="contents">
-            <dt className="select-none font-ui text-[13px] text-info" aria-hidden>{REPERES[i] ?? '·'}</dt>
+            <dt className={`flex select-none items-center gap-1 font-ui text-[13px] ${teinteDuMoment(i).trait}`} aria-hidden>
+              <span className={`inline-block size-3 rounded-[3px] border ${teinteDuMoment(i).puce}`} />
+              {REPERES[i] ?? '·'}
+            </dt>
             <dd className="m-0">{p.nom}</dd>
           </div>
         ))}
         <div className="contents">
-          <dt className="select-none font-ui text-[13px] text-pigment" aria-hidden>▢</dt>
+          <dt className="flex select-none items-center gap-1 font-ui text-[13px] text-pigment" aria-hidden>
+            <span className="inline-block size-3 rounded-[3px] border-2 border-dashed border-pigment/60 bg-pigment-teinte" />
+          </dt>
           <dd className="m-0 font-semibold text-encre">
             {pieces.trou ?? 'ta pièce'}
             <span className="font-normal text-encre-douce"> — c’est ce que tu écris, dans le cadre vert.</span>

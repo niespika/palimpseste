@@ -72,6 +72,18 @@
   --comp-synthese:            #5E4A7A;  --comp-synthese-teinte:        #E3DCEE;
   --comp-questionnement:      #2F6B6A;  --comp-questionnement-teinte:  #D3E6E3;
 
+  /* --- Le texte à trou du cran 2 (élève) : UNE TEINTE PAR MOMENT DU DEVOIR ----
+     « Il faut une couleur différente par moment, pas juste une couleur pour tout »
+     (Louis, 06/09). Cinq teintes pâles, dans l'ordre du texte, qui tournent au-delà
+     de cinq ; la couleur pleine est le repère (①) et la légende. ⚠️ Aucune n'est le
+     vert du trou (`--pigment-teinte` du module Codex) ni l'ocre des passages marqués
+     (`--attention-teinte`) : le trou et la marque gardent leur sens. */
+  --moment-1: #DCE3EC;  --moment-1-trait: #3E5C7E;   /* bleu-gris   */
+  --moment-2: #E3DCEE;  --moment-2-trait: #5E4A7A;   /* mauve       */
+  --moment-3: #EFD8D3;  --moment-3-trait: #7A3A3A;   /* rose        */
+  --moment-4: #F3EAD0;  --moment-4-trait: #8C6A2E;   /* paille      */
+  --moment-5: #DEE7D2;  --moment-5-trait: #4F6B3E;   /* sauge       */
+
   /* La carte de crédence qui porte le plus de jetons — EFFET DE LA SAISIE,
      JAMAIS UN INDICE (`02-` §5 ; handoff §4). Deux teintes quasi neutres, pour
      qu'elles ne prennent pas parti dans le monde du module. */
@@ -134,6 +146,11 @@
   --color-retard-teinte:    var(--retard-teinte);
   --color-info:             var(--info);
   --color-info-teinte:      var(--info-teinte);
+  --color-moment-1:         var(--moment-1);   --color-moment-1-trait: var(--moment-1-trait);
+  --color-moment-2:         var(--moment-2);   --color-moment-2-trait: var(--moment-2-trait);
+  --color-moment-3:         var(--moment-3);   --color-moment-3-trait: var(--moment-3-trait);
+  --color-moment-4:         var(--moment-4);   --color-moment-4-trait: var(--moment-4-trait);
+  --color-moment-5:         var(--moment-5);   --color-moment-5-trait: var(--moment-5-trait);
   --color-vert-bouteille:   var(--vert-bouteille);
   --color-comp-expression:            var(--comp-expression);
   --color-comp-expression-teinte:     var(--comp-expression-teinte);
