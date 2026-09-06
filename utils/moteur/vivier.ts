@@ -232,16 +232,21 @@ export interface EcartDuVivier {
  *        servi (vide aux crans qui isolent).
  * @param observableIsole la compétence que l'INSTANCE isole
  *        (`exercices.observable_isole_competence`), aux crans qui isolent.
+ * @param isole ⭐ 06/09/2026 — ce que le CRAN déclare (`exercices_crans.couverture_observables`,
+ *        `02-` v6.7 §2.2) : le cran 2 PRODUIT et ISOLE — le trou est une absence, et
+ *        l'instance isole l'observable de sa clé « pièce absente ». Le geste ne suffit
+ *        donc plus à dire la couverture ; à défaut, il la dit comme avant.
  */
 export function couvertureDeLInstance(
   competencesDeclarees: readonly string[],
   geste: Geste,
   exerceDuCran: readonly string[],
   observableIsole: string | null,
+  isole: boolean = geste !== 'produire',
 ): Record<string, Couverture> {
   const out: Record<string, Couverture> = {}
   for (const c of competencesDeclarees) {
-    if (geste === 'produire') {
+    if (!isole) {
       out[c] = exerceDuCran.includes(c) ? 'exerce' : 'observable_seul'
     } else {
       // Un seul défaut injecté, donc UNE SEULE cible : celle que l'instance isole.

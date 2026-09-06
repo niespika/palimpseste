@@ -234,7 +234,9 @@ export async function lireLesInstances(
       modesParCompetence: l.modes_par_competence ?? {},
       couverture: couvertureDeLInstance(
         declarees, (cran?.geste ?? 'produire') as Geste, exerce,
-        l.observable_isole_competence),
+        // ⭐ 06/09 — la couverture suit le CRAN, pas le geste : le cran 2 produit ET isole.
+        l.observable_isole_competence,
+        cran ? cran.isole : undefined),
       materiaux: materiauxDeLInstance,
       devoirs: devoirsDeLInstance(l.id_import, l.exercices_cas, materiaux.fabriquesParImport),
       coTexte,
