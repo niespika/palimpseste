@@ -10,6 +10,8 @@ import {
   type CarteAncree, type PerimetreCartes,
 } from '@/utils/quazian-visibilite'
 import { fsrs, createEmptyCard, date_diff, type Card, type Grade } from 'ts-fsrs'
+import { lireFuseau } from '@/utils/fuseau-serveur'
+import { estEchue, seuilEcheanceDuJour } from '@/utils/quazian-echeance'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -151,6 +153,13 @@ async function lireCartes(
 // asynchrones — les deux seuls lecteurs, la file et les stats, vivent ici.)
 const PLAFOND_SESSION = 30
 
+// « Due aujourd'hui » = échéance avant la FIN de la journée en cours, heure de
+// l'école — jamais « avant maintenant » (règle et raisons dans
+// utils/quazian-echeance.ts). LE prédicat des trois lecteurs : file, consultation, compteurs.
+async function seuilDuJour(): Promise<number> {
+  return seuilEcheanceDuJour(new Date(), await lireFuseau())
+}
+
 export interface CarteRevision {
   flashcard_id: string
   card_state_id: string | null  // null = première révision
@@ -196,6 +205,7 @@ function cibleDeLaCarte(f: Record<string, unknown>): string {
 export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
+  const seuil = await seuilDuJour()
 
   // Périmètre « vu » des classes en contexte — admin pour contourner RLS.
   const admin = createAdminClient()
@@ -226,7 +236,7 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
     etatsMap[e.flashcard_id] = e
   }
 
-  // File = nouvelles cartes (sans état) + cartes dues aujourd'hui
+  // File = nouvelles cartes (sans état) + cartes dues aujourd'hui (fin de journée comprise)
   const file: CarteRevision[] = []
 
   for (const f of flashcards) {
@@ -245,7 +255,7 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
     if (!etat) {
       // Nouvelle carte — à réviser
       file.push({ ...commun, card_state_id: null, state: 0 /* New */, due: maintenant })
-    } else if (etat.due <= maintenant) {
+    } else if (estEchue(etat.due, seuil)) {
       // Carte due
       file.push({ ...commun, card_state_id: etat.id, state: etat.state, due: etat.due })
     }
@@ -298,7 +308,7 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
 
   // `due` en plus de l'id : les tuiles par cours annoncent « N à réviser », et
   // ce compte doit sortir du MÊME prédicat que la file (jamais vue, ou échue).
-  const maintenant = new Date().toISOString()
+  const seuil = await seuilDuJour()
   const { data: etats } = await supabase
     .from('quazian_card_states')
     .select('flashcard_id, due')
@@ -320,7 +330,7 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
         label_unite: labelUnite,
         cible_id: cibleDeLaCarte(f),
         nouvelle: due === undefined,
-        a_reviser: due === undefined || due <= maintenant,
+        a_reviser: due === undefined || estEchue(due, seuil),
         created_at: f.created_at as string,
       }
     })
@@ -495,7 +505,7 @@ export async function soumettreNote(
 // Stats pour la page d'accueil
 export async function chargerStatsRevision() {
   const { supabase, userId } = await verifierEleve()
-  const maintenant = new Date().toISOString()
+  const seuil = await seuilDuJour()
   const admin = createAdminClient()
 
   // Gel de l'intégrité : les compteurs annoncent la file, et la file est vide
@@ -529,7 +539,7 @@ export async function chargerStatsRevision() {
     : { data: [] }
 
   const connues = etats?.length ?? 0
-  const dues = etats?.filter((e) => e.due <= maintenant).length ?? 0
+  const dues = etats?.filter((e) => estEchue(e.due, seuil)).length ?? 0
   const nouvelles = totalCartes - connues
 
   // Deux nombres, deux sens — et c'est le correctif du 14/08 (recette C7·L3) :
