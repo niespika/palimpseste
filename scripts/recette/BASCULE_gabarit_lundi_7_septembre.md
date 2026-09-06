@@ -31,7 +31,7 @@
    ```
    ⚠️ Le script lit les clés `PROD_*` du `.env.local` sur `--prod` — on n'échange rien dans le fichier.
    ⚠️ L'import REFUSE un `id_import` déjà en base : un second dépôt du même fichier ne fait rien.
-   ⭐ 06/09 : un TROISIÈME fichier, `gabarit-c2.json` — **24 exercices de cran 2 en TEXTE À TROU** (dérivés en séance le
+   ⭐ 06/09 : un TROISIÈME fichier, `gabarit-c2.json` — **24 exercices de cran 2 en TEXTE À TROU** (dérivés en séance le ⛔⛔ **06/09 (après-midi) : jouer le 4 bis AVANT ce fichier.** Le cran 2 ISOLE désormais (`02-` v6.7) et chaque cas porte sa clé « pièce absente » en `probleme` ; le contrôle d'import lit la doctrine DE LA BASE, et refuserait `probleme` au cran 2 tant que la prod porte encore `exerce`. Ordre réel : 1 → 2 (vagues 1 et 2) → 3 → 4 → **4 bis** → 2 (le troisième fichier, `gabarit-c2.json`) → 3 pour lui → 5.
    06/09, relus par Louis, forme du `10-` v0.9 ; 0 refus aux deux contrôles ; 0 matériau, il réutilise les sujets) :
    ```
    … scripts/recette/import-a-blanc.mjs <conception>/generateur/banque/gabarit-c2.json prod
@@ -56,7 +56,7 @@
    ⛔ AVANT : vérifier par requête que la Synthèse est `differee` (`competences_statut_recette`),
    sinon ses élèves ne recevraient plus rien. Mesuré `differee` le 05/09 — re-mesurer dimanche.
 
-4 bis. **La doctrine re-dérivée en production** (écrit ; le `09-` est passé en v1.6 le 06/09 : exemplaires et
+4 bis. **La doctrine re-dérivée en production** (écrit ; ⭐ **06/09 après-midi : le cran 2 ISOLE** — `02-` v6.7, `09-` v1.8 avec 206 problèmes, `exercices_types_crans` du cran 2 couvert par les clés « pièce absente » ; 26ᵉ dérivation en bac à sable, 18 IDENTIQUE ; le `09-` est passé en v1.6 le 06/09 : exemplaires et
    contre-exemples validés par Louis, 18 contre-exemples canoniques lus, 13 exemplaires plus « brouillon ») :
    ```
    python3 scripts/derive-doctrine.py --sql > /tmp/derive.sql
