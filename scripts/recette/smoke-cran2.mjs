@@ -187,7 +187,7 @@ async function lire() {
       trou: !!document.querySelector('textarea[placeholder="Écris ici"]') || !!document.querySelector('[data-plan]'),
       plan: !!document.querySelector('[data-plan]'), lienVide: [...document.querySelectorAll('[data-plan] input')].filter((x) => x.value.trim() === '').length,
       legende: /c’est ce que tu écris/i.test(t), guide: /De quoi t.aider/i.test(t),
-      consigne2: /le texte à compléter/i.test(t), ilManque: /il manque/i.test(t),
+      consigne2: /le texte à compléter|les thèses des parties, qui sont dans le désordre/i.test(t), ilManque: /il manque/i.test(t),
       piecesDansLesDocuments: /LES PIÈCES|Le texte à compléter/.test([...document.querySelectorAll('h3')].map((h) => h.textContent).join('|')),
       enregistrer: boutons.includes('Enregistrer'),
       rendre: boutons.find((b) => /^Rendre/.test(b)) ?? null,
