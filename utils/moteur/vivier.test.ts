@@ -529,7 +529,7 @@ describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et u
 
   it('la séquence suit le palier, et le 2 n\'y entre que si son écran est servi', () => {
     assert.deepEqual(sequenceDeMethode('D', false), [1, 3, 4])
-    assert.deepEqual(sequenceDeMethode('E', true), [1, 3, 2, 4])
+    assert.deepEqual(sequenceDeMethode('E', true), [1, 3, 4, 2])   // 07/09 : 1·3 sur un devoir, 4·2 sur un autre
     assert.deepEqual(sequenceDeMethode('C', true), [1, 3, 2])
     assert.deepEqual(sequenceDeMethode('B', false), [1, 3])
     assert.deepEqual(sequenceDeMethode('A', true), [4])
@@ -547,11 +547,11 @@ describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et u
     // l'argument (palier D) garde son cran 1 ; l'exemple (palier A) n'a que le 4 dans sa séquence : son 1 sort ;
     // la transition, troisième objet, attend le cycle suivant.
     assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['arg-1'])
-    assert.deepEqual(b.retenus[0]!.methode, { objet: 'argument', devoir: 'a1', sequence: [1, 3, 2, 4], rang: 0 })
+    assert.deepEqual(b.retenus[0]!.methode, { objet: 'argument', devoir: 'a1', sequence: [1, 3], rang: 0 })
     assert.deepEqual(b.ecartes.map((e) => [e.exerciceId, e.motif]).sort(),
       [['exe-1', 'methode_hors_quota'], ['tra-1', 'methode_hors_quota']])
     assert.match(b.ecartes.find((e) => e.exerciceId === 'tra-1')!.detail, /bornée à 2 objets/)
-    assert.match(b.ecartes.find((e) => e.exerciceId === 'exe-1')!.detail, /crans 4 de la séquence du palier A/)
+    assert.match(b.ecartes.find((e) => e.exerciceId === 'exe-1')!.detail, /crans 4 — séquence du palier A/)
   })
 
   it('⭐ C7-L7 — un objet PAR COMPÉTENCE d\'abord : deux objets d\'Argumentation ne s\'affament pas l\'un l\'autre sous PB2', () => {
@@ -581,28 +581,41 @@ describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et u
     ]
     const paliers2 = new Map<string, string | null>([['structure', 'D'], ['expression', 'B']])
     const b = bornerLaMethode(r as never, ['expression', 'structure'] as never, paliers2 as never, true)
-    // Le devoir de Structure couvre trois crans de SA séquence (1·3·2·4) contre deux pour celui d'Expression (1·3·2) : c'est lui.
-    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['s-1', 's-3', 's-4'])
-    assert.deepEqual(b.retenus[0]!.methode, { objet: 'exemple', devoir: 'dev-s', sequence: [1, 3, 2, 4], rang: 0 })
-    // Le devoir d'Expression seul : la séquence de B.
-    const e = bornerLaMethode(r.slice(3) as never, ['expression', 'structure'] as never, paliers2 as never, true)
-    assert.deepEqual(e.retenus[0]!.methode?.sequence, [1, 3, 2])
+    // Deux devoirs (07/09) : à couverture égale de la première part (1·3), le premier par identifiant — dev-e (Expression, B) ;
+    // la seconde part de B est [2], que dev-s ne porte pas : le 4 de dev-s sort, et l'écart dit qu'il manque un devoir au 2.
+    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['e-1', 'e-3'])
+    assert.deepEqual(b.retenus[0]!.methode, { objet: 'exemple', devoir: 'dev-e', sequence: [1, 3], rang: 0 })
+    // Le devoir de Structure seul : la séquence de D, sans second devoir la seconde part (4·2) n'est pas posée.
+    const e = bornerLaMethode(r.slice(0, 3) as never, ['expression', 'structure'] as never, paliers2 as never, true)
+    assert.deepEqual(e.retenus.map((x) => x.instance.exerciceId), ['s-1', 's-3'])
+    assert.match(e.ecartes.find((x) => x.exerciceId === 's-4')!.detail, /il manque un devoir/)
   })
 
-  it('un seul devoir par objet : celui qui couvre le plus de crans de la séquence ; un exercice par cran', () => {
+  it('⭐ 07/09 — deux devoirs par objet : 1·3 sur le premier, 4·2 sur un AUTRE ; un exercice par cran', () => {
     const r = [
       retenue({ exerciceId: 'a1-c1', objet: 'argument', cranNumero: 1, devoirs: ['d1'] }),
       retenue({ exerciceId: 'a1-c1b', objet: 'argument', cranNumero: 1, devoirs: ['d1'] }),
       retenue({ exerciceId: 'a1-c3', objet: 'argument', cranNumero: 3, devoirs: ['d1'] }),
       retenue({ exerciceId: 'a1-c4', objet: 'argument', cranNumero: 4, devoirs: ['d1'] }),
+      retenue({ exerciceId: 'a1-c2', objet: 'argument', cranNumero: 2, devoirs: ['d1'] }),
       retenue({ exerciceId: 'a2-c1', objet: 'argument', cranNumero: 1, devoirs: ['d2'] }),
       retenue({ exerciceId: 'a2-c3', objet: 'argument', cranNumero: 3, devoirs: ['d2'] }),
+      retenue({ exerciceId: 'a2-c4', objet: 'argument', cranNumero: 4, devoirs: ['d2'] }),
+      retenue({ exerciceId: 'a2-c2', objet: 'argument', cranNumero: 2, devoirs: ['d2'] }),
     ]
-    const b = bornerLaMethode(r as never, ['argumentation'] as never, paliers as never, false)
-    assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['a1-c1', 'a1-c3', 'a1-c4'])
-    assert.deepEqual(b.retenus.map((x) => x.methode!.rang), [0, 1, 2])
-    assert.deepEqual(b.retenus[0]!.methode, { objet: 'argument', devoir: 'd1', sequence: [1, 3, 4], rang: 0 })
-    assert.deepEqual(b.ecartes.map((e) => e.exerciceId).sort(), ['a1-c1b', 'a2-c1', 'a2-c3'])
+    const b = bornerLaMethode(r as never, ['argumentation'] as never, paliers as never, true)
+    // d1 et d2 couvrent 1·3 à égalité : d1 par identifiant ; la seconde part (4·2) va sur d2, jamais sur d1.
+    assert.deepEqual(b.retenus.map((x) => [x.instance.exerciceId, x.methode!.devoir, x.methode!.rang]),
+      [['a1-c1', 'd1', 0], ['a1-c3', 'd1', 1], ['a2-c4', 'd2', 2], ['a2-c2', 'd2', 3]])
+    assert.deepEqual(b.retenus[0]!.methode!.sequence, [1, 3, 4, 2])
+    assert.deepEqual(b.ecartes.map((e) => e.exerciceId).sort(), ['a1-c1b', 'a1-c2', 'a1-c4', 'a2-c1', 'a2-c3'])
+    // Le 4 de d1 est écarté parce que la seconde part est sur d2, pas parce qu'il manque un devoir.
+    assert.doesNotMatch(b.ecartes.find((e) => e.exerciceId === 'a1-c4')!.detail, /il manque un devoir/)
+    // Un seul devoir : 1 puis 3, et c'est tout — le 4 et le 2 attendent un second devoir.
+    const seul = bornerLaMethode(r.slice(0, 5) as never, ['argumentation'] as never, paliers as never, true)
+    assert.deepEqual(seul.retenus.map((x) => x.instance.exerciceId), ['a1-c1', 'a1-c3'])
+    assert.match(seul.ecartes.find((e) => e.exerciceId === 'a1-c4')!.detail, /il manque un devoir/)
+    assert.match(seul.ecartes.find((e) => e.exerciceId === 'a1-c2')!.detail, /il manque un devoir/)
   })
 
   it('⭐ 07/09 — l\'objet neuf s\'élit par la règle 4 : à rang égal, le score, puis le tirage — plus l\'alphabet', () => {
@@ -646,7 +659,8 @@ describe('`01-` v5.9 §5 — la semaine de méthode, bornée à deux objets et u
     const tires: string[][] = []
     const dernier = (l: readonly string[]) => { tires.push([...l]); return l[l.length - 1]! }
     const b = bornerLaMethode(r as never, ['argumentation'] as never, paliers as never, false, 2, { tirer: dernier })
-    // d3 ne couvre qu'un cran : hors du tirage ; d1 et d2 à égalité, le tirage prend d2.
+    // d3 ne couvre qu'un cran de la première part : hors du tirage ; d1 et d2 à égalité, le tirage prend d2.
+    // La seconde part (4, sans cran 2) : aucun autre devoir ne porte le 4 — pas de second tirage.
     assert.deepEqual(tires, [['d1', 'd2']])
     assert.deepEqual(b.retenus.map((x) => x.instance.exerciceId), ['a2-c1', 'a2-c3'])
     assert.deepEqual(bornerLaMethode(r as never, ['argumentation'] as never, paliers as never).retenus.map((x) => x.instance.exerciceId),

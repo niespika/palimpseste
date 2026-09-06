@@ -181,7 +181,7 @@ function coutureTrois(gab, doctrine) {
   const porteM = { actif: true, de: (o) => porteDeLObjet([], o, false) }
   const vM = constituerLeVivier(miennes, { ...base, porte: porteM, devoirsServis: new Map(), cycleLundi: CYCLE_2 })
   const bM = bornerLaMethode(vM.retenus, ['argumentation'], paliers, true, 2)
-  console.log(`a) méthode : ${bM.retenus.length} retenue(s) sur un seul devoir ? ${new Set(bM.retenus.map((r) => r.methode?.devoir)).size === 1} — séquence ${bM.retenus.map((r) => r.instance.cranNumero).join(' → ')} (devoir ${(bM.retenus[0]?.methode?.devoir ?? '?').slice(0, 8)})`)
+  console.log(`a) méthode : ${bM.retenus.length} retenue(s) sur deux devoirs au plus (07/09 : 1·3 ‖ 4·2) ? ${new Set(bM.retenus.map((r) => r.methode?.devoir)).size <= 2} — séquence ${bM.retenus.map((r) => r.instance.cranNumero).join(' → ')} (devoir ${(bM.retenus[0]?.methode?.devoir ?? '?').slice(0, 8)})`)
   // b) OUVERT : le devoir de la méthode a été servi le cycle d'avant ; UN exercice, sur un AUTRE devoir.
   const devoirServi = bM.retenus[0]?.methode?.devoir
   const registre = deriverLeRegistre([]) // rien de réussi encore : le 1 reste le cran non tenu le plus bas
@@ -197,7 +197,7 @@ function coutureTrois(gab, doctrine) {
     + `· la phase B pose ${semaine.exercices.length} exercice(s) sur « argument » — cran ${posesArg.map((r) => r?.instance.cranNumero).join(',')}, devoir ${posesArg.map((r) => (r?.devoir.ids[0] ?? '?').slice(0, 8)).join(',')} ≠ ${String(devoirServi).slice(0, 8)} ? ${posesArg.every((r) => !r?.devoir.ids.includes(devoirServi))}`)
   console.log(`   motif d'arrêt de la phase B : ${semaine.journal.motifArret}`)
   console.log(`   écarts par objet : ${[...ctx.journal.ecartes.values()].map((e) => `${e.motif} — ${e.detail.slice(0, 110)}`).join(' | ') || 'aucun'}`)
-  const ok = bM.retenus.length >= 3 && new Set(bM.retenus.map((r) => r.methode?.devoir)).size === 1 && enQuarantaine.length > 0
+  const ok = bM.retenus.length >= 2 && new Set(bM.retenus.map((r) => r.methode?.devoir)).size <= 2 && enQuarantaine.length > 0
     && semaine.exercices.length === 1 && posesArg.every((r) => !r?.devoir.ids.includes(devoirServi)) && posesArg[0]?.instance.cranNumero === 1
   console.log(ok ? '✅ couture ③ tenue' : '⛔ couture ③ NON tenue')
   return ok

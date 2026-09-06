@@ -794,10 +794,24 @@ export function constituerLeVivier(
  * est servi ». ⚠️ La porte (`porte.ts`) ne sert en méthode que 1·3·4 : le 9 d'A
  * y attend que la porte l'ouvre — A reçoit le 4.
  */
+/**
+ * ⭐⭐ 07/09 (Louis, soir) — LA SÉQUENCE DE MÉTHODE SE JOUE SUR DEUX DEVOIRS. « Si on
+ *    fait 1, 3, 2, l'élève ne va que recopier le 3 dans le 2 » : le 1 puis le 3 sur un
+ *    premier devoir (l'exemple résolu : reconnaître, puis corriger) ; puis, sur un
+ *    SECOND devoir que l'élève n'a jamais vu corrigé, le 4 (localiser seul) puis le 2
+ *    (compléter le texte à trou). Avec un seul devoir en banque, la seconde part
+ *    n'est pas posée — « soit on n'a qu'un seul devoir, et on peut juste faire 1 puis 3 ».
+ */
+export function partsDeMethode(palier: string | null, cran2Servi: boolean): { premier: number[]; second: number[] } {
+  if (palier === 'A') return { premier: [4], second: [] }
+  if (palier === 'B' || palier === 'C') return { premier: [1, 3], second: cran2Servi ? [2] : [] }
+  return { premier: [1, 3], second: cran2Servi ? [4, 2] : [4] }      // E, D — et sans palier connu
+}
+
+/** La séquence entière, dans l'ordre de pose : la première part, puis la seconde. */
 export function sequenceDeMethode(palier: string | null, cran2Servi: boolean): number[] {
-  if (palier === 'A') return [4]
-  if (palier === 'B' || palier === 'C') return cran2Servi ? [1, 3, 2] : [1, 3]
-  return cran2Servi ? [1, 3, 2, 4] : [1, 3, 4]      // E, D — et sans palier connu
+  const p = partsDeMethode(palier, cran2Servi)
+  return [...p.premier, ...p.second]
 }
 
 /** « Deux objets par élève, pas quatre » — le nombre vit ici. */
@@ -919,44 +933,63 @@ export function bornerLaMethode(
     }
     const cibleDe = (l: InstanceRetenue[]) => prioriteDesCompetences.find((c) => l.some((r) => r.ciblables.includes(c)))
       ?? l[0]!.ciblables[0] ?? null
-    const sequenceDe = (l: InstanceRetenue[]) => {
+    const partsDe = (l: InstanceRetenue[]) => {
       const cible = cibleDe(l)
-      return sequenceDeMethode(cible ? (paliers.get(cible) ?? null) : null, cran2Servi)
+      return partsDeMethode(cible ? (paliers.get(cible) ?? null) : null, cran2Servi)
     }
-    // Le devoir unique : celui qui couvre le plus de crans de sa séquence ; à
-    // égalité, le devoir jamais servi, puis LE TIRAGE (07/09) — et, sans élection,
-    // le premier par identifiant.
-    const couverture = (l: InstanceRetenue[]) => {
-      const seq = sequenceDe(l)
-      return new Set(l.map((r) => r.instance.cranNumero).filter((n) => n !== null && seq.includes(n))).size
+    // ⭐⭐ 07/09 — DEUX DEVOIRS : le premier porte la première part (1·3), le second —
+    //    un AUTRE devoir — la seconde (4·2). Chacun : celui qui couvre le plus de
+    //    crans de SA part ; à égalité, jamais servi, puis LE TIRAGE — et, sans
+    //    élection, le premier par identifiant. Sans second devoir, la seconde part
+    //    n'est pas posée, et l'écart le dit.
+    // La couverture d'un devoir se compte sur une part DONNÉE : la première part
+    // sur la séquence de SA compétence ; la seconde part sur celle du PREMIER devoir
+    // retenu — un élève à B n'a pas à recevoir la seconde part de D parce que le
+    // second devoir porte une clé de Structure.
+    const couverture = (l: InstanceRetenue[], seq: readonly number[]) =>
+      new Set(l.map((r) => r.instance.cranNumero).filter((n) => n !== null && seq.includes(n))).size
+    const elire = (seqDe: (l: InstanceRetenue[]) => readonly number[], sauf: string | null): string | null => {
+      const classes = [...parDevoir.entries()].filter(([id]) => id !== sauf && (sauf === null || id !== '∅'))
+        .filter(([, l]) => couverture(l, seqDe(l)) > 0)
+        .sort((a, b) =>
+          couverture(b[1], seqDe(b[1])) - couverture(a[1], seqDe(a[1]))
+          || (a[1][0]!.devoir.dernierDepotAt ?? '').localeCompare(b[1][0]!.devoir.dernierDepotAt ?? '')
+          || a[0].localeCompare(b[0]))
+      const tete = classes[0]
+      if (!tete) return null
+      const exAequo = classes.filter((x) => couverture(x[1], seqDe(x[1])) === couverture(tete[1], seqDe(tete[1]))
+        && (x[1][0]!.devoir.dernierDepotAt ?? '') === (tete[1][0]!.devoir.dernierDepotAt ?? '')).map((x) => x[0])
+      return exAequo.length > 1 && election.tirer ? election.tirer(exAequo) : tete[0]
     }
-    const classes = [...parDevoir.entries()].sort((a, b) =>
-      couverture(b[1]) - couverture(a[1])
-      || (a[1][0]!.devoir.dernierDepotAt ?? '').localeCompare(b[1][0]!.devoir.dernierDepotAt ?? '')
-      || a[0].localeCompare(b[0]))
-    const tete = classes[0]!
-    const exAequo = classes.filter((x) => couverture(x[1]) === couverture(tete[1])
-      && (x[1][0]!.devoir.dernierDepotAt ?? '') === (tete[1][0]!.devoir.dernierDepotAt ?? '')).map((x) => x[0])
-    const devoir = exAequo.length > 1 && election.tirer ? election.tirer(exAequo) : tete[0]
-    const retenuesDuDevoir = parDevoir.get(devoir) ?? []
-    const cible = cibleDe(retenuesDuDevoir)
+    const premier = elire((l) => partsDe(l).premier, null) ?? [...parDevoir.keys()][0]!
+    const retenuesDuPremier = parDevoir.get(premier) ?? []
+    const cible = cibleDe(retenuesDuPremier)
     const palier = cible ? (paliers.get(cible) ?? null) : null
-    const sequence = sequenceDe(retenuesDuDevoir)
+    const parts = partsDe(retenuesDuPremier)
+    const second = parts.second.length ? elire(() => parts.second, premier) : null
+    const retenuesDuSecond = second ? (parDevoir.get(second) ?? []) : []
+    const sequence = [...parts.premier, ...(second ? parts.second : [])]
+    const nom = (d: string) => (d === '∅' ? 'sans devoir' : d.slice(0, 8))
     const vues = new Set<string>()
     for (const r of siennes) {
       const n = r.instance.cranNumero
-      const dedans = retenuesDuDevoir.includes(r) && n !== null && sequence.includes(n)
+      const surPremier = retenuesDuPremier.includes(r) && n !== null && parts.premier.includes(n)
+      const surSecond = second !== null && retenuesDuSecond.includes(r) && n !== null && sequence.slice(parts.premier.length).includes(n)
       // Un seul exercice par cran de la séquence (1(a) OU 1(b) : la paire est un exercice).
       const cle = `${n}`
-      if (!dedans || vues.has(cle)) {
+      if (!(surPremier || surSecond) || vues.has(cle)) {
+        const secondePart = n !== null && parts.second.includes(n)
         ecartes.push({ exerciceId: r.instance.exerciceId, motif: 'methode_hors_quota',
-          detail: !dedans
-            ? `méthode sur « ${objet} » : un seul devoir (${devoir === '∅' ? 'sans devoir' : devoir.slice(0, 8)}) aux crans ${sequence.join('·')} de la séquence du palier ${palier ?? '?'}.`
-            : `méthode sur « ${objet} » : le cran ${n} est déjà posé sur ce devoir.` })
+          detail: vues.has(cle) && (surPremier || surSecond)
+            ? `méthode sur « ${objet} » : le cran ${n} est déjà posé sur ce devoir.`
+            : second === null && secondePart
+              ? `méthode sur « ${objet} » : la seconde part (${parts.second.join('·')}) veut un SECOND devoir, et la banque n'en porte qu'un (${nom(premier)}) — il manque un devoir (\`01-\` §5, 07/09).`
+              : `méthode sur « ${objet} » : deux devoirs — ${nom(premier)} aux crans ${parts.premier.join('·')}${second ? `, ${nom(second)} aux crans ${sequence.slice(parts.premier.length).join('·')}` : ''} — séquence du palier ${palier ?? '?'}.` })
         continue
       }
       vues.add(cle)
-      out.push({ ...r, methode: { objet, devoir: devoir === '∅' ? null : devoir, sequence, rang: sequence.indexOf(n) } })
+      const devoir = surPremier ? premier : second!
+      out.push({ ...r, methode: { objet, devoir: devoir === '∅' ? null : devoir, sequence, rang: sequence.indexOf(n!) } })
     }
   }
   return { retenus: out, ecartes, objetsEnMethode: gardes, elections }
