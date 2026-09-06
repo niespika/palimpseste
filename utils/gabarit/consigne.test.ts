@@ -1,7 +1,7 @@
 // C7-L3 — les consignes du gabarit, mot pour mot (`10-` §3), et les trois règles.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { consigneDuCran2, consigneDuGabarit, demandeUneDesignationAuGabarit, marqueLePassage, sansDocuments } from './consigne'
+import { consigneDuCran2, consigneDuGabarit, demandeUneDesignationAuGabarit, GESTE_DU_PLAN, marqueLePassage, sansDocuments } from './consigne'
 
 const E = "Entre ce qui sert d'appui à l'argument et la conclusion, il y a juste un « donc »."
 const c = (cran: number, variante: 'a' | 'b' | null = null, insertion = false) =>
@@ -49,6 +49,18 @@ test('le cran 2 : « Lis les documents ci-joints : le sujet, et le texte à comp
   assert.equal(c(2), null)
   // « voici », jamais « il manque » (`10-` §2 bis.1).
   assert.equal(consigneDuCran2(G)!.includes('il manque'), false)
+})
+
+test('le plan (le trou est un ordre) : « les thèses des parties, dans le désordre », puis le geste validé par Louis le 06/09', () => {
+  const attendu = "Lis les documents ci-joints : le sujet, et les thèses des parties, dans le désordre. " + GESTE_DU_PLAN
+  // La base porte encore l'ancien geste « Voici les thèses… » : la phrase validée sert.
+  assert.equal(consigneDuCran2("Voici les thèses des parties, dans le désordre. Mets-les dans l'ordre.", 'ordre'), attendu)
+  assert.equal(consigneDuCran2(null, 'ordre'), attendu)
+  // Le jour où la base porte un geste « Complète … », il prend le dessus.
+  assert.equal(consigneDuCran2('Complète le plan autrement.', 'ordre'),
+    "Lis les documents ci-joints : le sujet, et les thèses des parties, dans le désordre. Complète le plan autrement.")
+  assert.equal(consigneDuGabarit({ cran: 2, variante: null, enonce: null, insertion: false, geste: null, forme: 'ordre' }), attendu)
+  assert.match(GESTE_DU_PLAN, /« car », le « mais » ou le « donc »/)
 })
 
 test('les crans 6 et 8 n’ont pas encore leur consigne ici ; un énoncé absent ne casse rien', () => {

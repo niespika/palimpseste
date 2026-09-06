@@ -32,6 +32,8 @@ export interface EntreeConsigne {
   insertion: boolean
   /** ⭐ Cran 2 — le geste sur la pièce, tel que la fiche l'écrit (`exercices_pieces.geste`). */
   geste?: string | null
+  /** ⭐ Cran 2 — la forme du trou : un blanc dans le texte, ou un ORDRE (le plan). */
+  forme?: 'trou' | 'ordre'
 }
 
 const LIS = 'Lis les documents ci-joints.'
@@ -42,9 +44,26 @@ function probleme(enonce: string | null): string {
   return e ? `« ${e} »` : '« … »'
 }
 
-/** La consigne du cran 2, à partir du geste — `null` sans geste. */
-export function consigneDuCran2(geste: string | null | undefined): string | null {
-  const g = (geste ?? '').trim()
+/**
+ * ⭐ 06/09 — LE PLAN, validé par Louis : le trou est un ORDRE, et la consigne
+ *    nomme ce qu'on sert — pas « un texte à compléter » mais « les thèses des
+ *    parties, dans le désordre ». Le geste, validé mot pour mot :
+ *    « Complète le plan : mets les thèses dans l'ordre, et écris devant chacune
+ *    le « car », le « mais » ou le « donc » qui oblige à passer à la suivante. »
+ * ⚠️ Le geste se RECOPIE de la fiche (`exercices_pieces.geste`) ; tant que le
+ *    `09-` §7 n'est pas récrit sur ce patron et redérivé, la base porte encore
+ *    « Voici les thèses des parties… » — alors c'est la phrase validée qui sert.
+ *    Le jour où la base porte un geste « Complète … », il prend le dessus.
+ */
+export const GESTE_DU_PLAN = "Complète le plan : mets les thèses dans l'ordre, et écris devant chacune le « car », le « mais » ou le « donc » qui oblige à passer à la suivante."
+
+/** La consigne du cran 2, à partir du geste — `null` sans geste (sauf sur un ordre, qui a son repli). */
+export function consigneDuCran2(geste: string | null | undefined, forme: 'trou' | 'ordre' = 'trou'): string | null {
+  let g = (geste ?? '').trim()
+  if (forme === 'ordre') {
+    if (!/^Complète/i.test(g)) g = GESTE_DU_PLAN
+    return `Lis les documents ci-joints : le sujet, et les thèses des parties, dans le désordre. ${g}`
+  }
   if (g === '') return null
   // ⭐ 06/09 (nuit) — « le cran 2 est un texte à trou » : le texte à compléter, puis le geste « Complète … » tel quel.
   return `Lis les documents ci-joints : le sujet, et le texte à compléter. ${g}`
@@ -59,7 +78,7 @@ export function consigneDuGabarit(e: EntreeConsigne): string | null {
   const p = probleme(e.enonce)
   switch (cran) {
     case 2:
-      return consigneDuCran2(e.geste)
+      return consigneDuCran2(e.geste, e.forme ?? 'trou')
     case 1:
       if (variante === 'b') {
         return `Voici une erreur courante : ${p} Lequel de ces quatre devoirs d'élève la commet ?`

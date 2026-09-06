@@ -49,7 +49,7 @@ import { lireReleveDeLangue, nombreDeFautes, ancrerLigneALigne, phraseDeLaChasse
   type AncrageFaute } from './langue'
 import { baliser, type Jeton } from './balisage'
 import { lireLeGabaritDuDepot, lireLeCran2, type GabaritDuDepot } from '@/utils/gabarit/lecture'
-import { composerLesPieces, type PiecesServies } from '@/utils/gabarit/pieces'
+import { composerLesPieces, formeDuTrou, type PiecesServies } from '@/utils/gabarit/pieces'
 import { appuiDu1a, appuiDu1b } from '@/utils/gabarit/candidats'
 import {
   consigneDuGabarit, demandeUneDesignationAuGabarit, sansDocuments, varianteDuCas, type Variante,
@@ -613,6 +613,12 @@ export async function chargerLeDeroule(
       objet: ctx.objet, genre: depot.exercice.genre ?? null })
     : null
   if (cran2) avertissements.push(...cran2.incidents)
+  // ⭐ 06/09 (Louis) — le plan a TROIS thèses : au-delà, les cartes deviennent longues à déplacer au pouce.
+  if (cran2 && formeDuTrou(ctx.objet) === 'ordre') {
+    for (const [ordre, c] of cran2.parCas) {
+      if (c.pieces.length !== 3) avertissements.push(`plan, cas ${ordre} : ${c.pieces.length} thèses servies — la doctrine en veut trois`)
+    }
+  }
 
   const enonceDuCas = (ordre: number): string | null => {
     const cle = gabarit.clesParCas.get(ordre)
@@ -659,7 +665,7 @@ export async function chargerLeDeroule(
       && pointDInsertion(materiauBrut, mat.version_corrigee))
     const consigneDerivee = gabarit.actif && ctx.cran != null
       ? consigneDuGabarit({ cran: ctx.cran, variante: vCas, enonce: enonceDuCas(i + 1), insertion,
-        geste: cran2?.geste ?? null })
+        geste: cran2?.geste ?? null, forme: formeDuTrou(ctx.objet) })
       : null
     consignesGabarit.push(consigneDerivee ?? '')
     if (gabarit.actif && ctx.cran === 2 && !consigneDerivee) {
