@@ -94,6 +94,8 @@ export interface Candidat {
      *    sens que si on la respecte » (`10-` §7).
      */
     rattrapage?: boolean
+    /** ⭐ C7-L7 — l'exercice est un cran de la SÉQUENCE DE MÉTHODE de son objet : PB2 ne le sépare pas du précédent sur le même objet (Louis, 07/09). */
+    methode?: boolean
   }
   /** ⭐ C7-L7 — l'observable de la clé (`code`) : ce que PB2 compare sous le gabarit. */
   observable?: string | null
@@ -298,9 +300,17 @@ export function poserLaSemaine(
     }
     // ⭐ C7-L7 — sous le gabarit, « la même » est l'OBSERVABLE : deux candidats qui
     //    portent un observable se comparent dessus ; sans observable, la compétence.
-    const memeChose = (c: Candidat) => pb2Observable && dernier && dernier.observable && c.observable
-      ? c.observable === dernier.observable
-      : c.competence === derniere
+    // ⛔ LA MÉTHODE EST L'EXCEPTION À PB2, comme à l'espacement (Louis, 07/09) : tous les
+    //    exercices d'une même clé portent le même observable, et la séquence d'un objet en
+    //    méthode se suit sur le même devoir — un cran de cette séquence n'est pas « deux fois
+    //    de suite la même chose » après le cran d'avant sur le même objet. L'interleaving,
+    //    lui, joue entre objets.
+    const memeChose = (c: Candidat) => {
+      if (pb2Observable && c.ordre?.methode && dernier?.ordre?.objet === c.ordre.objet) return false
+      return pb2Observable && dernier && dernier.observable && c.observable
+        ? c.observable === dernier.observable
+        : c.competence === derniere
+    }
 
     const candidats = candidatsPour(entree.competence, exercices)
       // PB2, encore : un candidat qui redonnerait la même chose de suite est écarté.

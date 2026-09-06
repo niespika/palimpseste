@@ -331,6 +331,22 @@ describe('⭐ Louis, 06/09 nuit — PB2 lit l\'OBSERVABLE sous le gabarit ; le c
     const meth = methodeDe('objection', [1, 3, 2]).map((r) => ({ ...r, methode: { ...r.methode!, sequence: [1, 3, 2] } }))
     const cm = ctx({ paliers: new Map<Competence, Lettre>([['argumentation', 'C']]) })
     const o = ordonnerParObjet(candidatsPour(meth, 'argumentation', []), meth, 'argumentation', [], cm)
-    assert.ok(o.length === 3 && o.every((x) => x.ordre!.rattrapage === true))
+    assert.ok(o.length === 3 && o.every((x) => x.ordre!.rattrapage === true && x.ordre!.methode === true))
+  })
+
+  it('⛔ la méthode est l\'exception à PB2 (Louis, 07/09) : la séquence d\'un objet s\'enchaîne seule, même observable aux trois crans', () => {
+    // Tous les exercices d'une même clé portent le même observable : sans l'exception, le 3 attendrait un autre objet.
+    const meth = methodeDe('objection', [1, 3, 2]).map((r) => ({ ...r, methode: { ...r.methode!, sequence: [1, 3, 2] } }))
+    const cm = ctx({ paliers: new Map<Competence, Lettre>([['argumentation', 'C']]) })
+    const s = poserLaSemaine(liste, { plancher: 5, plafond: 60, optionnel: 0 },
+      (comp, poses) => candidatsPour(meth, comp, poses, false, cm), (ex) => ex[0]!, undefined, { pb2: 'observable' })
+    assert.deepEqual(s.exercices.map((e) => e.candidat.exerciceId), ['objection-1-x', 'objection-3-x', 'objection-2-x'])
+    assert.ok(s.exercices.every((e) => e.candidat.observable === 'garant_present'))
+    // Un objet OUVERT, lui, reste sous PB2 : deux fois de suite le même observable, non.
+    const ouverts = [retenue(instance({ objet: 'argument', cran: 1, exerciceId: 'a' })), retenue(instance({ objet: 'exemple', cran: 1, exerciceId: 'c' }))]
+    const co = ctx({ dejaServis: new Set(['argument', 'exemple']) })
+    const s2 = poserLaSemaine([{ competence: 'argumentation', regle: 'R2', motif: '' }, { competence: 'structure', regle: 'R5', motif: '' }],
+      { plancher: 5, plafond: 60, optionnel: 0 }, (comp, poses) => candidatsPour(ouverts, comp, poses, false, co), (ex) => ex[0]!, undefined, { pb2: 'observable' })
+    assert.equal(s2.exercices.length, 1)
   })
 })

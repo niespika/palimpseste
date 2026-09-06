@@ -346,7 +346,7 @@ export function ordonnerParObjet(
       const rattrapage = k.r.porte === 'methode'
         || vieDeLObjet(ctx, o, competence).prerequis.includes(cran)
       ctx.journal.elections.set(k.c.exerciceId, k.election)
-      out.push({ ...k.c, ordre: { rang, objet: o, motif: k.election.motif, rattrapage } })
+      out.push({ ...k.c, ordre: { rang, objet: o, motif: k.election.motif, rattrapage, methode: k.r.porte === 'methode' } })
     }
   }
   return out
