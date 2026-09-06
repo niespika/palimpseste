@@ -146,7 +146,13 @@ const metrics = (w) => cdp.envoie('Emulation.setDeviceMetricsOverride', { width:
 const montreLeVolet = (lire) => cdp.evalue(`(() => {
   const b = [...document.querySelectorAll('[role=group][aria-label] button')].filter((x) => x.offsetParent !== null)
   if (!b.length) return 'sans bascule'
-  const cible = ${lire} ? b.find((x) => /^Lire|^Mon texte/.test(x.textContent.trim())) : b.find((x) => !/^Lire|^Mon texte|^Crédence/.test(x.textContent.trim()))
+  // ⚠️ Pendant la crédence (un seul curseur), le volet à montrer est « Crédence » : cliquer
+  //    « Écrire » ramènerait la page au champ et perdrait la crédence (vu au smoke du cran 5).
+  const ranges = [...document.querySelectorAll('input[type=range]')].length
+  let cible
+  if (${lire}) cible = b.find((x) => /^Lire|^Mon texte/.test(x.textContent.trim()))
+  else if (ranges === 1 && b.some((x) => /^Crédence/.test(x.textContent.trim()))) cible = b.find((x) => /^Crédence/.test(x.textContent.trim()))
+  else cible = b.find((x) => !/^Lire|^Mon texte|^Crédence/.test(x.textContent.trim()))
   if (!cible) return 'pas de cible'
   if (cible.getAttribute('aria-pressed') === 'true') return 'déjà'
   cible.click(); return 'basculé : ' + cible.textContent.trim()
@@ -175,7 +181,8 @@ async function lire() {
     const boutons = [...document.querySelectorAll('button')].filter((b) => !b.disabled && b.offsetParent !== null).map((b) => b.textContent.trim())
     const ta = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly).map((x) => ({ rows: x.rows, vide: x.value.trim() === '', trou: x.placeholder === 'Écris ici' }))
     const geste = /Ta thèse en une phrase/i.test(t) ? 'restitution' : /degré de confiance/i.test(t) ? 'confiance' : /Dans quelles conditions as-tu travaillé/i.test(t) ? 'conditions' : null
-    return { boutons, textareas: ta, geste,
+    const ranges = [...document.querySelectorAll('input[type=range]')].filter((x) => x.offsetParent !== null).length
+    return { boutons, textareas: ta, geste, ranges,
       // ⭐ le texte à trou : le champ « Écris ici » posé dans le fil, la légende « ce bloc = telle chose ».
       trou: !!document.querySelector('textarea[placeholder="Écris ici"]') || !!document.querySelector('[data-plan]'),
       plan: !!document.querySelector('[data-plan]'), lienVide: [...document.querySelectorAll('[data-plan] input')].filter((x) => x.value.trim() === '').length,
@@ -292,8 +299,19 @@ try {
     if (args.includes('--jusqua-piece')) throw Object.assign(new Error('fin : jusqu\'à la pièce'), { fin: true })
     await clique('Enregistrer'); await attendQue((x) => !x.textareas.some((y) => y.trou))
   }
-  for (let pas = 0; pas < 8; pas++) {
+  for (let pas = 0; pas < 10; pas++) {
     e = await lire()
+    // ⭐ Le cran 5 demande une crédence après l'écriture (un seul curseur) : 70 %, puis « Enregistrer ».
+    if (e.ranges === 1) {
+      await capture('credence'); await dors(400)
+      const pose = await cdp.evalue(`(() => { const r = [...document.querySelectorAll('input[type=range]')].filter((x) => x.offsetParent !== null)[0]; if (!r) return false; const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; s.call(r, '70'); r.dispatchEvent(new Event('input', { bubbles: true })); return true })()`)
+      if (!pose) { await dors(500); continue }
+      await dors(300)
+      await clique('Enregistrer')
+      await attendQue((x) => x.ranges === 0)
+      if (args.includes('--jusqua-credence')) { await capture('credence-apres'); throw Object.assign(new Error('fin : jusqu\'à la crédence'), { fin: true }) }
+      continue
+    }
     if (e.geste) {
       await capture(`se-juger-${e.geste}`)
       if (e.geste === 'confiance') await cdp.evalue(`(() => { for (const f of document.querySelectorAll('fieldset')) { const b = f.querySelector('button'); if (b) b.click() } return true })()`)
@@ -346,7 +364,8 @@ try {
       const vf = d2?.verdicts_cran?.vf ?? null
       constat(!!vf, `verdict du juge (vf) : ${vf ? `${vf.reussi ? 'RÉUSSI' : 'RATÉ'} — ${vf.motif}` : 'absent'}`)
     }
-  } else constat(false, 'pas de version finale offerte (régime ?)')
+  } else if (CRAN === 2) constat(false, 'pas de version finale offerte (régime ?)')
+  else console.log('  (pas de version finale : le régime du cran', CRAN, 'n\'en a pas — attendu)')
 } catch (e) {
   if (!(e && e.fin)) throw e
 } finally {
