@@ -9,7 +9,7 @@ import {
   carteVisible, perimetreVide,
   type CarteAncree, type PerimetreCartes,
 } from '@/utils/quazian-visibilite'
-import { fsrs, createEmptyCard, type Card, type Grade } from 'ts-fsrs'
+import { fsrs, createEmptyCard, date_diff, type Card, type Grade } from 'ts-fsrs'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -405,13 +405,22 @@ export async function soumettreNote(
     }
   }
 
+  // `scheduled_days` : l'intervalle que la révision PRÉCÉDENTE avait planifié.
+  // Le journal le recopie tel quel (`buildLog`) ; la base ne le stocke pas, mais
+  // il se relit : échéance moins dernière révision, en jours — même calcul que
+  // `ts-fsrs` dans son propre `reschedule`. Reconstruit à 0 jusqu'au 05/09, le
+  // journal portait 0 sur ses 1 054 lignes. `elapsed_days` n'a pas ce problème :
+  // le planificateur le recalcule lui-même depuis `last_review`.
+  const scheduledDays = etat?.last_review
+    ? Math.max(0, date_diff(new Date(etat.due), new Date(etat.last_review), 'days'))
+    : 0
   const card: Card = etat
     ? {
         due: new Date(etat.due),
         stability: etat.stability,
         difficulty: etat.difficulty,
         elapsed_days: 0,
-        scheduled_days: 0,
+        scheduled_days: scheduledDays,
         reps: etat.reps,
         lapses: etat.lapses,
         learning_steps: 0,
