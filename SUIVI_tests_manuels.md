@@ -9144,3 +9144,64 @@ le veut.
 - [ ] **C10L1-x6 — LE REFUS DU PORTIER, ÉPROUVÉ DE BOUT EN BOUT.** ⚠️ **Ce qui est prouvé** : la garde est dans le `if (ecriture)` de `portier`, appelé par **18 des 20 actions** *(compté)*, et la règle qu'elle appelle est testée sous tous ses angles. ⛔ **Ce qui ne l'est PAS** : aucun **appel réel** d'action serveur refusée. `portier` est privée et passe par `garderEleveDeraule` — donc par des cookies de session : la couture n'a pas de session, et l'écran fermé n'offre plus aucun bouton de travail à cliquer. **Le cas qui compte est celui du piège 21** : *l'onglet resté ouvert depuis dimanche soir, qui doit être refusé à 18:01 et non à la prochaine navigation.* **Condition de reprise** : ouvrir l'exercice AVANT que la ligne existe *(l'écran de travail se rend normalement)*, poser la ligne, puis cliquer « Remettre » **sans recharger** — le serveur doit répondre le message de Louis.
 
 - [ ] **C10L1-x5 — l'écran fermé sous le GABARIT.** `gabarit_actif` est désormais **ON en production** *(mesuré le 07/09 à 13:51 UTC — le prompt du lot le disait OFF)*. La vue fermée d'un exercice du gabarit — cran 2 « texte à trou », `probleme`, `constituant`, pièces servies — **est couverte par la liste blanche par construction**, et le test le prouve sur une vue farcie, **mais elle n'a pas été vue à l'œil sur un vrai exercice de gabarit** : le décor de la couture pose des instances simples. **Condition de reprise** : un dépôt du routeur sur une instance `ex-gab-*`, semaine comptée, aux trois largeurs.
+
+## C10-L2 — Le professeur clôt les dépôts d'une passation (séance du 07/09/2026, après-midi)
+
+> **Prouvé par exécution** : `scripts/recette/couture-c10l2.mjs --essai` *(60 contrôles, 0 échec)* et
+> `scripts/recette/smoke-c10l2.mjs <dossier>` *(sessions prof ET élève, deux modules, trois largeurs)*.
+> ⛔ **Non poussé.** `passation_classe_actif` est ON en production.
+
+### Le miroir, et son idempotence
+
+- [x] **C10L2-1 — un dépôt `assigne` ET un dépôt `ouvert` de la même instance passent à `abandonne` en UN clic.** ⭐ La branche `assigne` **n'a aucun cas en production** *(mesuré : `statut='assigne' ∧ routeur_decision_id IS NULL` → 0)* : elle est **fabriquée au décor** et éprouvée là. *(couture ①)*
+- [x] **C10L2-2 — la copie REMISE ne bouge pas, ni son statut ni son texte** ; un dépôt `retire` n'est pas repeint. *(couture ①)*
+- [x] **C10L2-3 — SECOND CLIC : 0 dépôt clos, et l'écran le dit.** L'idempotence tient par le FILTRE DE STATUT, jamais par le journal. *(couture ①)*
+- [x] **C10L2-4 — la garde de LIEU refuse une instance de maison**, avec son motif nommé. *(couture ①)*
+- [x] **C10L2-5 — le BROUILLON est clos mais son texte n'est pas effacé**, et la confirmation le NOMME À PART. *(couture ① · smoke prof)*
+
+### La garde — la couture que ce lot CRÉE
+
+- [x] **C10L2-6 — les ONZE chemins d'écriture de l'élève sont APPELÉS pour de vrai après la clôture, et TOUS refusent.** Huit rendent « Ce dépôt est clos. » ; `transcrireDepot` **lève** `DepotSansCopie` *(panne locale et permanente : le job meurt sans geler la tête de file)* ; le collage n'est pas journalisé. *(couture ②)*
+- [x] **C10L2-7 — après les onze appels, le dépôt est TOUJOURS `abandonne` et `v1_remis_at` est NULL.** C'est le contrôle qui vaut tous les autres. *(couture ②)*
+- [x] **C10L2-8 — la garde n'a pas débordé** : un dépôt remis non clos est refusé par SA garde à lui (« Tu as déjà validé ta copie. »), pas par la clôture. *(couture ②)*
+- [x] **C10L2-9 — `depotClos` refuse les trois statuts fermés et laisse passer les six autres**, énumérés depuis une constante *(un dixième statut casserait le test)*. *(`utils/passation/statuts.test.ts`)*
+
+### L'élève
+
+- [x] **C10L2-10 — par son URL DIRECTE, l'écran de passation dit « Ce dépôt est clos. » et ne porte AUCUNE commande** : 0 bouton de geste, 0 champ de saisie. ⭐ **C'est le trou que `!vue.ouvert` ne fermait pas** — `ouvert_par_prof_at` reste non nul après la clôture. *(smoke élève, DEUX modules)*
+- [x] **C10L2-11 — la bannière verte de lancement est ÉTEINTE**, sans une ligne écrite à `signal.ts`. *(couture ③ · smoke élève, deux modules)*
+- [x] **C10L2-12 — une ligne « abandonné » APPARAÎT dans « Mes examens passés », ton `clos`.** ⭐ **Comportement ATTENDU, pas un manque** ; et le ton est réutilisé, donc aucune table exhaustive payée. *(couture ③ · smoke élève)*
+- [x] **C10L2-13 — les trois offres de Monitoring se taisent** avec le motif de clôture, réduites là où la vue se construit. *(couture ③)*
+
+### Le journal
+
+- [x] **C10L2-14 — l'entrée est en base, et c'est la PREMIÈRE de `override_prof` en cinq mois de production.** La preuve ne peut être qu'une requête : ce journal n'a aucun lecteur. *(couture ④)*
+- [x] **C10L2-15 — tous les `cycle_lundi` sont des LUNDIS (isodow = 1)**, et le dépôt du **dimanche 20 h 30 à Toronto** est daté de SA semaine (`2026-08-31`), pas de la suivante — un `.slice(0, 10)` aurait été REFUSÉ par le CHECK. *(couture ④)*
+- [x] **C10L2-16 — aucun `routeur_decision_id` posé sur les dépôts clos.** Sinon `C10-L1` les fermerait AUSSI, par une seconde règle. *(couture ④)*
+- [x] **C10L2-17 — l'erreur du journal est captée et REMONTÉE à l'écran** *(le patron du retrait n'en attrape aucune)*.
+
+### Les chiffres qui ne doivent pas bouger
+
+- [x] **C10L2-18 — `comptesDeLaSemaine` AVANT = APRÈS, à la chaîne près**, sur la semaine semée ET sur la semaine en cours, pour les deux élèves. `ouvert` et `abandonne` sont indiscernables pour la collecte. *(couture ⑤)*
+- [x] **C10L2-19 — K de R5 INCHANGÉ (7 → 7) pendant que le journal passe de 0 à 1 ligne.** *(couture ⑥)*
+- [x] **C10L2-20 — ⛔⛔ LA GARDE D'IDEMPOTENCE DE LA POSE HEBDOMADAIRE, mesurée dans les deux sens** : `dejaServi = true` sans le filtre *(une semaine PERDUE pour l'élève)*, `false` avec. La régression que le prompt ne nommait pas. *(couture ⑥)*
+- [x] **C10L2-21 — `assiduite_hebdo` inchangée, MINUTES COMPRISES** *(`remplirLesMinutes` écrivait sur la ligne d'un élève sans décision réelle)*. *(couture ⑥)*
+
+### L'ordre des gestes, et l'écran du professeur
+
+- [x] **C10L2-22 — la clôture est placée AVANT « 2 · Déclencher l'analyse en lot »**, mesuré par la position dans le texte de la page, sur les deux modules. *(smoke prof)*
+- [x] **C10L2-23 — `publier` NE REPEINT PAS un dépôt clos en « retour publié ».** ⭐ C'est l'argument à donner au professeur, et il ne demande aucun code : clore d'abord. *(couture H)*
+- [x] **C10L2-24 — la confirmation NOMME tous les élèves en clair**, sans « et N autres », sans troncature, aux trois largeurs, sur les deux modules. Mesuré en production : 13 noms de 7 à 23 caractères, pire cas 23 noms / 386 caractères. *(smoke prof)*
+- [x] **C10L2-25 — la confirmation porte la phrase de la source en toutes lettres** : « un **constat**, pas une absolution », et « restent au **dénominateur** ». *(smoke prof, deux modules)*
+- [x] **C10L2-26 — la confirmation est EN PAGE, jamais `confirm()`**, et le serveur refuse sans le champ `confirme`.
+- [x] **C10L2-27 — `tsc` propre et `npm test` vert** : 2 506 tests, 0 échec *(2 499 avant le lot)*.
+- [x] **C10L2-28 — la base rendue à son état d'entrée, VÉRIFIÉE par requête** : retrait par la MARQUE et par ids ; le journal retiré PAR ID, jamais par cycle ni par élève ; 0 dépôt `abandonne` survivant dans une base **partagée avec d'autres séances** *(17 dépôts de classe ouverts leur appartiennent, et n'ont pas été touchés)*.
+
+### Reste à faire — décoché, avec sa condition de reprise
+
+- [ ] **C10L2-x1 — LA CLÔTURE RÉELLE EN PRODUCTION : 15 dépôts, 4 instances, 13 élèves, 3 classes.** ⭐ **Quatre clics, et ils sont à Louis, quand il veut.** *Condition de reprise : le lot poussé et déployé, puis Louis sur `/prof/aletheia/passation/b5f7a719-…` (10 dépôts, le plus gros cas), `/prof/codex/passation/d8de575c-…` (2), `/prof/codex/passation/364359ce-…` (2), `/prof/codex/passation/524f5484-…` (1).* ⚠️ **`d8de575c` porte `dc11bafa`, le dépôt de 2 266 caractères déjà corrigé** : la confirmation le nommera à part.
+- [ ] **C10L2-x2 — LA BRANCHE `assigne`, jamais rencontrée en production.** Mesuré : 0 dépôt `assigne` sans décision de routeur. ⭐ Elle est **fabriquée et éprouvée au bac à sable**, mais jamais vue sur une vraie passation. *Condition de reprise : une passation où le professeur assigne un jour et ouvre le lendemain — la fenêtre dure des heures (10 h 30 mesurées sur `524f5484`, assignée le 26/08 à 04:04, ouverte à 14:34).*
+- [ ] **C10L2-x3 — LE BOUTON DE LA MAISON — population NULLE.** `origine='prof' ∧ lieu='maison'` = **0 en production**, tous statuts confondus ; les 195 dépôts de maison jouables sont **tous** du routeur, donc de `C10-L1`. ⛔ **Hors périmètre, explicitement.** *Condition de reprise : une première assignation à la main sur une instance de maison — le chemin existe (`assignerALaClasse` écrit `origine:'prof'` sans regarder le `lieu`), il n'a simplement jamais servi.*
+- [ ] **C10L2-x4 — LA TROISIÈME SURFACE ÉLÈVE : Fragments-érudition interpole le libellé DANS UNE PHRASE.** `app/eleve/modules/fragments-erudition/page.tsx:749-761` : après clôture, l'élève lirait *« abandonné · ton essai a deux retours : celui de Fragments ci-dessous, et celui-ci »* — une promesse de deux retours sur une copie déclarée jamais rendue. ⛔ **Écarté explicitement** : **0 instance Fragments de classe en production**, et corriger la phrase est une décision de contenu. *Condition de reprise : la première passation en classe de Fragments-érudition.*
+- [ ] **C10L2-x6 — UN PASSAGE UNIQUE DE `smoke-c10l2.mjs`, VERT DE BOUT EN BOUT.** ⭐ **Les onze contrôles d'écran ont tous été tenus** — écran professeur avec sa confirmation ouverte sur les deux modules et les trois largeurs, `{v1_remis: 1, abandonne: 6}` en base après le clic réel, écran élève clos par l'URL directe dans Codex ET Aletheia, bannière éteinte, ligne « abandonné », 0 débordement partout — **mais sur plusieurs passages, pas sur un seul.** ⛔ **Cause mesurée, et elle n'est pas dans le lot** : le serveur de développement du port 3000 appartient à une AUTRE séance *(Next refuse un second `next dev` sur le même arbre — éprouvé)*, et sa lenteur sous charge fait expirer les sondes CDP. *Condition de reprise : rejouer `smoke-c10l2.mjs` sur un serveur de développement non partagé — le script a été durci pour cela (échéance sur chaque appel CDP, sonde bornée à 2 s, course sur l'événement de chargement, verrou d'essai, refus de semer sur un décor résiduel).*
+- [ ] **C10L2-x5 — UN DÉPÔT `abandonne` RESTE RETIRABLE par deux chemins prof, et emporté par un retrait de pool.** `app/prof/routeur/actions.ts` et `utils/signalements/serveur.ts` ne refusent que `clos` ; `emportesParLeRetraitDuPool` n'exclut pas `abandonne` **délibérément** (son commentaire le dit). ⭐ **Assumé, et motivé au relevé §5.7** : le `07-` §1.1 dit « le retrait reste permis tant que le dépôt n'est pas `clos` ». *Condition de reprise : une décision de Louis, s'il veut fermer cette porte.*
