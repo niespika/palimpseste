@@ -28,11 +28,22 @@ const TRAVAUX = true
 /** Le cookie que pose le laissez-passer. Sa valeur est comparée à l'env. */
 const COOKIE_ATELIER = 'palimpseste_atelier'
 
-/** Ce qui passe malgré les travaux : la page elle-même, et de quoi s'identifier. */
+/**
+ * Ce qui passe malgré les travaux : la page elle-même, de quoi s'identifier, et
+ * LE CÔTÉ PROFESSEUR.
+ *
+ * ⭐ `/prof` est ouvert exprès. Les travaux sont un message aux ÉLÈVES ; fermer
+ *    la console du professeur pendant qu'il répare ne protège personne et
+ *    l'enferme dehors. Aucun risque d'exposition : les pages de `/prof` portent
+ *    déjà leur propre garde de rôle, et un élève qui s'y aventure est renvoyé
+ *    vers `/eleve`, donc vers la page des travaux.
+ * ⛔ `/passation` reste FERMÉ : c'est une séance de classe, avec des élèves.
+ */
 function laisseePasser(chemin: string): boolean {
   return chemin === '/travaux'
     || chemin === '/login'
     || chemin.startsWith('/auth/')
+    || chemin === '/prof' || chemin.startsWith('/prof/')
 }
 
 export async function proxy(request: NextRequest) {
