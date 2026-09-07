@@ -59,7 +59,7 @@ test('les cinq observables du 09- sans entrée `observables_mesure` sont ceux du
 //    COMPTAGE rapporté `au_plus` dont le seuil (paramètre `contresens_partiels_
 //    plafond_moyen`) vaut 2 : le « 1 » du raté reste SOUS le seuil. La conversion
 //    rend alors `n/a` et le dit, jamais une valeur fausse (DETTE, question à Louis).
-const NON_COUVERTS = new Set(['synthese|contresens_partiel'])
+const NON_COUVERTS = new Set<string>()  // 08/09 : le seuil doublé (1 au minimum) couvre `contresens_partiel`
 
 test('⭐ LA RÈGLE — pour les 47 observables isolés, réussi lit `reussie` et raté lit `ratee` au seuil DÉCLARÉ (un cas non couvert, nommé)', () => {
   let eprouves = 0
@@ -122,11 +122,11 @@ test('la table du 03- §1 : proportion/comptage au_moins → 1/0, au_plus → 0/
   const defauts: EntreeObservableMesure = { famille: 'comptage', reussie: 'au_plus', seuil: 0 }
   assert.equal(valeurDuVerdict('x', defauts, true).valeur, 0)
   assert.equal(valeurDuVerdict('x', defauts, false).valeur, 1)
-  // ⚠️ un comptage `au_plus 2` : le « 1 » du raté reste SOUS le seuil — n/a, et l'alerte le dit (jamais une valeur fausse)
+  // ⭐ un comptage `au_plus 2` : le raté vaut le seuil doublé, 1 au minimum (Louis, 08/09)
   const deux: EntreeObservableMesure = { famille: 'comptage', reussie: 'au_plus', seuil: 2 }
   assert.equal(valeurDuVerdict('x', deux, true).valeur, 0)
-  assert.equal(valeurDuVerdict('x', deux, false).valeur, NA)
-  assert.match(valeurDuVerdict('x', deux, false).alerte?.motif ?? '', /ne se relit pas « ratee »/)
+  assert.equal(valeurDuVerdict('x', deux, false).valeur, 4)
+  assert.equal(valeurDuVerdict('x', { ...deux, seuil: 0 }, false).valeur, 1)
   const strict: EntreeObservableMesure = { famille: 'comptage rapporté', rapporte_a: 'n', reussie: 'moins_de', seuil: 0.3 }
   assert.equal(valeurDuVerdict('x', strict, true).valeur, 0)
   assert.equal(valeurDuVerdict('x', strict, false).valeur, 1)

@@ -222,15 +222,23 @@ function valeurDeLaTable(
     case 'plus_de': case 'au_moins':
       return { valeur: reussi ? 1 : 0, alerte: null }
     case 'au_plus': case 'moins_de': {
+      if (reussi) return { valeur: 0, alerte: null }
       if (entree.famille === 'densité') {
-        if (reussi) return { valeur: 0, alerte: null }
         const seuil = seuilDe(entree, parametres)
         if (typeof seuil !== 'number' || !Number.isFinite(seuil)) {
           return { valeur: NA, alerte: { observable: code, motif: 'densité ratée sans seuil numérique lisible : le seuil doublé ne se calcule pas' } }
         }
         return { valeur: seuil * 2, alerte: null }
       }
-      return { valeur: reussi ? 0 : 1, alerte: null }
+      // ⭐ 08/09 (Louis) — un COMPTAGE n'a pas de borne haute non plus : le raté
+      //    vaut « le seuil doublé, et 1 au minimum » — la table du 03- §1 (1) au
+      //    seuil 0, la convention de la densité au-delà. Mesuré : `contresens_partiel`
+      //    (seuil 2) rendait n/a avec le seul « 1 ».
+      if (entree.famille === 'comptage' || entree.famille === 'comptage rapporté') {
+        const seuil = seuilDe(entree, parametres)
+        if (typeof seuil === 'number' && Number.isFinite(seuil) && seuil >= 1) return { valeur: Math.max(1, seuil * 2), alerte: null }
+      }
+      return { valeur: 1, alerte: null }
     }
     default:
       return { valeur: NA, alerte: { observable: code, motif: `\`reussie = ${entree.reussie}\` : hors de la table du 03- §1` } }
