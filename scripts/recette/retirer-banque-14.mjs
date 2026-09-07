@@ -21,13 +21,14 @@ const PROD = process.argv.includes('--prod')
 const admin = PROD
   ? createClient(env.PROD_SUPABASE_URL, env.PROD_SUPABASE_SECRET_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
   : createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+// ⛔ 08/09 — PostgREST rend 1000 lignes au plus, même avec `.limit(5000)`, sans le dire : on pagine.
+const lireTout = async (f) => { const out = []; for (let d = 0; ; d += 1000) { const { data, error } = await f().order('id').range(d, d + 999); if (error) throw new Error(error.message); out.push(...data); if (data.length < 1000) break } return out }
 const MARQUE = '[banque 1.4]'
 const MOTIF = `${MARQUE} retirée du routage le ${new Date().toISOString().slice(0, 10)} — remplacée par les exercices du gabarit (10-)`
 const applique = process.argv.includes('--applique'); const retablis = process.argv.includes('--retablis')
 
-const { data: ex, error } = await admin.from('exercices')
-  .select('id, id_import, statut, bloque, blocages, classe_id, lieu, exercices_cas(probleme)').limit(5000)
-if (error) throw new Error(error.message)
+const ex = await lireTout(() => admin.from('exercices')
+  .select('id, id_import, statut, bloque, blocages, classe_id, lieu, exercices_cas(probleme)'))
 const est14 = (e) => !(e.exercices_cas ?? []).some((c) => typeof c.probleme === 'string' && c.probleme)
 const anciennes = ex.filter((e) => est14(e) && e.lieu !== 'classe')
 const dejaRetirees = anciennes.filter((e) => (e.blocages ?? []).some((b) => String(b).startsWith(MARQUE)))

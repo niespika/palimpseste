@@ -31,6 +31,7 @@ import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { controleImport, type DejaEnBase, type VerdictImport } from './verifie-import'
 import { chargerDoctrineDepuisBase } from './doctrine'
+import { lirePagine } from '@/utils/routeur/donnees'
 
 /** L'empreinte du CONTENU EXACT, octet pour octet. AUCUNE normalisation —
  *  « deux textes qui ne diffèrent que d'une espace sont DEUX TEXTES, et leurs
@@ -87,18 +88,25 @@ const BANQUES = ['textes', 'sujets', 'materiaux', 'exercices', 'demonstrations']
 
 /** Ce que la base porte déjà : les ids, les références validées, les longueurs. */
 export async function lireDejaEnBase(admin: SupabaseClient): Promise<DejaEnBase> {
+  // ⛔ 08/09/2026 — PostgREST rend 1000 lignes au plus par requête, même sans `limit`, sans le dire.
+  //    La production a passé ce cap (1106 exercices, 1004 matériaux) : ces lectures tronquaient
+  //    l'ensemble des ids connus, et un dépôt rejoué pouvait réinsérer ce qui était déjà en base.
+  //    `lirePagine` lit tout, recoupe par un `count` exact, et REFUSE une lecture tronquée.
+  type L = Record<string, any>
+  const a = admin as never
+  const nonNul = (q: unknown) => (q as { not: (c: string, o: string, v: null) => unknown }).not('id_import', 'is', null)
   const [t, s, m, e, dm] = await Promise.all([
-    admin.from('exercices_textes')
-      .select('id_import, contenu_id, reference_id, exercices_references(validee_at), scriptorium_contenus(texte_extrait)'),
-    admin.from('exercices_sujets').select('id_import').not('id_import', 'is', null),
-    admin.from('exercices_materiaux').select('id_import').not('id_import', 'is', null),
-    admin.from('exercices').select('id_import').not('id_import', 'is', null),
-    admin.from('exercices_demonstrations').select('id_import').not('id_import', 'is', null),
+    lirePagine<L>(a, 'exercices_textes',
+      'id, id_import, contenu_id, reference_id, exercices_references(validee_at), scriptorium_contenus(texte_extrait)', ['id'], (q) => q),
+    lirePagine<L>(a, 'exercices_sujets', 'id_import', ['id_import'], nonNul),
+    lirePagine<L>(a, 'exercices_materiaux', 'id_import', ['id_import'], nonNul),
+    lirePagine<L>(a, 'exercices', 'id_import', ['id_import'], nonNul),
+    lirePagine<L>(a, 'exercices_demonstrations', 'id_import', ['id_import'], nonNul),
   ])
   const textes = new Set<string>()
   const textesValides = new Set<string>()
   const longueurTexte: Record<string, number> = {}
-  for (const r of (t.data ?? []) as Array<Record<string, any>>) {
+  for (const r of t) {
     const id = r.id_import as string
     textes.add(id)
     if (r.exercices_references?.validee_at) textesValides.add(id)
@@ -106,10 +114,10 @@ export async function lireDejaEnBase(admin: SupabaseClient): Promise<DejaEnBase>
   }
   return {
     textes, textesValides, longueurTexte,
-    sujets: new Set((s.data ?? []).map((x: any) => x.id_import as string)),
-    materiaux: new Set((m.data ?? []).map((x: any) => x.id_import as string)),
-    exercices: new Set((e.data ?? []).map((x: any) => x.id_import as string)),
-    demonstrations: new Set((dm.data ?? []).map((x: any) => x.id_import as string)),
+    sujets: new Set(s.map((x) => x.id_import as string)),
+    materiaux: new Set(m.map((x) => x.id_import as string)),
+    exercices: new Set(e.map((x) => x.id_import as string)),
+    demonstrations: new Set(dm.map((x) => x.id_import as string)),
   }
 }
 

@@ -32,10 +32,10 @@ const souches = cles.map((k) => `gab-${limace(k.split('.')[0], 14)}-${limace(k.s
 const exDe = (id) => tout ? /^ex-gab-/.test(id) : souches.some((s) => new RegExp(`^ex-${s}-c\\d[ab]?(-\\d\\d)?$`).test(id))
 const matDe = (id) => tout ? /^mat-gab-/.test(id) : souches.some((s) => new RegExp(`^mat-${s}-[ab](t\\d)?(-\\d\\d)?$`).test(id))
 
-const { data: ex, error: e1 } = await admin.from('exercices').select('id, id_import').like('id_import', 'ex-gab-%').limit(5000)
-if (e1) throw new Error(e1.message)
-const { data: mats, error: e2 } = await admin.from('exercices_materiaux').select('id, id_import').like('id_import', 'mat-gab-%').limit(5000)
-if (e2) throw new Error(e2.message)
+// ⛔ 08/09 — PostgREST rend 1000 lignes au plus, même avec `.limit(5000)`, sans le dire : on pagine.
+const lireTout = async (f) => { const out = []; for (let d = 0; ; d += 1000) { const { data, error } = await f().order('id').range(d, d + 999); if (error) throw new Error(error.message); out.push(...data); if (data.length < 1000) break } return out }
+const ex = await lireTout(() => admin.from('exercices').select('id, id_import').like('id_import', 'ex-gab-%'))
+const mats = await lireTout(() => admin.from('exercices_materiaux').select('id, id_import').like('id_import', 'mat-gab-%'))
 const exVises = ex.filter((e) => exDe(e.id_import)); const matVises = mats.filter((m) => matDe(m.id_import))
 const { data: dep } = await admin.from('exercices_depots').select('id, exercice_id').in('exercice_id', exVises.map((e) => e.id))
 console.log(`bac à sable — ${exVises.length} exercice(s), ${matVises.length} matériau(x), ${dep?.length ?? 0} dépôt(s) posé(s) dessus`)

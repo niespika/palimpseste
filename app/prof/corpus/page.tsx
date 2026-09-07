@@ -19,6 +19,12 @@
 
 import Link from 'next/link'
 import { lire, incidentsDe } from '@/utils/fabrique/lecture'
+import { lirePagine } from '@/utils/routeur/donnees'
+// Le lecteur paginé, détypé pour cette page : instancier ses génériques sur le client typé de la
+// page fait sombrer le typeur (TS2589) ; la page ne lit que des lignes brutes.
+const pagine = lirePagine as unknown as (
+  admin: unknown, table: string, colonnes: string, cle: string[], affiner: (q: any) => unknown, // eslint-disable-line @typescript-eslint/no-explicit-any
+) => Promise<Ligne[]>
 import { garderProf } from '@/utils/fabrique/acces'
 import { formatJour } from '@/utils/fuseau'
 import DepotCorpus from './DepotCorpus'
@@ -73,8 +79,11 @@ export default async function DepotDuCorpus({
       admin.from('exercices_sujets').select('*, exercices_sujets_cours(cours_declare, cours_id)')
         .neq('statut', 'retire').order('created_at')),
     lire<Ligne>('les matériaux',
-      admin.from('exercices_materiaux').select('id, id_import, import_id, objet_code, mode, famille, defaut, statut')
-        .neq('statut', 'retire').order('created_at')),
+      // ⛔ 08/09 — PostgREST rend 1000 lignes au plus : au-delà, la liste se coupait sans le dire, et
+      //    ce qui manquait était le plus RÉCENT. `lirePagine` lit tout et refuse une lecture tronquée.
+      pagine(admin, 'exercices_materiaux', 'id, id_import, import_id, objet_code, mode, famille, defaut, statut',
+        ['created_at', 'id'], (q) => q.neq('statut', 'retire'))
+        .then((lignes) => ({ data: lignes, error: null }))),
     // ⭐ `consigne_instanciee` est ici POUR L'ÉCRAN, et pour rien d'autre : sans
     //    elle, la file affiche « argument · cran 2 · maison » et le professeur
     //    valide un exercice dont il ignore le contenu.
@@ -84,8 +93,9 @@ export default async function DepotDuCorpus({
       //    ne sait plus le lire et rend `GenericStringError[]` — la ligne
       //    devient inassignable, et rien ne dit que c'est la MISE EN FORME qui
       //    l'a cassée. Même piège que celui déjà noté à `utils/routeur/donnees.ts`.
-      admin.from('exercices').select('id, id_import, import_id, cran, lieu, statut, bloque, blocages, signalements, consigne_instanciee, exercices_types(code)')
-        .not('id_import', 'is', null).order('created_at')),
+      pagine(admin, 'exercices', 'id, id_import, import_id, cran, lieu, statut, bloque, blocages, signalements, consigne_instanciee, exercices_types(code)',
+        ['created_at', 'id'], (q) => q.not('id_import', 'is', null))
+        .then((lignes) => ({ data: lignes, error: null }))),
     lire<Ligne>('les démonstrations',
       admin.from('exercices_demonstrations').select('*').order('competence')),
     // ⭐ C4-L16 — `notions` entre à CE `select`-là, et à aucun autre : l'écran
