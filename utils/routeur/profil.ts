@@ -87,6 +87,23 @@ export interface DecisionLue {
   createdAt: string
   /** ⭐ `routeur_decisions.bonus` — « en faire plus » n'est pas la semaine ; la garde d'idempotence l'ignore. */
   bonus: boolean
+  /**
+   * ⭐⭐ C10 · L2 — `routeur_decisions.exercice_id`, ET IL DISCRIMINE UNE LIGNE
+   * QUI N'A SERVI AUCUN EXERCICE.
+   *
+   * Le journal porte deux natures de ligne. Celles du ROUTEUR nomment l'exercice
+   * qu'elles ont posé. Celles de l'OVERRIDE DU PROFESSEUR — le retrait
+   * (`app/prof/routeur/actions.ts`) et, depuis C10-L2, la clôture d'une
+   * passation (`app/passation/actions.ts`) — sont ORPHELINES par construction :
+   * `exercice_id` NULL, `cible_retenue` NULL, `regle_declenchee = 'override_prof'`.
+   *
+   * ⛔ SANS CE CHAMP, TROIS LECTEURS COMPTAIENT UN OVERRIDE POUR UN EXERCICE
+   *    SERVI. Le journal n'avait jamais reçu une seule ligne en cinq mois de
+   *    production (480 décisions, ZÉRO `override_prof`), donc rien ne s'était vu.
+   *    `utils/moteur/bonus-serveur.ts` (`decisionsDuCycle`) filtrait déjà
+   *    `!!l.exercice_id` de son côté : ce champ ne fait qu'aligner les autres.
+   */
+  exerciceId: string | null
 }
 
 export function historiqueDesCibles(decisions: readonly DecisionLue[]): Competence[] {

@@ -444,8 +444,11 @@ export async function lireLesDecisions(
   admin: Admin, eleveId: string, depuisLundi?: string,
 ): Promise<DecisionLue[]> {
   const lignes = await lirePagine<{ cible_retenue: string | null; cycle_lundi: string
-    created_at: string; bonus: boolean | null }>(
-    admin, 'routeur_decisions', 'cible_retenue, cycle_lundi, created_at, bonus, id',
+    created_at: string; bonus: boolean | null; exercice_id: string | null }>(
+    // ⭐ C10 · L2 — `exercice_id` a été AJOUTÉ à la lecture : sans lui, ses trois
+    //    consommateurs ne peuvent pas distinguer une décision du routeur d'une
+    //    ligne d'override du professeur, qui n'a servi aucun exercice.
+    admin, 'routeur_decisions', 'cible_retenue, cycle_lundi, created_at, bonus, exercice_id, id',
     ['created_at', 'id'],
     (q) => {
       let r = (q as never as { eq: (a: string, b: string) => unknown }).eq('eleve_id', eleveId)
@@ -459,6 +462,7 @@ export async function lireLesDecisions(
     cycleLundi: l.cycle_lundi,
     createdAt: l.created_at,
     bonus: l.bonus === true,
+    exerciceId: l.exercice_id ?? null,
   }))
 }
 

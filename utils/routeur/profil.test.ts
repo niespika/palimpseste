@@ -105,9 +105,9 @@ test('la fenêtre d\'évidence garde LES QUATRE DERNIÈRES, dans l\'ordre', () =
 
 test('l\'historique se LIT sur les décisions, dans l\'ordre chronologique', () => {
   const h = historiqueDesCibles([
-    { cibleRetenue: 'structure', cycleLundi: '2026-09-07', createdAt: '2026-09-07T09:00:00Z', bonus: false },
-    { cibleRetenue: null, cycleLundi: '2026-09-07', createdAt: '2026-09-07T10:00:00Z', bonus: false },
-    { cibleRetenue: 'expression', cycleLundi: '2026-09-14', createdAt: '2026-09-14T09:00:00Z', bonus: false },
+    { cibleRetenue: 'structure', cycleLundi: '2026-09-07', createdAt: '2026-09-07T09:00:00Z', bonus: false, exerciceId: 'ex-1' },
+    { cibleRetenue: null, cycleLundi: '2026-09-07', createdAt: '2026-09-07T10:00:00Z', bonus: false, exerciceId: 'ex-2' },
+    { cibleRetenue: 'expression', cycleLundi: '2026-09-14', createdAt: '2026-09-14T09:00:00Z', bonus: false, exerciceId: 'ex-3' },
   ])
   assert.deepEqual(h, ['structure', 'expression'], 'les décisions sans cible ne comptent pas')
 })
@@ -222,4 +222,21 @@ test('le §7 mord ici aussi : à égalité, LE MODE LE PLUS EN RETARD', () => {
   const r = departagerParLeModeEnRetard(['structure', 'argumentation'],
     (c) => (c === 'argumentation' ? 0.3 : 0.1))
   assert.deepEqual(r, ['argumentation'])
+})
+
+
+// ── C10 · L2 — la ligne d'OVERRIDE n'est pas un exercice servi ──────────────
+
+test('une ligne d\'override (exerciceId null) ne compte dans AUCUN historique', () => {
+  // ⭐ `historiqueDesCibles` survit par accident : il filtre sur la CIBLE, pas
+  //    sur l'exercice. La ligne d'override porte les deux à NULL — mais si un
+  //    jour quelqu'un remplit `cible_retenue` sur un override, ce test tombera,
+  //    et c'est ce qu'on veut : l'immunité tenait à une valeur nulle, pas à une
+  //    intention.
+  const h = historiqueDesCibles([
+    { cibleRetenue: 'structure', cycleLundi: '2026-08-31', createdAt: '2026-08-31T09:00:00Z', bonus: false, exerciceId: 'ex-1' },
+    // La clôture d'une passation en classe, journalisée : aucun exercice servi.
+    { cibleRetenue: null, cycleLundi: '2026-08-24', createdAt: '2026-09-07T17:00:00Z', bonus: false, exerciceId: null },
+  ])
+  assert.deepEqual(h, ['structure'])
 })
