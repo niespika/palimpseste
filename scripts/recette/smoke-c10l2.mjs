@@ -286,7 +286,7 @@ async function cible() {
  *    DISPARU du contenu, ET qu'un bouton porte une FIBRE REACT — cliquer avant
  *    l'hydratation ne fait rien du tout (leçon d'`aletheia-smoke-eleve.mjs`).
  */
-async function attendreLeContenu(cdp, { hydrate = false, marqueur = null } = {}) {
+async function attendreLeContenu(cdp, { hydrate = false, marqueur = null, budget = 90_000 } = {}) {
   // ⛔⛔ NE PAS ATTENDRE LA DISPARITION DE « chargement » : mesuré ici, ce mot
   //    vient de CINQ `SPAN.font-titre` de l'EN-TÊTE DU SITE, dont les plumes ne
   //    se résolvent jamais quand le volet est masqué. Les guetter fait attendre
@@ -312,14 +312,14 @@ async function attendreLeContenu(cdp, { hydrate = false, marqueur = null } = {})
   //    chargé, la même boucle a duré vingt secondes une fois et six minutes une
   //    autre. On compte l'HORLOGE, et la sonde a de quoi respirer (5 s) parce
   //    qu'une page en cours de compilation ne répond pas en deux.
-  const FIN = Date.now() + 90_000
+  const FIN = Date.now() + budget
   let vu = false
   while (Date.now() < FIN) {
     if (await sonde(PRET)) { vu = true; break }
     await dors(400)
   }
-  if (!vu) console.log(`     ⚠️ contenu attendu ABSENT après 90 s${marqueur ? ` (${marqueur})` : ''}`
-    + ' — le serveur compile-t-il encore ?')
+  if (!vu) console.log(`     ⚠️ contenu attendu ABSENT après ${budget / 1000} s`
+    + `${marqueur ? ` (${marqueur})` : ''} — le serveur compile-t-il encore ?`)
   return vu
   if (hydrate) {
     // ⭐ LA FIBRE REACT — sans elle, `b.click()` part dans le vide : le DOM est
@@ -365,8 +365,14 @@ async function capturer(cdp, nom, url, { largeurs = LARGEURS, marqueur = null } 
   const c = cdp.attendChargement()
   await cdp.envoie('Page.navigate', { url: BASE + url })
   await Promise.race([c, dors(15000)])
-  trace(`${nom} : on attend le contenu`)
-  await attendreLeContenu(cdp, { marqueur })
+  // ⛔⛔ QUATRE MINUTES POUR LA PREMIÈRE VISITE, ET C'EST MESURÉ, PAS PRUDENT :
+  //    `next dev` COMPILE une route à sa première visite, et le serveur peut
+  //    être partagé avec une autre séance. Quatre-vingt-dix secondes suffisent
+  //    à une page chaude et jamais à une compilation — le smoke s'est arrêté
+  //    exactement là, sur la route prof d'Aletheia, après avoir passé Codex en
+  //    entier. Les mises en page qui suivent, elles, ne chargent rien.
+  trace(`${nom} : on attend le contenu (première visite : compilation possible)`)
+  await attendreLeContenu(cdp, { marqueur, budget: 240_000 })
 
   const mesures = []
   for (const largeur of largeurs) {
