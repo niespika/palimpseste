@@ -24,6 +24,7 @@ import { enTexte } from './consigne'
 import { cibleDansLeMateriau, verdictDeLaZone } from '@/utils/deroule/designation'
 import { lireLaPorteJugeDocuments } from '@/utils/juge/porte'
 import { lireLaPorteChaineCle } from './porte-cle'
+import { lireLaPorteJugeMesure } from './porte-mesure'
 import type { CleDuCas } from './cle'
 import type { ChoixServiAuJuge, PieceServieAuJuge, ZoneServieAuJuge } from './juge-cran'
 import { lireLeCran2 } from '@/utils/gabarit/lecture'
@@ -251,6 +252,14 @@ export interface ContexteDepot {
    */
   cle: CleDuCas | null
   /**
+   * ⭐⭐ C7-L9 — la porte du lot « le juge est la mesure » (`porte-mesure.ts`,
+   *    colonne absente ⇒ OFF), et L'ORIGINE DU DÉPÔT (`exercices_depots.origine`,
+   *    `routeur` ou `prof`) : « le périmètre se lit sur trois choses, pas une »
+   *    — le cran, l'origine, le lieu et la forme (prompt C7-L9, piège 4).
+   */
+  jugeMesureActif: boolean
+  origine: string | null
+  /**
    * Ce que la DÉCISION D'ASSIGNATION porte. « Le drapeau [de sonde de montée]
    * vient de la décision d'assignation ; la chaîne LE RECOPIE sur la mesure,
    * ELLE NE LE DEVINE PAS » (piège 20).
@@ -382,6 +391,7 @@ interface LigneDepot {
   texte_vf: string | null; transcription_vf: string | null
   confiance_declaree: Record<string, string> | null
   routeur_decision_id: string | null
+  origine: string | null
 }
 interface LigneExercice {
   id: string; type_id: string; classe_id: string | null; lieu: string
@@ -407,7 +417,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   const { data: depotBrut, error: eDepot } = await admin
     .from('exercices_depots')
     .select('id, eleve_id, exercice_id, statut, texte_v1, transcription_v1, texte_vf, '
-      + 'transcription_vf, confiance_declaree, routeur_decision_id')
+      + 'transcription_vf, confiance_declaree, routeur_decision_id, origine')
     .eq('id', depotId).maybeSingle()
   if (eDepot) throw new DepotIllisible(`dépôt ${depotId} : ${eDepot.code} ${eDepot.message}`)
   if (!depotBrut) throw new DepotIllisible(`dépôt ${depotId} : ${NUL}`)
@@ -734,6 +744,9 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     // ⭐⭐ C7-L8 — la porte du lot, lue UNE fois ; et la clé du cas.
     chaineCleActif: await lireLaPorteChaineCle(admin as never),
     cle: await cleDuCas(admin, cas),
+    // ⭐⭐ C7-L9 — la porte du lot, lue UNE fois ; l'origine du dépôt, pour le périmètre.
+    jugeMesureActif: await lireLaPorteJugeMesure(admin as never),
+    origine: depot.origine ?? null,
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
     estSyntheseEnClasse: typeExercice === 'synthese' && exercice.lieu === 'classe',

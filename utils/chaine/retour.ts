@@ -316,6 +316,18 @@ export interface EntreeRetour {
    *    à l'octet, borne du cran 2 comprise sous `juge_documents_actif`.
    */
   observableIsole?: { code: string; nom: string; dimension: string | null; competence: string; cle: string } | null
+  /**
+   * ⭐⭐ C7-L9 — « LE JUGE EST LA MESURE » (`07-` §4 bis, acté le 07/09/2026) : sur
+   *    un cran qui isole servi par le routeur, Calame NE REÇOIT PLUS DE SQUELETTE
+   *    — ni la section « SQUELETTE ET VERDICTS », ni l'état antérieur en valeurs —
+   *    mais le verdict du juge du cran, la copie, les documents et la dimension de
+   *    l'observable isolé (`observableIsole`), l'état antérieur étant une SUITE DE
+   *    VERDICTS (le `tendance` de `etatAnterieur` le porte déjà en mots). Les cinq
+   *    lignes du § 4 bis entrent dans l'ASSEMBLAGE en clair — « ce qui t'appartient
+   *    est l'assemblage » ; le gabarit (§4, GELÉ) ne bouge pas. Absent ou faux :
+   *    le message d'hier à l'octet (test « porte FERMÉE », `retour-juge-mesure.test.ts`).
+   */
+  jugeEstLaMesure?: boolean
 }
 
 /** Le message de l'appel chaud. Le gabarit (couche contrat) part en SYSTÈME. */
@@ -588,17 +600,48 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
     ].join('\n'))
   }
 
-  morceaux.push('SQUELETTE ET VERDICTS — ' + (e.moment === 'v1' ? 'la v1.' : 'la v1, puis la version finale.'))
-  morceaux.push(JSON.stringify(e.squelettes))
-  if (e.moment === 'vf') {
+  // ⭐⭐ C7-L9 — `07-` § 4 bis : SANS SQUELETTE. Les cinq lignes, en clair, dans
+  //    l'assemblage — le gabarit du §4 est GELÉ et ne bouge pas. Le verdict est
+  //    déjà servi ci-dessus (C7-L1) quand le juge a tranché ; sans verdict, on le
+  //    dit (« jamais un écran muet », `06-` §2), et Calame juge sur la copie et les
+  //    documents. Fermé : rien, le message d'hier à l'octet.
+  if (e.jugeEstLaMesure) {
+    const o = e.observableIsole
     morceaux.push([
-      "SQUELETTE DE LA VERSION FINALE — c'est la COMPARAISON DES DEUX qui engendre ce retour.",
-      // RR2 (`01-` §12) — il manquait à l'assemblage, alors que RR1, RR3 et RR4
-      // y sont : « en version finale, le "pourquoi" causal devient UN CONSTAT ».
-      'RR2 : en version finale, le « pourquoi » causal devient UN CONSTAT — « ce qui manque',
-      'encore, d\'après les deux versions », et JAMAIS « pourquoi ça n\'a pas marché ».',
+      "⛔ SUR CE CRAN, LE JUGE EST LA MESURE : TU NE REÇOIS AUCUN SQUELETTE — ni relevé, ni jugement par observable.",
+      e.verdictCran
+        ? 'Tu reçois le verdict du juge du cran (ci-dessus), la copie, les documents, et la dimension en jeu'
+          + (o ? ` — « ${o.dimension ?? o.nom} ».` : '.')
+        : 'AUCUN VERDICT DU JUGE N\'EST DISPONIBLE sur ce dépôt : tu juges toi-même sur la copie et les documents,'
+          + (o ? ` sur la seule dimension « ${o.dimension ?? o.nom} »,` : '') + ' sans inventer un verdict que personne n\'a rendu.',
+      'Ce que les règles du contrat deviennent ici :',
+      '· règle 1 — la citation ancrée « copie » de ton point principal EST le passage cité par le juge, déjà vérifié au caractère près ; un point sans passage n\'a pas de citation ;',
+      '· règle 2 — UNE RÉUSSITE SEULEMENT SI LE VERDICT EST RÉUSSI : sur un verdict raté, tu n\'inventes aucune réussite — « aucun compliment sans citation » ; ton retour peut alors ne porter que des points de travail ;',
+      '· règle 3 — la tentative se lit DANS LA COPIE, il n\'y a pas de squelette où la lire ;',
+      '· règle 4 — le « voilà comment faire mieux » s\'écrit depuis le problème vu et la version corrigée, jamais en la dictant — ne recopie ni ne paraphrase la version corrigée ;',
+      '· le plafond — deux choses, UNE SEULE dimension nommée, en langue élève.',
     ].join('\n'))
-    morceaux.push(JSON.stringify(e.squelettesVf ?? []))
+  } else {
+    morceaux.push('SQUELETTE ET VERDICTS — ' + (e.moment === 'v1' ? 'la v1.' : 'la v1, puis la version finale.'))
+    morceaux.push(JSON.stringify(e.squelettes))
+  }
+  if (e.moment === 'vf') {
+    if (e.jugeEstLaMesure) {
+      morceaux.push([
+        "LA VERSION FINALE — le juge l'a rejugée à l'aveugle, et son verdict (ci-dessus) est celui de la vf.",
+        'RR2 : en version finale, le « pourquoi » causal devient UN CONSTAT — « ce qui manque',
+        'encore, d\'après les deux versions », et JAMAIS « pourquoi ça n\'a pas marché ».',
+      ].join('\n'))
+    } else {
+      morceaux.push([
+        "SQUELETTE DE LA VERSION FINALE — c'est la COMPARAISON DES DEUX qui engendre ce retour.",
+        // RR2 (`01-` §12) — il manquait à l'assemblage, alors que RR1, RR3 et RR4
+        // y sont : « en version finale, le "pourquoi" causal devient UN CONSTAT ».
+        'RR2 : en version finale, le « pourquoi » causal devient UN CONSTAT — « ce qui manque',
+        'encore, d\'après les deux versions », et JAMAIS « pourquoi ça n\'a pas marché ».',
+      ].join('\n'))
+      morceaux.push(JSON.stringify(e.squelettesVf ?? []))
+    }
     if (e.retourV1) {
       morceaux.push('LE RETOUR QUI LUI AVAIT ÉTÉ DONNÉ SUR SA v1 :')
       morceaux.push(JSON.stringify(e.retourV1.points.map((p) => p.texte)))
@@ -1040,6 +1083,14 @@ export function controlerRetour(
      */
     materiaux?: readonly string[] | null
     passagesACorriger?: readonly string[] | null
+    /**
+     * ⭐ C7-L9 — `07-` § 4 bis, règle 2 : « une réussite seulement si le verdict est
+     *    réussi ; sur un raté, aucune réussite n'est inventée ». Un retour sur un
+     *    verdict RATÉ peut donc n'avoir aucune réussite : « si le contrôle le
+     *    refuse, c'est le contrôle qui apprend le cas, pas le gabarit » (piège 18).
+     *    Vrai SEULEMENT sur un verdict raté, porte ouverte ; absent : le contrôle d'hier.
+     */
+    sansReussiteAdmise?: boolean
   },
 ): { verdict: Verdict<RetourBrut>; controle: ControleRetour } {
   const verdict = valider<RetourBrut>(brut, FORME_RETOUR)
@@ -1066,8 +1117,14 @@ export function controlerRetour(
   }
 
   // La règle 2 encore : « COMMENCE PAR UNE RÉUSSITE réelle, citée. »
+  // ⭐ C7-L9 — sur un verdict RATÉ, « aucune réussite n'est inventée » (§ 4 bis) :
+  //    un retour qui n'en porte aucune est juste, et le contrôle l'admet.
   if (r.points.length && r.points[0].nature !== 'reussite') {
-    controle.refus.push('règle 2 : le retour commence par une réussite réelle, citée')
+    if (attendu.sansReussiteAdmise && !r.points.some((p) => p.nature === 'reussite')) {
+      controle.alertes.push('règle 2 : aucune réussite — admis, le verdict du cran est raté (C7-L9, § 4 bis)')
+    } else {
+      controle.refus.push('règle 2 : le retour commence par une réussite réelle, citée')
+    }
   }
 
   for (const p of r.points) {

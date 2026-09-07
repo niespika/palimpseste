@@ -28,6 +28,7 @@ import {
 import { clotureDue } from '@/utils/deroule/cloture-guidee'
 import { nombreDeCas } from '@/utils/deroule/regime'
 import { poserLAccordDeLaPorte2 } from '@/utils/chaine/monitoring'
+import { lireLaPorteJugeMesure } from '@/utils/chaine/porte-mesure'
 import {
   enregistrerLaConfiance, enregistrerLesConditions, enregistrerLaRestitution,
   enregistrerLaCredence, enregistrerLaDesignation, ouvrirSeJuger, enregistrerSeJuger,
@@ -324,6 +325,15 @@ async function clore(
     if (!c.ok) { console.error(`[deroule] clôture guidée refusée — ${depotId} : ${c.message}`); return }
     if (c.valeur?.dejaClos) return   // un autre appel l'a fait : rien à ajouter.
 
+    // ⭐⭐ C7-L9 — « pour écrire une mesure convertie, il faut un chemin » (piège 11) :
+    //    porte `juge_mesure_actif` ouverte, sur un dépôt du ROUTEUR, la clôture met
+    //    le dépôt en file `mesure_v1` (idempotent). La chaîne y accepte un dépôt sans
+    //    production aux crans 1·3, dérive l'issue de la crédence, écrit la mesure et
+    //    N'APPELLE PERSONNE. Porte fermée, ou dépôt du professeur : rien, comme hier.
+    //    ⚠️ Le périmètre entier (juge ouvert, clé, lieu, forme) se juge dans la chaîne,
+    //    qui refuse proprement ce qui n'en est pas ; ici on n'ouvre que le chemin.
+    await mettreEnFileSiLeJugeEstLaMesure(admin, depotId)
+
     // ⭐ LA PORTE 2, ET C'EST ICI QU'ELLE EXISTE ENFIN. Elle ne tournait que dans
     //    la chaîne, et la chaîne exige une production textuelle que ces crans
     //    n'ont pas. L'accord crédence ↔ réussite se calcule pourtant SANS AUCUN
@@ -332,6 +342,24 @@ async function clore(
     if (!m.ecrite && m.motif) console.warn(`[deroule] porte 2 non posée — ${depotId} : ${m.motif}`)
   } catch (e) {
     console.error(`[deroule] clôture guidée — ${depotId} :`, e)
+  }
+}
+
+/**
+ * ⭐ C7-L9 — le chemin des crans 1·3 vers la mesure convertie : la file, porte
+ *    ouverte et dépôt du routeur seulement. Ne fait jamais échouer la clôture.
+ */
+async function mettreEnFileSiLeJugeEstLaMesure(
+  admin: Awaited<ReturnType<typeof garderEleveDeroule>>['admin'], depotId: string,
+): Promise<void> {
+  try {
+    if (!(await lireLaPorteJugeMesure(admin as never))) return
+    const { data } = await admin.from('exercices_depots').select('origine').eq('id', depotId).maybeSingle()
+    if ((data as { origine?: string } | null)?.origine !== 'routeur') return
+    const f = await mettreLaMesureEnFile(admin, depotId, 'v1')
+    if (f.erreur) console.warn(`[deroule] C7-L9 — dépôt ${depotId} NON mis en file après clôture : ${f.erreur}`)
+  } catch (e) {
+    console.error(`[deroule] C7-L9 — mise en file après clôture — ${depotId} :`, e)
   }
 }
 

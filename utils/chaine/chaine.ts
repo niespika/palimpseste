@@ -49,6 +49,14 @@ import {
   attacherDelta, ecrireMesure, entreesDesRegles, fenetreDEvidence,
   type LigneMesure,
 } from './mesures'
+// ⭐⭐ C7-L9 — « sur un cran qui isole, le juge est la mesure » : la part pure, et
+//    le registre des réussites (C7-L7), seul domicile de l'issue d'un dépôt.
+import {
+  CRANS_SANS_APPEL, deltaDesVerdicts, observableMesurable, observablesConvertis, regimeJugeMesure,
+  suiteDeVerdicts, type RegimeJugeMesure,
+} from './juge-mesure'
+import { issueDuDepot } from '@/utils/registre/reussites'
+import { lireLesDepotsPourLeRegistre } from '@/utils/registre/reussites-serveur'
 import { traiterLeMonitoring } from './monitoring'
 import { trancheDeReference } from './tranche'
 import {
@@ -173,12 +181,26 @@ export async function traiterDepot(
   const { mesurees, ecartees } = competencesDeLExercice(ctx)
   const ouvertes = new Set(competencesOuvertes())
 
+  // ⭐⭐ C7-L9 — LE RÉGIME « LE JUGE EST LA MESURE » (`07-` §2, C7-L9 ; `01-` §8.2,
+  //    §11 ; `03-` §1 ; `10-` §6-§7). Porte `juge_mesure_actif` ouverte, juge
+  //    ouvert, cran 1·2·3·4·5·7·9, dépôt du ROUTEUR, maison et formatif, avec un
+  //    observable de clé : ni P1 ni P2 — le verdict converti est la mesure. Tout
+  //    autre dépôt : la chaîne d'hier, à l'octet (`regimeJugeMesure`).
+  const regime = regimeJugeMesure(ctx, codesDeLInstrument)
+  alertes.push(...regime.alertes)
+  const sansAppel = regime.actif && ctx.cran != null && CRANS_SANS_APPEL.has(ctx.cran)
+
   const production = version === 'v1' ? ctx.productionV1 : ctx.productionVf
   if (!production || production.trim() === '') {
-    throw new DepotInexploitable(`le dépôt ${depotId} n'a pas de production en ${version}.`)
+    // ⭐ C7-L9, piège 11 — aux crans 1·3 « la crédence EST la réponse » (`regime.ts`) :
+    //    porte ouverte, un dépôt sans production y est la règle, et la mesure se
+    //    dérive de la crédence. Partout ailleurs, le refus d'hier.
+    if (!(sansAppel && version === 'v1')) {
+      throw new DepotInexploitable(`le dépôt ${depotId} n'a pas de production en ${version}.`)
+    }
   }
   // La copie est neutralisée à l'assemblage ; ici, on rend le fait VISIBLE.
-  if (tentativeDeSortieDeBloc(production)) {
+  if (production && tentativeDeSortieDeBloc(production)) {
     const trace = `[chaine] tentative de sortie de bloc dans la copie — dépôt ${depotId}, `
       + `élève ${ctx.eleveId}, version ${version}. La copie est neutralisée avant tout appel `
       + '(01- §12, défense 1) ; aucun drapeau d\'intégrité n\'est levé, le canal existant ne '
@@ -193,6 +215,17 @@ export async function traiterDepot(
   //    n'est jamais « indéterminée » (piège 27 : c'est le motif 1 de C9-L3, fermé
   //    pour le gabarit). Porte fermée ou sans clé : `null`, et tout est d'hier.
   const observableCle = observableDeLaCleServie(ctx, alertes)
+  // ⭐⭐ C7-L9 — SOUS LE RÉGIME, tout ce qui suit est remplacé : le juge d'abord, la
+  //    mesure convertie ensuite, Calame sans squelette enfin — et aux crans 1·3
+  //    personne n'est appelé. La chaîne d'hier ne repart qu'après ce `return`.
+  if (regime.actif && regime.observable) {
+    return traiterLeCranQuiIsole(admin, {
+      ctx, version, modele, production: production ?? '', regime, config, options,
+      dejaFaits, debut, alertes, ecartees, mesurees, ouvertes,
+    })
+  }
+  // Hors régime, la production est là (le refus est plus haut) — le type le sait ici.
+  if (!production) throw new DepotInexploitable(`le dépôt ${depotId} n'a pas de production en ${version}.`)
   // « La vf ne rejoue les appels froids que pour LA SEULE COMPÉTENCE VISÉE PAR
   //   LE RETOUR » (piège 16 ; `01-` §11).
   const { cible, alerte: alerteCible } = cibleAvecLaCle(observableCle, cibleDuRetour(ctx, mesurees), ctx.decision)
@@ -347,6 +380,211 @@ export async function traiterDepot(
       + 'pas de retour engendré (clause granulaire).')
   }
 
+  return finDuTour(admin, {
+    ctx, version, config, dejaFaits, debut, appels, passages, competencesFroides, ouvertes, ecartees, alertes,
+    mesuresEcrites, mesuresDejaLa, retourEcrit, monitoring: { mesures: monitoring.mesures, motifs: monitoring.motifs },
+  })
+}
+
+/** Les codes `observables_mesure` de l'instrument DÉRIVÉ d'une compétence ouverte — `null` sinon. */
+function codesDeLInstrument(competence: string): readonly string[] | null {
+  const e = etatCompetence(competence as Competence)
+  return e.ouverte && e.instrument ? Object.keys(e.instrument.observables_mesure) : null
+}
+
+/**
+ * ⭐⭐ C7-L9 — LE TRAITEMENT D'UN CRAN QUI ISOLE, SERVI PAR LE ROUTEUR, PORTE OUVERTE.
+ *
+ * L'ordre devient JUGE → MESURE → RETOUR (piège 2) : « porte ouverte, sur un cran
+ * qui isole, la mesure attend le verdict ». Cinq pièces (`07-` §2, C7-L9) :
+ *   (1) la mesure est le verdict converti — l'issue vient de `issueDuDepot`
+ *       (C7-L7, le registre : « un seul domicile », piège 1), jamais d'un second
+ *       calcul ; aux 1·3 depuis la crédence, au 4(b) depuis la porte de zone, aux
+ *       2·4(a)·5·7·9 depuis `verdicts_cran` — le verdict que le juge vient d'écrire ;
+ *   (2) `lettre_equivalente` NULLE ; le Monitoring reçoit un niveau `null` et sa
+ *       calibration rend `indetermine`, « et c'est attendu » (piège 13) ;
+ *   (3) le poids par cran n'est pas ici : il vit dans `tauxDeReussite` ;
+ *   (4) en vf, le juge rejoue à l'aveugle (`entreeDuContexte` ne lui donne ni le
+ *       verdict ni le retour de v1), son verdict s'écrit sur `verdicts_cran['vf']`,
+ *       et `delta_v1_vf` = verdict vf − verdict v1 s'attache à la mesure de la v1
+ *       (`attacherDelta`) — JAMAIS une seconde mesure ;
+ *   (5) Calame reçoit `squelettes: []`, le verdict, les documents et la dimension
+ *       (`engendrerLeRetour`, `jugeEstLaMesure`) — deux appels, jamais un.
+ * ⛔ Aux crans 1·3, PERSONNE n'est appelé — ni juge, ni Calame, ni Monitoring :
+ *    « il n'y a pas de retour IA, c'est juste de l'algo » (Louis, 24/08) ; zéro
+ *    ligne `api_couts`. Le moteur prend la suite comme après toute mesure.
+ * ⛔ Sans verdict (`jugerLeCran` rend `null`), AUCUNE mesure ne s'écrit, l'alerte
+ *    le dit, et le retour se sert quand même — « jamais un écran muet ».
+ */
+async function traiterLeCranQuiIsole(
+  admin: Admin,
+  a: {
+    ctx: ContexteDepot; version: Version; modele: string; production: string
+    regime: RegimeJugeMesure; config: ConfigChaine
+    options: { registre?: Registre; aideConsommee?: number | null }
+    dejaFaits: number; debut: number
+    alertes: string[]; ecartees: Array<{ competence: string; motif: string }>
+    mesurees: readonly Competence[]; ouvertes: ReadonlySet<Competence>
+  },
+): Promise<BilanDepot> {
+  const { ctx, version, modele, production, regime, alertes, ecartees } = a
+  const o = regime.observable as ObservableDeLaCle
+  const depotId = ctx.depotId
+  const competence = o.competence
+  const cran = ctx.cran as number
+  const sansAppel = CRANS_SANS_APPEL.has(cran)
+  let appels = 0
+  let mesuresEcrites = 0
+  let mesuresDejaLa = 0
+
+  // Les compétences que l'instance déclare : TOUTES écartées, avec un motif servi.
+  for (const c of a.mesurees) {
+    ecartees.push({ competence: c, motif: c === competence
+      ? `ni P1 ni P2 : le juge du cran est la mesure, convertie sur l'observable « ${o.code} » de la clé « ${o.cle} » (C7-L9)`
+      : `hors de l'observable isolé par la clé « ${o.cle} » : rien ne se mesure sur ${c} (C7-L9)` })
+  }
+  const { cible, alerte: alerteCible } = cibleAvecLaCle(o, cibleDuRetour(ctx, a.mesurees), ctx.decision)
+  if (alerteCible) alertes.push(alerteCible)
+  const coexistence = alerteDeCoexistence(ctx)
+  if (coexistence) alertes.push(coexistence)
+  if (ctx.chaineCleActif && version === 'v1' && production) {
+    const recopie = signalDeRecopie(production, ctx.cran, ctx.casPourLeRetour)
+    if (recopie) alertes.push(recopie)
+  }
+
+  // ── Le dépôt tel que le REGISTRE le lit — un seul domicile pour l'issue ─────
+  const registre = await lireLesDepotsPourLeRegistre(admin, ctx.eleveId, { depotId })
+  alertes.push(...registre.incidents.map((i) => `registre des réussites : ${i}`))
+  const d = registre.depots[0] ?? null
+  if (!d) {
+    alertes.push('le registre des réussites ne lit pas ce dépôt (statut hors de ceux jugés, cran ou objet absent) : '
+      + 'aucune issue ne se dérive, aucune mesure ne s\'écrit (C7-L9, piège 1)')
+  }
+  const quatreB = cran === 4 && d?.variante === 'b'
+
+  // ── LE JUGE, D'ABORD (piège 2) — sauf aux 1·3 (piège 11) et au 4(b) (piège 3) ──
+  let verdictCran: VerdictCran | null = null
+  if (!sansAppel && !quatreB && production) {
+    const j = await jugerLeCran(admin, { ctx, version, modele, production })
+    appels += j.appels
+    alertes.push(...j.alertes)
+    verdictCran = j.verdict
+    if (!j.verdict) {
+      alertes.push('juge du cran : aucun verdict — AUCUNE mesure ne s\'écrit, le retour se sert sans lui (C7-L9, piège 2)')
+    }
+  } else if (quatreB) {
+    alertes.push('cran 4(b) : pas de juge, le verdict est la porte de zone (C7-L9, piège 3)')
+  }
+
+  // ── L'ISSUE, dérivée du registre — le verdict que le juge vient d'écrire compris ──
+  const verdicts = d ? { ...d.verdicts, ...(verdictCran ? { [version]: verdictCran } : {}) } : {}
+  const issue = d ? issueDuDepot({ ...d, verdicts }) : null
+
+  // ── LA MESURE CONVERTIE (v1) · LE DELTA DES VERDICTS (vf) ───────────────────
+  const etat = etatCompetence(competence)
+  const instrument = etat.instrument
+  const mesurable = observableMesurable(regime, codesDeLInstrument) && !!instrument
+  if (version === 'v1') {
+    if (!issue) {
+      alertes.push(`aucune issue sur ce dépôt (cran ${cran}) : aucune mesure ne s'écrit — le verdict, s'il existe, reste sur le dépôt (C7-L9)`)
+    } else if (!mesurable || !instrument) {
+      alertes.push(`issue « ${issue} » sur le dépôt, sans ligne de mesure : l'observable « ${o.code} » n'a pas d'entrée \`observables_mesure\` (C7-L9, piège 7)`)
+    } else {
+      const conv = observablesConvertis(instrument.observables_mesure, o.code, issue === 'reussi', valeursDesParametres(instrument))
+      if (conv.alerte) alertes.push(`conversion du verdict : ${conv.alerte}`)
+      const modes = ctx.modesParCompetence[competence] ?? []
+      const regles = await entreesDesRegles(admin, ctx.eleveId, competence, { modes, objet: ctx.objet }, new Date())
+      const ligne: LigneMesure = {
+        eleve_id: ctx.eleveId,
+        competence,
+        modes,
+        // (2) « la lettre-équivalente est NULLE » — la lettre ne bouge que par les ancres et les 6·8.
+        lettre_equivalente: null,
+        observables: conv.observables,
+        lieu: ctx.lieu,
+        forme: ctx.forme,
+        genre: ctx.genre,
+        classe_id: ctx.classeId,
+        // Piège 20 de C4-L5 : par compétence, recopié de la décision, jamais propagé.
+        sonde_montee: ctx.decision?.sondesMontee?.includes(competence) ?? false,
+        distance_contexte: regles.distance_contexte,
+        delai_jours: regles.delai_jours,
+        delai_mesures: regles.delai_mesures,
+        aide_consommee: a.options.aideConsommee ?? null,
+        depot_id: depotId,
+        bonus: ctx.bonus,
+        // « C'est lui qui définit la famille : la mesure se relit contre lui » (piège 8).
+        instrument_version: instrument.version,
+      }
+      const ecriture = await ecrireMesure(admin, ligne)
+      if (ecriture.erreur) alertes.push(`écriture de la mesure convertie : ${ecriture.erreur}`)
+      if (ecriture.ecrite) mesuresEcrites += 1
+      if (ecriture.dejaLa) mesuresDejaLa += 1
+      alertes.push(`mesure convertie (C7-L9) : ${o.code} ← ${issue} → ${JSON.stringify(conv.observables[o.code])}, `
+        + `${Object.keys(conv.observables).length - 1} autre(s) à n/a, lettre nulle`
+        + (ecriture.dejaLa ? ' — déjà là, non réécrite' : ''))
+    }
+  } else {
+    // (4) le delta des VERDICTS — « raté puis réussi = +1, réussi puis raté = −1,
+    //     sinon 0 ; sans vf, NULL » — attaché à la mesure de la v1, jamais une seconde.
+    const delta = deltaDesVerdicts(d?.verdicts.v1 ?? null, verdictCran)
+    if (delta === null) {
+      alertes.push('`delta_v1_vf` reste NULL : il manque le verdict de la v1 ou celui de la vf — et NULL n\'est pas 0 (C7-L9)')
+    } else {
+      await attacherDelta(admin, depotId, competence, delta)
+      alertes.push(`delta_v1_vf = ${delta > 0 ? '+1' : delta} — verdict v1 ${d?.verdicts.v1?.reussi ? 'réussi' : 'raté'}, `
+        + `vf ${verdictCran?.reussi ? 'réussi' : 'raté'} (C7-L9)`)
+    }
+  }
+
+  // ── LE MONITORING, en dernier — hors synthèse en classe il n'appelle personne ──
+  let monitoring: { mesures: number; appels: number; motifs: string[] } = { mesures: 0, appels: 0, motifs: [] }
+  if (!sansAppel && production) {
+    // Piège 13 — le niveau est `null` par construction : la calibration rend `indetermine`, et c'est attendu.
+    monitoring = await traiterLeMonitoring(admin, { ctx, version, modele, production, niveauxObtenus: { [competence]: null } })
+    appels += monitoring.appels
+  } else {
+    monitoring.motifs.push('cran 1·3 : personne n\'est appelé — ni juge, ni Calame, ni Monitoring (C7-L9, piège 11)')
+  }
+
+  // ── LE RETOUR — Calame sans squelette (`07-` § 4 bis), sauf aux 1·3 ──────────
+  let retourEcrit = false
+  if (!sansAppel && production) {
+    const r = await engendrerLeRetour(admin, {
+      ctx, version, modele, squelettes: [], registre: a.options.registre ?? null, cible,
+      verdictCran, observableDeLaCle: o, jugeEstLaMesure: true,
+    })
+    appels += r.appels
+    retourEcrit = r.ecrit
+    alertes.push(...r.alertes)
+  } else {
+    alertes.push('cran 1·3 : aucun retour IA — « il n\'y a pas de retour IA, c\'est juste de l\'algo » (C7-L9, piège 11)')
+  }
+
+  return finDuTour(admin, {
+    ctx, version, config: a.config, dejaFaits: a.dejaFaits, debut: a.debut, appels, passages: 0,
+    competencesFroides: [competence], ouvertes: a.ouvertes, ecartees, alertes,
+    mesuresEcrites, mesuresDejaLa, retourEcrit, monitoring: { mesures: monitoring.mesures, motifs: monitoring.motifs },
+  })
+}
+
+/**
+ * La FIN D'UN TOUR — commune à la chaîne d'hier et au régime de C7-L9 : la
+ * confrontation des appels à la base, le moteur, le contrat de latence, le bilan.
+ */
+async function finDuTour(
+  admin: Admin,
+  a: {
+    ctx: ContexteDepot; version: Version; config: ConfigChaine; dejaFaits: number; debut: number
+    appels: number; passages: number; competencesFroides: readonly Competence[]
+    ouvertes: ReadonlySet<Competence>; ecartees: Array<{ competence: string; motif: string }>
+    alertes: string[]; mesuresEcrites: number; mesuresDejaLa: number; retourEcrit: boolean
+    monitoring: { mesures: number; motifs: string[] }
+  },
+): Promise<BilanDepot> {
+  const { ctx, version, config, dejaFaits, debut, appels, passages, competencesFroides, ouvertes, ecartees, alertes } = a
+  const depotId = ctx.depotId
+  const { mesuresEcrites, mesuresDejaLa, retourEcrit, monitoring } = a
   // ⭐⭐ `C4L7-7` — LA CONFRONTATION, À CHAQUE TOUR. `dejaFaits` a été lu AVANT
   //    que la chaîne parte ; on relit maintenant, et la différence est ce que ce
   //    tour a RÉELLEMENT écrit au journal. Si le bilan et la base divergent,
@@ -356,6 +594,7 @@ export async function traiterDepot(
   //    illisible ne doit pas fabriquer un faux écart. On le dit, et on n'accuse
   //    personne.
   const apresLeTour = await appelsDuDepot(admin, depotId)
+
   const appelsEnBase = Number.isFinite(apresLeTour) && Number.isFinite(dejaFaits)
     ? apresLeTour - dejaFaits
     : null
@@ -1149,6 +1388,14 @@ export async function engendrerLeRetour(
      *    rejoué doit être borné comme un retour neuf.
      */
     observableDeLaCle?: ObservableDeLaCle | null
+    /**
+     * ⭐⭐ C7-L9 — « le juge est la mesure » (`07-` § 4 bis) : Calame ne reçoit AUCUN
+     *    squelette — `squelettes` arrive vide et ce n'est pas la clause granulaire —
+     *    mais le verdict, la copie, les documents, et la dimension de
+     *    `observableDeLaCle` ; l'état antérieur est une SUITE DE VERDICTS ; la
+     *    règle 2 admet un retour sans réussite sur un verdict raté. Absent : hier.
+     */
+    jugeEstLaMesure?: boolean
   },
 ): Promise<{
   ecrit: boolean; appels: number; alertes: string[]
@@ -1163,9 +1410,11 @@ export async function engendrerLeRetour(
   //    REÇOIT (piège 12) : seul le squelette de la compétence de la clé lui
   //    arrive — à la mesure comme au rejeu. Sans observable de clé : tout, d'hier.
   const o = a.observableDeLaCle ?? null
+  const regime = a.jugeEstLaMesure === true
   const squelettes = o ? a.squelettes.filter((s) => s.competence === o.competence) : a.squelettes
   const squelettesVf = a.squelettesVf && o ? a.squelettesVf.filter((s) => s.competence === o.competence) : a.squelettesVf
-  if (o) {
+  if (regime && !o) return { ecrit: false, appels: 0, alertes: ['le juge est la mesure, sans observable de clé : rien à dire (C7-L9)'] }
+  if (o && !regime) {
     const ecartes = a.squelettes.filter((s) => s.competence !== o.competence).map((s) => s.competence)
     if (ecartes.length) {
       alertes.push(`retour borné à ${o.competence} (observable « ${o.code} », clé « ${o.cle} ») : `
@@ -1198,12 +1447,15 @@ export async function engendrerLeRetour(
   const servies = squelettesVf ?? squelettes
   // « Une SONDE est silencieuse : elle ne produit AUCUN RETOUR » (`01-` §1, principe 4).
   const sondes = sondesDeLExercice(ctx)
-  const competencesAdmises = servies.map((s) => s.competence).filter((c) => !sondes.has(c))
+  // ⭐ C7-L9 — sous le régime, la seule compétence servie est celle de la clé : il
+  //    n'y a pas de squelette d'où la lire.
+  const competencesServies: Competence[] = regime ? [cible] : servies.map((s) => s.competence)
+  const competencesAdmises = competencesServies.filter((c) => !sondes.has(c))
   // ⚠️ C7-L8 — la liste que RR4 surveille reste ENTIÈRE (tous les codes de la
   //    compétence servie) : la réduire au seul code de la clé relâcherait RR4
   //    sur les autres codes — écart assumé au piège 12, dit au relevé.
-  const codesObservables = servies.flatMap((s) => {
-    const e = etatCompetence(s.competence)
+  const codesObservables = competencesServies.flatMap((c) => {
+    const e = etatCompetence(c)
     return e.instrument ? Object.keys(e.instrument.observables_mesure) : []
   })
   // ⚠️ C7-L8 — sur un exercice qui isole avec une clé, les sondes ne sont plus
@@ -1216,25 +1468,37 @@ export async function engendrerLeRetour(
     return { ecrit: false, appels: 0, alertes: [...alertes, 'toutes les compétences mesurées sont des sondes : aucun retour'] }
   }
 
-  const couches: CoucheCompetence[] = servies
-    .filter((s) => !sondes.has(s.competence))
-    .map((s) => ({
-      competence: s.competence,
+  const couches: CoucheCompetence[] = competencesAdmises
+    .map((c) => ({
+      competence: c,
       // ⚠️ « le vocabulaire de la grille » (§4) vit DANS LA FICHE et n'est pas
       //    dérivable d'ailleurs : il s'ajoutera au branchement le jour où un slot
       //    s'ouvre. Vide ici, et dit au relevé — jamais inventé.
       vocabulaire: [],
-      correspondance: ctx.correspondance[s.competence] ?? [],
+      correspondance: ctx.correspondance[c] ?? [],
     }))
 
   // L'état antérieur vient de la FENÊTRE D'ÉVIDENCE, et n'existe pas à la semaine 1.
+  // ⭐ C7-L9 — sous le régime, « l'état antérieur comme UNE SUITE DE VERDICTS » sur le
+  //    seul observable de la clé : « raté, réussi, réussi », jamais « 0, 1, 1 »
+  //    (`07-` § 4 bis, piège 17). Une mesure d'hier s'y lit par le même
+  //    `statutDeLaMesure` — sans cas particulier.
   const fenetre = await fenetreDEvidence(admin, ctx.eleveId, cible)
-  const etatAnterieur = fenetre.length
-    ? (ctx.correspondance[cible] ?? []).map((c) => ({
-      observable_nom: c.dimension_eleve,
-      tendance: resumerTendance(fenetre, c.observable_code),
-    })).filter((x) => x.tendance !== '')
-    : null
+  const entreeIsolee = regime && o ? etatCompetence(o.competence).instrument : null
+  const etatAnterieur = !fenetre.length
+    ? null
+    : regime && o
+      ? (() => {
+        const entree = entreeIsolee?.observables_mesure[o.code]
+        if (!entree || !entreeIsolee) return null
+        const suite = suiteDeVerdicts(fenetre, o.code, entree, valeursDesParametres(entreeIsolee))
+        const nom = nomDeLObservable(o, ctx.servable, ctx.correspondance)
+        return suite ? [{ observable_nom: nom.dimension ?? nom.nom, tendance: suite }] : null
+      })()
+      : (ctx.correspondance[cible] ?? []).map((c) => ({
+        observable_nom: c.dimension_eleve,
+        tendance: resumerTendance(fenetre, c.observable_code),
+      })).filter((x) => x.tendance !== '')
 
   // `07-` §4 — « la `longueur` […] son domicile est un PARAMÈTRE DE PLATEFORME,
   // au même endroit que les interrupteurs (§5), NULL VALANT LA RÈGLE 7 ». La
@@ -1286,6 +1550,8 @@ export async function engendrerLeRetour(
     //    `null`, et le message est celui d'hier à l'octet.
     observableIsole: o ? { ...nomDeLObservable(o, ctx.servable, ctx.correspondance),
       code: o.code, competence: o.competence, cle: o.cle } : null,
+    // ⭐⭐ C7-L9 — sans squelette : le § 4 bis en clair. Absent : le message d'hier.
+    ...(regime ? { jugeEstLaMesure: true } : {}),
   })
 
   try {
@@ -1327,6 +1593,8 @@ export async function engendrerLeRetour(
         materiaux: ctx.casPourLeRetour.map((c) => c.materiau).filter((m): m is string => !!m),
         passagesACorriger: passagesACorriger(ctx.casPourLeRetour),
       } : {}),
+      // ⭐ C7-L9 — § 4 bis, règle 2 : sur un verdict RATÉ, aucune réussite n'est inventée.
+      ...(regime && a.verdictCran?.reussi === false ? { sansReussiteAdmise: true } : {}),
     })
     // ⚠️ LES ALERTES SE JOURNALISENT SANS ARRÊTER — c'est ce que leur nom dit,
     //    et elles ne remontaient nulle part avant C5-L2 : le champ existait,
@@ -1573,6 +1841,33 @@ export async function rejouerLeRetour(
   const mesures = (data ?? []) as unknown as Array<{
     competence: Competence; instrument_version: string | null
   }>
+  // ⭐⭐ C7-L9 — SOUS LE RÉGIME, « rejouer une compétence, c'est rejouer le juge, pas
+  //    P1/P2 » (piège 20) — et rejouer le seul RETOUR, c'est relire le verdict
+  //    stocké : il n'y a AUCUN squelette à relire, ni de garde de version dessus.
+  //    Un dépôt sans mesure (le juge avait manqué) se rejoue quand même : le retour
+  //    se sert « sans lui », comme à la mesure.
+  const regime = regimeJugeMesure(ctx, codesDeLInstrument)
+  alertes.push(...regime.alertes)
+  if (regime.actif && regime.observable) {
+    const o = regime.observable
+    const verdictsStockes = await lireLesVerdictsDuDepot(admin, depotId)
+    if (!verdictsStockes.v1) alertes.push('rejeu du retour sous le régime C7-L9 : aucun verdict de v1 sur le dépôt — Calame sert sans lui')
+    const r = await engendrerLeRetour(admin, {
+      ctx, version: 'v1', modele, squelettes: [], registre: options.registre ?? null, cible: o.competence,
+      tolererLaForme: options.tolererLaForme === true,
+      sansEcriture: options.sansEcriture === true,
+      verdictCran: verdictsStockes.v1 ?? null,
+      observableDeLaCle: o, jugeEstLaMesure: true,
+    })
+    alertes.push(...r.alertes)
+    const apres = await appelsDuDepot(admin, depotId)
+    return {
+      depotId, version: 'v1', competencesMesurees: mesures.map((m) => m.competence), competencesEcartees: [],
+      mesuresEcrites: 0, mesuresDejaLa: mesures.length, retourEcrit: r.ecrit, retourEngendre: r.retour ?? null,
+      monitoring: { mesures: 0, motifs: ['étape de retour seul : le Monitoring ne se rejoue pas'] },
+      appels: r.appels, passages: 0, appelsEnBase: apres - avant, dureeMs: Date.now() - debut, alertes,
+    }
+  }
   if (!mesures.length) {
     throw new DepotInexploitable(
       'aucune mesure écrite pour ce dépôt : il n’y a rien à commenter. '
@@ -1883,6 +2178,18 @@ export async function rejouerUneCompetence(
 
   const etat = etatCompetence(a.competence)
   if (!etat.ouverte || !etat.instrument || !etat.branchement) return null
+
+  // ⭐⭐ C7-L9 — « porte ouverte sur un cran du périmètre, rejouer une compétence,
+  //    c'est rejouer le JUGE, pas P1/P2 » (piège 20). Sans écriture, comme le banc.
+  const regime = regimeJugeMesure(ctx, codesDeLInstrument)
+  if (regime.actif && regime.observable) {
+    const j = await jugerLeCran(admin, { ctx, version: a.version, modele: a.modele, production, sansEcriture: true })
+    return {
+      competence: a.competence, modele: a.modele, appels: j.appels, lettre: null, squelette: null,
+      alerte: [`le juge est la mesure (C7-L9) : verdict ${j.verdict ? (j.verdict.reussi ? 'RÉUSSI' : 'RATÉ') : 'ABSENT'}`
+        + ` sur l'observable « ${regime.observable.code} » — aucune lettre`, ...regime.alertes, ...j.alertes].join(' · '),
+    }
+  }
 
   const r = await chaineDUneCompetence(admin, {
     ctx, competence: a.competence, version: a.version, production, modele: a.modele,

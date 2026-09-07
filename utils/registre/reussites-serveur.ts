@@ -22,15 +22,26 @@ const STATUTS_JUGES = ['v1_remis', 'retour_publie', 'vf_remis', 'clos'] as const
 
 export async function lireLesDepotsPourLeRegistre(
   admin: Admin, eleveId: string,
+  /**
+   * ⭐ C7-L9 — UN SEUL dépôt, quand la chaîne dérive l'issue du dépôt qu'elle
+   *    traite (« le verdict du cran a DÉJÀ un domicile, ne le recalcule pas » —
+   *    piège 1). Même lecture, même forme ; la liste se borne, rien d'autre.
+   */
+  seulement: { depotId?: string } = {},
 ): Promise<{ depots: DepotPourLeRegistre[]; incidents: string[] }> {
   const incidents: string[] = []
   // ⭐ C7-L7 — LE DEVOIR entre au registre : `materiau_id` sur la même jointure,
   //    et `id_import` pour la souche du cran 2 (`devoirsDeLInstance`).
-  const { data, error } = await admin.from('exercices_depots')
-    .select('id, statut, v1_remis_at, vf_remis_at, exercices(cran, id_import, exercices_types(code), '
+  // ⭐ C7-L9 — et la VARIANTE de l'instance (`exercices.variante`, C7-L2) : sans
+  //    elle, `issueDuDepot` lit le 4(b) comme un 4(a) et attend un juge qu'il n'a
+  //    pas — la porte de zone est son verdict (`10-` §7).
+  let q = admin.from('exercices_depots')
+    .select('id, statut, v1_remis_at, vf_remis_at, exercices(cran, variante, id_import, exercices_types(code), '
       + 'exercices_cas(ordre, materiau_id, exercices_materiaux(contenu, version_corrigee))), '
       + 'exercices_metacognition(credence)')
     .eq('eleve_id', eleveId).in('statut', [...STATUTS_JUGES])
+  if (seulement.depotId) q = q.eq('id', seulement.depotId)
+  const { data, error } = await q
   if (error) return { depots: [], incidents: [`dépôts illisibles : ${error.code} ${error.message}`] }
   const lignes = (data ?? []) as unknown as Array<{
     id: string; v1_remis_at: string | null; vf_remis_at: string | null
@@ -60,7 +71,7 @@ export async function lireLesDepotsPourLeRegistre(
   const un = <T,>(x: unknown): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x as T | null))
   const depots: DepotPourLeRegistre[] = []
   for (const l of lignes) {
-    const ex = un<{ cran: unknown; id_import: string | null; exercices_types: unknown; exercices_cas: unknown }>(l.exercices)
+    const ex = un<{ cran: unknown; variante?: unknown; id_import: string | null; exercices_types: unknown; exercices_cas: unknown }>(l.exercices)
     const cran = cranNumero(ex?.cran)
     const objet = un<{ code: string }>(ex?.exercices_types)?.code ?? null
     if (cran == null || !objet) continue
@@ -81,8 +92,10 @@ export async function lireLesDepotsPourLeRegistre(
       zones.push({ cas: c.ordre,
         verdict: cible && z && m?.contenu ? verdictDeLaZone(m.contenu, cible, z).verdict : null })
     }
+    // ⭐ C7-L9 — la variante, telle que la banque 1.5 la porte (`a` / `b`) ; `null` ailleurs.
+    const variante = ex?.variante === 'a' || ex?.variante === 'b' ? ex.variante : null
     depots.push({
-      depotId: l.id, objet, cran, variante: null,
+      depotId: l.id, objet, cran, variante,
       at: l.vf_remis_at ?? l.v1_remis_at ?? '',
       verdicts: lireLesVerdicts(verdicts.get(l.id)),
       credence, zones,
