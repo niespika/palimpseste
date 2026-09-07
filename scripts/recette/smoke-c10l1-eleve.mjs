@@ -52,6 +52,21 @@ if (!fs.existsSync(REGISTRE)) {
 }
 const registre = JSON.parse(fs.readFileSync(REGISTRE, 'utf-8'))
 
+// ⛔⛔ LA CLASSE EN CONTEXTE DÉCIDE DE CE QUE L'ÉCRAN MONTRE, ET ELLE EST DANS UN
+//    COOKIE. `eleve_classe` porte un **id d'INSCRIPTION** (`app/eleve/actions.ts`),
+//    et « Ma semaine » comme la liste de Codex bornent à cette classe-là
+//    (`01-` §2 : « dans les modules on reste par classe »). ⚠️ **Trouvé au smoke
+//    du 07/09** : l'élève de test est inscrit dans DEUX classes, son cookie
+//    pointait la première, le décor était semé dans la seconde — les captures
+//    montraient un écran parfaitement rendu **et parfaitement vide du décor**.
+//    *Un smoke qui photographie la mauvaise classe ne prouve rien.*
+//    ⭐ On pose donc le cookie sur l'inscription de la classe DU DÉCOR, et on
+//    dit laquelle.
+const { data: inscrDecor, error: eI } = await admin.from('inscriptions')
+  .select('id, classe_id, classes(nom)')
+  .eq('eleve_id', registre.eleveId).eq('classe_id', registre.classeId).maybeSingle()
+if (eI || !inscrDecor) throw new Error(`inscription du décor introuvable : ${eI?.message}`)
+
 // ── Ce que le décor a semé, relu EN BASE : on ne devine aucun identifiant ────
 const { data: semes, error: eD } = await admin.from('exercices_depots')
   .select('id, statut, origine, routeur_decision_id, assigne_at, texte_v1, '
@@ -146,6 +161,15 @@ try {
   await cdp.envoie('Page.navigate', { url: `${BASE}/auth/confirm?token_hash=`
     + `${lien.properties.hashed_token}&type=magiclink&next=/eleve/modules/codex` })
   await ch; await dors(3000)
+
+  // ⭐ Le cookie de classe, posé sur l'inscription du décor — sinon l'écran
+  //    borne sur l'AUTRE classe de l'élève et ne montre rien de ce qu'on veut voir.
+  await cdp.envoie('Network.enable')
+  await cdp.envoie('Network.setCookie', {
+    name: 'eleve_classe', value: inscrDecor.id, domain: 'localhost', path: '/',
+  })
+  console.log(`classe en contexte : « ${inscrDecor.classes?.nom} » `
+    + `(inscription ${inscrDecor.id.slice(0, 8)})`)
   const ou = await cdp.evalue('location.pathname')
   console.log(`\nsession ouverte — ${ou}`)
   if (ou.includes('/login') || ou === '/') {
@@ -188,12 +212,18 @@ try {
       //    compile : 2,4 s suffisent parfois et jamais la première fois, et la
       //    capture montre alors « chargement » — un smoke qui photographie une
       //    plume d'attente ne prouve rien. On attend que le Suspense ait rendu.
-      for (let i = 0; i < 40; i++) {
-        const t = await cdp.evalue('(document.body.innerText || "")')
-        if (t.length > 200 && !/chargement/i.test(t)) break
-        await dors(500)
+      // ⚠️ On attend que le CONTENU DE LA PAGE soit là, pas que « chargement »
+      //    ait disparu de tout le document : l'en-tête du site porte ses propres
+      //    plumes d'attente, qui ne se résolvent pas quand le volet est masqué —
+      //    les guetter ferait attendre 20 s par écran pour rien.
+      for (let i = 0; i < 30; i++) {
+        const pret = await cdp.evalue(
+          '!!document.querySelector("main")'
+          + ' && (document.querySelector("main").innerText || "").trim().length > 80')
+        if (pret) break
+        await dors(400)
       }
-      await dors(400)
+      await dors(600)
       const m = JSON.parse(await cdp.evalue(
         'JSON.stringify({ interne: window.innerWidth, doc: document.documentElement.scrollWidth,'
         + ' hauteur: document.documentElement.scrollHeight,'
