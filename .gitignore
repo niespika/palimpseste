@@ -91,3 +91,6 @@ scripts/recette/.decor-fragments-eleve.json
 # captures des smokes CDP (Aletheia)
 scripts/recette/captures/
 scripts/recette/sauvegardes/
+
+# Registre local du décor de recette C7-L9 (scripts/recette/couture-c7l9.mjs)
+scripts/recette/.couture-c7l9.json
