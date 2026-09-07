@@ -111,3 +111,21 @@ test('les mesures sans objet sortent du dénominateur, elles n\'y comptent pas c
   const r = tauxDeReussite([0.9, NA, 0.1, NA], PROPORTION)
   assert.deepEqual([r.reussies, r.denominateur, r.taux], [1, 2, 0.5])
 })
+
+// ── ⭐ C7-L9 — le taux PONDÉRÉ par cran (`01-` §8.2, 07/09) ─────────────────────
+test('C7-L9 — sans poids, le taux d\'hier à l\'octet ; avec, des SOMMES DE POIDS — et n/a sort toujours du dénominateur', () => {
+  const hier = tauxDeReussite([0.9, NA, 0.1, 0.8], PROPORTION)
+  assert.deepEqual(hier, { reussies: 2, denominateur: 3, taux: 2 / 3 })
+  assert.deepEqual(tauxDeReussite([0.9, NA, 0.1, 0.8], PROPORTION, {}, undefined), hier)
+  // une mesure réussie au cran 5 pèse 0,6 : le taux rend 0,6 / 0,6 = 1, et le « fait quand » (2) le veut à 0,6 de poids
+  assert.deepEqual(tauxDeReussite([0.9], PROPORTION, {}, [0.6]), { reussies: 0.6, denominateur: 0.6, taux: 1 })
+  // un 6·8 réussi (1) et un cran 1 raté (0,2) : 1 / 1,2
+  const r = tauxDeReussite([0.9, 0.1], PROPORTION, {}, [1, 0.2])
+  assert.equal(r.reussies, 1); assert.equal(r.denominateur, 1.2); assert.ok(Math.abs((r.taux ?? 0) - 1 / 1.2) < 1e-12)
+  // n/a n'entre pas, quel que soit son poids ; un poids manquant ou invalide vaut 1
+  assert.deepEqual(tauxDeReussite([NA, 0.9], PROPORTION, {}, [1, 0.5]), { reussies: 0.5, denominateur: 0.5, taux: 1 })
+  assert.deepEqual(tauxDeReussite([0.9, 0.1], PROPORTION, {}, [0.5]), { reussies: 0.5, denominateur: 1.5, taux: 0.5 / 1.5 })
+  assert.deepEqual(tauxDeReussite([0.9, 0.1], PROPORTION, {}, [NaN, -1]), { reussies: 1, denominateur: 2, taux: 0.5 })
+  // rien qui ait un objet ⇒ NULL, jamais 0
+  assert.deepEqual(tauxDeReussite([NA, NA], PROPORTION, {}, [1, 1]), { reussies: 0, denominateur: 0, taux: null })
+})

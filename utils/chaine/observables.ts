@@ -126,6 +126,117 @@ export function appliquerObservablesMesure(
   return { observables, alertes }
 }
 
+/**
+ * ⭐⭐ C7-L9 — LA CONVERSION D'UN VERDICT EN VALEUR (`03-` §1, amendement du
+ *    07/09/2026, acté par Louis). Aux crans 1·2·3·4·5·7·9 servis par le routeur,
+ *    « la mesure d'un observable est LE VERDICT DU CRAN, écrit dans
+ *    `competences_mesures.observables` COMME UNE VALEUR DE LA FAMILLE de
+ *    l'observable, pour que `statutDeLaMesure` la lise sans rien savoir de son
+ *    origine ». La règle est GÉNÉRALE, par famille, et s'écrit ici une fois :
+ *    **réussi vaut la valeur EXTRÊME du côté qui franchit le seuil, raté celle du
+ *    côté qui ne le franchit pas** — « de sorte qu'un seuil provisoire peut
+ *    bouger sans jamais retourner un verdict déjà converti ».
+ *
+ *   | famille                              | `reussie`             | réussi           | raté                    |
+ *   | proportion · comptage · comptage rapporté | `plus_de` · `au_moins` | 1              | 0                       |
+ *   | proportion · comptage · comptage rapporté | `au_plus` · `moins_de` | 0              | 1                       |
+ *   | densité                              | `au_plus`             | 0                | le seuil DOUBLÉ         |
+ *   | binaire                              | `vaut`                | `valeur_reussie` | la valeur d'ABSENCE     |
+ *
+ * ⚠️ Le seuil de la densité se lit par `parametres` (`valeursDesParametres`, jamais
+ *    `instrument.parametres` — C4-L10) ; sans seuil lisible, `n/a` et une alerte.
+ * ⚠️ `valeur_reussie` peut être une LISTE (`question_presente`) : le PREMIER terme.
+ * ⚠️ Un `ordinal` n'a pas de règle — « aucun observable isolé n'en est » —, et un
+ *    observable `sans_objet` n'a rien à convertir : `n/a`, et l'alerte le dit.
+ *    On n'invente pas une famille.
+ */
+export const VALEURS_D_ABSENCE: Readonly<Record<string, string | boolean>> = {
+  // `03-` §1 — « les onze binaires isolés par le `09-`, et leur valeur d'absence ».
+  // ⚠️ Les cinq « booléens » de la fiche valent `oui` / `non` en texte — mesuré sur
+  //    les instruments dérivés le 07/09 (`valeur_reussie: 'oui'`) : l'absence est `non`.
+  objection_traitee: 'non', recadrage: 'non', plan_tenu: 'non', promesse_presente: 'non',
+  apport_organisateur: 'non',
+  question_presente: 'absent', enjeu: 'absent',
+  notions_en_tension: 'absentes', debat_situe: 'absentes',
+  question_propre: 'reprise_enonce', question_specifique: 'generique',
+}
+
+export function valeurDuVerdict(
+  code: string,
+  entree: EntreeObservableMesure,
+  reussi: boolean,
+  parametres: Record<string, number | string> = {},
+): { valeur: ValeurObservable; alerte: Alerte | null } {
+  const r = valeurDeLaTable(code, entree, reussi, parametres)
+  if (r.valeur === NA) return r
+  // ⚠️ L'AUTO-VÉRIFICATION — la raison d'être de l'extrême : la valeur convertie
+  //    doit se RELIRE comme le verdict qu'elle porte, contre le seuil lu aujourd'hui.
+  //    Là où la table ne franchit pas le seuil — un COMPTAGE `au_plus 2`
+  //    (`synthese|contresens_partiel`, seuil par paramètre) dont le « 1 » du raté
+  //    est encore sous le seuil ; un seuil dégénéré (`plus_de 1`) — on n'écrit
+  //    JAMAIS une valeur qui dirait le contraire du verdict : `n/a` (« jamais 0 »),
+  //    et l'alerte nomme le cas. *Mesuré le 07/09 : un observable isolé sur 47.*
+  const attendu = reussi ? 'reussie' : 'ratee'
+  if (statutDeLaMesure(r.valeur, entree, parametres) !== attendu) {
+    return { valeur: NA, alerte: { observable: code,
+      motif: `la valeur extrême de la table du 03- §1 (${JSON.stringify(r.valeur)}) ne se relit pas « ${attendu} » `
+        + `contre le seuil lu (famille ${entree.famille}, \`${entree.reussie}\` ${JSON.stringify(seuilDe(entree, parametres))}) : `
+        + 'n/a plutôt qu\'une valeur fausse — la table ne couvre pas ce comptage (DETTE, à Louis)' } }
+  }
+  return r
+}
+
+function valeurDeLaTable(
+  code: string,
+  entree: EntreeObservableMesure,
+  reussi: boolean,
+  parametres: Record<string, number | string>,
+): { valeur: ValeurObservable; alerte: Alerte | null } {
+  if (entree.reussie === 'sans_objet') {
+    return { valeur: NA, alerte: { observable: code, motif: 'observable `sans_objet` : aucun verdict sur l\'élève ne se convertit' } }
+  }
+  if (entree.famille === 'ordinal') {
+    return { valeur: NA, alerte: { observable: code, motif: 'famille `ordinal` : la conversion n\'est pas écrite (03- §1 : « sans objet, à écrire le jour où il y en a un »)' } }
+  }
+  if (entree.famille === 'binaire') {
+    if (entree.reussie !== 'vaut') {
+      return { valeur: NA, alerte: { observable: code, motif: `binaire avec \`reussie = ${entree.reussie}\` : hors de la table du 03- §1` } }
+    }
+    const attendue = entree.valeur_reussie
+    const reussie = Array.isArray(attendue) ? attendue[0] : attendue
+    if (reussie === undefined) {
+      return { valeur: NA, alerte: { observable: code, motif: 'binaire sans `valeur_reussie`' } }
+    }
+    if (reussi) return { valeur: reussie as ValeurObservable, alerte: null }
+    const absence = VALEURS_D_ABSENCE[code]
+    if (absence === undefined) {
+      // Un binaire booléen dont la fiche nomme `true` : l'absence est `false` par
+      // construction. Sinon, la liste des onze fait foi, et un code inconnu se DIT.
+      if (typeof reussie === 'boolean') return { valeur: !reussie, alerte: null }
+      return { valeur: NA, alerte: { observable: code, motif: 'binaire hors de la liste des onze valeurs d\'absence (03- §1) : rien ne se convertit' } }
+    }
+    return { valeur: absence, alerte: null }
+  }
+  // proportion · densité · comptage · comptage rapporté
+  switch (entree.reussie) {
+    case 'plus_de': case 'au_moins':
+      return { valeur: reussi ? 1 : 0, alerte: null }
+    case 'au_plus': case 'moins_de': {
+      if (entree.famille === 'densité') {
+        if (reussi) return { valeur: 0, alerte: null }
+        const seuil = seuilDe(entree, parametres)
+        if (typeof seuil !== 'number' || !Number.isFinite(seuil)) {
+          return { valeur: NA, alerte: { observable: code, motif: 'densité ratée sans seuil numérique lisible : le seuil doublé ne se calcule pas' } }
+        }
+        return { valeur: seuil * 2, alerte: null }
+      }
+      return { valeur: reussi ? 0 : 1, alerte: null }
+    }
+    default:
+      return { valeur: NA, alerte: { observable: code, motif: `\`reussie = ${entree.reussie}\` : hors de la table du 03- §1` } }
+  }
+}
+
 // ── Moitié 2 : LIRE le verdict — jamais écrit, toujours recalculé ────────────
 
 export type Statut = 'reussie' | 'ratee' | 'sans_objet'
@@ -210,14 +321,26 @@ export function tauxDeReussite(
   valeurs: ReadonlyArray<ValeurObservable | undefined>,
   entree: EntreeObservableMesure,
   parametres: Record<string, number | string> = {},
+  /**
+   * ⭐ C7-L9 — `01-` §8.2 (07/09/2026) : « une mesure de la trajectoire PÈSE selon
+   *    son cran dans le taux de réussite » — un poids par valeur, dans le même
+   *    ordre. `reussies` et `denominateur` deviennent des SOMMES DE POIDS, `taux`
+   *    leur rapport. Absent, ou plus court que `valeurs` : le poids manquant
+   *    vaut 1 — le taux d'hier, à l'octet. ⚠️ Le poids n'entre QU'ICI : la
+   *    fenêtre et les compteurs restent en mesures.
+   */
+  poids?: ReadonlyArray<number>,
 ): { reussies: number; denominateur: number; taux: number | null } {
   let reussies = 0
   let denominateur = 0
-  for (const v of valeurs) {
+  valeurs.forEach((v, i) => {
     const s = statutDeLaMesure(v, entree, parametres)
-    if (s === 'sans_objet') continue
-    denominateur += 1
-    if (s === 'reussie') reussies += 1
-  }
+    if (s === 'sans_objet') return
+    const p = poids?.[i]
+    const w = typeof p === 'number' && Number.isFinite(p) && p >= 0 ? p : 1
+    denominateur += w
+    if (s === 'reussie') reussies += w
+  })
+  // « Un observable sans taux ne se classe pas » : rien qui ait un objet ⇒ NULL, jamais 0.
   return { reussies, denominateur, taux: denominateur === 0 ? null : reussies / denominateur }
 }
