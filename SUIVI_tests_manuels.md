@@ -9149,7 +9149,7 @@ le veut.
 
 > **Prouvé par exécution** : `scripts/recette/couture-c10l2.mjs --essai` *(60 contrôles, 0 échec)* et
 > `scripts/recette/smoke-c10l2.mjs <dossier>` *(sessions prof ET élève, deux modules, trois largeurs)*.
-> ⛔ **Non poussé.** `passation_classe_actif` est ON en production.
+> ✅ **Poussé le 07/09 à 18:15 UTC.** `passation_classe_actif` est ON en production : la garde atteint les élèves, et c'est l'effet voulu.
 
 ### Le miroir, et son idempotence
 
@@ -9195,6 +9195,7 @@ le veut.
 - [x] **C10L2-25 — la confirmation porte la phrase de la source en toutes lettres** : « un **constat**, pas une absolution », et « restent au **dénominateur** ». *(smoke prof, deux modules)*
 - [x] **C10L2-26 — la confirmation est EN PAGE, jamais `confirm()`**, et le serveur refuse sans le champ `confirme`.
 - [x] **C10L2-27 — `tsc` propre et `npm test` vert** : 2 506 tests, 0 échec *(2 499 avant le lot)*.
+- [x] **C10L2-29 — ⭐⭐ CLORE APRÈS COUP NE DÉPLACE AUCUN CHIFFRE — mesuré en production le 07/09 à 18:15 UTC, APRÈS le passage du déclencheur.** La clôture des 15 dépôts simulée sur les données réelles, `comptesDeLaSemaine` recalculé pour les 13 élèves sur les deux cycles : **26 comptes sur 26 identiques, zéro différence.** ⭐ Ce n'est donc jamais « trop tard » : la propriété ne dépend pas du moment. *(Trois raisons indépendantes : l'indiscernabilité `ouvert`/`abandonne` pour la collecte ; le gel des lignes déjà posées ; et — la plus forte, écrite nulle part avant ce lot — `chargerAssiduite` n'ouvre JAMAIS `exercices_depots`.)*
 - [x] **C10L2-28 — la base rendue à son état d'entrée, VÉRIFIÉE par requête** : retrait par la MARQUE et par ids ; le journal retiré PAR ID, jamais par cycle ni par élève ; 0 dépôt `abandonne` survivant dans une base **partagée avec d'autres séances** *(17 dépôts de classe ouverts leur appartiennent, et n'ont pas été touchés)*.
 
 ### Reste à faire — décoché, avec sa condition de reprise
