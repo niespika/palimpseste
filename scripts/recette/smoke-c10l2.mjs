@@ -299,56 +299,83 @@ async function attendreLeContenu(cdp, { hydrate = false, marqueur = null } = {})
   //    secondes : un appel qui ne revient pas rend `false`, la boucle compte, et
   //    sa borne de 60 s tient vraiment.
   const sonde = async (expr) => {
-    try { return await cdp.evalue(expr, 2000) } catch { return false }
+    try { return await cdp.evalue(expr, 5000) } catch { return false }
   }
   const PRET = marqueur
     ? `(() => { const m = document.querySelector("main"); return !!m && `
       + `${marqueur}.test(m.innerText || "") })()`
     : '(() => { const m = document.querySelector("main");'
       + ' return !!m && (m.innerText || "").trim().length > 300 })()'
-  // ⛔ 60 s, PAS 20 : en `next dev`, la PREMIÈRE visite d'une route la compile,
-  //    et un serveur qui vient de voir ses fichiers réécrits met bien plus que
-  //    vingt secondes. Mesuré : à 20 s, la garde rendait la main sur une page
-  //    non hydratée, le clic partait dans le vide, et le smoke déclarait la
-  //    confirmation absente — sur un écran parfaitement correct.
+  // ⛔⛔ LA BORNE EST EN TEMPS, PAS EN TOURS DE BOUCLE — et c'est la troisième
+  //    fois que ce script se trompe au même endroit. « 150 tours » ne veut rien
+  //    dire quand chaque tour peut coûter le délai d'une sonde : sur un serveur
+  //    chargé, la même boucle a duré vingt secondes une fois et six minutes une
+  //    autre. On compte l'HORLOGE, et la sonde a de quoi respirer (5 s) parce
+  //    qu'une page en cours de compilation ne répond pas en deux.
+  const FIN = Date.now() + 90_000
   let vu = false
-  for (let i = 0; i < 150; i++) {
+  while (Date.now() < FIN) {
     if (await sonde(PRET)) { vu = true; break }
     await dors(400)
   }
-  if (!vu) console.log(`     ⚠️ contenu attendu ABSENT après 60 s${marqueur ? ` (${marqueur})` : ''}`
+  if (!vu) console.log(`     ⚠️ contenu attendu ABSENT après 90 s${marqueur ? ` (${marqueur})` : ''}`
     + ' — le serveur compile-t-il encore ?')
   return vu
   if (hydrate) {
     // ⭐ LA FIBRE REACT — sans elle, `b.click()` part dans le vide : le DOM est
     //    là, l'état ne l'est pas, et rien ne se passe. C'est ce qui a fait dire
     //    au premier essai « le bouton se clique ✅ » sur un clic sans effet.
-    for (let i = 0; i < 40; i++) {
-      const h = await sonde('(() => { const b = [...document.querySelectorAll("main button")];'
+    // ⭐ ET L'HYDRATATION AUSSI SE BORNE EN TEMPS, et elle se DIT quand elle
+    //    n'arrive pas : un clic sur un bouton sans fibre React ne fait rien du
+    //    tout et ne rend aucune erreur — c'est ce qui a fait dire à ce script
+    //    « le bouton se clique ✅ » puis « la confirmation est absente ❌ ».
+    const FIN_H = Date.now() + 60_000
+    let hydrate = false
+    while (Date.now() < FIN_H) {
+      hydrate = await sonde('(() => { const b = [...document.querySelectorAll("main button")];'
         + ' return b.length > 0 && b.some(el => Object.keys(el).some(k => k.startsWith("__reactFiber"))) })()')
-      if (h) break
+      if (hydrate) break
       await dors(500)
     }
+    if (!hydrate) console.log('     ⚠️ AUCUN bouton hydraté après 60 s — un clic ne ferait rien')
   }
   await dors(700)
 }
 
+// ⭐ La trace : quand un smoke se fige, ce qu'on veut savoir est OÙ, et aucun
+//    log d'étape ne le dit si les étapes ne se nomment pas.
+const trace = (t) => { if (process.argv.includes('--trace')) console.log(`      · ${t}`) }
+
 async function capturer(cdp, nom, url, { largeurs = LARGEURS, marqueur = null } = {}) {
+  // ⛔⛔ ON NAVIGUE UNE FOIS, PUIS ON CHANGE DE LARGEUR — jamais l'inverse.
+  //    C'est la quatrième version de cette fonction, et l'erreur des trois
+  //    premières était la même : renaviguer vers la MÊME url à chaque largeur.
+  //    Chrome ne relève pas `Page.loadEventFired` sur une navigation identique,
+  //    la page se recharge quand même, et sur un serveur de développement
+  //    partagé chaque tour coûtait jusqu'à quatre-vingt-dix secondes d'attente
+  //    de contenu — pour photographier trois fois la même page.
+  //    ⭐ La preuve était sous les yeux : les captures de la CONFIRMATION, qui
+  //    ne renavigent pas (elles ne le peuvent pas, l'état est côté client),
+  //    n'ont jamais échoué ni traîné. `setDeviceMetricsOverride` suffit à
+  //    remettre la page en page : c'est une mise en page, pas un chargement.
+  trace(`${nom} : navigate ${url}`)
+  await cdp.envoie('Emulation.setDeviceMetricsOverride',
+    { width: largeurs[0], height: 900, deviceScaleFactor: 1, mobile: largeurs[0] < 768,
+      screenWidth: largeurs[0], screenHeight: 900 })
+  const c = cdp.attendChargement()
+  await cdp.envoie('Page.navigate', { url: BASE + url })
+  await Promise.race([c, dors(15000)])
+  trace(`${nom} : on attend le contenu`)
+  await attendreLeContenu(cdp, { marqueur })
+
   const mesures = []
   for (const largeur of largeurs) {
+    trace(`${nom}@${largeur} : mise en page`)
     await cdp.envoie('Emulation.setDeviceMetricsOverride',
       { width: largeur, height: 900, deviceScaleFactor: 1, mobile: largeur < 768,
         screenWidth: largeur, screenHeight: 900 })
-    const c = cdp.attendChargement()
-    await cdp.envoie('Page.navigate', { url: BASE + url })
-    // ⛔⛔ ON COURSE L'ÉVÉNEMENT DE CHARGEMENT, ON NE L'ATTEND PAS SEUL. Mesuré :
-    //    `capturer` visite la MÊME url une fois par largeur, et Chrome ne relève
-    //    pas `Page.loadEventFired` sur une navigation identique — le smoke restait
-    //    bloqué indéfiniment à la DEUXIÈME largeur, sur une page parfaitement
-    //    rendue. C'est `attendreLeContenu` qui décide que la page est là, pas
-    //    l'événement.
-    await Promise.race([c, dors(15000)])
-    await attendreLeContenu(cdp, { marqueur })
+    // Le temps que la mise en page se refasse — aucun chargement à attendre.
+    await dors(900)
     // ⚠️ LE TEXTE MESURÉ EST CELUI DE `main`, PAS DU `body` : la navigation du
     //    site occupait les 300 premiers caractères et masquait tout le contenu.
     const m = JSON.parse(await cdp.evalue(
@@ -356,9 +383,10 @@ async function capturer(cdp, nom, url, { largeurs = LARGEURS, marqueur = null } 
       + ' hauteur: document.documentElement.scrollHeight,'
       + ' txt: ((document.querySelector("main") || document.body).innerText || "")'
       + '   .replace(/\\n+/g, " · ") })'))
+    trace(`${nom}@${largeur} : capture (${m.hauteur} px)`)
     const shot = await cdp.envoie('Page.captureScreenshot', { format: 'png',
       clip: { x: 0, y: 0, width: largeur, height: Math.min(m.hauteur, 4000), scale: 1 },
-      captureBeyondViewport: true })
+      captureBeyondViewport: true }, 60000)
     fs.writeFileSync(`${SORTIE}/${nom}-${largeur}.png`, Buffer.from(shot.data, 'base64'))
     const deborde = m.doc > m.interne
     if (deborde) ko++; else ok++
@@ -439,11 +467,13 @@ try {
     // 2 · le PREMIER TEMPS : on clique, et la confirmation nomme les élèves
     //     ⛔ `confirm()` est interdit — si le geste passait par le dialogue natif,
     //        ce clic ne montrerait RIEN (il rend `false` en aperçu embarqué).
+    // ⛔ ON NE RENAVIGUE PAS : `capturer` vient de charger cette page, et une
+    //    seconde navigation vers la MÊME url est précisément ce qui coûtait des
+    //    minutes. On remet la largeur, on attend l'hydratation, on clique.
+    trace('confirmation : largeur 1280 puis hydratation')
     await cdp.envoie('Emulation.setDeviceMetricsOverride',
       { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
-    ch = cdp.attendChargement()
-    await cdp.envoie('Page.navigate', { url: BASE + url })
-    await Promise.race([ch, dors(15000)])
+    await dors(600)
     await attendreLeContenu(cdp, { hydrate: true, marqueur: '/Clore les d[ée]p[ôo]ts/' })
     // ⛔⛔ LE CLIC SE REJOUE JUSQU'À CE QUE LA CONFIRMATION PARAISSE. Un clic sur
     //    un bouton dont la fibre React n'est pas encore montée ne fait RIEN, et
@@ -460,7 +490,18 @@ try {
         if (b.disabled) return 'BOUTON DÉSACTIVÉ'
         b.click(); return 'ok'
       })()`)
-      vueLaConfirmation = await attendreLeContenu(cdp, { marqueur: '/vont? passer à/' })
+      trace(`confirmation : clic ${essai} → ${clique}`)
+      // ⭐ 12 s suffisent : la confirmation est un `useState`, elle paraît au
+      //    rendu suivant ou jamais. L'attendre 90 s ne l'aide pas — elle
+      //    multiplie seulement le coût des essais.
+      const FIN = Date.now() + 12_000
+      vueLaConfirmation = false
+      while (Date.now() < FIN && !vueLaConfirmation) {
+        vueLaConfirmation = await cdp.evalue(
+          '/vont? passer à/.test(document.querySelector("main")?.innerText || "")', 5000)
+          .catch(() => false)
+        if (!vueLaConfirmation) await dors(400)
+      }
       if (!vueLaConfirmation) console.log(`     … essai ${essai} : la confirmation n’a pas paru`)
     }
     dire(vueLaConfirmation,
