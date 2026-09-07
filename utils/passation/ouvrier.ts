@@ -26,6 +26,7 @@ import { lireConfigPassation } from './config'
 import { passationOuverteAEleve } from './acces'
 import { transcrire, TranscriptionImpossible } from './transcription'
 import { ETAPE_TRANSCRIPTION } from './depots'
+import { depotClos, MESSAGE_DEPOT_CLOS } from './statuts'
 import type { Photo } from './photos'
 import { sansControleDeLEleve } from '@/utils/essai/regles'
 
@@ -88,6 +89,16 @@ export async function transcrireDepot(
   }
   if (!d.ouvert_par_prof_at) {
     throw new DepotSansCopie(`dépôt ${depotId} : le professeur n'a pas ouvert le dépôt.`)
+  }
+  // ⭐⭐ C10 · L2 — IL SÉLECTIONNAIT `statut` SANS JAMAIS LE TESTER, et il ÉCRIT
+  //    (`v1_remis` sur l'essai de Fragments, la transcription sur tous). Un job
+  //    encore en vol au moment du clic aurait donc écrit sur un dépôt clos, et
+  //    PAYÉ ses appels pour cela. `DepotSansCopie` est la bonne classe : la panne
+  //    est LOCALE et PERMANENTE — trois tentatives n'y changeraient rien, et
+  //    laisser le job en file gèlerait la tête de file.
+  if (depotClos(d)) {
+    throw new DepotSansCopie(`dépôt ${depotId} : ${MESSAGE_DEPOT_CLOS} `
+      + `(statut « ${d.statut} ») — le professeur a clos les dépôts de cette passation.`)
   }
   if (d.v1_remis_at) {
     // L'élève a validé : sa correction fait foi, on ne la piétine pas.

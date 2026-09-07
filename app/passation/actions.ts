@@ -25,7 +25,13 @@ import {
   mettreLaTranscriptionEnFile, validerLaTranscription, enregistrerLaTranscription,
   validerLaSaisieClavier, declencherLeLot, ecrireLeCommentaireGeneral,
   poserLeMessageReporte, journaliserCollageBloque, lireDepot, relancerLaMesure,
+  clorLesDepots,
 } from '@/utils/passation/depots'
+import { depotClos } from '@/utils/passation/statuts'
+// ⚠️ C10 · L2 — les instants se lisent DANS LE FUSEAU, les dates pures en UTC.
+import { toISODate } from '@/utils/calendrier-grille'
+import { lundiDuCycle } from '@/utils/deroule/echeance'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { transcrireMaintenant } from '@/utils/passation/ouvrier'
 import { leverLesDrapeaux, offreSeJuger, enregistrerSeJuger,
   enregistrerConfianceRemise, offreCredence, enregistrerCredence } from '@/utils/passation/metacognition'
@@ -83,6 +89,105 @@ export async function actionOuvrirLesDepots(
   rafraichir()
   return succes(`Dépôt ouvert pour ${r.data.ouverts} élève(s)`
     + (r.data.deja > 0 ? ` (${r.data.deja} l’étaient déjà).` : '.'))
+}
+
+/**
+ * ÉTAPE 11 bis — LA CLÔTURE DES DÉPÔTS, miroir de l'ouverture.
+ *
+ * ⭐ ELLE VIENT AVANT L'ÉTAPE 12, ET L'ORDRE N'EST PAS INDIFFÉRENT (`02-` §6.D,
+ *    `11 bis`) : `publier` ne bascule en « retour publié » que les dépôts
+ *    `v1_remis` ou `ouvert` (`utils/passation/retours.ts`). Clore d'abord est ce
+ *    qui empêche de repeindre en « retour publié » une copie jamais rendue.
+ *
+ * ⭐⭐ LA CONFIRMATION EST UNE GARDE, PAS UNE POLITESSE — patron du 01/09
+ *    (`actionDesignation`, `app/deroule/actions.ts`) : l'écran pose la question,
+ *    LE SERVEUR LA TIENT. Sans le champ `confirme`, l'action refuse. Un écran
+ *    qui perdrait son second temps ne clôturerait pas la classe par accident.
+ *
+ * ⛔ `confirm()` EST INTERDIT côté écran — cinquième morsure documentée
+ *    (`components/pilotage/ConfirmationRetrait.tsx`) : le dialogue natif rend
+ *    `false` dans un aperçu embarqué, et le bouton paraît mort.
+ */
+export async function actionCloreLesDepots(
+  _prec: Reponse | null, form: FormData,
+): Promise<Reponse> {
+  const { admin, userId } = await garderProf(false)
+  const exerciceId = String(form.get('exercice_id') ?? '')
+  if (form.get('confirme') !== 'oui') {
+    return echec('Clôture non confirmée : rien n’a été fait. '
+      + 'Le geste se confirme à l’écran, et le serveur tient la confirmation.')
+  }
+
+  const r = await clorLesDepots(admin, exerciceId)
+  if (!r.ok) return echec(r.message)
+  const { clos, deja } = r.data
+
+  // ── LE JOURNAL — `routeur_decisions.override_prof`, ET IL N'Y EN A PAS D'AUTRE
+  //
+  // « TOUT override du professeur SE JOURNALISE dans `routeur_decisions`, ORIGINE
+  //   COMPRISE » (`07-` §1.5). Patron : `retirerLExercice`
+  //   (`app/prof/routeur/actions.ts`), UNE LIGNE PAR DÉPÔT, comme lui.
+  //
+  // ⛔ LES AUTRES PORTES SONT FERMÉES D'AVANCE : `integrite_evenements` a un
+  //    CHECK fermé à ('strike','blocage','deblocage') — il demanderait une
+  //    migration ; `exercices.blocages` n'a pas le bon grain (l'exercice, pas
+  //    l'élève). On n'ouvre pas un second journal.
+  //
+  // ⛔⛔ ET ON N'ÉCRIT JAMAIS `routeur_decision_id` SUR LE DÉPÔT. La ligne reste
+  //    ORPHELINE — le seul lien est la clé `depot_id` DANS le JSON, exactement
+  //    comme le retrait. Poser ce lien ferait tomber ces dépôts sous `C10-L1`
+  //    (`utils/deroule/fermeture.ts` : `if (!q.routeurDecisionId) return false`),
+  //    et ils seraient fermés deux fois par deux règles différentes.
+  //
+  // ⚠️ CE JOURNAL N'A AUCUN LECTEUR, et il n'en a jamais eu : 480 décisions en
+  //    production, ZÉRO `override_prof` non nul, zéro en bac à sable — alors que
+  //    38 dépôts sont `retire`. Ce geste en est la PREMIÈRE écriture réelle. La
+  //    preuve du « fait quand » ne peut donc être qu'une requête en base.
+  const fuseau = await lireFuseau()
+  const echecsDeJournal: string[] = []
+  for (const d of clos) {
+    // ⛔⛔ LE `cycle_lundi` SE DÉRIVE, IL NE SE TRONQUE PAS. `assigne_at.slice(0,10)`
+    //    prendrait le JOUR UTC d'un `timestamptz` : un dépôt du dimanche 20 h 30 à
+    //    Toronto est le lundi 00 h 30 UTC, et l'insert serait REFUSÉ par
+    //    `routeur_cycle_lundi_chk CHECK (EXTRACT(isodow FROM cycle_lundi) = 1)`.
+    const cycleLundi = toISODate(lundiDuCycle(new Date(d.assigne_at), fuseau))
+    const entree = {
+      geste: 'cloture_passation', depot_id: d.id, motif: `instance ${exerciceId}`,
+      par: userId, at: new Date().toISOString(),
+      // La distinction que le `07-` §1.1 veut voir tenue, dite dans le sens de CE geste.
+      note: '`abandonne` — le professeur CONSTATE un non-geste de l\'élève à la clôture '
+        + 'd\'une passation en classe ; il n\'absout pas. Ne se confond jamais avec '
+        + '`retire`, qui est une décision du professeur et SORT du dénominateur d\'assiduité.',
+    }
+    // ⚠️ SUPABASE-JS NE LÈVE PAS. Le patron du retrait n'attrape aucun `{ error }`
+    //    sur ses deux écritures — c'est pourquoi on ne peut même pas affirmer que
+    //    ses 38 `retire` ne sont pas passés par un journal échoué en silence. Ici,
+    //    l'erreur est captée et REMONTÉE à l'écran.
+    const { error } = await admin.from('routeur_decisions').insert({
+      eleve_id: d.eleve_id, cycle_lundi: cycleLundi,
+      regle_declenchee: 'override_prof', override_prof: [entree],
+    })
+    if (error) {
+      console.error(`[passation] CLÔTURE JOURNALISÉE À MOITIÉ — dépôt ${d.id}, élève `
+        + `${d.eleve_id}, cycle ${cycleLundi}`, { code: error.code, message: error.message })
+      echecsDeJournal.push(d.id.slice(0, 8))
+    }
+  }
+
+  rafraichir()
+  const bouts = [`${clos.length} dépôt(s) clos`]
+  if (deja > 0) bouts.push(`${deja} l’étaient déjà`)
+  const fin = clos.length === 0
+    ? 'Aucun dépôt n’attendait : rien n’a changé.'
+    : 'Les copies remises n’ont pas bougé, et une remise après clôture est désormais refusée.'
+  if (echecsDeJournal.length > 0) {
+    // ⛔ On le DIT plutôt que de rendre `ok` : le statut est écrit, la trace manque,
+    //    et un rejeu ne rattrapera pas — le filtre de statut ne trouvera plus rien.
+    return echec(`${bouts.join(', ')}. ⚠️ MAIS LE JOURNAL A ÉCHOUÉ pour `
+      + `${echecsDeJournal.length} d’entre eux (${echecsDeJournal.join(', ')}) : les dépôts sont `
+      + 'clos, la trace du geste manque, et un rejeu ne la posera pas.')
+  }
+  return succes(`${bouts.join(', ')}. ${fin}`)
 }
 
 /** ÉTAPE 12 — le traitement en lot, par la MÊME file. */
@@ -309,6 +414,13 @@ export async function actionCollageBloque(
   //    réussissait, elle est désormais refusée.
   const d = await lireDepot(admin, depotId)
   if (!d || d.eleve_id !== userId) return
+  // ⭐ C10 · L2 — LA MÊME GARDE, AU MÊME ENDROIT, POUR LA MÊME RAISON. Le RPC
+  //    `journaliser_collage` est `SECURITY INVOKER` et fait `update … where id =
+  //    p_depot_id` SANS AUCUN FILTRE : ni statut, ni élève. La garde
+  //    d'appartenance a déjà été ajoutée ICI, dans l'appelant, plutôt qu'au RPC
+  //    (le toucher serait une migration, que ce lot n'a pas le droit de faire).
+  //    La garde de clôture suit le même chemin.
+  if (depotClos(d)) return
   await journaliserCollageBloque(admin, depotId, userId, moyen)
 }
 

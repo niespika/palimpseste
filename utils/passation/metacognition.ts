@@ -34,6 +34,7 @@ import { INSTRUMENT_MONITORING } from '@/utils/chaine/derive/monitoring'
 import { COMPETENCES, type Competence } from '@/utils/chaine/types'
 import { cranEstUnCode, cranNumero } from '@/utils/cran'
 import { lireLesStatutsDeRecette } from '@/utils/statut-recette'
+import { depotClos, MESSAGE_DEPOT_CLOS } from './statuts'
 
 type Admin = SupabaseClient
 
@@ -378,10 +379,12 @@ export async function enregistrerSeJuger(
   offre: OffreSeJuger, reponses: Record<string, string>,
 ): Promise<Issue> {
   const { data: d, error: eD } = await admin.from('exercices_depots')
-    .select('id, eleve_id, v1_remis_at, juger_debut_at').eq('id', depotId).maybeSingle()
+    // ⭐ C10 · L2 — `statut` A ÉTÉ AJOUTÉ ICI : il ne se lisait pas du tout.
+    .select('id, eleve_id, statut, v1_remis_at, juger_debut_at').eq('id', depotId).maybeSingle()
   if (eD) return refus(`Lecture impossible : ${eD.message}`)
   if (!d) return refus('Dépôt introuvable.')
   if (d.eleve_id !== eleveId) return refus('Ce dépôt n’est pas le vôtre.')
+  if (depotClos(d as { statut: string })) return refus(MESSAGE_DEPOT_CLOS)   // C10 · L2
   if (!offre.servie) return refus(`« Se juger » n’est pas servi ici : ${offre.motif}`)
 
   const attendues = new Set(offre.questions.map((q) => q.observable_code))
@@ -496,10 +499,12 @@ export async function enregistrerConfianceRemise(
   parCompetence: Record<string, string>,
 ): Promise<Issue> {
   const { data: d, error: eD } = await admin.from('exercices_depots')
-    .select('id, eleve_id').eq('id', depotId).maybeSingle()
+    // ⭐ C10 · L2 — `statut` a été ajouté : la lecture ne portait que deux colonnes.
+    .select('id, eleve_id, statut').eq('id', depotId).maybeSingle()
   if (eD) return refus(`Lecture impossible : ${eD.message}`)
   if (!d) return refus('Dépôt introuvable.')
   if (d.eleve_id !== eleveId) return refus('Ce dépôt n’est pas le vôtre.')
+  if (depotClos(d as { statut: string })) return refus(MESSAGE_DEPOT_CLOS)   // C10 · L2
 
   const offre = await offreConfianceRemise(admin, depotId)
   if (!offre.servie) return refus(`La confiance de remise n’est pas servie ici : ${offre.motif}`)
@@ -696,10 +701,12 @@ export async function enregistrerCredence(
   saisies: Array<{ cas: number; valeurs: Record<string, number> | { pourcentage: number } }>,
 ): Promise<Issue> {
   const { data: d, error: eD } = await admin.from('exercices_depots')
-    .select('id, eleve_id').eq('id', depotId).maybeSingle()
+    // ⭐ C10 · L2 — `statut` a été ajouté : la lecture ne portait que deux colonnes.
+    .select('id, eleve_id, statut').eq('id', depotId).maybeSingle()
   if (eD) return refus(`Lecture impossible : ${eD.message}`)
   if (!d) return refus('Dépôt introuvable.')
   if (d.eleve_id !== eleveId) return refus('Ce dépôt n’est pas le vôtre.')
+  if (depotClos(d as { statut: string })) return refus(MESSAGE_DEPOT_CLOS)   // C10 · L2
 
   const offre = await offreCredence(admin, depotId)
   if (!offre.servie) return refus(`La crédence n’est pas servie ici : ${offre.motif}`)

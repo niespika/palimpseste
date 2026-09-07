@@ -34,6 +34,7 @@ import { refuserPhotos, renumeroter, type Photo } from './photos'
 import { lireConfigPassation } from './config'
 import { normaliserRetours, type Doute } from './transcription-calcul'
 import type { CollageBloque, MoyenDeCollage } from './collage'
+import { depotClos, MESSAGE_DEPOT_CLOS } from './statuts'
 
 type Admin = SupabaseClient
 
@@ -218,6 +219,93 @@ export function depotOuvert(d: DepotDePassation): boolean {
   return d.ouvert_par_prof_at != null
 }
 
+/**
+ * ⭐⭐ C10 · L2 — LE SECOND GARDE-FOU, ET IL NE SE DÉDUIT PAS DU PREMIER.
+ *
+ * ⛔ `depotOuvert` NE SUFFIT PAS À FERMER : il lit `ouvert_par_prof_at`, une
+ *    colonne que la clôture NE TOUCHE PAS — elle reste vraie après le clic
+ *    (mesuré en production le 07/09 : non nulle sur 15/15 des dépôts à clore).
+ *    C'est exactement pourquoi les neuf chemins d'écriture de l'élève, qui ne
+ *    tenaient que par elle, laissaient passer une remise après clôture.
+ *
+ * La règle vit dans `./statuts` — module PUR, pour qu'un test l'atteigne :
+ * ce fichier ouvre par `import 'server-only'`, que le runner ne résout pas.
+ * Elle est ré-exportée ici pour se lire à côté de sa jumelle.
+ */
+export { depotClos, MESSAGE_DEPOT_CLOS, STATUTS_DU_DEPOT } from './statuts'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉTAPE 11 bis — LA CLÔTURE DES DÉPÔTS, MIROIR EXACT DE L'ÉTAPE 4
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * « Il CLÔT LES DÉPÔTS — miroir exact de l'étape 4, et ACTION MANUELLE comme
+ * elle. Les dépôts qui n'ont jamais été rendus passent à `abandonne` […], les
+ * copies remises ne bougent pas, et une remise après clôture est refusée »
+ * (`02-exercices.md` §6.D, étape `11 bis`, écrite le 07/09/2026).
+ *
+ * ⭐⭐ POURQUOI `abandonne`, ET PAS AUTRE CHOSE — décision de Louis, 07/09, la
+ *    question posée avec les trois citations contraires sous les yeux. La
+ *    contradiction de vocabulaire est réelle et elle est assumée : le `07-` §1.1
+ *    définit `abandonne` comme « un NON-GESTE DE L'ÉLÈVE » quand ici c'est le
+ *    professeur qui clique. Mais le FAIT CONSTATÉ est bien un non-geste de
+ *    l'élève — « le professeur le CONSTATE, il n'absout pas » —, et les deux
+ *    autres valeurs mentiraient en base, pas seulement en mots :
+ *      · `retire` SORT DU DÉNOMINATEUR (`entreAuDenominateur(s) = s !== 'retire'`,
+ *        `utils/routeur/assiduite.ts`) : l'élève absent cesserait de peser,
+ *        c'est-à-dire serait ABSOUS — l'inverse exact de l'intention ;
+ *      · `clos` COMPTE LA COPIE COMME RENDUE (`STATUTS_RENDUS` contient `clos`,
+ *        même fichier) : une copie jamais remise serait comptée rendue ;
+ *      · un statut NEUF coûterait une migration — que la décision du 05/09
+ *        interdit — et une douzaine de tables exhaustives.
+ *    `abandonne` reste au dénominateur et n'est jamais rendu : en base et en
+ *    assiduité, il est exactement à sa place.
+ *
+ * ⚠️ ET IL N'Y A AUCUN HORODATAGE. Il n'existe aucune colonne miroir
+ *    d'`ouvert_par_prof_at`, et aucune migration n'est permise : la seule trace
+ *    du QUAND est la clé `at` de la ligne de journal (`app/passation/actions.ts`,
+ *    `actionCloreLesDepots`) — un journal qui n'a, à ce jour, aucun lecteur.
+ *
+ * ⭐ L'IDEMPOTENCE EST GRATUITE, ET ELLE TIENT PAR LE FILTRE DE STATUT, jamais
+ *    par le journal : un rejeu ne trouve plus de dépôt `assigne` ni `ouvert`,
+ *    donc il n'écrit rien et le dit. ⚠️ Un échec partiel entre l'`update` et
+ *    l'insert de journal laisse un état mixte que le rejeu ne rattrapera pas —
+ *    les dépôts sont clos, la ligne de journal manque.
+ */
+export async function clorLesDepots(
+  admin: Admin, exerciceId: string,
+): Promise<Issue<{ clos: Array<{ id: string; eleve_id: string; assigne_at: string }>; deja: number }>> {
+  const { data: ex, error: eEx } = await admin
+    .from('exercices').select('id, lieu, statut').eq('id', exerciceId).maybeSingle()
+  if (eEx) return refus(`Lecture de l'instance impossible : ${eEx.message}`)
+  if (!ex) return refus('Instance inconnue.')
+  if (ex.lieu !== 'classe') {
+    // « Ce qui commande le comportement est le `lieu`, jamais le module. »
+    return refus('Cette instance n’est pas une passation en classe : son `lieu` vaut '
+      + `« ${String(ex.lieu)} ». La clôture manuelle des dépôts n’a de sens qu’en classe.`)
+  }
+
+  // ⛔⛔ LA BORNE À L'INSTANCE EST LA GARDE QUI COMPTE, PAS LE STATUT. Mesuré en
+  //    production le 07/09 : 170 dépôts sont `assigne`, et ils appartiennent
+  //    TOUS au routeur. Une requête qui filtrerait sur le seul statut sans
+  //    `.eq('exercice_id', …)` ferait 170 lignes de dégâts.
+  const maintenant = new Date().toISOString()
+  const { data: clos, error } = await admin.from('exercices_depots')
+    // Le compare-and-set : ce qui n'attend plus ne bouge pas. Une copie remise
+    // (`v1_remis`, `retour_publie`) reste intacte, un `retire` n'est pas repeint.
+    .update({ statut: 'abandonne', updated_at: maintenant })
+    .eq('exercice_id', exerciceId).in('statut', ['assigne', 'ouvert'])
+    .select('id, eleve_id, assigne_at')
+  if (error) return refus(`La clôture a échoué : ${error.message}`)
+
+  const { count: deja } = await admin.from('exercices_depots')
+    .select('id', { count: 'exact', head: true })
+    .eq('exercice_id', exerciceId).eq('statut', 'abandonne')
+
+  const lignes = (clos ?? []) as unknown as Array<{ id: string; eleve_id: string; assigne_at: string }>
+  return ok({ clos: lignes, deja: Math.max(0, (deja ?? 0) - lignes.length) })
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ÉTAPE 5 — L'ÉLÈVE DÉPOSE LUI-MÊME, DEPUIS SON COMPTE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -239,9 +327,9 @@ export async function preparerDepotDesPhotos(
   if (!depotOuvert(d)) {
     return refus('Le dépôt n’est pas encore ouvert : le professeur l’ouvre quand la rédaction est finie.')
   }
-  if (d.statut === 'retire' || d.statut === 'abandonne' || d.statut === 'clos') {
-    return refus('Ce dépôt est clos.')
-  }
+  // ⭐ C10 · L2 — la condition qui vivait ici EN CLAIR est devenue le prédicat,
+  //    et le prédicat est posé aux HUIT autres chemins. Un prédicat, neuf appels.
+  if (depotClos(d)) return refus(MESSAGE_DEPOT_CLOS)
   if (d.v1_remis_at) return refus('Tu as déjà validé ta copie.')
   if (nb < 1) return refus('Ajoute au moins une page.')
   if (nb > config.pagesMax) return refus(`Maximum ${config.pagesMax} pages.`)
@@ -279,6 +367,7 @@ export async function enregistrerLesPhotos(
   if (!d) return refus('Dépôt introuvable.')
   if (d.eleve_id !== eleveId) return refus('Ce dépôt n’est pas le vôtre.')
   if (!depotOuvert(d)) return refus('Le dépôt n’est pas encore ouvert.')
+  if (depotClos(d)) return refus(MESSAGE_DEPOT_CLOS)   // C10 · L2
   if (d.v1_remis_at) return refus('Tu as déjà validé ta copie.')
 
   const rangees = renumeroter(photos)
@@ -367,6 +456,10 @@ export async function validerLaTranscription(
   if (!d) return refus('Dépôt introuvable.')
   if (d.eleve_id !== eleveId) return refus('Ce dépôt n’est pas le vôtre.')
   if (!depotOuvert(d)) return refus('Le dépôt n’est pas encore ouvert.')
+  // ⛔⛔ C10 · L2 — LE CHEMIN QUI DÉFAISAIT LA CLÔTURE EN SILENCE. Un élève resté
+  //    sur son écran de transcription et qui appuie sur « Valider » après le clic
+  //    du professeur reposait `v1_remis` sur un dépôt abandonné, sans erreur.
+  if (depotClos(d)) return refus(MESSAGE_DEPOT_CLOS)
   if (d.v1_remis_at) return refus('Tu as déjà validé ta copie.')
   if (texte.trim() === '') {
     return refus('La transcription est vide : relis ta copie avant de valider.')
@@ -391,6 +484,7 @@ export async function enregistrerLaTranscription(
   if (!d) return refus('Dépôt introuvable.')
   if (d.eleve_id !== eleveId) return refus('Ce dépôt n’est pas le vôtre.')
   if (!depotOuvert(d)) return refus('Le dépôt n’est pas encore ouvert.')
+  if (depotClos(d)) return refus(MESSAGE_DEPOT_CLOS)   // C10 · L2
   if (d.v1_remis_at) return refus('Tu as déjà validé ta copie.')
   const { error } = await admin.from('exercices_depots')
     .update({ transcription_v1: normaliserRetours(texte).replace(/\n+$/, ''), updated_at: new Date().toISOString() })
@@ -476,8 +570,17 @@ export async function relancerLaMesure(
   if (!d.v1_remis_at || !production) {
     return refus('Cette copie n’a rien de lisible : la chaîne la refuserait aussitôt.')
   }
-  if (d.statut === 'retire' || d.statut === 'abandonne') {
+  // ⭐ C10 · L2 — LE MESSAGE DISAIT « RETIRÉE » SUR LES DEUX STATUTS, et personne
+  //    ne l'avait vu parce qu'`abandonne` n'avait jamais été écrit en cinq mois
+  //    de production. Le premier clic sur « Clore les dépôts » le rendait faux —
+  //    et faux de la seule façon que le `07-` §1.1 interdit : « `abandonne` est
+  //    un non-geste de l'élève, `retire` une décision du professeur, LES DEUX NE
+  //    SE CONFONDENT PAS ». Le refus tient ; c'est sa phrase qui suit le statut.
+  if (d.statut === 'retire') {
     return refus('Cette copie est retirée : elle n’entre pas dans la chaîne.')
+  }
+  if (d.statut === 'abandonne') {
+    return refus('Cette copie est abandonnée : elle n’entre pas dans la chaîne.')
   }
 
   const [{ count: nbMesures }, { count: nbRetours }, jobs] = await Promise.all([
@@ -679,6 +782,7 @@ export async function validerLaSaisieClavier(
   if (!d) return refus('Dépôt introuvable.')
   if (d.eleve_id !== eleveId) return refus('Ce dépôt n’est pas le vôtre.')
   if (!depotOuvert(d)) return refus('Le dépôt n’est pas encore ouvert.')
+  if (depotClos(d)) return refus(MESSAGE_DEPOT_CLOS)   // C10 · L2 — l'autre chemin de remise
   if (d.v1_remis_at) return refus('Tu as déjà validé ta copie.')
   if (!(await eleveExempte(admin, eleveId))) {
     return refus('Cette passation se rédige à la main : la saisie au clavier est un aménagement '

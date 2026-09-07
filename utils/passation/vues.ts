@@ -12,6 +12,8 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireDepot, lireDepotsDeLInstance, attenteDuDepot, lireLeMessageReporte,
   eleveExempte, type DepotDePassation } from './depots'
+import { depotClos, MESSAGE_DEPOT_CLOS } from './statuts'
+import { depotPorteDuTravail } from '@/utils/examens/retrait'
 import { lireLesRetours, pointsAAfficher } from './retours'
 import { offreSeJuger, offreConfianceRemise, offreCredence, LIBELLES_CONFIANCE }
   from './metacognition'
@@ -57,10 +59,25 @@ export async function chargerVueEleve(
     attenteDuDepot(admin, depotId),
   ])
 
+  // ⭐⭐ C10 · L2 — « CE QUE L'ÉLÈVE NE DOIT PAS VOIR NE PART PAS DU SERVEUR »
+  //    (le patron de `C10-L1`). La vue se RÉDUIT ici, là où elle se construit,
+  //    pas à l'écran.
+  //
+  // ⛔ ET `ouvert` NE SUFFISAIT PAS : il vaut `d.ouvert_par_prof_at != null`,
+  //    une colonne que la clôture NE TOUCHE PAS. `EcranEleve` ne testait que
+  //    `!vue.ouvert` — un élève qui revenait par l'URL directe sur un dépôt clos
+  //    voyait donc son formulaire de dépôt ENTIER. La vue ne recopiait même pas
+  //    `d.statut` : l'écran n'avait aucun moyen de le savoir.
+  const clos = depotClos(d)
+  // Les trois offres de Monitoring se taisent : leurs actions serveur refusent
+  // désormais un dépôt clos — servir le formulaire proposerait un geste refusé.
+  const tu = (motif: string) => ({ servie: false as const, motif })
+
   return {
     depotId: d.id,
     consigne: enTexte(d.exercice.consigne_instanciee),
     ouvert: d.ouvert_par_prof_at != null,
+    clos,
     auClavier,
     photos: d.photos_v1,
     transcription: d.transcription_v1,
@@ -69,10 +86,10 @@ export async function chargerVueEleve(
     valide: d.v1_remis_at != null,
     messageReporte,
     rappelLisibilite: RAPPEL_LISIBILITE,
-    seJuger,
-    confiance,
+    seJuger: clos ? { ...seJuger, ...tu(MESSAGE_DEPOT_CLOS), questions: [] } : seJuger,
+    confiance: clos ? { ...confiance, ...tu(MESSAGE_DEPOT_CLOS), competences: [] } : confiance,
     libellesConfiance: LIBELLES_CONFIANCE,
-    credence,
+    credence: clos ? { ...credence, ...tu(MESSAGE_DEPOT_CLOS), cas: [] } : credence,
     pagesMax: lireConfigPassation().pagesMax,
     retourPublie: retourPublie(await lireLesRetours(admin, depotId), d),
     attente: attente.map((a) => ({
@@ -116,6 +133,21 @@ export async function chargerVueProf(
       //    chaîne, elle, avait bien lu le texte (`utils/chaine/contexte.ts`,
       //    `production()` lit `texte_v1` OU `transcription_v1`).
       copie,
+      // ⭐⭐ C10 · L2 — « REMIS » ET « PORTE DU TRAVAIL » SONT DEUX PRÉDICATS
+      //    DIFFÉRENTS, et la source n'a retenu que le premier. Mesuré en
+      //    production le 07/09 : un dépôt `ouvert`, `v1_remis_at` NULL — donc
+      //    « jamais remis » — porte 2 photos, une transcription de 2 266
+      //    caractères, 20 doutes et un commentaire du professeur. Le clore sans
+      //    le dire serait un mensonge en base. La confirmation les nomme à part.
+      //
+      // ⛔ Le prédicat n'est pas recopié : c'est celui du retrait, PUR et écrit
+      //    pour cette question — « le statut ne dit rien du travail » (décision
+      //    de Louis, 25/08). En classe, ses champs `_vf` sont NULL par trigger.
+      porteDuTravail: depotPorteDuTravail({
+        statut: d.statut, texte_v1: d.texte_v1, texte_vf: null,
+        transcription_v1: d.transcription_v1, transcription_vf: null,
+        photos_v1: d.photos_v1, photos_vf: null,
+      }),
       auClavier: d.transcription_v1 == null && d.texte_v1 != null,
       nbBlocs: copie ? blocs(copie).length : 0,
       doutes: Array.isArray(d.transcription_v1_doutes) ? d.transcription_v1_doutes.length : 0,

@@ -41,6 +41,7 @@ import {
   declencherLeLot, mettreLaTranscriptionEnFile, ouvrirLesDepots, lireDepotsDeLInstance,
 } from '@/utils/passation/depots'
 import { remettreEnFile } from '@/utils/chaine/file'
+import { depotClos } from '@/utils/passation/statuts'
 import { depotsQuiBloquent, type DepotPourRetrait } from '@/utils/examens/retrait'
 import {
   BUCKET_ESSAIS, CODE_TYPE_ESSAI, MODES_DE_LESSAI, assigneAtDeLEssai, consigneDeLEssai,
@@ -431,6 +432,21 @@ export async function deposerLaCopieDansLaChaine(
     depot = cree
   }
   const d = depot as unknown as { id: string; statut: string; ouvert_par_prof_at: string | null; v1_remis_at: string | null }
+
+  // ⭐⭐ C10 · L2 — LE ONZIÈME CHEMIN, ET IL EST LE PLUS CHER. Il LISAIT `statut`
+  //    sans jamais le tester. Sur un dépôt clos, il écrivait `photos_v1` PUIS
+  //    mettait une transcription en file — c'est-à-dire qu'il faisait PAYER des
+  //    appels d'IA pour une copie que le professeur venait de déclarer jamais
+  //    rendue. Pire : si `v1_remis_at` était posé, il reposait `statut: 'ouvert'`
+  //    et ROUVRAIT le dépôt clos. Il est gardé, pas écarté.
+  //
+  // ⚠️ La garde se pose APRÈS le filet qui fait naître le dépôt : un dépôt qui
+  //    vient de naître est `assigne`, donc jamais clos — la garde ne le mange pas.
+  if (depotClos(d)) {
+    return refus('Ce dépôt est clos : le professeur a clos les dépôts de cette passation. '
+      + 'Ta copie reste dans Vestigia ; elle n’entre plus dans la chaîne de mesure.')
+  }
+
   const maintenant = new Date().toISOString()
 
   // ── L'ouverture — le geste du professeur, qui a ouvert les dépôts (ou déposé lui-même) ──
