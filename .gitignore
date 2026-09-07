@@ -94,3 +94,6 @@ scripts/recette/sauvegardes/
 
 # Registre local du décor de recette C7-L9 (scripts/recette/couture-c7l9.mjs)
 scripts/recette/.couture-c7l9.json
+scripts/recette/.couture-c10l1.json
+scripts/recette/.couture-c10l2.json
+scripts/recette/.smoke-c10l2.lock
