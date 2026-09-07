@@ -24,7 +24,7 @@
 import { useState, useActionState } from 'react'
 import Link from 'next/link'
 import {
-  actionLeverLesDrapeaux, actionOuvrirLesDepots, actionDeclencherLeLot,
+  actionLeverLesDrapeaux, actionOuvrirLesDepots, actionCloreLesDepots, actionDeclencherLeLot,
   actionEditerLeRetour, actionCommentaireGeneral, actionMessageReporte,
   actionValiderLesCorrections, actionPublier, actionDepublier, actionRelancerLaMesure,
   type Reponse,
@@ -51,6 +51,17 @@ export interface LigneCopie {
    *    exempté était invisible au professeur, qui corrigeait à l'aveugle.
    */
   copie: string | null
+  /**
+   * ⭐⭐ C10 · L2 — CE DÉPÔT PORTE-T-IL QUELQUE CHOSE QUE L'ÉLÈVE A ÉCRIT ?
+   *
+   * ⛔ CE N'EST PAS `remiseLe != null`. Mesuré en production le 07/09 : un dépôt
+   *    `ouvert` dont `v1_remis_at` est NULL — donc « jamais remis » — porte 2
+   *    photos et une transcription de 2 266 caractères, déjà corrigée par le
+   *    professeur. « Les copies remises ne bougent pas » ne le protège pas.
+   *    Dérivé par `depotPorteDuTravail` (`utils/examens/retrait.ts`), le
+   *    prédicat pur du retrait : « le statut ne dit rien du travail ».
+   */
+  porteDuTravail: boolean
   /** La copie vient-elle du CLAVIER ? Alors il n'y a ni photo ni doute de lecture. */
   auClavier: boolean
   nbBlocs: number
@@ -159,8 +170,13 @@ function Ouverture({ vue }: { vue: VueProf }) {
 
   return (
     <section className="rounded-lg border border-bordure bg-surface p-4">
+      {/* ⭐ C10 · L2 — le titre nomme les DEUX gestes, parce que la section les
+          porte tous les deux : l'ouverture (étape 4) et la clôture (`11 bis`).
+          Elle reste la section « 1 · » — la clôture se pose AVANT le
+          déclenchement, qui est la section « 2 · », et l'ordre n'est pas
+          indifférent (`02-` §6.D). */}
       <h2 className="font-cinzel text-sm uppercase tracking-wide text-muet-clair">
-        1 · Ouvrir le dépôt
+        1 · Ouvrir, puis clore le dépôt
       </h2>
       <p className="mt-2 text-sm text-encre-douce">
         C’est <strong>votre geste</strong>, jamais une fenêtre calendaire : rien ne se ferme tout
@@ -219,7 +235,136 @@ function Ouverture({ vue }: { vue: VueProf }) {
         )}
         {etatO && <p className={`mt-2 text-sm ${etatO.ok ? 'text-ok' : 'text-retard'}`}>{etatO.message}</p>}
       </form>
+
+      <Cloture vue={vue} />
     </section>
+  )
+}
+
+/**
+ * ÉTAPE 11 bis — LA CLÔTURE DES DÉPÔTS, miroir exact de l'ouverture.
+ *
+ * ⛔ `confirm()` EST INTERDIT — cinquième morsure documentée
+ *    (`components/pilotage/ConfirmationRetrait.tsx`) : le dialogue natif rend
+ *    `false` dans un aperçu embarqué, et le bouton paraît mort. Confirmation EN
+ *    PAGE, à deux temps, comme `ReunirCopies` — dans la FORME de
+ *    `ConfirmationRetrait`, qui NOMME ligne par ligne AVANT le geste.
+ *
+ * ⭐ ELLE NE COÛTE AUCUNE LECTURE SERVEUR : `vue.copies` porte déjà le nom et le
+ *    statut de chaque dépôt de l'instance. Pas d'action d'aperçu.
+ *
+ * ⭐ LES NOMS EN CLAIR, TOUS, SANS « et 7 autres ». Mesuré en production le
+ *    07/09 : les 13 noms concernés font de 7 à 23 caractères (médiane 13) ; la
+ *    plus grande liste réelle fait 10 noms et 161 caractères, le pire cas de la
+ *    base 23 noms et 386 caractères. Ça tient.
+ */
+function Cloture({ vue }: { vue: VueProf }) {
+  const [etat, action, enCours] = useActionState(actionCloreLesDepots, null as Reponse | null)
+  const [confirme, setConfirme] = useState(false)
+
+  // ⛔ LE MÊME PRÉDICAT QUE LE SERVEUR, ET AUCUN AUTRE : `assigne` ou `ouvert`.
+  //    L'écran annonce EXACTEMENT ce que `clorLesDepots` filtrera.
+  const cibles = vue.copies.filter((c) => c.statut === 'assigne' || c.statut === 'ouvert')
+  const avecTravail = cibles.filter((c) => c.porteDuTravail)
+  const dejaClos = vue.copies.filter((c) => c.statut === 'abandonne').length
+
+  return (
+    <div className="mt-6 border-t border-bordure pt-4">
+      <p className="text-sm font-semibold text-encre">Clore les dépôts</p>
+      {/* ⭐ La PLACE du geste est un fait, pas un rangement : `publier` ne
+          bascule en « retour publié » que les dépôts `v1_remis` ou `ouvert`. */}
+      <p className="mt-1 text-xs text-encre-douce">
+        Après le ramassage des copies papier, et <strong>avant le déclenchement</strong> :
+        clore d’abord est ce qui empêche de repeindre en « retour publié » une copie jamais
+        rendue. C’est <strong>votre geste</strong>, comme l’ouverture — rien ne se ferme tout seul.
+      </p>
+
+      {cibles.length === 0 ? (
+        <p className="mt-3 text-sm italic text-muet">
+          Aucun dépôt n’attend : tous ont été rendus ou sont déjà clos
+          {dejaClos > 0 ? ` (${dejaClos} abandonné${dejaClos > 1 ? 's' : ''})` : ''}.
+        </p>
+      ) : !confirme ? (
+        <button
+          type="button"
+          onClick={() => setConfirme(true)}
+          disabled={vue.tronque}
+          className="mt-3 rounded border border-bordure-bouton px-3 py-1.5 text-sm text-encre-douce
+            hover:bg-parchemin disabled:opacity-40"
+        >
+          Clore les dépôts — {cibles.length} en attente
+        </button>
+      ) : (
+        <div className="mt-3 rounded border border-attention bg-attention-teinte p-3">
+          <p className="text-sm font-semibold text-encre">
+            {cibles.length} dépôt{cibles.length > 1 ? 's' : ''} {cibles.length > 1 ? 'vont' : 'va'} passer
+            à « abandonné » :
+          </p>
+          {/* ⛔ TOUS les noms, en clair, sans troncature — et pas de `flex-wrap`
+              sans `min-width` : un titre écrasé à 12 px est un défaut connu. */}
+          <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-encre">
+            {cibles.map((c) => (
+              <li key={c.depotId} className="break-words">
+                {c.eleve}
+                {c.porteDuTravail && (
+                  <span className="text-attention"> — porte une copie non validée</span>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {avecTravail.length > 0 && (
+            /* ⭐⭐ « Les copies remises ne bougent pas » NE LES PROTÈGE PAS : elles
+               n'ont jamais été validées, mais elles portent du travail. Poser
+               « abandonné » dessus sans le dire serait un mensonge en base. */
+            <p className="mt-2 text-sm text-attention">
+              <strong>{avecTravail.length} de ces dépôts porte{avecTravail.length > 1 ? 'nt' : ''} une
+              copie non validée</strong> — photos ou transcription. Elle{avecTravail.length > 1 ? 's' : ''}
+              {' '}ne {avecTravail.length > 1 ? 'seront' : 'sera'} pas effacée{avecTravail.length > 1 ? 's' : ''},
+              mais le dépôt sera compté comme non rendu.
+            </p>
+          )}
+
+          {/* ⭐⭐ LA PHRASE QUE LA SOURCE EXIGE (`02-` §6.D, `11 bis`), en toutes
+              lettres : sans elle, le professeur croirait absoudre. */}
+          <p className="mt-2 text-xs text-encre-douce">
+            « Abandonné » est un <strong>constat</strong>, pas une absolution : vous constatez un
+            non-geste de l’élève. Ces dépôts <strong>restent au dénominateur</strong> de son
+            assiduité et n’y sont jamais comptés rendus. <em>Retirer</em> un exercice, à
+            l’inverse, l’en sortirait — ce n’est pas le même geste.
+          </p>
+          <p className="mt-1 text-xs text-encre-douce">
+            Les copies remises ne bougent pas. Une remise après clôture sera refusée. Le geste se
+            rejoue sans effet.
+          </p>
+
+          <form action={action} className="mt-3 flex flex-wrap items-center gap-2">
+            <input type="hidden" name="exercice_id" value={vue.exerciceId} />
+            {/* ⭐ LA CONFIRMATION EST UNE GARDE, PAS UNE POLITESSE : l'écran pose
+                la question, LE SERVEUR LA TIENT — sans ce champ, l'action refuse. */}
+            <input type="hidden" name="confirme" value="oui" />
+            <button type="submit" disabled={enCours || vue.tronque}
+              className="rounded bg-retard px-4 py-2 text-sm text-parchemin disabled:opacity-40">
+              {enCours ? '…' : `Clore ${cibles.length} dépôt${cibles.length > 1 ? 's' : ''}`}
+            </button>
+            <button type="button" onClick={() => setConfirme(false)} disabled={enCours}
+              className="rounded border border-bordure-bouton px-3 py-2 text-sm text-encre-douce
+                disabled:opacity-40">
+              Annuler
+            </button>
+          </form>
+        </div>
+      )}
+
+      {vue.tronque && (
+        /* ⚠️ La même garde que « Déclencher » : une clôture posée sur une liste
+           tronquée agirait sur une population incomplète, en silence. */
+        <p className="mt-2 text-xs text-retard">
+          La liste des copies n’a pas pu être lue en entier : la clôture est désactivée.
+        </p>
+      )}
+      {etat && <p className={`mt-2 text-sm ${etat.ok ? 'text-ok' : 'text-retard'}`}>{etat.message}</p>}
+    </div>
   )
 }
 

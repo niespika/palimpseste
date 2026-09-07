@@ -16,10 +16,23 @@ import { useActionState, useState } from 'react'
 import type { ChargeAssignation, DepotAssigne } from './serveur'
 import { retirerLExercice, type Retour } from './actions'
 
+// ⭐⭐ C10 · L2 — « abandonné par l'élève » EST DEVENU FAUX AU PREMIER CLIC.
+//    Ce libellé était vrai tant que personne n'écrivait jamais cette valeur —
+//    mesuré le 07/09/2026 : ZÉRO ligne `abandonne` en production sur 565 dépôts,
+//    en cinq mois. C10-L2 en est la première écriture réelle, et c'est le
+//    PROFESSEUR qui clique : « abandonné par l'élève » dirait au professeur que
+//    l'élève a fait quelque chose que le professeur vient de faire.
+//
+// ⭐ LE MOT NEUTRE DIT VRAI DANS LES DEUX CAS, et il est déjà celui de l'autre
+//    écran (`components/passation/EcranProf.tsx`) : le FAIT constaté reste bien
+//    un non-geste de l'élève (`07-` §1.1), c'est l'attribution du GESTE qui
+//    mentait. La distinction avec `retire` — « retiré par vous » — tient
+//    toujours, et c'est elle qui compte : l'un reste au dénominateur
+//    d'assiduité, l'autre en sort.
 const LIBELLE_STATUT: Record<string, string> = {
   assigne: 'assigné', ouvert: 'ouvert', v1_remis: 'v1 remise',
   retour_publie: 'retour publié', vf_remis: 'vf remise', clos: 'clos',
-  abandonne: 'abandonné par l’élève', retire: 'retiré par vous',
+  abandonne: 'abandonné', retire: 'retiré par vous',
 }
 
 export default function VueAssignation({ charge }: { charge: ChargeAssignation }) {

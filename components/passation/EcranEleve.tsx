@@ -52,6 +52,18 @@ export interface VueEleve {
   depotId: string
   consigne: string
   ouvert: boolean
+  /**
+   * ⭐⭐ C10 · L2 — LE PROFESSEUR A CLOS LES DÉPÔTS DE CETTE PASSATION.
+   *
+   * ⛔ CE N'EST PAS `!ouvert`. `ouvert` vaut `d.ouvert_par_prof_at != null`, et
+   *    la clôture ne touche PAS cette colonne : elle reste VRAIE après le clic.
+   *    Sans ce champ, l'écran continuait de proposer le formulaire de dépôt
+   *    entier à l'élève qui revenait par l'URL directe — pendant que le serveur,
+   *    lui, refusait chacune de ses écritures.
+   *
+   * Posé par `chargerVueEleve`, qui réduit la vue là où elle se construit.
+   */
+  clos: boolean
   /** L'élève rédige-t-il au clavier ? — `profiles.mode_saisie_force`, jamais le motif. */
   auClavier: boolean
   photos: Photo[] | null
@@ -100,6 +112,27 @@ export interface VueEleve {
 }
 
 export function EcranEleve({ vue }: { vue: VueEleve }) {
+  // ⭐⭐ C10 · L2 — LA CLÔTURE PASSE AVANT L'OUVERTURE, et l'ordre compte : un
+  //    dépôt clos est TOUJOURS ouvert au sens d'`ouvert_par_prof_at`, donc le
+  //    test d'en dessous ne l'attraperait jamais.
+  //
+  // ⭐ LE RETOUR RESTE LISIBLE. Structurellement, un dépôt que ce lot clôt n'en
+  //    a aucun — `publier` ne bascule que `v1_remis` et `ouvert`, et la clôture
+  //    les a quittés —, mais s'il en portait un, le lui retirer serait lui
+  //    reprendre ce qu'il a le droit de lire.
+  if (vue.clos) {
+    return (
+      <div className="space-y-6">
+        <Encart>
+          <p className="text-encre">
+            <strong>Ce dépôt est clos.</strong> Ton professeur a clos les dépôts de cette
+            passation : tu ne peux plus y déposer de copie ni modifier ta transcription.
+          </p>
+        </Encart>
+        {vue.retourPublie && <RetourPublie vue={vue} />}
+      </div>
+    )
+  }
   if (!vue.ouvert) {
     return (
       <Encart>
