@@ -39,6 +39,9 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireLaPorte } from '@/utils/deroule/acces'
+import { estFermee } from '@/utils/deroule/fermeture'
+import { cyclesComptesDeLEleve } from '@/utils/deroule/fermeture-serveur'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { passationOuverteAEleve } from '@/utils/passation/acces'
 import { cranNumero } from '@/utils/cran'
 import {
@@ -104,6 +107,21 @@ export interface ExerciceMaison {
    *    `C6-L2` a ajoutés ici pour la même raison.
    */
   bonus: boolean
+  /**
+   * ⭐⭐ C10 · L1 — LA SEMAINE DE CET EXERCICE A ÉTÉ COMPTÉE : il ne se travaille
+   *    plus. **Un fait DÉRIVÉ à chaque lecture** — la ligne `assiduite_hebdo`
+   *    (élève × cycle d'`assigne_at`) existe —, jamais un statut, jamais une
+   *    colonne (`utils/deroule/fermeture.ts`).
+   *
+   * ⭐ IL EST RENDU EN PLUS DU `ton`, parce que le ton ne le dit pas partout : un
+   *    `retour_publie` non lu FERMÉ reste `a_lire` (sa lecture est due et
+   *    possible), et un `v1_remis` fermé reste `attente`. La frise et le bilan
+   *    ont besoin du fait lui-même, pas seulement de sa conséquence sur le ton.
+   *
+   * ⛔ C'est un ÉLARGISSEMENT de ce que cette lecture rend, jamais une seconde
+   *    liste : le patron est celui d'`assigneAt`, de `competences` et de `bonus`.
+   */
+  fermee: boolean
   /**
    * ⭐ HANDOFF « Codex Exercices (élève) » §3 — LA LIGNE DE MÉTA DE L'ACCUEIL :
    *    « compétence · **forme** · durée ». La forme, c'est ceci : un cas, ou
@@ -189,8 +207,14 @@ export async function exercicesMaisonDeLEleve(
     //    servent la ligne de méta et la distinction des deux états d'attente.
     //    ⚠️ Aucune requête de plus ici — « un aller-retour Supabase coûte
     //       160-332 ms », et cette lecture est aussi celle de la semaine.
+    // ⭐⭐ C10 · L1 — `routeur_decision_id` s'ajoute au MÊME aller-retour : c'est
+    //    le discriminant que la SOURCE nomme pour « assigné par le routeur »
+    //    (`07-` §1.5). L'embed `routeur_decisions(bonus)` ne suffirait pas —
+    //    il serait nul aussi bien pour un dépôt du professeur que pour une
+    //    décision supprimée, et la colonne, elle, dit laquelle. ⛔ Aucune
+    //    seconde requête : « un aller-retour Supabase coûte 160-332 ms ».
     .select('id, statut, echeance, assigne_at, v1_remis_at, vf_remis_at, '
-      + 'routeur_decisions(bonus), '
+      + 'routeur_decision_id, routeur_decisions(bonus), '
       + 'exercices!inner(id, lieu, classe_id, consigne_instanciee, modes_par_competence, '
       + 'paire_diagnostic, cran, type_id)')
     .eq('eleve_id', eleveId)
@@ -213,14 +237,32 @@ export async function exercicesMaisonDeLEleve(
 
   const retours = await retoursDesDepots(admin, retenus.map((d) => txt(d.id)))
 
+  // ⭐⭐ C10 · L1 — LA FERMETURE ENTRE ICI, ET LES QUATRE SURFACES SUIVENT. Codex,
+  //    Aletheia, « Ma semaine » et la tuile du tableau de bord lisent TOUTES
+  //    cette liste : une garde posée au site d'appel serait une garde qu'on
+  //    oublie en écrivant le cinquième écran.
+  // ⭐ Deux lectures de plus pour TOUTE la liste, pas une par exercice — et les
+  //    deux sont `cache()`ées par rendu (`lireFuseau`, `cyclesComptesDeLEleve`),
+  //    donc « Ma semaine », qui appelle cette fonction deux fois (Codex ET
+  //    Aletheia), ne les paie qu'une seule.
+  const [fuseau, { cycles }] = await Promise.all([
+    lireFuseau(), cyclesComptesDeLEleve(eleveId),
+  ])
+
   return retenus
     .map((d) => {
       const ex = lig(un(d.exercices))
+      const fermee = estFermee({
+        assigneAt: txt(d.assigne_at),
+        routeurDecisionId: (d.routeur_decision_id as string | null) ?? null,
+        fuseau,
+        cyclesComptes: cycles,
+      })
       return {
         depotId: txt(d.id),
         titre: titreDeLaConsigne(ex.consigne_instanciee),
         echeance: (d.echeance as string | null) ?? null,
-        etat: etatDeLExercice(txt(d.statut), retours.get(txt(d.id)) ?? null),
+        etat: etatDeLExercice(txt(d.statut), retours.get(txt(d.id)) ?? null, fermee),
         href: hrefDuDeroule(atelier, txt(d.id)),
         assigneAt: txt(d.assigne_at),
         competences: competencesDeclarees(ex.modes_par_competence),
@@ -229,6 +271,7 @@ export async function exercicesMaisonDeLEleve(
         //    et c'est juste. Le `un()` déplie l'embed, que PostgREST rend tantôt
         //    objet tantôt tableau selon la cardinalité qu'il déduit.
         bonus: lig(un(d.routeur_decisions)).bonus === true,
+        fermee,
         estUnePaire: ex.paire_diagnostic === true,
         // ⛔ PAR LE NUMÉRO, comme partout ailleurs depuis C4-L11 : la colonne a
         //    porté les deux formes, et `utils/cran.ts` est le SEUL endroit où

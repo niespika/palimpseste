@@ -47,6 +47,12 @@ import { journaliserCollageBloque } from '@/utils/passation/depots'
 import { estUnMoyen, type MoyenDeCollage } from '@/utils/passation/collage'
 import { messageSiBloque } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
+// ⛔ C10 · L1 — la RÈGLE et le MESSAGE vivent sous `utils/`, jamais ici : un
+//    `export type` dans un module `'use server'` tue TOUT le module à
+//    l'exécution, `tsc` et les tests verts (bandeau de fin de fichier).
+import { estFermee, MESSAGE_SEMAINE_FERMEE } from '@/utils/deroule/fermeture'
+import { cyclesComptesDeLEleve } from '@/utils/deroule/fermeture-serveur'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import {
   lireLaPorteDuSignalement, poserLeSignalement, retirerLeSignalement,
 } from '@/utils/signalements/serveur'
@@ -85,6 +91,29 @@ async function portier(depotId: string, ecriture = true): Promise<
     if (blocage) return { erreur: echec(blocage) }
     const gateLecture = await messageSiRetoursNonLus(admin, userId)
     if (gateLecture) return { erreur: echec(gateLecture) }
+    // ⭐⭐ C10 · L1 — LA SEMAINE COMPTÉE SE FERME, et la garde entre ICI, EN UNE
+    //    FOIS, à côté des deux autres. Le portier est appelé par DIX-HUIT des
+    //    vingt actions (mesuré) : la recopier dans chacune, ce serait dix-huit
+    //    occasions d'en oublier une le jour où une vingt-et-unième naîtra.
+    // ⭐ Les six appels `portier(depotId, false)` restent PERMIS par
+    //    construction : ce sont les lectures et les gestes qui portent sur LE
+    //    RETOUR, pas sur l'exercice — `actionValiderLaLecture` (la seule porte
+    //    de sortie d'un exercice fermé), `actionContester`, `actionPointsContestes`,
+    //    `actionSignalerUnProbleme`, `actionRetirerLeSignalement`,
+    //    `actionCompterUneAide`, `actionEtatDeLAttente`. **Contester un retour est
+    //    un droit sur le retour, pas un travail sur l'exercice.**
+    // ⚠️ `actionOuvrir` EST APPELÉE À CHAQUE MONTAGE DE L'ÉCRAN et son refus est
+    //    jeté : ce n'est donc PAS ici que l'élève lit le message. Il le lit
+    //    depuis la VUE (`vue.fermee`). Cette garde est celle de dernier ressort —
+    //    l'onglet resté ouvert depuis dimanche soir, qu'il faut refuser à 18:01
+    //    et non à la prochaine navigation.
+    const { cycles } = await cyclesComptesDeLEleve(userId)
+    if (estFermee({
+      assigneAt: depot.assigne_at,
+      routeurDecisionId: depot.routeur_decision_id,
+      fuseau: await lireFuseau(),
+      cyclesComptes: cycles,
+    })) return { erreur: echec(MESSAGE_SEMAINE_FERMEE) }
   }
   return { admin, userId, depot, delaiVfJours }
 }

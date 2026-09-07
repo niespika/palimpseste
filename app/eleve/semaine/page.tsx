@@ -202,7 +202,13 @@ export default async function SemaineDeLEleve({
   //   appellent aucun et n'en reçoivent aucune. **Même prédicat que la frise**,
   //   et une seule fonction pour les deux, plutôt qu'une copie qui dériverait.
   const aFaire = exercices.filter((e) => actionDeLaLigne(e.ton) !== null)
-  const dejaFait = exercices.filter((e) => actionDeLaLigne(e.ton) === null)
+  // ⛔⛔ C10 · L1 — UN EXERCICE FERMÉ N'EST PAS UN EXERCICE FAIT, et « Déjà fait »
+  //    avec sa pastille verte « fait » le dirait de quelque chose que l'élève
+  //    n'a jamais commencé. Il n'appelle plus de geste — donc il quitte « à
+  //    faire », comme la mission l'exige — mais il a son propre groupe, et son
+  //    propre mot. *Même exigence que la frise : « un décompte réel » (`06-` §5).*
+  const fermes = exercices.filter((e) => e.ton === 'ferme')
+  const dejaFait = exercices.filter((e) => e.ton !== 'ferme' && actionDeLaLigne(e.ton) === null)
 
   const lienDeVue = (v: Vue) => {
     const p = new URLSearchParams()
@@ -386,6 +392,14 @@ export default async function SemaineDeLEleve({
                 )}
 
                 {dejaFait.length > 0 && <DejaFait exercices={dejaFait} />}
+                {fermes.length > 0 && (
+                  <DejaFait
+                    exercices={fermes}
+                    titre="Fermés — la semaine est comptée"
+                    marque="fermé"
+                    tonDeLaMarque="bg-parchemin-fonce text-muet"
+                  />
+                )}
               </>
             ) : (
               <LeBilan bilan={bilan} manque={manque} exercices={exercices} />
@@ -615,14 +629,29 @@ function RangDExercice({ e, ouvert, fuseau, maintenant }: {
  *   `<details>` natif : pas d'état client, pas d'hydratation, et le contenu
  *   reste dans le document, donc trouvable au `Ctrl+F` du navigateur.
  */
-function DejaFait({ exercices }: { exercices: ExerciceDeLaSemaine[] }) {
+/**
+ * ⭐ C10 · L1 — LE MÊME REPLI SERT DEUX GROUPES, et c'est le mot qui change, pas
+ *    la forme : « Déjà fait / fait » pour ce qui a été rendu, « Fermés /
+ *    fermé » pour ce que la semaine comptée a arrêté. Deux composants jumeaux
+ *    seraient deux écrans à tenir d'accord.
+ * ⛔ Dans les deux cas la carte EST le lien — la consigne, la réponse et le
+ *    retour restent lisibles — et il n'y a AUCUN bouton : `actionDeLaLigne` rend
+ *    `null` pour `clos` comme pour `ferme`.
+ */
+function DejaFait({ exercices, titre = 'Déjà fait', marque = 'fait',
+  tonDeLaMarque = 'bg-ok-teinte text-ok' }: {
+  exercices: ExerciceDeLaSemaine[]
+  titre?: string
+  marque?: string
+  tonDeLaMarque?: string
+}) {
   return (
     <details className="group">
       <summary className="flex min-h-[48px] cursor-pointer list-none items-center gap-3
                           rounded-xl bg-parchemin-fonce px-4 py-3">
         <span aria-hidden className="text-xs text-muet group-open:hidden">▸</span>
         <span aria-hidden className="hidden text-xs text-muet group-open:inline">▾</span>
-        <span className="flex-1 font-ui text-[15px] font-semibold text-encre-douce">Déjà fait</span>
+        <span className="flex-1 font-ui text-[15px] font-semibold text-encre-douce">{titre}</span>
         <span className="font-ui text-sm text-muet">{exercices.length}</span>
       </summary>
       <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -635,9 +664,9 @@ function DejaFait({ exercices }: { exercices: ExerciceDeLaSemaine[] }) {
               <span className="block truncate font-corps text-[15px] text-encre-douce">{e.titre}</span>
               <span className="block font-ui text-xs text-muet-clair">{e.libelle}</span>
             </span>
-            <span className="shrink-0 rounded-full bg-ok-teinte px-2.5 py-1 font-ui text-[11px]
-                             font-semibold uppercase tracking-[0.04em] text-ok">
-              fait
+            <span className={`shrink-0 rounded-full px-2.5 py-1 font-ui text-[11px]
+                             font-semibold uppercase tracking-[0.04em] ${tonDeLaMarque}`}>
+              {marque}
             </span>
           </Link>
         ))}
@@ -756,7 +785,7 @@ function marqueDuBilan(b: Bilan): MarqueDuBilan {
 
 function LeBilan({ bilan, manque, exercices }: {
   bilan: Bilan[]
-  manque: { copiesNonMesurees: number; incomplet: boolean }
+  manque: { copiesNonMesurees: number; nonFaits: number; incomplet: boolean }
   exercices: ExerciceDeLaSemaine[]
 }) {
   const mesurees = bilan.filter((b) => marqueDuBilan(b) !== null)
@@ -787,12 +816,28 @@ function LeBilan({ bilan, manque, exercices }: {
       {/* ⛔⛔ UNE COPIE NON MESURÉE N'A NI RÉUSSITE NI ÉCART, ET LE SILENCE EST
           UN MENSONGE : le bilan DIT ce qui manque, et il le dit EN ENTIER —
           « ce bilan ne la compte pas encore » est la moitié qui compte. */}
-      {manque.incomplet && (
+      {manque.copiesNonMesurees > 0 && (
         <p className="mb-4 rounded-xl border border-attention/40 bg-attention-teinte p-3.5
                       font-corps text-[15px] leading-snug text-encre">
           {manque.copiesNonMesurees === 1
             ? 'Une de tes copies n’a pas encore été corrigée : ce bilan ne la compte pas encore.'
             : `${manque.copiesNonMesurees} de tes copies n’ont pas encore été corrigées : ce bilan ne les compte pas encore.`}
+        </p>
+      )}
+
+      {/* ⭐⭐ C10 · L1 — UN VIDE S'EXPLIQUE. Ce bilan s'ouvre parce que la semaine
+          a été comptée, PAS parce que tout a été fait : le taire ferait un bilan
+          qui ment par omission — et l'élève lirait « rien n'a été mesuré » sans
+          savoir pourquoi. ⛔ UNE PHRASE, PAS UN TABLEAU : ni taux, ni liste, ni
+          reproche — « un onglet qui range des exercices n'est pas un endroit où
+          l'on découvre son niveau », et les agrégats d'assiduité sont ceux du
+          professeur (`06-` §5). On dit un nombre, et ce qu'il change. */}
+      {manque.nonFaits > 0 && (
+        <p className="mb-4 rounded-xl border border-bordure bg-surface p-3.5
+                      font-corps text-[15px] leading-snug text-encre-douce">
+          {manque.nonFaits === 1
+            ? 'Un exercice de cette semaine n’a pas été fait : il est fermé, et ce bilan ne dit rien de lui.'
+            : `${manque.nonFaits} exercices de cette semaine n’ont pas été faits : ils sont fermés, et ce bilan ne dit rien d’eux.`}
         </p>
       )}
 

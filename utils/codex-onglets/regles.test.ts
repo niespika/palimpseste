@@ -223,3 +223,59 @@ describe("l'état d'un examen DE CLASSE — ce que la tuile « à faire » filtr
     assert.equal(etatDExamenDeClasse('abandonne', null).libelle, 'abandonné')
   })
 })
+
+// ════════════════════════════════════════════════════════════════════════════
+// C10 · L1 — LA SEMAINE COMPTÉE SE FERME : ce que le TON devient
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('C10-L1 — `etatDeLExercice` et la fermeture', () => {
+  test('⭐ fermés, `assigne` et `ouvert` se lisent « fermé » — et EUX SEULS', () => {
+    assert.deepEqual(etatDeLExercice('assigne', null, true), { ton: 'ferme', libelle: 'fermé' })
+    assert.deepEqual(etatDeLExercice('ouvert', null, true), { ton: 'ferme', libelle: 'fermé' })
+  })
+
+  test('⛔⛔ L\'OBLIGATION DE LECTURE PASSE DEVANT — un retour publié non lu, même fermé, reste « à lire »', () => {
+    // C'est la première ligne de la fonction, et elle cite le `06-` §2 temps 6 :
+    // « il se clôt par la validation "lu" ». La lecture reste due, elle reste
+    // POSSIBLE, et c'est la seule porte de sortie de l'exercice fermé — c'est
+    // aussi elle qui continue de retenir le bilan, comme `C6-L2` l'a écrit.
+    const nonLu = { publie: true, lu: false }
+    assert.deepEqual(etatDeLExercice('retour_publie', nonLu, true),
+      { ton: 'a_lire', libelle: 'retour à lire' })
+    // ⚠️ Et même sur un `assigne` : si un retour publié non lu existe, il gagne.
+    assert.equal(etatDeLExercice('assigne', nonLu, true).ton, 'a_lire')
+  })
+
+  test('⛔ un `v1_remis` fermé reste `attente` — « rendu, retour en préparation » est VRAI', () => {
+    // Le retour d'une v1 déjà remise continue d'arriver APRÈS la fermeture : la
+    // garde porte sur les gestes de l'élève, jamais sur la file ni sur la
+    // chaîne. « Fermé sans retour » est à `C9`, et ce lot ne le fabrique pas.
+    assert.deepEqual(etatDeLExercice('v1_remis', null, true),
+      { ton: 'attente', libelle: 'rendu — retour en préparation' })
+  })
+
+  test('les statuts déjà terminés ne bougent pas d\'un mot sous la fermeture', () => {
+    for (const statut of ['clos', 'abandonne', 'non_fait', 'vf_remis']) {
+      assert.deepEqual(etatDeLExercice(statut, null, true), etatDeLExercice(statut, null, false),
+        `le statut ${statut} ne doit pas changer`)
+    }
+  })
+
+  test('⭐ SANS fermeture, rien ne change — le défaut du paramètre protège tous les appelants', () => {
+    for (const statut of ['assigne', 'ouvert', 'v1_remis', 'retour_publie', 'vf_remis',
+      'clos', 'abandonne', 'non_fait', 'inconnu']) {
+      assert.deepEqual(etatDeLExercice(statut, null), etatDeLExercice(statut, null, false),
+        `le statut ${statut} sans fermeture`)
+    }
+    assert.equal(etatDeLExercice('assigne', null).ton, 'a_faire')
+  })
+
+  test('`ferme` ferme la liste : il se trie APRÈS tout le reste', () => {
+    const tons: Array<Parameters<typeof comparerLignes>[0]['ton']> = ['ferme', 'clos', 'attente', 'en_cours', 'a_faire', 'a_lire']
+    const tries = [...tons]
+      .map((ton) => ({ ton, echeance: null }))
+      .sort(comparerLignes)
+      .map((l) => l.ton)
+    assert.deepEqual(tries, ['a_lire', 'a_faire', 'en_cours', 'attente', 'clos', 'ferme'])
+  })
+})

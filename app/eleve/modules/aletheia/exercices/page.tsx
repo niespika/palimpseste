@@ -48,6 +48,8 @@ const PASTILLE: Record<TonEtat, string> = {
   en_cours: 'bg-info-teinte text-info',
   attente:  'bg-parchemin-fonce text-muet',
   clos:     'bg-parchemin-fonce text-muet',
+  // C10 · L1 — fermé : le même gris que les terminés, sans jeton d'alerte.
+  ferme:    'bg-parchemin-fonce text-muet',
 }
 
 export default async function ExercicesAletheiaElevePage() {

@@ -73,7 +73,7 @@ type EncartDeLangue = VueDuDeroule['langue']
  */
 export function RetourSegmente({
   depotId, retour, vue, titre, onRenvoi, renvoiActif = null, nu = false, parPages = false,
-  apresLecture = null, ancien = null,
+  apresLecture = null, ancien = null, fermee = false,
 }: {
   depotId: string
   retour: RetourServi
@@ -93,6 +93,18 @@ export function RetourSegmente({
   apresLecture?: React.ReactNode
   /** Le retour précédent, replié sur la dernière page (le chaud, quand le final est là). */
   ancien?: React.ReactNode
+  /**
+   * ⭐⭐ C10 · L1 — LA SEMAINE DE CET EXERCICE EST COMPTÉE. Un seul effet, et il
+   *    est sur UNE PHRASE : celle qui dit POURQUOI valider sa lecture.
+   *    ⛔ Sur un exercice fermé, « tant que tu ne l'as pas fait, tu ne peux rien
+   *    rendre d'autre » est FAUX deux fois — l'élève ne peut plus rien rendre sur
+   *    cette semaine de toute façon, et la vraie raison est ailleurs : **c'est la
+   *    lecture qui referme la semaine et ouvre le bilan** (`06-` §2, temps 6 ;
+   *    `C6-L2`). *Sans elle, un élève qui n'ouvre jamais son retour n'a jamais son
+   *    bilan — déjà vrai avant ce lot, mais la fermeture le rend visible sur une
+   *    semaine morte, où l'élève ne reviendra peut-être pas.*
+   */
+  fermee?: boolean
 }) {
   // ⚠️ Le parent peut rendre CE composant deux fois — le retour chaud, puis le
   //    retour final. L'encart de langue, lui, est UN relevé, fait sur la v1,
@@ -254,7 +266,7 @@ export function RetourSegmente({
         {pageCourante === derniere && (
           <>
             {porteLEncartDeLangue && <EncartLangue langue={vue.langue} />}
-            <ValidationDeLecture depotId={depotId} retour={retour} />
+            <ValidationDeLecture depotId={depotId} retour={retour} fermee={fermee} />
             {retour.luLe && apresLecture}
             {ancien}
             {/* Le chemin arrière, EN DERNIER — sous la validation et la reprise. */}
@@ -312,7 +324,7 @@ export function RetourSegmente({
 
       {porteLEncartDeLangue && <EncartLangue langue={vue.langue} />}
 
-      <ValidationDeLecture depotId={depotId} retour={retour} />
+      <ValidationDeLecture depotId={depotId} retour={retour} fermee={fermee} />
     </div>
   )
 }
@@ -574,8 +586,8 @@ function EncartLangue({ langue }: { langue: EncartDeLangue }) {
  *    rendus ». On le dit à l'élève, sinon le bouton n'a l'air de servir à rien.
  */
 function ValidationDeLecture({
-  depotId, retour,
-}: { depotId: string; retour: RetourServi }) {
+  depotId, retour, fermee = false,
+}: { depotId: string; retour: RetourServi; fermee?: boolean }) {
   const router = useRouter()
   const [enCours, setEnCours] = useState(false)
   const [reponse, setReponse] = useState<Reponse | null>(null)
@@ -603,8 +615,12 @@ function ValidationDeLecture({
   return (
     <div className="rounded-lg border border-bordure bg-surface p-4">
       <p className="text-sm text-encre-douce">
-        <strong>Il te reste à valider ta lecture.</strong> Tant que tu ne l’as pas fait, tu ne
-        peux rien rendre d’autre — c’est la seule chose qu’elle bloque.
+        <strong>Il te reste à valider ta lecture.</strong>{' '}
+        {fermee
+          ? 'C’est le dernier geste de cet exercice : une fois ton retour lu, le bilan de la '
+            + 'semaine s’ouvre.'
+          : 'Tant que tu ne l’as pas fait, tu ne peux rien rendre d’autre — c’est la seule '
+            + 'chose qu’elle bloque.'}
       </p>
       <button
         type="button"

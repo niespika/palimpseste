@@ -22,7 +22,7 @@ const ex = (
 ): ExerciceDeLaSemaine => ({
   depotId, titre: `Exercice ${depotId}`, echeance: null, assigneAt: '2026-09-14T08:00:00Z',
   atelier: 'codex', href: `/eleve/modules/codex/exercice/${depotId}`,
-  ton, libelle: ton, competences, bonus,
+  ton, libelle: ton, competences, bonus, fermee: ton === 'ferme',
 })
 
 const etat = (code: string, acquis: boolean, sansTaux = false): EtatObservable => ({
@@ -194,7 +194,7 @@ describe('C6-L2 · une copie non mesurée — « le silence est un mensonge »',
 
   test('⭐ tout mesuré : le bilan est complet et le dit', () => {
     const q = ceQuiManqueAuBilan([ex('1', 'clos'), ex('2', 'attente')], new Set(['1', '2']))
-    assert.deepEqual(q, { copiesNonMesurees: 0, incomplet: false })
+    assert.deepEqual(q, { copiesNonMesurees: 0, nonFaits: 0, incomplet: false })
   })
 })
 
@@ -371,7 +371,7 @@ describe('`dedoublonnerParDepot` — le bi-classe n\'a qu\'une semaine', () => {
   const ex = (depotId: string, p: Record<string, unknown> = {}) => ({
     depotId, titre: 't', echeance: null, assigneAt: '2026-08-31T12:00:00Z',
     atelier: 'codex' as const, href: '/x', ton: 'a_faire' as const, libelle: 'l',
-    competences: ['expression'], bonus: false, ...p,
+    competences: ['expression'], bonus: false, fermee: false, ...p,
   })
 
   test('⛔ LE CAS RÉEL — une instance SANS CLASSE revenait une fois PAR INSCRIPTION', () => {
@@ -402,5 +402,78 @@ describe('`dedoublonnerParDepot` — le bi-classe n\'a qu\'une semaine', () => {
 
   test('une liste vide reste vide', () => {
     assert.deepEqual(dedoublonnerParDepot([]), [])
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⭐ C10 · L1 — L'ARBITRAGE DU LOT : le bilan s'ouvre sur les NON FAITS, et
+//     un retour publié NON LU continue de le retenir.
+// ----------------------------------------------------------------------------
+// Deux phrases avaient l'air de se contredire, et elles ne parlent pas des mêmes
+// exercices :
+//   · la mission de `C10-L1` — « le bilan de la semaine s'ouvre, même sur des
+//     exercices NON FAITS » : `a_faire` et `en_cours`, jamais rendus ;
+//   · `C6-L2`, mesuré et écrit — « un dépôt rendu dont le retour est publié mais
+//     non lu attend encore un geste, et RETIENT LE BILAN […] La semaine ne se
+//     referme donc jamais sur un retour que l'élève n'a pas ouvert. »
+// Un retour publié non lu n'est pas un exercice non fait : c'est un exercice
+// RENDU, CORRIGÉ, dont l'élève n'a pas ouvert le retour. Les deux tiennent.
+// ⛔ L'autre lecture — « le bilan s'ouvre quels que soient les tons » — annulerait
+//    en silence une règle trouvée en recette. Elle est à Louis, pas à ce lot.
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('C10-L1 — la fermeture et le bilan', () => {
+  test('⭐ un `a_faire` FERMÉ n\'appelle plus de geste : le bilan s\'ouvre', () => {
+    assert.equal(momentDeLaSemaine([ex('1', 'a_faire'), ex('2', 'clos')]), 'recapitulatif')
+    assert.equal(momentDeLaSemaine([ex('1', 'ferme'), ex('2', 'clos')]), 'bilan')
+  })
+
+  test('⭐ une semaine ENTIÈREMENT non faite, une fois fermée, ouvre son bilan', () => {
+    assert.equal(momentDeLaSemaine([ex('1', 'ferme'), ex('2', 'ferme')]), 'bilan')
+  })
+
+  test('⛔⛔ MAIS un retour publié NON LU retient le bilan, fermé ou non — `C6-L2` survit intacte', () => {
+    assert.equal(momentDeLaSemaine([ex('1', 'ferme'), ex('2', 'a_lire')]), 'recapitulatif')
+  })
+
+  test('⭐ et la LECTURE est la porte de sortie : lue, le dépôt devient `clos`, le bilan s\'ouvre', () => {
+    assert.equal(momentDeLaSemaine([ex('1', 'ferme'), ex('2', 'clos')]), 'bilan')
+  })
+
+  test('⭐ un BONUS fermé ne retient pas le bilan — et ne l\'ouvre pas non plus', () => {
+    // `momentDeLaSemaine` se lit sur la semaine IMPOSÉE (`C6-L3`).
+    assert.equal(momentDeLaSemaine([ex('b', 'ferme', ['argumentation'], true)]), 'vide')
+    assert.equal(
+      momentDeLaSemaine([ex('1', 'ferme'), ex('b', 'a_faire', ['argumentation'], true)]),
+      'bilan',
+    )
+  })
+})
+
+describe('C10-L1 — la frise et le bilan ne mentent pas sur ce qui n\'a pas été fait', () => {
+  test('⛔⛔ LA FRISE NE COMPTE PAS UN FERMÉ COMME UN FAIT — « un décompte réel » (`06-` §5)', () => {
+    // Sans cette clause, la fermeture ferait passer la frise de « 1 sur 3 » à
+    // « 3 sur 3 » le lundi à 18 h, sans que l'élève ait rien fait.
+    const f = friseDeLaSemaine([ex('1', 'clos'), ex('2', 'ferme'), ex('3', 'ferme')])
+    assert.equal(f.total, 3)
+    assert.equal(f.faits, 1, 'un seul exercice a réellement été fait')
+    assert.deepEqual(f.cases, [true, false, false])
+  })
+
+  test('⭐ le bilan COMPTE les non-faits, et ne les prend pas pour des copies à corriger', () => {
+    // « Une de tes copies n'a pas encore été corrigée » serait faux d'un
+    // exercice jamais rendu : un vide s'explique, mais avec le bon mot.
+    const q = ceQuiManqueAuBilan(
+      [ex('1', 'clos'), ex('2', 'ferme'), ex('3', 'ferme'), ex('4', 'attente')],
+      new Set(['1']),
+    )
+    assert.equal(q.nonFaits, 2, 'deux exercices fermés sans avoir été rendus')
+    assert.equal(q.copiesNonMesurees, 1, 'et une seule copie rendue attend sa mesure')
+    assert.equal(q.incomplet, true)
+  })
+
+  test('⭐ une semaine fermée dont tout était fait et mesuré ne signale RIEN', () => {
+    const q = ceQuiManqueAuBilan([ex('1', 'clos'), ex('2', 'clos')], new Set(['1', '2']))
+    assert.deepEqual(q, { copiesNonMesurees: 0, nonFaits: 0, incomplet: false })
   })
 })

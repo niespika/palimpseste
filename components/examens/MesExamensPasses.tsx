@@ -31,6 +31,12 @@ const TON: Record<TonEtat, string> = {
   en_cours: 'bg-info-teinte text-info',
   attente:  'bg-parchemin-fonce text-muet',
   clos:     'bg-parchemin-fonce text-muet',
+  // ⚠️ C10 · L1 — INATTEIGNABLE ICI, et c'est voulu. Un examen de CLASSE n'est
+  //    jamais fermé par ce lot : il n'a aucune décision de routeur, et
+  //    `etatDeClasse` ne connaît même pas la fermeture. La case existe parce que
+  //    `Record<TonEtat, …>` est exhaustive — la laisser vide ne compilerait pas,
+  //    et l'omettre un jour ferait disparaître des lignes en silence.
+  ferme:    'bg-parchemin-fonce text-muet',
 }
 
 export default function MesExamensPasses({ examens }: { examens: ExamenDeClasse[] }) {

@@ -52,6 +52,15 @@ export interface DepotMaison {
   exercice_id: string
   statut: string
   echeance: string | null
+  /**
+   * ⭐⭐ C10 · L1 — L'INSTANT DE L'ASSIGNATION, et c'est le SEUL chemin vers la
+   *    SEMAINE d'un dépôt : « le rattachement d'un dépôt à sa semaine se dérive
+   *    d'`assigne_at`, et il n'a pas de colonne » (`07-` §1.1). `not null` en
+   *    base, jamais réécrit à la ré-assignation.
+   *    ⚠️ Il se lit par `lundiDuCycle(instant, fuseau)`, JAMAIS en UTC — « un
+   *       dépôt du dimanche 20 h 30 à Toronto est le lundi 00 h 30 UTC ».
+   */
+  assigne_at: string
   texte_v1: string | null
   texte_vf: string | null
   confiance_declaree: Record<string, string> | null
@@ -99,7 +108,7 @@ export interface DepotMaison {
 }
 
 const CHAMPS =
-  'id, eleve_id, exercice_id, statut, echeance, texte_v1, texte_vf, '
+  'id, eleve_id, exercice_id, statut, echeance, assigne_at, texte_v1, texte_vf, '
   + 'confiance_declaree, conditions_declarees, restitution_a_chaud, motif_depassement, '
   + 'ouvert_at, v1_remis_at, vf_remis_at, juger_debut_at, juger_fin_at, duree_taguee, '
   + 'collages_bloques, saisie_telemetrie, aide_consommee, routeur_decision_id, '

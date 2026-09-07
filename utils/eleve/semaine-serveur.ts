@@ -13,12 +13,25 @@ import 'server-only'
 //       `competences` —, tous deux déjà lus par sa requête. C'est un
 //       élargissement de ce qu'elle REND, jamais une seconde liste.
 //
-// ⛔⛔ `assiduite_hebdo` NE SE LIT PAS ICI, ET ELLE NE LE POURRA JAMAIS. Son
-//    écrivain est un cron HEBDOMADAIRE (C4-L13) qui compte UNE SEMAINE CLOSE —
-//    premier comptage réel le lundi 2026-09-07 —, et elle est VIDE dans les deux
-//    bases au 28/08. **La frise de la semaine EN COURS compte les dépôts, en
-//    direct.** ⚠️ Et ses trois colonnes de minutes sont AU PROFESSEUR : « pas de
-//    budget-temps hebdomadaire » (`06-` §2).
+// ⚠️⚠️ AMENDÉ LE 2026-09-07 PAR `C10-L1`, ET DÉLIBÉRÉMENT — le paragraphe qui
+//    suit portait « ⛔⛔ `assiduite_hebdo` NE SE LIT PAS ICI, ET ELLE NE LE POURRA
+//    JAMAIS ». Il avait raison, et il était DATÉ : il parlait de la table VIDE
+//    dans les deux bases au 28/08, et de LA FRISE DE LA SEMAINE EN COURS, qui
+//    compte les dépôts en direct. Le comptage qu'il annonçait a eu lieu — le
+//    premier tombe le lundi 2026-09-07 à 18:00 UTC —, et `C10-L1` lit la ligne
+//    d'une **semaine PASSÉE** pour en dériver une fermeture.
+//    ⭐ Ce qui reste vrai, mot pour mot :
+//      · **la frise de la semaine EN COURS ne lit toujours pas cette table** —
+//        elle compte les dépôts, en direct, et la ligne de la semaine courante
+//        n'existe jamais (« seule l'écoulée est en base ») ;
+//      · **ses trois colonnes de minutes sont AU PROFESSEUR** : « pas de
+//        budget-temps hebdomadaire » (`06-` §2) — `C10-L1` ne lit QUE
+//        `cycle_lundi`, et **n'écrit rien** (la ligne est partagée avec `C4-L12`) ;
+//      · **elle ne se lit toujours pas DANS CE FICHIER** : la lecture vit dans
+//        `utils/deroule/fermeture-serveur.ts`, appelée par le producteur unique
+//        `exercicesMaisonDeLEleve` — un seul aller-retour, `cache()`é par rendu,
+//        et en SERVICE-ROLE (la table n'a aucune policy élève : lue autrement,
+//        elle rend zéro ligne SANS erreur, et plus rien ne se fermerait jamais).
 //
 // ⚠️ UN CYCLE EST UNE SEMAINE DE LUNDI À DIMANCHE **DANS LE FUSEAU DE L'ÉCOLE**.
 //    On ne recalcule pas un lundi à la main : `lundiDuCycle(instant, fuseau)`.
@@ -107,7 +120,8 @@ export async function chargerLaSemaineDeLEleve(
     cycleLundi, porteOuverte: false, moment: 'vide', exercices: [],
     frise: { cases: [], faits: 0, total: 0, enPlus: { faits: 0, total: 0 } },
     recapitulatif: [], bilan: [],
-    manque: { copiesNonMesurees: 0, incomplet: false }, ecartAuTroisDuSixC: 0, incidents,
+    manque: { copiesNonMesurees: 0, nonFaits: 0, incomplet: false },
+    ecartAuTroisDuSixC: 0, incidents,
   }
 
   // ⛔ LA PORTE EST LUE ICI AUSSI, ET C'EST VOULU : `exercicesMaisonDeLEleve` la
@@ -137,6 +151,10 @@ export async function chargerLaSemaineDeLEleve(
       competences: e.competences,
       // ⭐ C6-L3 — la marque, lue au JOURNAL par `exercicesMaisonDeLEleve`.
       bonus: e.bonus,
+      // ⭐⭐ C10-L1 — la fermeture est DÉRIVÉE par le producteur unique, jamais
+      //    recalculée ici : deux dérivations divergeraient, et celle-ci serait
+      //    la seconde.
+      fermee: e.fermee,
     })))
   // ⛔ LE DÉDOUBLONNAGE ENVELOPPE LA CHAÎNE, DONC IL PRÉCÈDE TOUT CALCUL — la
   //    frise, le récapitulatif, le bilan et « ce qui manque » comptent tous sur
@@ -228,7 +246,7 @@ export async function chargerLaSemaineDeLEleve(
 
   const manque = moment === 'bilan'
     ? ceQuiManqueAuBilan(deLaSemaine, await depotsMesures(admin, eleveId, incidents))
-    : { copiesNonMesurees: 0, incomplet: false }
+    : { copiesNonMesurees: 0, nonFaits: 0, incomplet: false }
 
   return {
     cycleLundi, porteOuverte: true, moment, exercices: deLaSemaine, frise,

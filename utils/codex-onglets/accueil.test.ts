@@ -26,7 +26,7 @@ const MAINTENANT = '2026-09-07T12:00:00Z'
 function ligne(p: Partial<ExerciceMaison> & { etat: ExerciceMaison['etat'] }): ExerciceMaison {
   return {
     depotId: 'd', titre: 'Un exercice', echeance: null, href: '/x',
-    assigneAt: '2026-09-07T00:00:00Z', competences: [], bonus: false,
+    assigneAt: '2026-09-07T00:00:00Z', competences: [], bonus: false, fermee: false,
     estUnePaire: false, cran: null, typeId: 't', v1RemiseLe: null, vfRemiseLe: null,
     ...p,
   }

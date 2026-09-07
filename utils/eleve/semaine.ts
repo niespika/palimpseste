@@ -64,6 +64,15 @@ export interface ExerciceDeLaSemaine {
    *    (élève × exercice).
    */
   bonus: boolean
+  /**
+   * ⭐⭐ C10 · L1 — LA SEMAINE DE CET EXERCICE A ÉTÉ COMPTÉE. Le `ton` ne suffit
+   *    pas à le dire partout : un `retour_publie` non lu FERMÉ reste `a_lire`
+   *    (sa lecture est due, et c'est la seule porte de sortie), un `v1_remis`
+   *    fermé reste `attente`. Seuls les DEUX statuts du non-rendu prennent le
+   *    ton `ferme`. La frise et le bilan ont besoin du fait, pas seulement de sa
+   *    conséquence.
+   */
+  fermee: boolean
 }
 
 // ⛔ AUCUNE DURÉE PAR EXERCICE SUR CET ÉCRAN, ET C'EST UN CHOIX MOTIVÉ.
@@ -171,7 +180,14 @@ export interface Frise {
  *    ici ferait de l'écran de l'élève un tableau de bord de conformité.
  */
 export function friseDeLaSemaine(exercices: readonly ExerciceDeLaSemaine[]): Frise {
-  const fait = (e: ExerciceDeLaSemaine) => !APPELLE_UN_GESTE.includes(e.ton)
+  // ⛔⛔ C10 · L1 — UN EXERCICE FERMÉ SANS AVOIR ÉTÉ RENDU N'EST PAS UN FAIT, et
+  //    le prédicat « n'appelle plus de geste » le dirait. Sans cette clause, la
+  //    fermeture ferait passer la frise de « 3 sur 5 » à « 5 sur 5 » le lundi à
+  //    18 h, sans que l'élève ait rien fait — et « faits sur total » est un
+  //    DÉCOMPTE RÉEL (`06-` §5), le seul nombre que cet écran ait le droit de
+  //    montrer. La case reste FAUSSE : elle dit la semaine telle qu'elle a été.
+  const fait = (e: ExerciceDeLaSemaine) =>
+    e.ton !== 'ferme' && !APPELLE_UN_GESTE.includes(e.ton)
   const cases = exercices.filter((e) => !e.bonus).map(fait)
   const enPlus = exercices.filter((e) => e.bonus).map(fait)
   return {
@@ -407,7 +423,16 @@ export function bilanDeLaCompetence(
 export interface CeQuiManqueAuBilan {
   /** Les dépôts rendus dont AUCUNE mesure n'est encore écrite. */
   copiesNonMesurees: number
-  /** Vrai dès qu'il en reste une : l'écran doit le DIRE. */
+  /**
+   * ⭐⭐ C10 · L1 — LES EXERCICES QUE LA SEMAINE A FERMÉS SANS QU'ILS SOIENT
+   *    RENDUS. **Un vide s'explique** : la fermeture ouvre le bilan d'une
+   *    semaine où il manque du travail, et taire ce manque en ferait un bilan
+   *    qui ment par omission. ⛔ Ils ne rejoignent PAS `copiesNonMesurees` : une
+   *    copie non mesurée attend une correction — celle-ci n'a jamais été écrite,
+   *    et « ta copie n'a pas encore été corrigée » serait faux.
+   */
+  nonFaits: number
+  /** Vrai dès qu'il manque quelque chose — une mesure OU un travail. */
   incomplet: boolean
 }
 
@@ -415,9 +440,15 @@ export interface CeQuiManqueAuBilan {
 export function ceQuiManqueAuBilan(
   exercices: readonly ExerciceDeLaSemaine[], depotsMesures: ReadonlySet<string>,
 ): CeQuiManqueAuBilan {
-  const rendus = exercices.filter((e) => !APPELLE_UN_GESTE.includes(e.ton))
+  const nonFaits = exercices.filter((e) => e.ton === 'ferme').length
+  const rendus = exercices.filter((e) =>
+    e.ton !== 'ferme' && !APPELLE_UN_GESTE.includes(e.ton))
   const nonMesurees = rendus.filter((e) => !depotsMesures.has(e.depotId)).length
-  return { copiesNonMesurees: nonMesurees, incomplet: nonMesurees > 0 }
+  return {
+    copiesNonMesurees: nonMesurees,
+    nonFaits,
+    incomplet: nonMesurees > 0 || nonFaits > 0,
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

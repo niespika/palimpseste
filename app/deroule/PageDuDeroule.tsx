@@ -34,6 +34,7 @@ import { garderEleveDeroule } from '@/utils/deroule/acces'
 import { chargerLeDeroule } from '@/utils/deroule/vue'
 import { EcranDeroule } from '@/components/deroule/EcranDeroule'
 import { ExerciceEnRevision } from '@/components/deroule/ExerciceEnRevision'
+import { ExerciceFerme } from '@/components/deroule/ExerciceFerme'
 import { exerciceEnRevision } from '@/utils/signalements/serveur'
 import type { Atelier } from '@/utils/codex-onglets/regles'
 
@@ -68,6 +69,13 @@ export async function PageDuDeroule(
   for (const a of vue.avertissements) {
     console.warn(`[deroule] dépôt ${depotId} — ${a}`)
   }
+
+  // ⭐⭐ C10 · L1 — LA SEMAINE COMPTÉE SE FERME. La charge est DÉJÀ réduite au
+  //    chargeur (`vueFermee`) : cet aiguillage ne cache rien, il rend l'écran qui
+  //    correspond à ce qui reste. ⛔ Il vient APRÈS `notFound` et AVANT
+  //    `EcranDeroule` — `EcranDeroule` appelle `actionOuvrir` au montage, et un
+  //    exercice fermé n'a rien à ouvrir.
+  if (vue.fermee) return <ExerciceFerme vue={vue} atelier={atelier} />
 
   // ⭐ HANDOFF « Codex Exercices (élève) » §4 — LE LIEN DE RETOUR EST DESCENDU
   //    DANS LA BARRE DE CONTENU de l'écran, et il nomme sa destination :

@@ -53,6 +53,12 @@ const GROUPE: Record<TonEtat, Groupe> = {
   attente: 'en_attente',
   a_lire: 'en_attente',
   clos: 'termines',
+  // ⭐⭐ C10 · L1 — UN EXERCICE FERMÉ QUITTE « À FAIRE », et c'est l'effet 3 de
+  //    la mission. Il rejoint les terminés parce que c'est là que vivent les
+  //    lignes qui n'appellent plus de geste — « leur carte EST le lien (tu peux
+  //    les relire), sans bouton qui appellerait un geste ». Son libellé, lui,
+  //    dit la vérité : « fermé », jamais « terminé ».
+  ferme: 'termines',
 }
 
 export interface AccueilGroupe {
@@ -121,7 +127,11 @@ export function actionDeLaLigne(ton: TonEtat): ActionDeLigne | null {
     case 'a_lire':   return { libelle: 'Ouvrir', plein: false }
     // ⛔ L'attente n'offre rien, et les terminés non plus : leur carte EST le
     //    lien (« tu peux les relire »), sans bouton qui appellerait un geste.
+    // ⛔⛔ C10 · L1 — ET UN EXERCICE FERMÉ NON PLUS : « il se lit "fermé", SANS
+    //    BOUTON ». La consigne reste cliquable — elle mène à la vue fermée, qui
+    //    porte sa réponse et son retour —, mais plus rien n'appelle un geste.
     case 'attente':
+    case 'ferme':
     case 'clos':     return null
   }
 }

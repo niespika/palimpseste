@@ -29,6 +29,8 @@ import { mettreEnTete, observableDeLaCle } from '../chaine/cle'
 import { fenetreDEvidence } from '../chaine/mesures'
 import { etatCompetence, valeursDesParametres } from '../chaine/instruments'
 import { lireFuseau } from '../fuseau-serveur'
+import { estFermee, vueFermee } from './fermeture'
+import { cyclesComptesDeLEleve } from './fermeture-serveur'
 import type { Mesure } from '../routeur/mesure'
 
 import { lireLaPorteDuSignalement, lireLeSignalementDuDepot,
@@ -160,6 +162,22 @@ export interface VueDuDeroule {
   depotId: string
   /** Ouvert = `exercices_actif`. Faux, l'écran se ferme poliment. */
   ouvert: boolean
+  /**
+   * ⭐⭐ C10 · L1 — LA SEMAINE DE CET EXERCICE A ÉTÉ COMPTÉE : il ne se travaille
+   *    plus. **C'est un fait DÉRIVÉ à chaque lecture**, jamais un statut, jamais
+   *    une colonne — la ligne `assiduite_hebdo (élève, cycle d'`assigne_at`)`
+   *    existe (`utils/deroule/fermeture.ts`).
+   *
+   * ⛔ IL NE SE LOGE PAS DANS `ouvert`, qui porte déjà l'interrupteur
+   *    `exercices_actif` : deux causes sous un drapeau, et le message de la
+   *    fermeture s'afficherait le jour où le professeur éteint le module.
+   *
+   * ⭐ Quand il est vrai, la charge servie a DÉJÀ été réduite par `vueFermee` —
+   *    matériau, candidats, distracteurs et zones sont **absents**, pas masqués.
+   *    L'écran s'appuie dessus pour rendre la vue en lecture seule ; le refus des
+   *    gestes, lui, vit au portier des actions et ne dépend pas de ce champ.
+   */
+  fermee: boolean
   /**
    * ⭐ 01/09 — LE RELEVÉ DE SAISIE DÉJÀ EN BASE, par version. Le champ de
    * rédaction s'en SÈME à l'ouverture et porte ensuite le relevé cumulé :
@@ -913,8 +931,23 @@ export async function chargerLeDeroule(
   const sujet = await sujetDeLExercice(admin, depot)
 
   const temps = tempsServis(regime)
-  return {
-    depotId, ouvert: a.ouvert,
+
+  // ── C10 · L1 : la semaine de cet exercice a-t-elle été comptée ? ──────────
+  // ⭐ UNE SEULE REQUÊTE, ICI, POUR TOUT L'ÉCRAN — et en `admin`, parce que
+  //    `assiduite_hebdo` n'a AUCUNE policy élève : lue autrement elle rendrait
+  //    zéro ligne SANS erreur, et plus rien ne se fermerait jamais, en silence.
+  // ⚠️ Une lecture en ERREUR ne ferme pas (`cycles: null` ⇒ `estFermee` refuse) :
+  //    fermer sur une panne priverait un élève d'un travail qui compte encore.
+  const { cycles } = await cyclesComptesDeLEleve(eleveId)
+  const fermee = estFermee({
+    assigneAt: depot.assigne_at,
+    routeurDecisionId: depot.routeur_decision_id,
+    fuseau: await lireFuseau(),
+    cyclesComptes: cycles,
+  })
+
+  const vue: VueDuDeroule = {
+    depotId, ouvert: a.ouvert, fermee,
     // ⚠️ La MÊME fonction que la liste de l'accueil (`utils/codex-onglets/regles`) :
     //    deux titres calculés autrement seraient deux titres qui divergent.
     titre: titreDeLaConsigne(depot.exercice.consigne_instanciee),
@@ -994,6 +1027,14 @@ export async function chargerLeDeroule(
       : null,
     avertissements,
   }
+
+  // ⛔⛔ LA RÉDUCTION EST ICI, ET NULLE PART AILLEURS. « Ce que l'élève ne doit
+  //    pas voir ne part pas du serveur » : c'est le SEUL endroit où la charge se
+  //    construit, donc le seul où elle peut se réduire.
+  //    ⛔ Surtout PAS dans `lireContexte` : le même module nourrit l'écran ET la
+  //    chaîne de mesure (`utils/chaine/contexte.ts`) — une réduction posée là
+  //    ferait mesurer la chaîne sur un contexte amputé.
+  return fermee ? vueFermee(vue) : vue
 }
 
 // ── Les pièces ──────────────────────────────────────────────────────────────

@@ -184,13 +184,41 @@ export function visibleDansLaClasse(classeDeLInstance: string | null, classeEnCo
  *    Ce qui suit ne dit que l'ÉTAT DU GESTE — où en est l'élève, jamais ce qu'il
  *    vaut.
  */
-export type TonEtat = 'a_faire' | 'en_cours' | 'a_lire' | 'attente' | 'clos'
+/**
+ * ⭐⭐ C10 · L1 — LE SIXIÈME TON, `ferme`, ET POURQUOI IL COÛTE SON TYPE.
+ *    « Un libellé peut suffire là où un ton coûte un type » — et ici il ne
+ *    suffit pas. Un exercice FERMÉ et JAMAIS RENDU n'est pas `clos` : trois
+ *    fonctions pures lisent le ton pour dire « le geste est fait » —
+ *    `friseDeLaSemaine` (« un décompte réel », `06-` §5), `ceQuiManqueAuBilan`
+ *    (« une de tes copies n'a pas encore été corrigée ») et `momentDeLaSemaine`.
+ *    Le replier sur `clos` leur ferait dire **fait** et **rendu** d'un travail
+ *    que l'élève n'a jamais commencé : deux mensonges, sur un écran dont la
+ *    règle est que « le silence est un mensonge ».
+ *    ⭐ Et c'est un ton EXACT : la fermeture ne change le ton que d'`assigne` et
+ *    d'`ouvert` — un `v1_remis` fermé reste `attente`, un `retour_publie` non lu
+ *    reste `a_lire`. `ferme` veut donc dire, sans reste, « fermé sans avoir été
+ *    rendu ».
+ *    ⚠️ Il coûte QUATRE tables exhaustives, pas trois : `RANG` (ici), `GROUPE`
+ *    et `actionDeLaLigne` (`accueil.ts`), et `PASTILLE`
+ *    (`app/eleve/modules/aletheia/exercices/page.tsx`) — que le prompt du lot ne
+ *    nommait pas. **`Record<TonEtat, …>` les a toutes signalées**, et c'est
+ *    exactement le service qu'on lui demande.
+ */
+export type TonEtat = 'a_faire' | 'en_cours' | 'a_lire' | 'attente' | 'clos' | 'ferme'
 
 export interface EtatDeLigne { ton: TonEtat; libelle: string }
 
 export function etatDeLExercice(
   statutDepot: string,
   retour: { publie: boolean; lu: boolean } | null,
+  /**
+   * ⭐⭐ C10 · L1 — LA SEMAINE DE CET EXERCICE A ÉTÉ COMPTÉE. Cette fonction est
+   *    PURE et ne sait rien du temps : la fermeture lui est DONNÉE, elle ne la
+   *    dérive pas. *Par défaut `false` — les appelants qui ne connaissent pas la
+   *    fermeture (les examens de classe, la voie du professeur) gardent leur
+   *    comportement, mot pour mot.*
+   */
+  fermee = false,
 ): EtatDeLigne {
   // ⭐ L'OBLIGATION DE LECTURE EST UNE RÈGLE, PAS UNE DÉCORATION (`02-` §6.D,
   //    étape 17) : « le retour devient visible quand il coche la case de
@@ -198,6 +226,20 @@ export function etatDeLExercice(
   //    passe donc devant l'état du dépôt — un retour publié non lu se dit, même
   //    si la version finale est déjà partie.
   if (retour?.publie && !retour.lu) return { ton: 'a_lire', libelle: 'retour à lire' }
+  // ⭐⭐ C10 · L1 — LA FERMETURE PASSE APRÈS L'OBLIGATION DE LECTURE, ET C'EST
+  //    L'ORDRE QUI COMPTE. Un `retour_publie` non lu, même fermé, reste
+  //    `a_lire` / « retour à lire » : sa lecture reste due (`06-` §2, temps 6 —
+  //    « il se clôt par la validation "lu" »), elle reste POSSIBLE, et elle est
+  //    la seule porte de sortie de l'exercice fermé. C'est aussi elle qui
+  //    continue de retenir le bilan, comme `C6-L2` l'a écrit.
+  //
+  //    ⛔ Et elle ne touche QUE les deux statuts du non-rendu. Un `v1_remis`
+  //    fermé reste `attente` — « rendu, retour en préparation » est VRAI : le
+  //    retour d'une v1 déjà remise continue d'arriver après la fermeture, la
+  //    chaîne n'est jamais refusée. « Fermé sans retour » est à `C9`, pas à nous.
+  if (fermee && (statutDepot === 'assigne' || statutDepot === 'ouvert')) {
+    return { ton: 'ferme', libelle: 'fermé' }
+  }
   switch (statutDepot) {
     case 'assigne':       return { ton: 'a_faire', libelle: 'à faire' }
     case 'ouvert':        return { ton: 'en_cours', libelle: 'commencé' }
@@ -277,7 +319,11 @@ export function etatDExamenDeClasse(
  *    de progrès, aucun héros « à faire maintenant » — le point d'entrée du cycle
  *    reste le tableau de bord (`01-` §2). Ceci est un TRI DE LISTE.
  */
-const RANG: Record<TonEtat, number> = { a_lire: 0, a_faire: 1, en_cours: 2, attente: 3, clos: 4 }
+// ⭐ C10 · L1 — `ferme` passe APRÈS `clos` : il n'appelle aucun geste, et il
+//    n'est pas non plus un travail terminé. Il ferme la liste.
+const RANG: Record<TonEtat, number> = {
+  a_lire: 0, a_faire: 1, en_cours: 2, attente: 3, clos: 4, ferme: 5,
+}
 
 export function comparerLignes(
   a: { ton: TonEtat; echeance: string | null },
