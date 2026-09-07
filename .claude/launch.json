@@ -15,7 +15,6 @@
       "name": "palimpseste-attache",
       "port": 3000,
       "url": "http://localhost:3000"
-<<<<<<< HEAD
     },
     {
       "name": "palimpseste-etayage",
@@ -40,8 +39,6 @@
         "3200"
       ],
       "port": 3200
-=======
->>>>>>> main
     }
   ]
 }
