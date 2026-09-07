@@ -87,3 +87,13 @@
 - Banque 1.4 : `retirer-banque-14.mjs --prod --retablis`.
 - Les exercices 1.5 importés : ils restent en base ; à OFF ils ne sont pas servis. Pas de purge
   tant qu'un dépôt d'élève y pend (`exercices_depots → exercices` est en cascade).
+
+## Ajout du 08/09 (nuit) — la vague 3 et le crochet de résolution
+- ⛔ `deposer-import.mjs` s'arrête AVANT d'écrire (`ERR_MODULE_NOT_FOUND … utils/fabrique/verifie-import`) s'il est lancé
+  sans le crochet de résolution TypeScript : la commande est
+  `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/register-ts-resolver.mjs scripts/recette/deposer-import.mjs --prod <fichier>`.
+- La vague 3 (23 clés gardées après revue et corrections, 184 exercices, `gabarit-v3.json`) et ses 14 crans 2
+  (`gabarit-v3-c2.json`) se déposent comme les vagues 1 et 2, puis `passer-concu.mjs --prod --applique`.
+  Mesuré le 08/09 avant ce dépôt : prod 328 servables, tous 1.5, 0 clé avec second devoir ; bac à sable 526, 23 clés avec second devoir.
+- Le 1.4 en prod : 576 bloquées sur 580 avec la marque, les 4 restantes sont `lieu = classe` (épargnées exprès). Le routeur n'en sert aucune.
+  Une instance BLOQUÉE reste visible dans la liste du professeur : bloquée n'est pas effacée.

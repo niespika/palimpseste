@@ -20,8 +20,9 @@ const admin = PROD
   ? createClient(env.PROD_SUPABASE_URL, env.PROD_SUPABASE_SECRET_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
   : createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
 
-const { data: ex, error } = await admin.from('exercices').select('id, id_import, statut, bloque').like('id_import', 'ex-gab-%').limit(5000)
-if (error) throw new Error(error.message)
+// ⛔ 08/09 — PostgREST rend 1000 lignes au plus, même avec `.limit(5000)`, sans le dire : on pagine.
+const lireTout = async (f) => { const out = []; for (let d = 0; ; d += 1000) { const { data, error } = await f().order('id').range(d, d + 999); if (error) throw new Error(error.message); out.push(...data); if (data.length < 1000) break } return out }
+const ex = await lireTout(() => admin.from('exercices').select('id, id_import, statut, bloque').like('id_import', 'ex-gab-%'))
 const parStatut = {}; for (const e of ex) parStatut[e.statut] = (parStatut[e.statut] ?? 0) + 1
 const aPasser = ex.filter((e) => e.statut === 'a_concevoir' && !e.bloque)
 const bloques = ex.filter((e) => e.statut === 'a_concevoir' && e.bloque)
@@ -35,6 +36,6 @@ for (const e of aPasser) {
   if (e2) { console.log('  ✗', e.id_import, e2.message); continue }
   n += (data ?? []).length
 }
-const { data: apres } = await admin.from('exercices').select('statut').like('id_import', 'ex-gab-%').limit(5000)
+const apres = await lireTout(() => admin.from('exercices').select('statut').like('id_import', 'ex-gab-%'))
 const ap = {}; for (const e of apres ?? []) ap[e.statut] = (ap[e.statut] ?? 0) + 1
 console.log(`passés concu : ${n} · après : ${JSON.stringify(ap)}`)
