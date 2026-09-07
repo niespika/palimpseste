@@ -24,7 +24,7 @@ const mesure = (p: Partial<Mesure> = {}): Mesure => ({
   observables: null, lieu: 'classe', forme: 'sommatif', classeId: null, genre: null,
   sondeMontee: false, distanceContexte: null, delaiJours: null, delaiMesures: null,
   deltaV1Vf: null, paireCorrectionJuste: null, paireNouveauCasDetecte: null,
-  depotId: null, bonus: false, instrumentVersion: null, mesureAt: '2026-09-01T10:00:00Z', ...p,
+  depotId: null, bonus: false, instrumentVersion: null, mesureAt: '2026-09-01T10:00:00Z', cran: null, ...p,
 })
 
 // ── LE SECOND VERROU ────────────────────────────────────────────────────────
@@ -278,5 +278,17 @@ describe('`grouperParForme` — la garde LÈVE sur une charge hétérogène, et 
 
   it('une charge vide ne rend aucun lot — et rien à écrire n\'est pas une erreur', () => {
     assert.deepEqual(grouperParForme([]), [])
+  })
+})
+
+// ── ⭐ C7-L9 — la médiane IGNORE une mesure sans lettre (piège 12) ────────────────
+describe('C7-L9 — une mesure convertie (lettre nulle) n\'entre pas dans la réduction des lettres', () => {
+  it('ne fait descendre aucune lettre : les nulles sont filtrées avant la médiane', () => {
+    const avec = [mesure({ lettreEquivalente: 'B' }), mesure({ lettreEquivalente: null }), mesure({ lettreEquivalente: 'B' }), mesure({ lettreEquivalente: null })]
+    assert.equal(reduireLesLettresEquivalentes(avec), 'B')
+    assert.equal(reduireLesLettresEquivalentes(avec), reduireLesLettresEquivalentes(avec.filter((m) => m.lettreEquivalente)))
+  })
+  it('rien que des nulles : aucune lettre — le moteur ne fabrique jamais une première lettre', () => {
+    assert.equal(reduireLesLettresEquivalentes([mesure({ lettreEquivalente: null }), mesure({ lettreEquivalente: null })]), null)
   })
 })

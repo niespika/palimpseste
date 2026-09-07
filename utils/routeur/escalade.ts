@@ -33,7 +33,7 @@ import {
   MESURES_N1, MESURES_N2, MESURES_N3, MESURES_RECEPTIVITE_RETROUVEE,
   REGISTRE_PAR_DEFAUT, SEMAINES_N3, SEMAINES_RESIGNALEMENT_N3, zoneDuCran,
 } from './config'
-import { estAcquis, etatDesObservables, type EtatObservable, type InstrumentLu }
+import { estAcquis, etatDesObservables, poidsDe, type EtatObservable, type InstrumentLu }
   from './observables'
 import type { Mesure } from './mesure'
 import type { BrancheN2, CodeCran, Degre, Palier, Registre, StatutRecette } from './types'
@@ -68,11 +68,14 @@ export interface MesurePourCompteur {
  */
 export function suiviDeLObservable(
   historique: readonly Mesure[], code: string, instrument: InstrumentLu, tailleFenetre: number,
+  /** ⭐ C7-L9 — vrai : chaque fenêtre est pondérée par le cran de ses dépôts (`poidsDe`). Absent : hier. */
+  pondere = false,
 ): Array<{ mesure: Mesure; taux: number | null; acquis: boolean }> {
   const out: Array<{ mesure: Mesure; taux: number | null; acquis: boolean }> = []
   for (let i = 0; i < historique.length; i++) {
     const fenetre = historique.slice(Math.max(0, i + 1 - tailleFenetre), i + 1)
-    const etat = etatDesObservables(fenetre, instrument, [code]).find((e) => e.code === code)
+    const etat = etatDesObservables(fenetre, instrument, [code], pondere ? poidsDe(fenetre) : undefined)
+      .find((e) => e.code === code)
     out.push({ mesure: historique[i], taux: etat?.taux ?? null, acquis: estAcquis(etat?.taux ?? null) })
   }
   return out

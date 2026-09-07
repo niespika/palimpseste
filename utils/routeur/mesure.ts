@@ -45,6 +45,13 @@ export interface Mesure {
   bonus: boolean
   instrumentVersion: string | null
   mesureAt: string
+  /**
+   * ⭐ C7-L9 — LE CRAN DU DÉPÔT, lu par une jointure (`donnees.ts`) : « la mesure
+   *    ne porte toujours pas son cran — le poids se lit par le dépôt » (`07-`
+   *    §1.2 ; `01-` §8.2). `null` sans dépôt, dépôt sans exercice, ou exercice
+   *    effacé — et une mesure sans cran PÈSE 1 (`config.ts`, `poidsDuCran`).
+   */
+  cran: number | null
 }
 
 // ── Les groupes de modes (`01-` §7, étage 1) ────────────────────────────────

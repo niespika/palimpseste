@@ -95,6 +95,8 @@ export type Parcours = (typeof PARCOURS)[number]
  */
 export type RegleCiblage =
   | 'calibration' | 'R1' | 'R2' | 'R3' | 'R5' | 'PA3' | 'PB5'
+  /** ⭐ C7-L9 — `01-` §8.8 (07/09) : la sonde de montée au 6·8 que le signal de trajectoire déclenche. */
+  | 'trajectoire'
 
 /** `01-` §8.9 — le motif d'une sonde, tel que le §11 le demande. */
 export type MotifSonde =

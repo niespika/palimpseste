@@ -61,6 +61,8 @@ import {
   lireLesMesuresDesEleves, lireLElevesDesMesures, LectureTronquee,
 } from '@/utils/routeur/donnees'
 import { fenetreDEvidence } from '@/utils/routeur/profil'
+import { poidsDe } from '@/utils/routeur/observables'
+import { lireLaPorteJugeMesure } from '@/utils/chaine/porte-mesure'
 import { estAcquis } from '@/utils/routeur/observables'
 import { lireLesStatutsAvecDate } from '@/utils/statut-recette'
 import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
@@ -348,6 +350,8 @@ async function drapeauxDeDossierN3(
   admin: Admin, eleveIds: string[], nomDe: Map<string, string>,
   mesures: readonly MesureDeClasse[], cycles: CycleDuCalendrier[], aujourdHui: string,
   fuseau: string, optOut: Record<string, boolean>, incidents: string[],
+  /** ⭐ C7-L9 — la porte `juge_mesure_actif` : ouverte, le taux du dossier se pondère par cran. */
+  pondere = false,
 ): Promise<{ drapeaux: Drapeau[]; dossiers: number; eleves: number }> {
   if (eleveIds.length === 0) return { drapeaux: [], dossiers: 0, eleves: 0 }
   const { data, error } = await admin.from('competences_escalade')
@@ -415,9 +419,10 @@ async function drapeauxDeDossierN3(
     if (entree && instrument) {
       const parametres = valeursDesParametres(instrument)
       const fenetre = fenetreDEvidence(comptent)
+      // ⭐ C7-L9 — le taux pondéré par le cran du dépôt (`01-` §8.2), la règle du routeur appelée.
       const t = tauxDeReussite(
         fenetre.map((m) => m.observables?.[l.observable] as ValeurObservable | undefined),
-        entree, parametres)
+        entree, parametres, pondere ? poidsDe(fenetre) : undefined)
       detail.push(t.taux === null
         ? 'Fenêtre d’évidence : aucune mesure ayant un objet — l’observable ne se classe pas.'
         : `Fenêtre d’évidence : ${t.reussies}/${t.denominateur} réussies (${Math.round(t.taux * 100)} %) `
@@ -1027,11 +1032,13 @@ export async function chargerLAttentionDeLaClasse(
 ): Promise<AttentionDeLaClasse> {
   const incidents: string[] = []
 
-  const [rParams, cycles] = await Promise.all([
+  const [rParams, cycles, pondere] = await Promise.all([
     Promise.resolve(admin.from('scriptorium_params')
       .select('contestations_repetees_seuil, faisceau_convergence_seuil')
       .limit(1).maybeSingle()),
     lireLesCycles(admin, incidents),
+    // ⭐ C7-L9 — le taux pondéré par cran, la porte du lot ouverte seulement (lue une fois, tolérante).
+    lireLaPorteJugeMesure(admin as never),
   ])
   if (rParams.error) incidents.push(`les seuils réglables : ${rParams.error.message}`)
   const reglages = {
@@ -1045,7 +1052,7 @@ export async function chargerLAttentionDeLaClasse(
     drapeauxDeFraicheurDAncre(
       admin, eleveIds, nomDe, mesures, cycles, aujourdHui, fuseau, optOut, incidents),
     drapeauxDeDossierN3(
-      admin, eleveIds, nomDe, mesures, cycles, aujourdHui, fuseau, optOut, incidents),
+      admin, eleveIds, nomDe, mesures, cycles, aujourdHui, fuseau, optOut, incidents, pondere),
     lireLesContestations(admin, eleveIds, incidents),
     drapeauxDeCitationComposee(admin, eleveIds, nomDe, incidents),
   ])

@@ -175,7 +175,18 @@ export interface ContexteDuVivier {
    *    distribution par palier choisit PARMI les crans débloqués, elle ne
    *    débloque rien ». Absente ou inactive ⇒ la couche 4 sert comme hier.
    */
-  porte?: { actif: boolean; de: (objet: string) => PorteDUnObjet } | null
+  porte?: {
+    actif: boolean
+    de: (objet: string) => PorteDUnObjet
+    /**
+     * ⭐⭐ C7-L9 — « la trajectoire propose, le 6·8 dispose » (`01-` §8.8, 07/09) :
+     *    les compétences dont le signal de trajectoire s'est levé. Un exercice
+     *    6/8 qui les cible passe la porte EN SONDE — « la porte des crans du
+     *    `10-` §7 n'est pas violée : la sonde est l'exception qu'elle prévoit ».
+     *    Absent ou vide : la porte d'hier.
+     */
+    sondesDeTrajectoire?: ReadonlySet<Competence>
+  } | null
   /**
    * ⭐⭐ C7-L6 — LES DEVOIRS DÉJÀ SERVIS à l'élève : devoir → date du dernier
    *    dépôt (`assigne_at`, ISO). Avec `cycleLundi`, c'est ce que la quarantaine
@@ -736,6 +747,12 @@ export function constituerLeVivier(
     if (ctx.porte?.actif) {
       const p = ctx.porte.de(inst.objet)
       porte = statutDeService(p, inst.cranNumero)
+      // ⭐⭐ C7-L9 — l'exception que la porte prévoit : un 6/8 qui cible une
+      //    compétence dont la trajectoire s'est levée se sert EN SONDE de montée.
+      if (porte === 'ferme' && (inst.cranNumero === 6 || inst.cranNumero === 8)
+        && ciblables.some((c) => ctx.porte?.sondesDeTrajectoire?.has(c))) {
+        porte = 'sonde'
+      }
       if (porte === 'ferme') {
         ecarter(inst.exerciceId, 'porte_registre',
           motifDeFermeture(p, [], inst.cranNumero ?? 0))

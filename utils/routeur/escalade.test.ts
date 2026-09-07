@@ -25,7 +25,7 @@ function mes(valeur: number | string, p: Partial<Mesure> = {}): Mesure {
     observables: { garant_cite: valeur }, lieu: 'maison', forme: 'formatif', classeId: null,
     genre: null, sondeMontee: false, distanceContexte: null, delaiJours: null, delaiMesures: null,
     deltaV1Vf: null, paireCorrectionJuste: null, paireNouveauCasDetecte: null, depotId: null,
-    bonus: false, instrumentVersion: null,
+    bonus: false, instrumentVersion: null, cran: null,
     mesureAt: `2026-09-${String(n).padStart(2, '0')}T10:00:00Z`, ...p,
   }
 }

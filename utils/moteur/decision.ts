@@ -32,10 +32,12 @@
 // ============================================================================
 
 import { cransDeSonde } from '../routeur/montee'
+import type { EtatObservable } from '../routeur/observables'
+import { PART_MAJORITE_TRAJECTOIRE, PLAFOND_SONDES_PAR_CYCLE, type BudgetMinutes } from '../routeur/config'
 import type { EtatEscalade } from '../routeur/escalade'
-import type { ExercicePose, SondePosee } from '../routeur/semaine'
+import type { ExercicePose, SemainePosee, SondePosee } from '../routeur/semaine'
 import type { Competence, Lettre, Palier } from '../routeur/types'
-import type { BorneAmont, InstanceRetenue } from './vivier'
+import { candidatsPour, type BorneAmont, type InstanceRetenue } from './vivier'
 import { journalDeLObjet, type ContexteObjets } from './objets'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -95,6 +97,68 @@ export interface SondeRetenue {
   sonde_montee: boolean
   /** L'exercice qui la porte — pour ventiler les sondes par décision. */
   exercice_id: string
+  /**
+   * ⭐ C7-L9 — « les nombres qui l'ont déclenchée » (piège 25) : sur une sonde de
+   *    trajectoire, le compte des requis acquis / ratés. Absent ailleurs — les
+   *    lecteurs (`contexte.ts`, `serveur.ts`) lisent leurs clés et ignorent celle-ci.
+   */
+  detail?: string
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ C7-L9 — LE SIGNAL DE TRAJECTOIRE : « la trajectoire propose, le 6·8 dispose »
+// (`01-` §8.8, amendement du 07/09/2026 ; `10-` §7). PUR.
+// ════════════════════════════════════════════════════════════════════════════
+
+export type MotifTrajectoire = 'trajectoire_montee' | 'trajectoire_descente'
+
+export interface SignalDeTrajectoire {
+  competence: Competence
+  motif: MotifTrajectoire
+  /** Les requis acquis, ratés (un taux, non acquis) et le total — les nombres qui ont déclenché. */
+  acquis: number
+  rates: number
+  requis: number
+  detail: string
+}
+
+/**
+ * « Quand, sur la fenêtre d'évidence et au taux pondéré, LA MAJORITÉ STRICTE des
+ * observables REQUIS d'une compétence est ACQUISE — au seuil d'acquisition
+ * ordinaire — l'élève est candidat à monter […] ; quand la majorité stricte est
+ * RATÉE, même geste. » Le seuil (`estAcquis`) et la majorité (`PART_MAJORITE_
+ * TRAJECTOIRE`) vivent dans `config.ts`, provisoires.
+ * ⚠️ « Une compétence sans lettre ne se sonde pas » (`01-` §3) : `null` sans lettre.
+ * ⚠️ « Ratée » se lit sur un observable qui A un taux et n'est pas acquis : un
+ *    observable sans taux (aucune mesure ayant un objet) ne compte ni d'un côté ni
+ *    de l'autre — « un observable sans taux ne se classe pas » (§8.2).
+ */
+export function signalDeTrajectoire(
+  competence: Competence, etats: readonly EtatObservable[], lettre: Lettre,
+): SignalDeTrajectoire | null {
+  if (lettre === null) return null
+  const requis = etats.filter((e) => e.requis)
+  if (requis.length === 0) return null
+  const acquis = requis.filter((e) => e.acquis).length
+  const rates = requis.filter((e) => !e.acquis && !e.sansTaux).length
+  const majorite = requis.length * PART_MAJORITE_TRAJECTOIRE
+  const detail = `${acquis} requis acquis, ${rates} ratés, sur ${requis.length} (majorité stricte : plus de ${majorite})`
+  if (acquis > majorite) return { competence, motif: 'trajectoire_montee', acquis, rates, requis: requis.length, detail }
+  if (rates > majorite) return { competence, motif: 'trajectoire_descente', acquis, rates, requis: requis.length, detail }
+  return null
+}
+
+/** Les deux crans du 6·8 — « le substrat est un exercice 6/8 servable sur cette compétence ». */
+export const CRANS_DE_TRAJECTOIRE: ReadonlySet<string> = new Set(['production_etayee', 'production_autonome'])
+
+/**
+ * La sonde de montée qu'un signal de trajectoire pose sur un exercice 6/8 : la
+ * cible est la compétence, marquée `sonde_montee` (M-e) — « la même sonde qu'ici »
+ * (`10-` §7) —, motif `trajectoire_montee` / `trajectoire_descente`, les nombres au détail.
+ */
+export function sondeDeTrajectoire(signal: SignalDeTrajectoire, exerciceId: string): SondeRetenue {
+  return { competence: signal.competence, motif: signal.motif, priorite: null, sonde_montee: true,
+    exercice_id: exerciceId, detail: signal.detail }
 }
 
 /**
@@ -311,6 +375,23 @@ export interface ContexteDeDecision {
    *    les objets écartés (`01-` §11 ; prompt, piège 24). `null` : porte fermée.
    */
   objets?: ContexteObjets | null
+  /**
+   * ⭐⭐ C7-L9 — les sondes de montée que le SIGNAL DE TRAJECTOIRE a posées au 6·8
+   *    (`01-` §8.8, 07/09), et le journal de ce que chaque signal est devenu
+   *    (posée sur un exercice de la semaine, exercice ajouté, `sans_substrat`,
+   *    `hors_budget`) — écrit sous `alternatives_ecartees.trajectoire`, sur la
+   *    première ligne du cycle, comme le tirage. `null` : porte fermée, rien.
+   */
+  trajectoire?: { sondes: SondeRetenue[]; journal: JournalTrajectoire[] } | null
+}
+
+/** ⭐ C7-L9 — ce qu'un signal de trajectoire est devenu à la pose, journalisé (`01-` §11). */
+export interface JournalTrajectoire {
+  competence: Competence
+  motif: MotifTrajectoire
+  detail: string
+  issue: 'sonde_sur_exercice_pose' | 'exercice_ajoute' | 'sans_substrat' | 'hors_budget'
+  exercice_id: string | null
 }
 
 /**
@@ -372,11 +453,19 @@ export function lignesDeDecision(
         //    écartés et pourquoi (`01-` §11, amendement du 06/09). Le jsonb, jamais
         //    une colonne : `routeur_decisions` en a dix-sept, et ce lot n'en ajoute aucune.
         objet: r && ctx.objets ? journalDeLObjet(ctx.objets, r, p.candidat.competence) : null,
+        // ⭐⭐ C7-L9 — ce que chaque signal de trajectoire est devenu, une fois par cycle.
+        trajectoire: i === 0 && ctx.trajectoire ? ctx.trajectoire.journal : null,
       },
-      sondes_retenues: avecLaSondeDuRegistre(sondesDeLExercicePose(
-        p.candidat.exerciceId, p.candidat.competence, p.candidat.cran,
-        ctx.paliers.get(p.candidat.competence) ?? null, sondes), r?.porte ?? null,
-      p.candidat.exerciceId, p.candidat.competence),
+      // ⭐⭐ C7-L9 — la sonde de trajectoire, sur l'exercice 6/8 qui la porte : marquée
+      //    `sonde_montee` (M-e), motif `trajectoire_montee` / `trajectoire_descente`.
+      //    Elle entre AVANT celle du registre, qui s'efface devant une sonde de
+      //    montée déjà là (`avecLaSondeDuRegistre`) : une seule marque par exercice.
+      sondes_retenues: avecLaSondeDuRegistre([
+        ...sondesDeLExercicePose(
+          p.candidat.exerciceId, p.candidat.competence, p.candidat.cran,
+          ctx.paliers.get(p.candidat.competence) ?? null, sondes),
+        ...(ctx.trajectoire?.sondes.filter((s) => s.exercice_id === p.candidat.exerciceId) ?? []),
+      ], r?.porte ?? null, p.candidat.exerciceId, p.candidat.competence),
       propositions_iso_duree: offre.offerte ? offre.propositions : null,
       // ⛔ « La place qu'y prend la préférence recueillie n'est pas tranchée, et
       //    ce lot se construit sans elle » (`01-` §5, « Non tranché »).
@@ -392,4 +481,53 @@ export function lignesDeDecision(
       degrade: degradees.has(p.candidat.exerciceId),
     }
   })
+}
+
+/**
+ * ⭐⭐ C7-L9 — « LA TRAJECTOIRE PROPOSE, LE 6·8 DISPOSE » (`01-` §8.8 ; `10-` §7) : pour
+ *    chaque signal, une SONDE DE MONTÉE au cran 6 ou 8 sur la compétence —
+ *    « la même sonde qu'ici », marquée `sonde_montee` (M-e), motif journalisé avec
+ *    les nombres. Le substrat, dans l'ordre : un exercice 6/8 DÉJÀ POSÉ dont elle
+ *    est la cible ; sinon un exercice 6/8 SERVABLE sur elle dans le vivier — par
+ *    `candidatsPour`, la seule phase B —, ajouté à la semaine s'il tient dans le
+ *    budget ; sinon `sans_substrat` (ou `hors_budget`) journalisé, et rien d'autre.
+ *    Elle compte dans `PLAFOND_SONDES_PAR_CYCLE` : la phase C reçoit le reste.
+ * ⚠️ « Rien chez A » et « sans lettre, rien » sont tenus en amont, au signal.
+ */
+export function poserLesSondesDeTrajectoire(
+  signaux: readonly SignalDeTrajectoire[], semaine: SemainePosee, retenus: readonly InstanceRetenue[],
+  budget: BudgetMinutes, expressionEnSecondaire: boolean,
+): { sondes: SondeRetenue[]; journal: JournalTrajectoire[] } {
+  const sondes: SondeRetenue[] = []
+  const journal: JournalTrajectoire[] = []
+  for (const s of signaux) {
+    if (sondes.length >= PLAFOND_SONDES_PAR_CYCLE) break
+    const deja = semaine.exercices.find((p) => CRANS_DE_TRAJECTOIRE.has(p.candidat.cran) && p.candidat.competence === s.competence)
+    if (deja) {
+      sondes.push(sondeDeTrajectoire(s, deja.candidat.exerciceId))
+      journal.push({ competence: s.competence, motif: s.motif, detail: s.detail, issue: 'sonde_sur_exercice_pose', exercice_id: deja.candidat.exerciceId })
+      continue
+    }
+    // ⚠️ HORS de l'ordre par objet (C7-L7) : la sonde est l'exception à la porte ET
+    //    à l'ordre — un 6/8 servable sur la compétence, quel que soit l'état de son objet.
+    const candidats = candidatsPour(retenus, s.competence, semaine.exercices, expressionEnSecondaire, null)
+      .filter((c) => CRANS_DE_TRAJECTOIRE.has(c.cran))
+    const elu = candidats[0]
+    if (!elu) {
+      journal.push({ competence: s.competence, motif: s.motif, detail: s.detail, issue: 'sans_substrat', exercice_id: null })
+      continue
+    }
+    if (semaine.minutesAssignees + elu.dureeMin > budget.plafond) {
+      journal.push({ competence: s.competence, motif: s.motif, detail: `${s.detail} ; ${elu.dureeMin} min ne tiennent pas dans les ${budget.plafond - semaine.minutesAssignees} min restantes`, issue: 'hors_budget', exercice_id: elu.exerciceId })
+      continue
+    }
+    const tour = semaine.exercices.reduce((t, p) => Math.max(t, p.tour), -1) + 1
+    const pose = { candidat: elu, regle: 'trajectoire' as const, departageParPB3: false, tirage: false, tour }
+    semaine.exercices.push(pose)
+    semaine.posesDeCettePasse.push(pose)
+    semaine.minutesAssignees += elu.dureeMin
+    sondes.push(sondeDeTrajectoire(s, elu.exerciceId))
+    journal.push({ competence: s.competence, motif: s.motif, detail: s.detail, issue: 'exercice_ajoute', exercice_id: elu.exerciceId })
+  }
+  return { sondes, journal }
 }

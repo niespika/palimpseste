@@ -253,6 +253,40 @@ export const CYCLES_DU_PLANCHER_DE_MESURE = 3
 /** `01-` §8.2 — « acquis ≈ 2/3 sur la fenêtre d'évidence », sondes de montée exclues. */
 export const SEUIL_ACQUISITION = 2 / 3
 
+/**
+ * ⭐ C7-L9 — `01-` §8.2, amendement du 07/09/2026 : « une mesure de la trajectoire
+ *    PÈSE selon son cran dans le taux de réussite d'un observable — la part de ses
+ *    mesures réussies devient une SOMME DE POIDS ». *Provisoire — réglage
+ *    empirique.* ⚠️ « Le poids n'entre que dans le taux » : la fenêtre d'évidence
+ *    reste comptée en mesures (§3), les compteurs de l'escalade aussi (§8.4).
+ *    Le cran d'une mesure se lit PAR SON DÉPÔT — la mesure ne le porte pas (`07-` §1.2).
+ */
+export const POIDS_PAR_CRAN: Readonly<Record<number, number>> = {
+  1: 0.2, 2: 0.6, 3: 0.2, 4: 0.5, 5: 0.6, 6: 1, 7: 0.8, 8: 1, 9: 0.5,
+}
+
+/**
+ * Le poids d'une mesure, par le cran de son dépôt. « Une mesure sans cran — ancre,
+ * mesure en classe, mesure sans dépôt, dépôt dont l'exercice est effacé — pèse 1 »
+ * (prompt C7-L9, piège 22) ; un cran hors de la table aussi : on ne fabrique
+ * pas un poids.
+ */
+export function poidsDuCran(cran: number | null | undefined): number {
+  if (cran == null) return 1
+  return POIDS_PAR_CRAN[cran] ?? 1
+}
+
+/**
+ * ⭐ C7-L9 — `01-` §8.8, amendement du 07/09/2026 : « la trajectoire propose, le
+ *    6·8 dispose ». Le signal se lève quand LA MAJORITÉ STRICTE des observables
+ *    REQUIS d'une compétence est acquise (au seuil d'acquisition ordinaire,
+ *    `SEUIL_ACQUISITION`) — ou ratée — sur la fenêtre d'évidence au taux pondéré.
+ *    « Strictement plus de la moitié » : `PART_MAJORITE_TRAJECTOIRE` est la
+ *    fraction que le compte doit DÉPASSER. *Les deux nombres (2/3 et la majorité
+ *    stricte) sont provisoires — réglage empirique.*
+ */
+export const PART_MAJORITE_TRAJECTOIRE = 1 / 2
+
 /** `01-` §8.3, précondition basse — « ou dont aucune mesure n'est réussie sur DEUX fenêtres ». */
 export const FENETRES_SANS_REUSSITE = 2
 

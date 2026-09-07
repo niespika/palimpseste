@@ -66,8 +66,12 @@ import {
   lireLesCoursVus, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
 import {
-  journalDuTirage, journaliserLEscalade, lignesDeDecision, type LigneDeDecision,
+  journalDuTirage, journaliserLEscalade, lignesDeDecision, poserLesSondesDeTrajectoire, signalDeTrajectoire,
+  type LigneDeDecision, type SignalDeTrajectoire,
 } from './decision'
+import { lireLaPorteJugeMesure } from '@/utils/chaine/porte-mesure'
+import { PLAFOND_SONDES_PAR_CYCLE } from '@/utils/routeur/config'
+import { poidsDe } from '@/utils/routeur/observables'
 import {
   chargeDeMinutes, grouperParFormeDeCle, minutesAssignees, verifierLaChargeDeMinutes,
 } from './minutes'
@@ -565,6 +569,13 @@ export interface CompositionDUnEleve {
    *    `null` porte fermée : la pose est celle d'hier, à l'octet.
    */
   objets: ContexteObjets | null
+  /**
+   * ⭐⭐ C7-L9 — LES SIGNAUX DE TRAJECTOIRE (`01-` §8.8, 07/09), derrière
+   *    `juge_mesure_actif` : par compétence à lettre, la majorité stricte des
+   *    requis acquise ou ratée au taux PONDÉRÉ de la fenêtre d'évidence. Vide
+   *    porte fermée. La pose en fait une sonde de montée au 6·8.
+   */
+  trajectoire: SignalDeTrajectoire[]
 }
 
 export async function composerPourUnEleve(
@@ -584,7 +595,7 @@ export async function composerPourUnEleve(
       vivier: { retenus: [], ecartes: [] },
       listeComplete: [], journalPriorite: null, expressionEnSecondaire: false,
       paliers: new Map(), etats: [], escalades: new Map(), mesures: [], decisions: [],
-      journal: journalDuTirage(hasard), objets: null,
+      journal: journalDuTirage(hasard), objets: null, trajectoire: [],
     }
   }
 
@@ -633,6 +644,36 @@ export async function composerPourUnEleve(
     })
   }
 
+  // ── ⭐⭐ C7-L9 — LA PORTE DU LOT ET LE SIGNAL DE TRAJECTOIRE, AVANT LE VIVIER ──
+  //    La porte `juge_mesure_actif`, lue UNE fois : ouverte, le taux de la fenêtre
+  //    d'évidence se pondère par le cran du dépôt (`01-` §8.2) — la règle 4 de
+  //    C7-L7 le lit ainsi —, et le signal de trajectoire se calcule (`01-` §8.8) :
+  //    « une compétence sans lettre ne se sonde pas » ; le reste est
+  //    `signalDeTrajectoire` (pur). Il se calcule ICI parce que la porte des crans
+  //    doit le connaître : un 6/8 sur cette compétence passe la porte EN SONDE.
+  const pondere = await lireLaPorteJugeMesure(admin as never)
+  const etatsPonderesDe = (comp: Competence) => {
+    const instrument = instrumentDuRouteur(comp)
+    if (!instrument) return null
+    const n = niveaux.find((x) => x.competence === comp)
+    const comptent = mesuresQuiComptent(parDate(mesures.filter((m) => m.competence === comp)),
+      n?.statutRecettePoseLe ?? null)
+    let requis: string[] = []
+    try { requis = observablesRequis(c.fiches?.get(comp) ?? '').requis } catch { requis = [] }
+    const fen = fenetreDEvidence(comptent)
+    return etatDesObservables(fen, instrument, requis, pondere ? poidsDe(fen) : undefined)
+  }
+  const trajectoire: SignalDeTrajectoire[] = []
+  if (pondere) {
+    for (const e of etats) {
+      if (e.lettre === null) continue
+      const etatsObs = etatsPonderesDe(e.competence)
+      if (!etatsObs) continue
+      const sig = signalDeTrajectoire(e.competence, etatsObs, e.lettre)
+      if (sig) trajectoire.push(sig)
+    }
+  }
+
   // ── LE VIVIER — le premier geste, et il commande les trois autres ─────────
   // ⭐ C7-L5 — LA PORTE DES CRANS, lue une fois, derrière `gabarit_actif`.
   const porte = await lireLaPorteDesCrans(admin, c.eleveId, c.cycleLundi)
@@ -641,7 +682,8 @@ export async function composerPourUnEleve(
     coursVus: c.coursVus,
     positionsDeLecture: c.positions,
     instancesDejaDeposees: c.dejaDeposees,
-    porte,
+    // ⭐⭐ C7-L9 — la porte connaît les compétences dont la trajectoire s'est levée.
+    porte: trajectoire.length ? { ...porte, sondesDeTrajectoire: new Set(trajectoire.map((t) => t.competence)) } : porte,
     // ⭐ C7-L6 — la quarantaine des devoirs, quand le cycle a lu les devoirs servis.
     //    ⛔ DERRIÈRE `gabarit_actif`, comme la porte : à OFF, la couche 4 sert comme hier.
     devoirsServis: porte.actif ? (c.devoirsServis ?? null) : null,
@@ -683,17 +725,7 @@ export async function composerPourUnEleve(
   //    d'évidence (piège 20) ; les fiches sont lues une fois pour tous.
   let objets: ContexteObjets | null = null
   if (porte.actif) {
-    const etatsDe = (comp: Competence) => {
-      const instrument = instrumentDuRouteur(comp)
-      if (!instrument) return null
-      const n = niveaux.find((x) => x.competence === comp)
-      const comptent = mesuresQuiComptent(parDate(mesures.filter((m) => m.competence === comp)),
-        n?.statutRecettePoseLe ?? null)
-      let requis: string[] = []
-      try { requis = observablesRequis(c.fiches?.get(comp) ?? '').requis } catch { requis = [] }
-      return etatDesObservables(fenetreDEvidence(comptent), instrument, requis)
-        .map((e) => ({ code: e.code, acquis: e.acquis }))
-    }
+    const etatsDe = (comp: Competence) => etatsPonderesDe(comp)?.map((e) => ({ code: e.code, acquis: e.acquis })) ?? null
     objets = contexteDesObjets({
       registre: porte.registre,
       dejaServis: porte.dejaServis,
@@ -721,8 +753,10 @@ export async function composerPourUnEleve(
     decisions,
     journal,
     objets,
+    trajectoire,
   }
 }
+
 
 /**
  * ⭐⭐ C7-L6 / C7-L7 — CE QUE LA PHASE B REÇOIT, pour la semaine COMME pour le
@@ -807,6 +841,11 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   }
   if (semaine.exercices.length === 0) return out
 
+  // ── ⭐⭐ C7-L9 — LA SONDE DE MONTÉE DE LA TRAJECTOIRE, au 6·8 ─────────────
+  const trajectoire = poserLesSondesDeTrajectoire(compo.trajectoire, semaine, retenus, budget.budget,
+    expressionEnSecondaire)
+  out.exercicesPoses = semaine.exercices.length
+
   // ── PHASE C — les sondes, LA SEMAINE ENTIÈRE EN MAIN ─────────────────────
   const candidates: CandidateSonde[] = etats.map((e) => {
     const siennes = mesures.filter((m) => m.competence === e.competence && !m.sondeMontee)
@@ -824,9 +863,10 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
     }
   })
   const ordre = ordonnerLesSondes(candidates, journal.tirer<Competence>('sondes'))
+  // ⭐ C7-L9 — les sondes de trajectoire comptent dans le plafond du cycle (piège 25).
   const sondes = poserLesSondes(ordre, substratsDeLaSemaine(semaine.exercices, retenus),
-    journal.tirer<string>('phase_c'))
-  out.sondesPosees = sondes.posees.length
+    journal.tirer<string>('phase_c'), Math.max(0, PLAFOND_SONDES_PAR_CYCLE - trajectoire.sondes.length))
+  out.sondesPosees = sondes.posees.length + trajectoire.sondes.length
 
   // ── LA PERSISTANCE ───────────────────────────────────────────────────────
   const lignes = lignesDeDecision(semaine.exercices, sondes.posees as SondePosee[],
@@ -839,6 +879,8 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
       alternatives: journalPriorite,
       // ⭐ C7-L7 — l'état de l'objet, l'observable élu et son motif, au journal.
       objets: compo.objets,
+      // ⭐⭐ C7-L9 — les sondes de trajectoire et leur journal.
+      trajectoire: trajectoire.sondes.length || trajectoire.journal.length ? trajectoire : null,
     },
     // ⭐ C7-L6 — « sans devoir frais, le routeur sert quand même » : servi `degrade`.
     new Set(retenus.filter((r) => r.degrade).map((r) => r.instance.exerciceId)))

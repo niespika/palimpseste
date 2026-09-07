@@ -6,9 +6,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   estAcquis, etatDesObservables, candidatsSousDefautDominant, ilYAProgression,
-  ilYAStagnation, preconditionBasse, preconditionHaute, stabiliteAcquise,
+  ilYAStagnation, poidsDe, preconditionBasse, preconditionHaute, stabiliteAcquise,
   type InstrumentLu,
 } from './observables'
+import { poidsDuCran } from './config'
 import type { Mesure } from './mesure'
 
 /** Un instrument minimal : deux proportions à seuil, plus un binaire. */
@@ -30,7 +31,7 @@ function mes(observables: Record<string, number | string | boolean> | null): Mes
     observables, lieu: 'maison', forme: 'formatif', classeId: null, genre: null,
     sondeMontee: false, distanceContexte: null, delaiJours: null, delaiMesures: null,
     deltaV1Vf: null, paireCorrectionJuste: null, paireNouveauCasDetecte: null,
-    depotId: null, bonus: false, instrumentVersion: null,
+    depotId: null, bonus: false, instrumentVersion: null, cran: null,
     mesureAt: `2026-09-${String(n).padStart(2, '0')}T10:00:00Z`,
   }
 }
@@ -192,4 +193,36 @@ test('sans aucun requis (la Connaissance), la stabilité ne se déclare pas — 
   const e = etatDesObservables(f, instrument, [])
   assert.equal(stabiliteAcquise(e), false)
   assert.equal(preconditionHaute(e), false, 'aucun requis → la précondition haute ne passe jamais')
+})
+
+// ── ⭐ C7-L9 — la fenêtre reste en MESURES, le poids n'entre que dans le taux ────
+const auCran = (cran: number, valeur: number): Mesure => ({ ...mes({ garant_present: valeur }), cran })
+
+test('C7-L9 — dix mesures réussies au cran 1 : une fenêtre de QUATRE, un taux de 1 — et non un dénominateur de 0,8 pris pour un compte', () => {
+  const dix = Array.from({ length: 10 }, () => auCran(1, 0.9))
+  const fenetre = dix.slice(-4)
+  assert.equal(fenetre.length, 4)
+  const e = par('garant_present', etatDesObservables(fenetre, instrument, [], poidsDe(fenetre)))
+  assert.equal(e.taux, 1)
+  assert.equal(e.acquis, true)
+  // le dénominateur est une somme de poids (4 × 0,2), pas un compte : 0,8
+  assert.ok(Math.abs(e.denominateur - 0.8) < 1e-12)
+  assert.ok(Math.abs(e.reussies - 0.8) < 1e-12)
+  // sans poids : hier — 4 et 4
+  const h = par('garant_present', etatDesObservables(fenetre, instrument, []))
+  assert.deepEqual([h.reussies, h.denominateur, h.taux], [4, 4, 1])
+})
+
+test('C7-L9 — le poids par cran : 6·8 = 1, 7 = 0,8, 2·5 = 0,6, 4·9 = 0,5, 1·3 = 0,2, sans cran = 1 ; et il change l\'acquisition', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8, 9].map(poidsDuCran), [0.2, 0.6, 0.2, 0.5, 0.6, 1, 0.8, 1, 0.5])
+  assert.equal(poidsDuCran(null), 1)
+  assert.equal(poidsDuCran(undefined), 1)
+  assert.equal(poidsDuCran(42), 1)
+  // deux 6·8 réussis + deux crans 1 ratés : 2 / 2,4 = 0,83 > 2/3 → acquis ; à poids égal, 2 / 4 → non acquis
+  const fen = [auCran(6, 0.9), auCran(8, 0.9), auCran(1, 0.1), auCran(1, 0.1)]
+  assert.equal(par('garant_present', etatDesObservables(fen, instrument, [], poidsDe(fen))).acquis, true)
+  assert.equal(par('garant_present', etatDesObservables(fen, instrument, [])).acquis, false)
+  // une mesure réussie au cran 5 : le taux pondéré rend 1 sur un poids de 0,6 (« fait quand » 2)
+  const cinq = par('garant_present', etatDesObservables([auCran(5, 0.9)], instrument, [], poidsDe([auCran(5, 0.9)])))
+  assert.deepEqual([cinq.reussies, cinq.denominateur, cinq.taux], [0.6, 0.6, 1])
 })

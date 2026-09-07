@@ -43,10 +43,13 @@ import {
   type MesurePourCompteur,
 } from '@/utils/routeur/escalade'
 import {
-  etatDesObservables, preconditionBasse, preconditionHaute, type InstrumentLu,
+  etatDesObservables, poidsDe, preconditionBasse, preconditionHaute, type InstrumentLu,
 } from '@/utils/routeur/observables'
 import { deplacementsDeMasse, reporterAuGrainSuperieur, sondeCompte } from '@/utils/routeur/montee'
 import { FENETRE_EVIDENCE } from '@/utils/routeur/config'
+import { issueDuDepot } from '@/utils/registre/reussites'
+import { lireLesDepotsPourLeRegistre } from '@/utils/registre/reussites-serveur'
+import { lireLaPorteJugeMesure } from '@/utils/chaine/porte-mesure'
 import { CRANS, type Competence, type Grain, type Lettre, type Palier }
   from '@/utils/routeur/types'
 import {
@@ -167,6 +170,17 @@ export async function ecrireLEtatApresMesure(
   // de montée, et il vit sur l'exercice — jamais sur la mesure.
   const cases = await casesDesDepots(admin,
     mesures.filter((m) => m.sondeMontee && m.depotId).map((m) => m.depotId as string))
+  // ⭐ C7-L9 — la porte du lot, lue UNE fois (tolérante) : ouverte, le taux de
+  //    réussite se pondère par le cran du dépôt (`01-` §8.2) — l'escalade N1 le
+  //    lit « pondéré désormais, sans autre changement » (piège 27) ; fermée, hier.
+  const pondere = await lireLaPorteJugeMesure(admin as never)
+  // ⭐ C7-L9 — « une sonde de montée servie à un cran qui isole se dit réussie PAR
+  //    LE VERDICT » (`01-` §8.8, 07/09) : sa mesure n'a pas de lettre. On lit
+  //    l'issue du dépôt (`issueDuDepot`, le registre de C7-L7 — jamais un second
+  //    calcul), pour les seules sondes sans lettre ; sans issue, la sonde ne
+  //    compte ni réussie ni ratée (piège 26). Rien ne se lit s'il n'y en a aucune.
+  const issues = await issuesDesSondesSansLettre(admin, eleveId,
+    mesures.filter((m) => m.sondeMontee && m.depotId && !m.lettreEquivalente).map((m) => m.depotId as string), bilan)
 
   const lignesNiveau: LigneDeNiveau[] = []
   const lignesEscalade: ReturnType<typeof ligneDEscalade>[] = []
@@ -232,12 +246,12 @@ export async function ecrireLEtatApresMesure(
     }
     const requis = observablesRequis(fiches.get(competence) ?? '').requis
     const fenetre = fenetreDEvidence(comptent)
-    const etats = etatDesObservables(fenetre, instrument, requis)
+    const etats = etatDesObservables(fenetre, instrument, requis, pondere ? poidsDe(fenetre) : undefined)
     const dejaEscaladees = escalades.get(competence) ?? []
 
     for (const o of etats) {
       const precedent = dejaEscaladees.find((e) => e.observable === o.code) ?? null
-      const suivi = suiviDeLObservable(comptent, o.code, instrument, FENETRE_EVIDENCE)
+      const suivi = suiviDeLObservable(comptent, o.code, instrument, FENETRE_EVIDENCE, pondere)
       const avantDernier = suivi[suivi.length - 2]?.acquis ?? false
       // « DÉSESCALADE DÈS QUE L'OBSERVABLE CIBLÉ CHANGE DE STATUT. »
       if (desescalade(precedent, o.acquis, avantDernier)) {
@@ -282,15 +296,20 @@ export async function ecrireLEtatApresMesure(
       //    remonte donc par le DÉPÔT, le seul chemin qui existe.
       const sondes = siennes.filter((m) => m.sondeMontee).map((m) => {
         const c = m.depotId ? cases.get(m.depotId) : undefined
+        // ⭐ C7-L9 — sans lettre, l'issue du dépôt fait foi ; sans issue, la sonde
+        //    sort du compte (ni réussie ni ratée), et M-d ne change pas.
+        const issue = !m.lettreEquivalente && m.depotId ? issues.get(m.depotId) ?? null : null
+        if (!m.lettreEquivalente && !issue) return null
         return {
           grain: (c?.grain ?? 'meso') as Grain,
           cran: (c?.cran ?? '') as never,
           // « Une sonde est ratée souvent » : seule une lettre-équivalente au
-          // moins égale au palier courant vaut réussite.
-          reussie: !!m.lettreEquivalente && !!niveau.lettre
-            && m.lettreEquivalente >= (niveau.lettre as string),
+          // moins égale au palier courant vaut réussite — ou, sans lettre, le verdict.
+          reussie: m.lettreEquivalente
+            ? !!niveau.lettre && m.lettreEquivalente >= (niveau.lettre as string)
+            : issue === 'reussi',
         }
-      }).filter((s) => (CRANS as readonly string[]).includes(s.cran))
+      }).filter((s): s is { grain: Grain; cran: never; reussie: boolean } => !!s && (CRANS as readonly string[]).includes(s.cran))
       const deplacements = deplacementsDeMasse(sondes)
       if (deplacements.length) {
         let etatsMontee = montees.get(competence) ?? []
@@ -671,4 +690,25 @@ export async function cloturerLaCalibrationDesEleves(
     }
   }
   return bilan
+}
+
+/**
+ * ⭐ C7-L9 — l'issue (`reussi` / `rate`) des dépôts des sondes SANS lettre, par le
+ *    registre des réussites (piège 1 : un seul domicile). Lecture tolérante : un
+ *    incident part au bilan, et aucune sonde ne se dit réussie par défaut.
+ */
+async function issuesDesSondesSansLettre(
+  admin: Admin, eleveId: string, depotIds: readonly string[], bilan: { erreurs: string[] },
+): Promise<Map<string, 'reussi' | 'rate'>> {
+  const out = new Map<string, 'reussi' | 'rate'>()
+  if (depotIds.length === 0) return out
+  const { depots, incidents } = await lireLesDepotsPourLeRegistre(admin, eleveId)
+  for (const i of incidents) bilan.erreurs.push(`sondes sans lettre — ${i}`)
+  const voulus = new Set(depotIds)
+  for (const d of depots) {
+    if (!voulus.has(d.depotId)) continue
+    const issue = issueDuDepot(d)
+    if (issue) out.set(d.depotId, issue)
+  }
+  return out
 }

@@ -20,7 +20,7 @@ function m(p: Partial<Mesure> & { lettreEquivalente: Palier | null }): Mesure {
     lieu: 'maison', forme: 'formatif', classeId: null, genre: null, sondeMontee: false,
     distanceContexte: null, delaiJours: null, delaiMesures: null, deltaV1Vf: null,
     paireCorrectionJuste: null, paireNouveauCasDetecte: null, depotId: null, bonus: false,
-    instrumentVersion: null, mesureAt: `2026-09-${String(n).padStart(2, '0')}T10:00:00Z`,
+    instrumentVersion: null, cran: null, mesureAt: `2026-09-${String(n).padStart(2, '0')}T10:00:00Z`,
     ...p,
   }
 }

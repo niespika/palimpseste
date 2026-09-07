@@ -27,7 +27,7 @@
 import { statutDeLaMesure, tauxDeReussite, type Observables, type Statut }
   from '../chaine/observables'
 import type { EntreeObservableMesure } from '../chaine/instruments'
-import { FENETRES_SANS_REUSSITE, SEUIL_ACQUISITION } from './config'
+import { FENETRES_SANS_REUSSITE, SEUIL_ACQUISITION, poidsDuCran } from './config'
 import type { Mesure } from './mesure'
 
 /** Ce que la fiche déclare, tel que `derive-instruments.py` le verse. */
@@ -55,6 +55,9 @@ export interface EtatObservable {
 const valeursSur = (fenetre: readonly Mesure[], code: string) =>
   fenetre.map((m) => (m.observables as Observables | null)?.[code])
 
+/** `01-` §8.2 — le poids de chaque mesure de la fenêtre, par le cran de son dépôt. */
+export const poidsDe = (fenetre: ReadonlyArray<Pick<Mesure, 'cran'>>) => fenetre.map((m) => poidsDuCran(m.cran))
+
 /**
  * `01-` §8.2 — « ACQUIS : un observable dont le TAUX DE RÉUSSITE dépasse le seuil
  * d'acquisition, soit ~2/3, sur la FENÊTRE D'ÉVIDENCE ».
@@ -73,12 +76,19 @@ export function estAcquis(taux: number | null): boolean {
  */
 export function etatDesObservables(
   fenetre: readonly Mesure[], instrument: InstrumentLu, requis: readonly string[],
+  /**
+   * ⭐ C7-L9 — le taux PONDÉRÉ par le cran du dépôt (`01-` §8.2, 07/09) : un poids
+   *    par mesure de la fenêtre, dans l'ordre (`poidsDe`). La fenêtre reçue reste
+   *    comptée en mesures. Absent : le taux d'hier — porte `juge_mesure_actif`
+   *    fermée, chaque lecteur passe `undefined`.
+   */
+  poids?: readonly number[],
 ): EtatObservable[] {
   const codes = Object.keys(instrument.observablesMesure)
   return codes.map((code) => {
     const entree = instrument.observablesMesure[code]
     const { reussies, denominateur, taux } =
-      tauxDeReussite(valeursSur(fenetre, code), entree, instrument.parametres)
+      tauxDeReussite(valeursSur(fenetre, code), entree, instrument.parametres, poids)
     return {
       code, taux, reussies, denominateur,
       acquis: estAcquis(taux),

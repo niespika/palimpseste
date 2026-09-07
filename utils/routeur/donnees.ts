@@ -19,6 +19,7 @@
 // ============================================================================
 
 import 'server-only'
+import { cranNumero } from '@/utils/cran'
 import type { Admin } from './acces'
 import type { Mesure } from './mesure'
 import type { EtatNiveau } from './lettres'
@@ -85,7 +86,10 @@ export async function lirePagine<T>(
 const COLONNES_MESURE =
   'id, competence, modes, lettre_equivalente, observables, lieu, forme, genre, classe_id, '
   + 'sonde_montee, distance_contexte, delai_jours, delai_mesures, delta_v1_vf, '
-  + 'paire_correction_juste, paire_nouveau_cas_detecte, depot_id, bonus, instrument_version, mesure_at'
+  + 'paire_correction_juste, paire_nouveau_cas_detecte, depot_id, bonus, instrument_version, mesure_at, '
+  // ⭐ C7-L9 — le cran PAR LE DÉPÔT, « le seul chemin qui existe » (`etat-serveur.ts`) :
+  //    la mesure ne le porte pas, et n'en gagnera pas (`07-` §1.2). Aucune colonne.
+  + 'depot:exercices_depots(exercice:exercices(cran))'
 
 interface LigneMesure {
   id: string; competence: string; modes: string[] | null; lettre_equivalente: string | null
@@ -94,6 +98,7 @@ interface LigneMesure {
   delai_jours: number | null; delai_mesures: number | null; delta_v1_vf: number | null
   paire_correction_juste: boolean | null; paire_nouveau_cas_detecte: boolean | null
   depot_id: string | null; bonus: boolean; instrument_version: string | null; mesure_at: string
+  depot?: { exercice?: { cran?: unknown } | Array<{ cran?: unknown }> | null } | Array<{ exercice?: { cran?: unknown } | Array<{ cran?: unknown }> | null }> | null
 }
 
 const PALIERS_VALIDES = new Set(['E', 'D', 'C', 'B', 'A'])
@@ -121,7 +126,15 @@ function versMesure(l: LigneMesure): Mesure {
     bonus: !!l.bonus,
     instrumentVersion: l.instrument_version,
     mesureAt: l.mesure_at,
+    cran: cranDuDepotJoint(l.depot),
   }
+}
+
+/** Le cran de la jointure `depot → exercice` — tolérant : objet ou tableau, absent ⇒ `null`. */
+function cranDuDepotJoint(depot: LigneMesure['depot']): number | null {
+  const d = Array.isArray(depot) ? depot[0] : depot
+  const e = Array.isArray(d?.exercice) ? d?.exercice[0] : d?.exercice
+  return cranNumero(e?.cran)
 }
 
 /** Toutes les mesures d'un élève, paginées et confrontées au décompte. */

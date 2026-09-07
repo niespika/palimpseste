@@ -21,7 +21,7 @@ function m(lettre: Palier | null, modes: string[] = ['composer'], p: Partial<Mes
     lettreEquivalente: lettre, observables: null, lieu: 'maison', forme: 'formatif',
     classeId: null, genre: null, sondeMontee: false, distanceContexte: null, delaiJours: null,
     delaiMesures: null, deltaV1Vf: null, paireCorrectionJuste: null,
-    paireNouveauCasDetecte: null, depotId: null, bonus: false, instrumentVersion: null,
+    paireNouveauCasDetecte: null, depotId: null, bonus: false, instrumentVersion: null, cran: null,
     mesureAt: `2026-09-${String(n).padStart(2, '0')}T10:00:00Z`, ...p,
   }
 }

@@ -5,13 +5,15 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  CRAN_SANS_CHOIX, estUneSondeDeMontee, journalDuTirage, journaliserLEscalade,
-  lignesDeDecision, propositionsIsoDuree, sondesDeLExercicePose,
+  CRAN_SANS_CHOIX, CRANS_DE_TRAJECTOIRE, estUneSondeDeMontee, journalDuTirage, journaliserLEscalade,
+  lignesDeDecision, poserLesSondesDeTrajectoire, propositionsIsoDuree, signalDeTrajectoire, sondeDeTrajectoire,
+  sondesDeLExercicePose,
 } from './decision'
+import type { EtatObservable } from '../routeur/observables'
 import { constituerLeVivier, type ContexteDuVivier, type InstanceDuVivier } from './vivier'
 import { candidatsPour } from './vivier'
 import { BANDES_CRANS } from '../routeur/config'
-import type { ExercicePose, SondePosee } from '../routeur/semaine'
+import type { ExercicePose, SemainePosee, SondePosee } from '../routeur/semaine'
 import type { EtatEscalade } from '../routeur/escalade'
 import type { Competence, Lettre } from '../routeur/types'
 
@@ -246,5 +248,131 @@ describe('`01-` §11 — une ligne de décision PAR EXERCICE POSÉ', () => {
 
   it('les candidats se lisent avec la même durée que le vivier les rend', () => {
     assert.equal(candidatsPour(vivier, 'argumentation', [])[0].dureeMin, 20)
+  })
+})
+
+// ── ⭐⭐ C7-L9 — le signal de trajectoire : « la trajectoire propose, le 6·8 dispose » ──
+describe('C7-L9 — `signalDeTrajectoire` (`01-` §8.8, 07/09) : la majorité STRICTE des requis, acquise ou ratée', () => {
+  const o = (code: string, p: Partial<EtatObservable> = {}): EtatObservable => ({
+    code, taux: 1, reussies: 1, denominateur: 1, acquis: true, sansTaux: false, requis: true, ...p,
+  })
+  it('trois requis, deux acquis : montée — les nombres au détail', () => {
+    const s = signalDeTrajectoire('argumentation', [o('a'), o('b'), o('c', { acquis: false, taux: 0.2 })], 'C')
+    assert.equal(s?.motif, 'trajectoire_montee')
+    assert.deepEqual([s?.acquis, s?.rates, s?.requis], [2, 1, 3])
+    assert.match(s?.detail ?? '', /2 requis acquis, 1 ratés, sur 3/)
+  })
+  it('trois requis, deux ratés (un taux, non acquis) : descente', () => {
+    const s = signalDeTrajectoire('structure', [o('a', { acquis: false, taux: 0.1 }), o('b', { acquis: false, taux: 0 }), o('c')], 'D')
+    assert.equal(s?.motif, 'trajectoire_descente')
+  })
+  it('la MAJORITÉ est STRICTE : deux requis, un acquis et un raté — rien ; quatre, deux et deux — rien', () => {
+    assert.equal(signalDeTrajectoire('argumentation', [o('a'), o('b', { acquis: false, taux: 0 })], 'C'), null)
+    assert.equal(signalDeTrajectoire('argumentation', [o('a'), o('b'), o('c', { acquis: false, taux: 0 }), o('d', { acquis: false, taux: 0 })], 'C'), null)
+  })
+  it('« un observable sans taux ne se classe pas » : il ne compte ni acquis ni raté', () => {
+    // deux requis : un acquis, un sans taux → 1 > 1 ? non → rien ; trois : deux acquis + un sans taux → montée
+    assert.equal(signalDeTrajectoire('argumentation', [o('a'), o('b', { acquis: false, taux: null, sansTaux: true })], 'C'), null)
+    assert.equal(signalDeTrajectoire('argumentation', [o('a'), o('b'), o('c', { acquis: false, taux: null, sansTaux: true })], 'C')?.motif, 'trajectoire_montee')
+  })
+  it('les non-requis ne comptent pas ; sans requis, rien ; SANS LETTRE, rien — « ni ciblable, ni sondable »', () => {
+    assert.equal(signalDeTrajectoire('argumentation', [o('a', { requis: false }), o('b', { requis: false })], 'C'), null)
+    assert.equal(signalDeTrajectoire('argumentation', [], 'C'), null)
+    assert.equal(signalDeTrajectoire('argumentation', [o('a'), o('b'), o('c')], null), null)
+  })
+  it('la sonde qu\'il pose est une sonde de MONTÉE (M-e), motif journalisé, sur l\'exercice 6/8 qui la porte', () => {
+    const s = signalDeTrajectoire('argumentation', [o('a'), o('b'), o('c')], 'C')!
+    const sonde = sondeDeTrajectoire(s, 'ex-6')
+    assert.deepEqual(sonde, { competence: 'argumentation', motif: 'trajectoire_montee', priorite: null,
+      sonde_montee: true, exercice_id: 'ex-6', detail: s.detail })
+    assert.deepEqual([...CRANS_DE_TRAJECTOIRE].sort(), ['production_autonome', 'production_etayee'])
+  })
+})
+
+// ── ⭐⭐ C7-L9 — la pose de la sonde de trajectoire : le substrat, le budget, le plafond ──
+describe('C7-L9 — `poserLesSondesDeTrajectoire` : un 6/8 servable sur la compétence, sinon `sans_substrat` — et rien d\'autre', () => {
+  const signal = (competence: Competence = 'argumentation') =>
+    signalDeTrajectoire(competence, [
+      { code: 'a', taux: 1, reussies: 1, denominateur: 1, acquis: true, sansTaux: false, requis: true },
+      { code: 'b', taux: 1, reussies: 1, denominateur: 1, acquis: true, sansTaux: false, requis: true },
+      { code: 'c', taux: 0, reussies: 0, denominateur: 1, acquis: false, sansTaux: false, requis: true },
+    ], 'C')!
+  const semaine = (exercices: ExercicePose[] = [], minutes = 0): SemainePosee => ({
+    exercices, posesDeCettePasse: [], minutesAssignees: minutes,
+    ecart: { souSLePlancher: false, manque: 0, minutesPlancher: 45 } as never,
+    journal: { permutationsALaCouture: 0, reliquatPerdu: 0, voieMixte: false, motifArret: '' },
+  })
+  const BUDGET = { plancher: 45, plafond: 60, optionnel: 30 }
+
+  it('un 6/8 déjà POSÉ dont elle est la cible : la sonde s\'y pose, rien n\'est ajouté', () => {
+    const s = semaine([pose('six')])
+    const r = poserLesSondesDeTrajectoire([signal()], s, [], BUDGET, false)
+    assert.equal(s.exercices.length, 1)
+    assert.deepEqual(r.sondes.map((x) => [x.exercice_id, x.motif, x.sonde_montee]), [['six', 'trajectoire_montee', true]])
+    assert.equal(r.journal[0].issue, 'sonde_sur_exercice_pose')
+  })
+  it('sinon un 6/8 SERVABLE du vivier, ajouté à la semaine sous la règle `trajectoire`, s\'il tient dans le budget', () => {
+    const retenus = constituerLeVivier([instance({ exerciceId: 'six', cranNumero: 6, cranCode: 'production_etayee' }),
+      instance({ exerciceId: 'quatre', cranNumero: 4, cranCode: 'diagnostic_nomme', geste: 'diagnostiquer' })], ctxVivier).retenus
+    const s = semaine([pose('autre', { cran: 'diagnostic_nomme', competence: 'structure' })], 20)
+    const r = poserLesSondesDeTrajectoire([signal()], s, retenus, BUDGET, false)
+    assert.equal(r.journal[0].issue, 'exercice_ajoute')
+    assert.equal(s.exercices.length, 2)
+    assert.equal(s.exercices[1].candidat.exerciceId, 'six')
+    assert.equal(s.exercices[1].regle, 'trajectoire')
+    assert.equal(s.exercices[1].tour, 1)
+    assert.equal(s.minutesAssignees, 40)
+    assert.equal(s.posesDeCettePasse.length, 1)
+    assert.deepEqual(r.sondes[0], { competence: 'argumentation', motif: 'trajectoire_montee', priorite: null, sonde_montee: true, exercice_id: 'six', detail: signal().detail })
+  })
+  it('aucun 6/8 servable : `sans_substrat` journalisé, avec les nombres, et rien d\'autre', () => {
+    const retenus = constituerLeVivier([instance({ exerciceId: 'quatre', cranNumero: 4, cranCode: 'diagnostic_nomme', geste: 'diagnostiquer' })], ctxVivier).retenus
+    const s = semaine([], 0)
+    const r = poserLesSondesDeTrajectoire([signal()], s, retenus, BUDGET, false)
+    assert.deepEqual(r.sondes, [])
+    assert.equal(r.journal[0].issue, 'sans_substrat')
+    assert.match(r.journal[0].detail, /2 requis acquis, 1 ratés, sur 3/)
+    assert.equal(s.exercices.length, 0)
+  })
+  it('un 6/8 servable qui ne tient pas dans le budget : `hors_budget`, journalisé, rien d\'ajouté', () => {
+    const retenus = constituerLeVivier([instance({ exerciceId: 'six', cranNumero: 6 })], ctxVivier).retenus
+    const s = semaine([], 50)
+    const r = poserLesSondesDeTrajectoire([signal()], s, retenus, BUDGET, false)
+    assert.equal(r.journal[0].issue, 'hors_budget')
+    assert.equal(s.exercices.length, 0)
+    assert.deepEqual(r.sondes, [])
+  })
+  it('elles comptent dans le plafond de sondes du cycle', () => {
+    const signaux = (['argumentation', 'structure', 'expression', 'synthese', 'connaissance'] as Competence[]).map((c) => signal(c))
+    const s = semaine(signaux.map((x, i) => pose(`p${i}`, { competence: x.competence })))
+    const r = poserLesSondesDeTrajectoire(signaux, s, [], BUDGET, false)
+    assert.equal(r.sondes.length, 4)
+  })
+  it('⭐ la porte du registre laisse passer un 6/8 EN SONDE quand la trajectoire s\'est levée sur sa compétence — l\'exception qu\'elle prévoit', () => {
+    const fermee = { actif: true, de: (objet: string) => ({ objet, ouverts: [1, 3], sondes: [], methode: false }) }
+    const six = instance({ exerciceId: 'six', cranNumero: 6, cranCode: 'production_etayee' })
+    const hier = constituerLeVivier([six], { ...ctxVivier, porte: fermee })
+    assert.equal(hier.retenus.length, 0)
+    assert.equal(hier.ecartes[0].motif, 'porte_registre')
+    const avec = constituerLeVivier([six], { ...ctxVivier, porte: { ...fermee, sondesDeTrajectoire: new Set(['argumentation']) } })
+    assert.equal(avec.retenus.length, 1)
+    assert.equal(avec.retenus[0].porte, 'sonde')
+    // une autre compétence, ou un autre cran : la porte d'hier
+    assert.equal(constituerLeVivier([six], { ...ctxVivier, porte: { ...fermee, sondesDeTrajectoire: new Set(['structure']) } }).retenus.length, 0)
+    const cinq = instance({ exerciceId: 'cinq', cranNumero: 5, cranCode: 'transformation_nommee', geste: 'transformer' })
+    assert.equal(constituerLeVivier([cinq], { ...ctxVivier, porte: { ...fermee, sondesDeTrajectoire: new Set(['argumentation']) } }).retenus.length, 0)
+  })
+  it('la sonde de trajectoire entre AVANT celle du registre, qui s\'efface : une seule marque `sonde_montee` par exercice', () => {
+    const retenus = constituerLeVivier([instance({ exerciceId: 'six', cranNumero: 6 })], { ...ctxVivier,
+      porte: { actif: true, de: (objet: string) => ({ objet, ouverts: [], sondes: [], methode: false }), sondesDeTrajectoire: new Set(['argumentation']) } }).retenus
+    const s = signal()
+    const lignes = lignesDeDecision([pose('six')], [], retenus, {
+      eleveId: 'e', cycleLundi: '2026-09-14', etatEscalade: {} as never, tirages: [], paliers: new Map([['argumentation', 'C']]), alternatives: null,
+      trajectoire: { sondes: [sondeDeTrajectoire(s, 'six')], journal: [{ competence: 'argumentation', motif: s.motif, detail: s.detail, issue: 'exercice_ajoute', exercice_id: 'six' }] },
+    })
+    const montee = lignes[0].sondes_retenues.filter((x) => x.sonde_montee)
+    assert.equal(montee.length, 1)
+    assert.equal(montee[0].motif, 'trajectoire_montee')
+    assert.equal((lignes[0].alternatives_ecartees as { trajectoire: unknown[] }).trajectoire.length, 1)
   })
 })

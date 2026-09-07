@@ -73,7 +73,16 @@ import {
 } from '@/utils/chaine/observables'
 import { mesuresQuiComptent } from '@/utils/routeur/mesure'
 import { fenetreDEvidence } from '@/utils/routeur/profil'
-import { estAcquis } from '@/utils/routeur/observables'
+import { estAcquis, poidsDe } from '@/utils/routeur/observables'
+import { cranNumero } from '@/utils/cran'
+import { lireLaPorteJugeMesure } from '@/utils/chaine/porte-mesure'
+
+/** ⭐ C7-L9 — le cran de la jointure `depot → exercice`, tolérant : objet ou tableau, absent ⇒ `null`. */
+function cranDuDepotJoint(depot: unknown): number | null {
+  const d = (Array.isArray(depot) ? depot[0] : depot) as { exercice?: unknown } | null | undefined
+  const e = (Array.isArray(d?.exercice) ? d?.exercice[0] : d?.exercice) as { cran?: unknown } | null | undefined
+  return cranNumero(e?.cran)
+}
 import { lireLesStatutsAvecDate, STATUT_PAR_DEFAUT } from '@/utils/statut-recette'
 import { LETTRES_SECTIONS, type LettreSection } from '@/utils/notation'
 
@@ -234,6 +243,8 @@ interface MesureLue {
   classeId: string | null
   lettreEquivalente: string | null
   sondeMontee: boolean
+  /** ⭐ C7-L9 — le cran du dépôt, par la jointure ; `null` sans dépôt. Le poids se lit dessus. */
+  cran: number | null
 }
 
 /**
@@ -249,7 +260,9 @@ async function lireLesMesures(
 ): Promise<{ lignes: MesureLue[]; incident: string | null }> {
   if (eleveIds.length === 0) return { lignes: [], incident: null }
   const cols = 'id, eleve_id, competence, observables, mesure_at, classe_id, '
-    + 'lettre_equivalente, sonde_montee'
+    + 'lettre_equivalente, sonde_montee, '
+    // ⭐ C7-L9 — le cran PAR LE DÉPÔT, pour le taux pondéré (`01-` §8.2) ; aucune colonne.
+    + 'depot:exercices_depots(exercice:exercices(cran))'
   const decompte = Promise.resolve(
     admin.from('competences_mesures')
       .select(cols, { count: 'exact', head: true })
@@ -281,6 +294,7 @@ async function lireLesMesures(
     classeId: (m.classe_id ?? null) as string | null,
     lettreEquivalente: (m.lettre_equivalente ?? null) as string | null,
     sondeMontee: m.sonde_montee === true,
+    cran: cranDuDepotJoint(m.depot),
   }))
 
   const { count, error } = await decompte
@@ -318,7 +332,7 @@ export async function chargerGrilleCompetences(
 ): Promise<GrilleCompetencesClasse> {
   const incidents: string[] = []
 
-  const [rNiveaux, rMesures, rCorresp, statutsAvecDate] = await Promise.all([
+  const [rNiveaux, rMesures, rCorresp, statutsAvecDate, pondere] = await Promise.all([
     admin.from('competences_niveaux')
       .select('eleve_id, competence, lettre, lettre_initiale, profil_provisoire')
       .in('eleve_id', eleveIds.length ? eleveIds : ['00000000-0000-0000-0000-000000000000']),
@@ -326,6 +340,9 @@ export async function chargerGrilleCompetences(
     admin.from('competences_correspondance')
       .select('competence, observable_code, dimension_eleve, ordre, deposee_at'),
     lireLesStatutsAvecDate(admin),
+    // ⭐ C7-L9 — le taux pondéré par cran ne s'applique que la porte du lot OUVERTE
+    //    (`juge_mesure_actif`, lue une fois, tolérante) : fermée, le taux d'hier.
+    lireLaPorteJugeMesure(admin as never),
   ])
 
   if (rNiveaux.error) incidents.push(`les niveaux : ${rNiveaux.error.message}`)
@@ -404,9 +421,11 @@ export async function chargerGrilleCompetences(
 
       const observables: ObservableEleve[] = declares.map(([obsCode, entree]) => {
         const valeurs = comptent.map((m) => m.observables?.[obsCode])
-        const tout = tauxDeReussite(valeurs, entree, parametres)
+        // ⭐ C7-L9 — le taux est PONDÉRÉ par le cran du dépôt (`01-` §8.2, 07/09) —
+        //    la même règle que le routeur, appelée, pas recopiée (`poidsDe`).
+        const tout = tauxDeReussite(valeurs, entree, parametres, pondere ? poidsDe(comptent) : undefined)
         const surFenetre = tauxDeReussite(
-          fenetre.map((m) => m.observables?.[obsCode]), entree, parametres)
+          fenetre.map((m) => m.observables?.[obsCode]), entree, parametres, pondere ? poidsDe(fenetre) : undefined)
 
         const serieComplete: PointObservable[] = comptent.map((m, i) => ({
           date: m.mesureAt,
