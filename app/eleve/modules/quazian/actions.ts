@@ -9,7 +9,9 @@ import {
   carteVisible, perimetreVide,
   type CarteAncree, type PerimetreCartes,
 } from '@/utils/quazian-visibilite'
-import { fsrs, createEmptyCard, type Card, type Grade } from 'ts-fsrs'
+import { fsrs, createEmptyCard, date_diff, type Card, type Grade } from 'ts-fsrs'
+import { lireFuseau } from '@/utils/fuseau-serveur'
+import { estEchue, seuilEcheanceDuJour } from '@/utils/quazian-echeance'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -151,6 +153,13 @@ async function lireCartes(
 // asynchrones — les deux seuls lecteurs, la file et les stats, vivent ici.)
 const PLAFOND_SESSION = 30
 
+// « Due aujourd'hui » = échéance avant la FIN de la journée en cours, heure de
+// l'école — jamais « avant maintenant » (règle et raisons dans
+// utils/quazian-echeance.ts). LE prédicat des trois lecteurs : file, consultation, compteurs.
+async function seuilDuJour(): Promise<number> {
+  return seuilEcheanceDuJour(new Date(), await lireFuseau())
+}
+
 export interface CarteRevision {
   flashcard_id: string
   card_state_id: string | null  // null = première révision
@@ -196,6 +205,7 @@ function cibleDeLaCarte(f: Record<string, unknown>): string {
 export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
+  const seuil = await seuilDuJour()
 
   // Périmètre « vu » des classes en contexte — admin pour contourner RLS.
   const admin = createAdminClient()
@@ -226,7 +236,7 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
     etatsMap[e.flashcard_id] = e
   }
 
-  // File = nouvelles cartes (sans état) + cartes dues aujourd'hui
+  // File = nouvelles cartes (sans état) + cartes dues aujourd'hui (fin de journée comprise)
   const file: CarteRevision[] = []
 
   for (const f of flashcards) {
@@ -245,18 +255,24 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
     if (!etat) {
       // Nouvelle carte — à réviser
       file.push({ ...commun, card_state_id: null, state: 0 /* New */, due: maintenant })
-    } else if (etat.due <= maintenant) {
+    } else if (estEchue(etat.due, seuil)) {
       // Carte due
       file.push({ ...commun, card_state_id: etat.id, state: etat.state, due: etat.due })
     }
   }
 
-  // Mélanger légèrement (nouvelles d'abord, puis dues)
+  // Les DUES d'abord, les plus anciennes en tête, puis les neuves. Une carte due
+  // est un souvenir qui s'efface : la faire attendre derrière un paquet de cartes
+  // neuves, c'est le perdre. Une carte neuve, elle, ne coûte rien à attendre.
+  // Jusqu'au 05/09 c'était l'inverse (neuves d'abord) : un cours qui livrait 30
+  // cartes gelait toutes les révisions dues derrière le plafond.
+  const dues = file
+    .filter((c) => c.card_state_id !== null)
+    .sort((a, b) => a.due.localeCompare(b.due))
   const nouvelles = file.filter((c) => c.card_state_id === null)
-  const dues = file.filter((c) => c.card_state_id !== null)
 
   // Plafond de session — LE nombre que `chargerStatsRevision` doit annoncer.
-  return [...nouvelles, ...dues].slice(0, PLAFOND_SESSION)
+  return [...dues, ...nouvelles].slice(0, PLAFOND_SESSION)
 }
 
 export interface CarteConsultation {
@@ -298,7 +314,7 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
 
   // `due` en plus de l'id : les tuiles par cours annoncent « N à réviser », et
   // ce compte doit sortir du MÊME prédicat que la file (jamais vue, ou échue).
-  const maintenant = new Date().toISOString()
+  const seuil = await seuilDuJour()
   const { data: etats } = await supabase
     .from('quazian_card_states')
     .select('flashcard_id, due')
@@ -320,7 +336,7 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
         label_unite: labelUnite,
         cible_id: cibleDeLaCarte(f),
         nouvelle: due === undefined,
-        a_reviser: due === undefined || due <= maintenant,
+        a_reviser: due === undefined || estEchue(due, seuil),
         created_at: f.created_at as string,
       }
     })
@@ -340,7 +356,13 @@ export async function soumettreNote(
     return { due: new Date().toISOString(), state: 0, cardStateId }
   }
 
-  const scheduler = fsrs()
+  // ⚠️ Pas de paliers courts (1 min / 10 min). Ils supposent un écran qui ressert
+  // la carte dans la même séance, ce que Quazian ne fait pas : avec eux, toute
+  // carte notée « Bien » redevenait due dix minutes après la séance, et comme le
+  // palier atteint (`learning_steps`) n'est pas persisté en base, elle y
+  // restait à jamais — 273 cartes sur 554 mesurées coincées en prod le 05/09.
+  // Chaque note produit désormais directement un intervalle long.
+  const scheduler = fsrs({ enable_short_term: false })
   const maintenant = new Date()
 
   // Reconstruire la carte FSRS depuis l'état RÉEL en base (jamais l'état du client).
@@ -399,13 +421,22 @@ export async function soumettreNote(
     }
   }
 
+  // `scheduled_days` : l'intervalle que la révision PRÉCÉDENTE avait planifié.
+  // Le journal le recopie tel quel (`buildLog`) ; la base ne le stocke pas, mais
+  // il se relit : échéance moins dernière révision, en jours — même calcul que
+  // `ts-fsrs` dans son propre `reschedule`. Reconstruit à 0 jusqu'au 05/09, le
+  // journal portait 0 sur ses 1 054 lignes. `elapsed_days` n'a pas ce problème :
+  // le planificateur le recalcule lui-même depuis `last_review`.
+  const scheduledDays = etat?.last_review
+    ? Math.max(0, date_diff(new Date(etat.due), new Date(etat.last_review), 'days'))
+    : 0
   const card: Card = etat
     ? {
         due: new Date(etat.due),
         stability: etat.stability,
         difficulty: etat.difficulty,
         elapsed_days: 0,
-        scheduled_days: 0,
+        scheduled_days: scheduledDays,
         reps: etat.reps,
         lapses: etat.lapses,
         learning_steps: 0,
@@ -480,7 +511,7 @@ export async function soumettreNote(
 // Stats pour la page d'accueil
 export async function chargerStatsRevision() {
   const { supabase, userId } = await verifierEleve()
-  const maintenant = new Date().toISOString()
+  const seuil = await seuilDuJour()
   const admin = createAdminClient()
 
   // Gel de l'intégrité : les compteurs annoncent la file, et la file est vide
@@ -514,7 +545,7 @@ export async function chargerStatsRevision() {
     : { data: [] }
 
   const connues = etats?.length ?? 0
-  const dues = etats?.filter((e) => e.due <= maintenant).length ?? 0
+  const dues = etats?.filter((e) => estEchue(e.due, seuil)).length ?? 0
   const nouvelles = totalCartes - connues
 
   // Deux nombres, deux sens — et c'est le correctif du 14/08 (recette C7·L3) :

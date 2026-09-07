@@ -8,11 +8,15 @@ import type { Cellule } from '@/utils/matrice-pilotage'
 // (Le cas `absent` — module non donné à la classe — est géré par la cellule
 //  parente, qui grise le fond.)
 
-export default function CelluleModule({ cellule }: { cellule: Cellule }) {
+// Une cellule peut porter une SECONDE LIGNE (`detail`) : « 13/94 cartes vues »
+// sous « 3 à réviser », « thème validé » sous « 2/3 · 1 à faire ». Elle est
+// discrète et ne change jamais la couleur de la première.
+
+function Principal({ cellule }: { cellule: Cellule }) {
   switch (cellule.kind) {
     case 'action':
       return (
-        <span className="font-ui text-xs bg-retard-teinte text-retard px-2 py-0.5 rounded-full">
+        <span className="font-ui text-xs bg-retard-teinte text-retard px-2 py-0.5 rounded-full whitespace-nowrap">
           {cellule.label}
         </span>
       )
@@ -23,4 +27,14 @@ export default function CelluleModule({ cellule }: { cellule: Cellule }) {
     default:
       return <span className="font-ui text-xs text-muet">{cellule.label}</span>
   }
+}
+
+export default function CelluleModule({ cellule }: { cellule: Cellule }) {
+  if (!cellule.detail) return <Principal cellule={cellule} />
+  return (
+    <span className="inline-flex flex-col items-center gap-0.5">
+      <Principal cellule={cellule} />
+      <span className="font-ui text-[10.5px] text-muet whitespace-nowrap">{cellule.detail}</span>
+    </span>
+  )
 }

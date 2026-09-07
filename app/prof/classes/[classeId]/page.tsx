@@ -72,7 +72,11 @@ export default async function PilotageClasse({
   const tri: TriPilotage = triParam === 'nom' ? 'nom' : 'risque'
   const base = `/prof/classes/${classeId}`
 
-  const matrice = await chargerMatricePilotage(admin, classeId)
+  // ⚠️ Le fuseau se lit d'abord : la colonne Scriptorium coupe la semaine au lundi
+  //    DE L'ÉCOLE. `lireFuseau` est mis en cache par requête — la seconde lecture,
+  //    plus bas, ne coûte rien.
+  const fuseauEcole = await lireFuseau()
+  const matrice = await chargerMatricePilotage(admin, classeId, fuseauEcole)
   const lignesTriees = trierLignes(matrice.lignes, tri)
   const nbEleves = matrice.lignes.length
 

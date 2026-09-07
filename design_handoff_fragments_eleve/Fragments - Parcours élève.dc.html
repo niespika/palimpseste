@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&amp;family=Cormorant+Garamond:wght@500;600;700&amp;family=EB+Garamond:wght@400;500;600&amp;family=Alegreya+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond', Georgia, serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:40px;width:760px">
+  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.34em;color:#8A6F4E">PALIMPSESTE · ESPACE ÉLÈVE</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:50px;line-height:1.04;color:#221C16;margin-top:6px">Fragments d'érudition — le parcours élève au complet</div>
+  <div style="font-family:'EB Garamond',serif;font-size:18px;color:#5A4632;margin-top:8px;max-width:720px">Tous les écrans de l'élève dans Fragments — pas deux, mais <b>quatre brins</b> sous un même monde : le dépôt hebdomadaire, l'oral, l'essai et la synthèse. Trois partis pris : <b>désencombrer</b> (une chose à la fois, le reste replié), <b>mettre le sceau en valeur</b> et l'ajouter là où il manque, et <b>fixer la couleur</b> du monde — olive <span style="color:#616E30">#616E30</span> + bouton terracotta <span style="color:#B26A4A">#B26A4A</span>.</div>
+</div>
+
+<!-- seal showcase -->
+<div style="position:absolute;left:884px;top:36px;width:372px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;letter-spacing:.04em;color:#8A6F4E">LE SCEAU, MIS EN VALEUR</div>
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;box-shadow:0 4px 16px rgba(34,28,22,.1);padding:18px;display:flex;gap:16px;align-items:center">
+    <span style="width:138px;height:138px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(97,110,48,.16)"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply;filter:saturate(1.05) contrast(1.03)" alt="Sceau Fragments"></span>
+    <div>
+      <div style="font-family:'Cinzel',serif;font-weight:600;font-size:16px;letter-spacing:.16em;color:#616E30">FRAGMENTS</div>
+      <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5;margin-top:6px">La mappemonde et le livre ouvert : le savoir épars qu'on rassemble. On l'agrandit dans l'en-tête du monde (où il manquait), on en fait un héros sur la synthèse. Pastille olive teintée, gravure en <i>multiply</i>.</div>
+    </div>
+  </div>
+</div>
+
+<!-- legend -->
+<div style="position:absolute;left:80px;top:250px;width:1176px">
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;box-shadow:0 1px 3px rgba(34,28,22,.06);padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;font-family:'Alegreya Sans',sans-serif;font-size:14px;color:#5A4632">
+    <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;color:#8A6F4E">MONDE</span>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#616E30"></span>Pigment olive</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#B26A4A"></span>Bouton terracotta</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:6px;background:#E2E3D2;box-shadow:inset 0 0 0 1px #C9CBB6"></span>Teinte du monde</div>
+    <span style="width:1px;height:18px;background:#E4DBC9"></span>
+    <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;color:#8A6F4E">ÉTAT</span>
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:#5B6E4A"></span>à jour</div>
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:#9A6A2E"></span>à déposer / à lire</div>
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:#A23E2E"></span>en retard</div>
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:#C9B89A"></span>rien de neuf</div>
+  </div>
+</div>
+
+<!-- ======================= MODULE MAP ======================= -->
+<div style="position:absolute;left:80px;top:372px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#616E30">Le module en un coup d'œil</div>
+<div style="position:absolute;left:80px;top:414px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Quatre brins, un seul monde. Le dépôt hebdomadaire est le cœur ; l'oral, l'essai et la synthèse s'y greffent. « Ton parcours » court au-dessus des quatre.</div>
+
+<div style="position:absolute;left:80px;top:462px;width:1680px">
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;box-shadow:0 1px 3px rgba(34,28,22,.06);padding:20px 22px">
+    <div style="display:flex;align-items:stretch;gap:14px">
+      <!-- strand 1 hero -->
+      <div style="flex:1.5;min-width:0;background:#E2E3D2;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#616E30">BRIN 1 · LE CŒUR ★</span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:5px;line-height:1.1">Fragments écrits</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#3F4A2C;margin-top:3px;line-height:1.4">Chaque semaine : photographier son manuscrit, recevoir un retour socratique, le lire pour débloquer le suivant.</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:11px;flex-wrap:wrap;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">
+          <span style="background:#FBF8F1;border:1px solid #D6D8C2;border-radius:7px;padding:3px 8px">Déposer</span><span style="color:#B26A4A">→</span>
+          <span style="background:#FBF8F1;border:1px solid #D6D8C2;border-radius:7px;padding:3px 8px">Retour</span><span style="color:#B26A4A">→</span>
+          <span style="background:#FBF8F1;border:1px solid #D6D8C2;border-radius:7px;padding:3px 8px">Lire &amp; valider</span><span style="color:#B26A4A">↻</span>
+        </div>
+      </div>
+      <!-- strand 2 -->
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">BRIN 2</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:5px;line-height:1.1">Fragment oral</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.4">L'oral se fait en classe. L'élève consulte le retour : notes, audio, transcription.</div>
+      </div>
+      <!-- strand 3 -->
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">BRIN 3</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:5px;line-height:1.1">Essai</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.4">Épreuve datée. Photographier sa copie, puis recevoir un retour par dimension, noté sur 20.</div>
+      </div>
+      <!-- strand 4 -->
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">BRIN 4 · LE TÉLOS</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:5px;line-height:1.1">Synthèse</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.4">En fin de semestre : bilan, points forts, axes de progrès. Le sceau s'y déploie.</div>
+      </div>
+    </div>
+    <div style="border-top:1px dashed #E4DBC9;margin-top:16px;padding-top:13px;display:flex;align-items:center;gap:11px">
+      <span style="width:30px;height:30px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+      <span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632"><b>« Ton parcours »</b> traverse les quatre brins : un graphe par section (Découvertes · Sources · Réflexions) et les pistes du dernier retour — aujourd'hui affiché en entier tout en haut. <span style="color:#B26A4A">On le replie (voir section A).</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= A — ACCUEIL DU MONDE ======================= -->
+<div style="position:absolute;left:80px;top:780px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#616E30">A · L'accueil du monde — désencombré</div>
+<div style="position:absolute;left:80px;top:822px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E;width:1100px">Le vrai problème : tout s'empile et se lit d'un bloc. À gauche, l'écran tel quel. À droite, repensé — le sceau en en-tête, une seule action « maintenant », le parcours réduit à une bande, le reste replié.</div>
+
+<!-- AVANT — clutter mobile -->
+<div data-screen-label="Accueil Fragments — avant (actuel)" style="position:absolute;left:80px;top:912px;width:248px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#A23E2E">AVANT — tout empilé</div>
+  <div style="border:10px solid #221C16;border-radius:34px;background:#221C16;box-shadow:0 5px 18px rgba(34,28,22,.2)">
+    <div style="background:#EFE9DC;border-radius:24px;height:600px;overflow:hidden;padding:13px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#616E30">Fragments d'érudition</div>
+      <div style="background:#ECE4D6;border-radius:8px;padding:8px"><div style="font-size:9px;color:#8A6F4E;font-family:'Alegreya Sans',sans-serif">Ton thème</div><div style="height:7px;width:70%;background:#D8D9C4;border-radius:4px;margin-top:5px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:8px;padding:9px"><div style="font-size:9px;color:#8A6F4E;font-family:'Alegreya Sans',sans-serif">TON PARCOURS</div><div style="height:46px;background:#E2E3D2;border-radius:5px;margin-top:5px"></div></div>
+      <div style="display:flex;gap:5px"><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:34px"></div><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:34px"></div><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:34px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;padding:8px"><div style="height:6px;width:80%;background:#E4DBC9;border-radius:3px"></div><div style="height:6px;width:60%;background:#E4DBC9;border-radius:3px;margin-top:5px"></div></div>
+      <div style="display:flex;gap:5px"><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:40px"></div><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:40px"></div><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:40px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;padding:8px"><div style="font-size:9px;color:#8A6F4E;font-family:'Alegreya Sans',sans-serif">Ton dernier retour</div><div style="height:6px;width:90%;background:#E4DBC9;border-radius:3px;margin-top:5px"></div><div style="height:6px;width:85%;background:#E4DBC9;border-radius:3px;margin-top:4px"></div><div style="height:6px;width:70%;background:#E4DBC9;border-radius:3px;margin-top:4px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:30px"></div>
+    </div>
+  </div>
+  <div style="background:#EFD9D2;border:1px solid #DDB7AC;border-radius:7px;padding:9px 11px;margin-top:9px;font-family:'EB Garamond',serif;font-size:13px;color:#7A2E22;line-height:1.4">Thème, graphe, 3 stats, pistes, 4 tuiles, retour entier, formulaire, historique — <b>tout d'un coup</b>. On ne sait pas par où commencer.</div>
+</div>
+
+<!-- APRÈS — desktop -->
+<div data-screen-label="Accueil Fragments — après (ordi)" style="position:absolute;left:360px;top:912px;width:860px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5B6E4A">APRÈS — une hiérarchie de lecture · ordinateur</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:50px">
+      <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="color:#5A4632;padding:6px 13px">Calendrier</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">2nde 4 · Déconnexion</span>
+    </div>
+    <div style="background:#EFE9DC;padding:22px 26px 26px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-bottom:14px">← Retour</div>
+      <!-- hero header with big seal -->
+      <div style="display:flex;align-items:center;gap:18px">
+        <span style="width:88px;height:88px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(97,110,48,.16)"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply;filter:saturate(1.05) contrast(1.03)" alt=""></span>
+        <div style="min-width:0">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:14px;letter-spacing:.2em;color:#616E30">FRAGMENTS D'ÉRUDITION</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:29px;color:#221C16;line-height:1.05;margin-top:2px">La mémoire et l'oubli</div>
+          <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:2px">Ton thème du semestre · une fiche manuscrite par semaine.</div>
+        </div>
+      </div>
+      <!-- ONE focus: à faire maintenant -->
+      <div style="background:#FBF8F1;border:1.5px solid #616E30;border-radius:12px;padding:15px 18px;margin-top:18px;display:flex;align-items:center;gap:16px">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.08em;color:#616E30">▸ À FAIRE MAINTENANT</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;margin-top:3px">Semaine 5 — dépose ton fragment</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:2px">À rendre avant <b>dimanche 23 h</b>. Photographie ta fiche manuscrite.</div>
+        </div>
+        <span style="background:#B26A4A;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;border-radius:9px;padding:11px 20px;white-space:nowrap">Déposer →</span>
+      </div>
+      <!-- 4 strands as a calm tab row -->
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <div style="flex:1;background:#FBF8F1;border:1px solid #D6D8C2;border-bottom:3px solid #616E30;border-radius:10px;padding:11px 13px">
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#9A6A2E"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Écrits</span></div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#9A6A2E;margin-top:3px">À déposer</div>
+        </div>
+        <div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 13px">
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#5A4632">Oral</span></div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:3px">Retour dispo.</div>
+        </div>
+        <div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 13px">
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#5A4632">Essai</span></div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:3px">Rien de neuf</div>
+        </div>
+        <div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 13px">
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#5A4632">Synthèse</span></div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:3px">Fin de semestre</div>
+        </div>
+      </div>
+      <!-- parcours reduced to one slim strip -->
+      <div style="display:flex;align-items:center;gap:14px;margin-top:14px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:11px 16px">
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.08em;color:#8A6F4E">TON PARCOURS</span>
+        <div style="display:flex;align-items:center;gap:5px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632">Découvertes</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#5B6E4A">B+</span></div>
+        <span style="width:1px;height:16px;background:#E4DBC9"></span>
+        <div style="display:flex;align-items:center;gap:5px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632">Sources</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#9A6A2E">C</span></div>
+        <span style="width:1px;height:16px;background:#E4DBC9"></span>
+        <div style="display:flex;align-items:center;gap:5px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632">Réflexions</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#5B6E4A">B</span></div>
+        <span style="margin-left:auto;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#616E30">Voir le détail →</span>
+      </div>
+      <!-- last feedback collapsed to a recall line -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 14px;margin-top:10px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:14px">💡</span>
+        <span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;flex:1">Piste du dernier retour : <i>« cite tes sources précisément — au moins l'auteur et l'œuvre. »</i></span>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APRÈS — mobile -->
+<div data-screen-label="Accueil Fragments — après (mobile)" style="position:absolute;left:1260px;top:912px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5B6E4A">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#EFE9DC;border-radius:27px;height:610px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#616E30">FRAGMENTS</span></div>
+      <div style="padding:14px 15px;flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:58px;height:58px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+          <div style="min-width:0">
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;line-height:1.05">La mémoire et l'oubli</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:2px">Ton thème · semaine 5</div>
+          </div>
+        </div>
+        <!-- focus card -->
+        <div style="background:#FBF8F1;border:1.5px solid #616E30;border-radius:11px;padding:12px;margin-top:13px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.06em;color:#616E30">▸ À FAIRE MAINTENANT</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#221C16;margin-top:3px">Dépose ton fragment</div>
+          <div style="font-family:'EB Garamond',serif;font-size:12.5px;color:#5A4632;margin-top:2px">Avant dimanche 23 h</div>
+          <div style="background:#B26A4A;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;font-weight:600;text-align:center;border-radius:8px;padding:9px;margin-top:10px">Déposer →</div>
+        </div>
+        <!-- strands as compact rows -->
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">
+          <div style="background:#FBF8F1;border:1px solid #D6D8C2;border-left:3px solid #616E30;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:#9A6A2E"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;font-weight:700;color:#221C16;flex:1">Écrits</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#9A6A2E">à déposer</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:#5B6E4A"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;flex:1">Oral</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E">retour</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:#C9B89A"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;flex:1">Essai</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E">—</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:#C9B89A"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;flex:1">Synthèse</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E">—</span></div>
+        </div>
+        <!-- parcours strip -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:11px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 12px;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">
+          <span style="color:#8A6F4E">Parcours</span>
+          <span>Déc. <b style="color:#5B6E4A;font-family:'Cormorant Garamond',serif;font-size:14px">B+</b></span>
+          <span>Src <b style="color:#9A6A2E;font-family:'Cormorant Garamond',serif;font-size:14px">C</b></span>
+          <span>Réf. <b style="color:#5B6E4A;font-family:'Cormorant Garamond',serif;font-size:14px">B</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A note -->
+<div style="position:absolute;left:80px;top:1620px;width:248px">
+  
+</div>
+
+<!-- ======================= B — DÉPÔT HEBDO ======================= -->
+<div style="position:absolute;left:80px;top:1740px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#616E30">B · Le dépôt hebdomadaire — les états du brin « Écrits »</div>
+<div style="position:absolute;left:80px;top:1782px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E;width:1100px">Un même en-tête de semaine, puis l'écran change selon l'état : à déposer, déposé (retour en attente), retour à lire (verrou), à jour. Le formulaire est sobre — photo, ordre, commentaire.</div>
+
+<!-- B1 à déposer — desktop -->
+<div data-screen-label="Dépôt — à déposer (ordi)" style="position:absolute;left:80px;top:1860px;width:660px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">① À déposer — le formulaire</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:22px 26px 24px">
+      <!-- week header -->
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:54px;height:54px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.18em;color:#616E30">SEMAINE EN COURS</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;color:#221C16;line-height:1.05">Semaine 5 — La trace</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-top:1px">À rendre avant dimanche 8 juin, 23 h 00</div>
+        </div>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#9A6A2E;background:#EFE4CF;padding:4px 12px;border-radius:9px;white-space:nowrap">À déposer</span>
+      </div>
+      <!-- upload zone -->
+      <div style="border:2px dashed #C9B89A;background:#FBF8F1;border-radius:12px;padding:22px;margin-top:16px;text-align:center">
+        <div style="font-size:30px">📷</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;color:#5A4632;margin-top:5px">Ajouter des photos</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:3px">JPEG, PNG ou HEIC · Max 4 photos · compressées automatiquement</div>
+      </div>
+      <!-- thumbs -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;color:#5A4632">Photos (2/4) — dans cet ordre :</div>
+        <div style="background:#ECE4D6;border-radius:10px;padding:8px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;width:14px;text-align:center">1</span>
+          <span style="width:48px;height:48px;border-radius:8px;background:repeating-linear-gradient(45deg,#E4DBC9,#E4DBC9 5px,#EDE6D7 5px,#EDE6D7 10px);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:8px;color:#9A8A6E">photo</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;flex:1">IMG_4821.jpg</span>
+          <span style="display:flex;gap:4px;color:#8A6F4E;font-size:13px">▲ ▼ ✕</span>
+        </div>
+        <div style="background:#ECE4D6;border-radius:10px;padding:8px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;width:14px;text-align:center">2</span>
+          <span style="width:48px;height:48px;border-radius:8px;background:repeating-linear-gradient(45deg,#E4DBC9,#E4DBC9 5px,#EDE6D7 5px,#EDE6D7 10px);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:8px;color:#9A8A6E">photo</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;flex:1">IMG_4822.jpg</span>
+          <span style="display:flex;gap:4px;color:#8A6F4E;font-size:13px">▲ ▼ ✕</span>
+        </div>
+      </div>
+      <!-- comment -->
+      <div style="margin-top:14px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;color:#5A4632;margin-bottom:4px">Commentaire <span style="color:#8A6F4E;font-weight:400">(optionnel)</span></div>
+        <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:44px"></div>
+      </div>
+      <div style="background:#B26A4A;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:8px;padding:12px;margin-top:14px">Déposer mon compte-rendu</div>
+    </div>
+  </div>
+</div>
+
+<!-- B1 mobile -->
+<div data-screen-label="Dépôt — à déposer (mobile)" style="position:absolute;left:780px;top:1860px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — caméra directe</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#EFE9DC;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#616E30">FRAGMENTS</span></div>
+      <div style="padding:13px 15px;flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:11px">
+          <span style="width:44px;height:44px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+          <div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;line-height:1.05">Semaine 5 — La trace</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#9A6A2E;margin-top:1px">À déposer · dim. 23 h</div></div>
+        </div>
+        <div style="border:2px dashed #C9B89A;background:#FBF8F1;border-radius:11px;padding:26px 16px;margin-top:13px;text-align:center">
+          <div style="font-size:28px">📷</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;color:#5A4632;margin-top:5px">Photographier ma fiche</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;margin-top:3px">Max 4 photos</div>
+        </div>
+        <div style="background:#ECE4D6;border-radius:9px;padding:7px;display:flex;align-items:center;gap:9px;margin-top:11px">
+          <span style="width:42px;height:42px;border-radius:7px;background:repeating-linear-gradient(45deg,#E4DBC9,#E4DBC9 5px,#EDE6D7 5px,#EDE6D7 10px);flex-shrink:0"></span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;flex:1">IMG_4821.jpg</span>
+          <span style="color:#8A6F4E;font-size:12px">▲ ▼ ✕</span>
+        </div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;font-weight:600;color:#5A4632;margin-top:12px;margin-bottom:4px">Commentaire</div>
+        <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:40px"></div>
+        <div style="background:#B26A4A;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:11px;margin-top:13px">Déposer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B states column: déposé / gate / à jour -->
+<div data-screen-label="Dépôt — états (déposé / verrou / à jour)" style="position:absolute;left:1120px;top:1860px;width:440px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Les autres états du dépôt</div>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <!-- déposé -->
+    <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden">
+      <div style="background:#EFE9DC;padding:15px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">② DÉPOSÉ — RETOUR EN ATTENTE</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5B6E4A;background:#E4E8D8;padding:3px 10px;border-radius:9px">✓ Déposé</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:13px;margin-top:11px">
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5">Retour en préparation — ton professeur l'examinera bientôt. Ta fiche reste visible en attendant.</div>
+        </div>
+      </div>
+    </div>
+    <!-- en retard -->
+    <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden">
+      <div style="background:#EFE9DC;padding:15px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">VARIANTE — EN RETARD</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;background:#EFD9D2;padding:3px 10px;border-radius:9px">⚠ En retard</span></div>
+        <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;line-height:1.5;margin-top:9px">Le dépôt reste possible mais signalé. Même formulaire, badge minium.</div>
+      </div>
+    </div>
+    <!-- gate -->
+    <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden">
+      <div style="background:#EFE9DC;padding:15px 18px">
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">③ VERROU — RETOUR À LIRE</span>
+        <div style="background:#EFE4CF;border:1px solid #9A6A2E;border-radius:10px;padding:12px 14px;margin-top:11px">
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#9A6A2E;line-height:1.5">Lis et valide ton dernier retour pour débloquer le dépôt de cette semaine.</div>
+          <div style="background:#B26A4A;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:9px;margin-top:10px">J'ai lu mon retour</div>
+        </div>
+      </div>
+    </div>
+    <!-- à jour -->
+    <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden">
+      <div style="background:#EFE9DC;padding:15px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">④ À JOUR</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5B6E4A;background:#E4E8D8;padding:3px 10px;border-radius:9px">✓ À jour</span></div>
+        <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;line-height:1.5;margin-top:9px">Rien à faire cette semaine. La tuile « Écrits » passe au vert ; on attend l'ouverture de la prochaine.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B note -->
+<div style="position:absolute;left:80px;top:2680px;width:660px">
+  <div style="background:#EFE9DC;border:1px solid #E4DBC9;border-left:3px solid #B26A4A;border-radius:8px;padding:14px 18px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#B26A4A">UN GESTE, PAS UN MUR</span><br>
+    Pas de saisie au clavier : l'élève écrit à la main puis <b>photographie</b>. L'écran ne montre que ce qui sert au geste — la zone photo, l'ordre des pages, un commentaire optionnel. Le verrou de lecture (état ③) est repris d'Aletheia : on ne dépose pas tant qu'on n'a pas lu le retour précédent.
+  </div>
+</div>
+
+<!-- ======================= C — RETOUR SOCRATIQUE ======================= -->
+<div style="position:absolute;left:80px;top:2820px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#B26A4A">C · Le retour socratique — repensé contre le clutter ★</div>
+<div style="position:absolute;left:80px;top:2862px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E;width:1100px">L'écran le plus chargé du module : 3 notes + 5 sections de texte + pistes + note du prof + transcription, tout déplié. On hiérarchise : la note d'un coup d'œil, « en un mot », puis le détail replié section par section.</div>
+
+<!-- AVANT -->
+<div data-screen-label="Retour — avant (tout déplié)" style="position:absolute;left:80px;top:2940px;width:240px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#A23E2E">AVANT — tout déplié</div>
+  <div style="border:9px solid #221C16;border-radius:32px;background:#221C16;box-shadow:0 5px 18px rgba(34,28,22,.2)">
+    <div style="background:#EFE9DC;border-radius:23px;height:540px;overflow:hidden;padding:13px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;gap:6px"><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:38px"></div><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:38px"></div><div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:38px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;padding:9px"><div style="height:6px;width:50%;background:#D8D9C4;border-radius:3px"></div><div style="height:6px;width:92%;background:#E4DBC9;border-radius:3px;margin-top:6px"></div><div style="height:6px;width:88%;background:#E4DBC9;border-radius:3px;margin-top:4px"></div><div style="height:6px;width:80%;background:#E4DBC9;border-radius:3px;margin-top:4px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;padding:9px"><div style="height:6px;width:40%;background:#D8D9C4;border-radius:3px"></div><div style="height:6px;width:90%;background:#E4DBC9;border-radius:3px;margin-top:6px"></div><div style="height:6px;width:84%;background:#E4DBC9;border-radius:3px;margin-top:4px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;padding:9px"><div style="height:6px;width:45%;background:#D8D9C4;border-radius:3px"></div><div style="height:6px;width:88%;background:#E4DBC9;border-radius:3px;margin-top:6px"></div><div style="height:6px;width:76%;background:#E4DBC9;border-radius:3px;margin-top:4px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;padding:9px"><div style="height:6px;width:42%;background:#D8D9C4;border-radius:3px"></div><div style="height:6px;width:90%;background:#E4DBC9;border-radius:3px;margin-top:6px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:7px;height:26px"></div>
+    </div>
+  </div>
+  <div style="background:#EFD9D2;border:1px solid #DDB7AC;border-radius:7px;padding:9px 11px;margin-top:9px;font-family:'EB Garamond',serif;font-size:13px;color:#7A2E22;line-height:1.4">Cinq pavés de texte de même poids. On lit tout ou on ne lit rien.</div>
+</div>
+
+<!-- APRÈS desktop -->
+<div data-screen-label="Retour — après (hiérarchisé, ordi)" style="position:absolute;left:360px;top:2940px;width:740px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5B6E4A">APRÈS — la note, puis l'essentiel, le détail replié · ordinateur</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:22px 26px 26px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:50px;height:50px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.18em;color:#616E30">RETOUR · SEMAINE 4</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;color:#221C16;line-height:1.05">L'oubli volontaire</div>
+        </div>
+      </div>
+      <!-- 3 notes at a glance -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px">
+        <div style="background:#E4E8D8;border-radius:11px;padding:11px 13px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5B6E4A">Découvertes</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#5B6E4A">B+ <span style="font-family:'EB Garamond',serif;font-size:13px;font-weight:400">Un bon travail</span></div></div>
+        <div style="background:#EFE4CF;border-radius:11px;padding:11px 13px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#9A6A2E">Sources</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#9A6A2E">C <span style="font-family:'EB Garamond',serif;font-size:13px;font-weight:400">Travail fait</span></div></div>
+        <div style="background:#E4E8D8;border-radius:11px;padding:11px 13px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5B6E4A">Réflexions</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#5B6E4A">B <span style="font-family:'EB Garamond',serif;font-size:13px;font-weight:400">Un bon travail</span></div></div>
+      </div>
+      <!-- en un mot, lead -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #616E30;border-radius:11px;padding:15px 17px;margin-top:14px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#616E30">★ EN UN MOT</div>
+        <div style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;line-height:1.6;margin-top:7px">Une belle intuition sur la mémoire comme choix, mais tes sources restent vagues — nomme les auteurs. Ta réflexion gagnerait à confronter deux thèses plutôt qu'à en illustrer une seule.</div>
+      </div>
+      <!-- pistes -->
+      <div style="margin-top:14px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">PISTES POUR LA SUITE</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;gap:9px"><span style="flex-shrink:0">💡</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.45">Cite tes sources précisément — au moins l'auteur et l'œuvre.</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;gap:9px"><span style="flex-shrink:0">🔁</span><div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#616E30;font-weight:600">On en avait parlé</div><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.45">Pense à la structure : une thèse, une objection, une réponse.</span></div></div>
+        </div>
+      </div>
+      <!-- detail collapsed -->
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:7px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">LE DÉTAIL — DÉPLIER CE QUI T'INTÉRESSE</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Langue</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Style</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Contenu</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Transcription de mon manuscrit</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APRÈS mobile -->
+<div data-screen-label="Retour — après (mobile)" style="position:absolute;left:1140px;top:2940px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5B6E4A">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#EFE9DC;border-radius:27px;height:620px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#616E30">FRAGMENTS</span></div>
+      <div style="padding:13px 15px;flex:1;overflow:hidden">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16">Retour — Semaine 4</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:11px">
+          <div style="background:#E4E8D8;border-radius:9px;padding:8px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#5B6E4A">B+</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#5B6E4A">Découv.</div></div>
+          <div style="background:#EFE4CF;border-radius:9px;padding:8px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#9A6A2E">C</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#9A6A2E">Sources</div></div>
+          <div style="background:#E4E8D8;border-radius:9px;padding:8px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#5B6E4A">B</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#5B6E4A">Réflex.</div></div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #616E30;border-radius:10px;padding:11px 13px;margin-top:11px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.08em;color:#616E30">★ EN UN MOT</div>
+          <div style="font-family:'EB Garamond',serif;font-size:13px;color:#221C16;line-height:1.5;margin-top:5px">Belle intuition sur la mémoire ; nomme tes sources, et confronte deux thèses plutôt qu'une seule.</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 12px;margin-top:9px;display:flex;gap:8px"><span>💡</span><span style="font-family:'EB Garamond',serif;font-size:12.5px;color:#5A4632;line-height:1.4">Cite tes sources : auteur + œuvre.</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:9px">
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:12.5px;color:#221C16;flex:1">Langue · Style · Contenu</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E">déplier</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:12.5px;color:#221C16;flex:1">Transcription</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E">déplier</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- C note -->
+<div style="position:absolute;left:360px;top:3700px;width:740px">
+  <div style="background:#EFE9DC;border:1px solid #E4DBC9;border-left:3px solid #5B6E4A;border-radius:8px;padding:14px 18px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.55;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#5B6E4A">POURQUOI C'EST PLUS LISIBLE</span><br>
+    Les notes (Découvertes · Sources · Réflexions) donnent le verdict en une ligne. Le <b>« en un mot »</b> remonte la phrase qui compte. Les pistes — actionnables — restent visibles. Les quatre sections détaillées (langue, style, contenu, transcription) se <b>replient</b> : on les ouvre si on veut creuser. Cinq pavés égaux → une lecture guidée.
+  </div>
+</div>
+
+<!-- ======================= D — SEMAINES PRÉCÉDENTES ======================= -->
+<div style="position:absolute;left:80px;top:3840px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#616E30">D · Les semaines précédentes — une archive repliée</div>
+<div style="position:absolute;left:80px;top:3882px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E;width:1100px">Aujourd'hui chaque semaine passée ré-affiche le retour entier, à la queue leu leu. On les réduit à des lignes : numéro, titre, état, note — on déplie celle qu'on veut revoir.</div>
+
+<div data-screen-label="Semaines précédentes — ordi" style="position:absolute;left:80px;top:3960px;width:720px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — liste repliable</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:20px 24px 24px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:11px">SEMAINES PRÉCÉDENTES</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <!-- expanded one -->
+        <div style="background:#FBF8F1;border:1px solid #B9C2A0;border-radius:11px;overflow:hidden">
+          <div style="padding:12px 16px;display:flex;align-items:center;gap:14px;background:#E2E3D2">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#616E30;width:24px;text-align:center">4</span>
+            <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">L'oubli volontaire</span>
+            <span style="display:flex;gap:5px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#5B6E4A">B+</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#9A6A2E">C</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#5B6E4A">B</span></span>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#616E30">replier ▴</span>
+          </div>
+          <div style="padding:14px 16px">
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #616E30;border-radius:10px;padding:12px 14px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.08em;color:#616E30">★ EN UN MOT</div>
+              <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;line-height:1.55;margin-top:5px">Belle intuition sur la mémoire comme choix ; tes sources restent vagues. Confronte deux thèses.</div>
+            </div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:10px">▸ Détail · pistes · transcription — <span style="color:#616E30">déplier</span></div>
+          </div>
+        </div>
+        <!-- collapsed rows -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:12px 16px;display:flex;align-items:center;gap:14px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#B3A488;width:24px;text-align:center">3</span>
+          <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">La trace et l'effacement</span>
+          <span style="display:flex;gap:5px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#5B6E4A">B</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#9A6A2E">C+</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#5B6E4A">A−</span></span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#616E30">déplier ▾</span>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:12px 16px;display:flex;align-items:center;gap:14px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#B3A488;width:24px;text-align:center">2</span>
+          <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">Mémoire et témoignage</span>
+          <span style="display:flex;gap:5px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#9A6A2E">C</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#5B6E4A">B</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#5B6E4A">B</span></span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#616E30">déplier ▾</span>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:12px 16px;display:flex;align-items:center;gap:14px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#B3A488;width:24px;text-align:center">1</span>
+          <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">Qu'est-ce que se souvenir ?</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;background:#ECE4D6;padding:2px 9px;border-radius:9px">Déposé ✓</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#616E30">déplier ▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D mobile -->
+<div data-screen-label="Semaines précédentes — mobile" style="position:absolute;left:840px;top:3960px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#EFE9DC;border-radius:27px;height:540px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#616E30">FRAGMENTS</span></div>
+      <div style="padding:13px 15px;flex:1;overflow:hidden">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.08em;color:#8A6F4E;margin-bottom:9px">SEMAINES PRÉCÉDENTES</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="background:#E2E3D2;border:1px solid #B9C2A0;border-radius:9px;padding:10px 12px"><div style="display:flex;align-items:center;gap:9px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#616E30">4</span><span style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16;flex:1">L'oubli volontaire</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#616E30">▴</span></div><div style="font-family:'EB Garamond',serif;font-size:12px;color:#5A4632;line-height:1.45;margin-top:6px">Belle intuition ; sources vagues. Confronte deux thèses.</div></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488">3</span><span style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16;flex:1">La trace</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#616E30">▾</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488">2</span><span style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16;flex:1">Témoignage</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#616E30">▾</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:9px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488">1</span><span style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16;flex:1">Se souvenir ?</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#616E30">▾</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= E — ORAL ======================= -->
+<div style="position:absolute;left:80px;top:4640px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#616E30">E · Fragment oral — la lecture du retour</div>
+<div style="position:absolute;left:80px;top:4682px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E;width:1100px">L'oral se fait en classe ; l'élève consulte ici le retour. Même grammaire que l'écrit : notes en haut, sections, audio à réécouter, transcription repliée. Ou, si rien : un état vide net.</div>
+
+<div data-screen-label="Oral — retour publié (ordi)" style="position:absolute;left:80px;top:4760px;width:680px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — retour d'oral</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:22px 26px 26px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">SEMAINE 3 — TA PRÉSENTATION ORALE</div>
+      <!-- notes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px">
+        <div style="background:#ECE4D6;border-radius:10px;padding:11px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#221C16">B+</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px">Contenu</div></div>
+        <div style="background:#ECE4D6;border-radius:10px;padding:11px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#221C16">B</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px">Structure</div></div>
+        <div style="background:#ECE4D6;border-radius:10px;padding:11px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#221C16">A−</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px">Expression</div></div>
+      </div>
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:10px">4 min 12 s · 612 mots · 146 mots/min</div>
+      <!-- sections -->
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:13px">
+        <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.06em;color:#8A6F4E;margin-bottom:3px">EN UN MOT</div><div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.55">Présentation claire et bien rythmée ; tu as su tenir ton auditoire jusqu'à la conclusion.</div></div>
+        <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.06em;color:#8A6F4E;margin-bottom:3px">PRISE EN COMPTE DE TES RETOURS ÉCRITS</div><div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.55">On voit que tu as cité tes sources cette fois — c'était la piste de la semaine 2.</div></div>
+      </div>
+      <!-- audio -->
+      <div style="margin-top:14px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-bottom:5px">Réécouter ta présentation</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:12px">
+          <span style="width:32px;height:32px;border-radius:50%;background:#616E30;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px">▶</span>
+          <div style="flex:1;height:5px;background:#E4DBC9;border-radius:3px;overflow:hidden"><div style="width:28%;height:100%;background:#616E30"></div></div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">1:09 / 4:12</span>
+        </div>
+      </div>
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#616E30;margin-top:12px;text-decoration:underline">Voir la transcription</div>
+    </div>
+  </div>
+</div>
+
+<!-- E vide + mobile -->
+<div data-screen-label="Oral — état vide" style="position:absolute;left:800px;top:4760px;width:340px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">État vide — pas encore d'oral</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden">
+    <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:30px 24px;text-align:center">
+      <span style="width:60px;height:60px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;opacity:.7"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+      <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.5;margin-top:14px">Aucun retour d'oral pour l'instant.<br>L'oral se fait en classe.</div>
+    </div>
+  </div>
+  <div data-drags-parent="1" style="position:absolute;top:266px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — retour d'oral</div>
+  <div style="position:absolute;top:296px;left:0;width:300px;border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#EFE9DC;border-radius:27px;height:480px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#616E30">FRAGMENTS</span></div>
+      <div style="padding:13px 15px;flex:1;overflow:hidden">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.08em;color:#8A6F4E">SEMAINE 3 — ORAL</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:9px">
+          <div style="background:#ECE4D6;border-radius:8px;padding:8px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#221C16">B+</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#8A6F4E">Contenu</div></div>
+          <div style="background:#ECE4D6;border-radius:8px;padding:8px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#221C16">B</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#8A6F4E">Struct.</div></div>
+          <div style="background:#ECE4D6;border-radius:8px;padding:8px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#221C16">A−</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#8A6F4E">Expr.</div></div>
+        </div>
+        <div style="font-family:'EB Garamond',serif;font-size:12.5px;color:#5A4632;line-height:1.5;margin-top:11px">Présentation claire et bien rythmée ; tu as tenu ton auditoire jusqu'au bout.</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:10px;margin-top:11px"><span style="width:28px;height:28px;border-radius:50%;background:#616E30;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">▶</span><div style="flex:1;height:4px;background:#E4DBC9;border-radius:3px;overflow:hidden"><div style="width:28%;height:100%;background:#616E30"></div></div><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#8A6F4E">4:12</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= F — ESSAI ======================= -->
+<div style="position:absolute;left:80px;top:5400px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#616E30">F · L'essai — épreuve, dépôt, retour noté</div>
+<div style="position:absolute;left:80px;top:5442px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E;width:1100px">Une épreuve datée par le prof. L'élève photographie sa copie (jusqu'à 12 pages), puis reçoit un retour par dimension (Structure · Expression · Argumentation · Connaissances) et, si le prof le rend visible, une note sur 20.</div>
+
+<!-- F dépôt -->
+<div data-screen-label="Essai — dépôt (ordi)" style="position:absolute;left:80px;top:5520px;width:560px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">① Épreuve ouverte — dépôt</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:22px 26px 24px">
+      <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16">Essai n°1 — La mémoire collective</div>
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-top:2px">14 juin 2026 · 120 min</div>
+      <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5;margin-top:9px">En t'appuyant sur les fragments du semestre, discute : la mémoire collective se construit-elle ou se subit-elle ?</div>
+      <div style="border:2px dashed #C9B89A;background:#FBF8F1;border-radius:12px;padding:22px;margin-top:14px;text-align:center">
+        <div style="font-size:28px">📷</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;color:#5A4632;margin-top:5px">Photographier mon essai</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:3px">Max 12 photos · recto d'abord, puis verso</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <span style="width:46px;height:46px;border-radius:8px;background:repeating-linear-gradient(45deg,#E4DBC9,#E4DBC9 5px,#EDE6D7 5px,#EDE6D7 10px);flex-shrink:0"></span>
+        <span style="width:46px;height:46px;border-radius:8px;background:repeating-linear-gradient(45deg,#E4DBC9,#E4DBC9 5px,#EDE6D7 5px,#EDE6D7 10px);flex-shrink:0"></span>
+        <span style="width:46px;height:46px;border-radius:8px;background:repeating-linear-gradient(45deg,#E4DBC9,#E4DBC9 5px,#EDE6D7 5px,#EDE6D7 10px);flex-shrink:0"></span>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;align-self:center">3 / 12</span>
+      </div>
+      <div style="background:#B26A4A;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:8px;padding:12px;margin-top:14px">Déposer mon essai</div>
+    </div>
+  </div>
+  <div style="background:#EFE9DC;border:1px solid #E4DBC9;border-left:3px solid #3E5C7E;border-radius:8px;padding:12px 15px;margin-top:12px;font-family:'EB Garamond',serif;font-size:14px;line-height:1.5;color:#5A4632"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#3E5C7E">APRÈS DÉPÔT</span><br>« Analyse en cours… ton professeur recevra les résultats dès qu'elle sera terminée. »</div>
+</div>
+
+<!-- F retour -->
+<div data-screen-label="Essai — retour noté (ordi)" style="position:absolute;left:680px;top:5520px;width:560px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">② Retour publié — par dimension</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:22px 26px 26px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">RETOUR DE TON PROFESSEUR</div>
+      <!-- letters grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:12px">
+        <div style="background:#E4E8D8;border-radius:10px;padding:10px;text-align:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#5B6E4A;margin-bottom:6px">Structure</div><span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:#E4E8D8;box-shadow:inset 0 0 0 1.5px #5B6E4A;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-weight:700;color:#5B6E4A">B</span></div>
+        <div style="background:#E4E8D8;border-radius:10px;padding:10px;text-align:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#5B6E4A;margin-bottom:6px">Expression</div><span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:#E4E8D8;box-shadow:inset 0 0 0 1.5px #5B6E4A;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-weight:700;color:#5B6E4A">A</span></div>
+        <div style="background:#EFE4CF;border-radius:10px;padding:10px;text-align:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#9A6A2E;margin-bottom:6px">Argument.</div><span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:#EFE4CF;box-shadow:inset 0 0 0 1.5px #9A6A2E;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-weight:700;color:#9A6A2E">C</span></div>
+        <div style="background:#E4E8D8;border-radius:10px;padding:10px;text-align:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#5B6E4A;margin-bottom:6px">Connaiss.</div><span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:#E4E8D8;box-shadow:inset 0 0 0 1.5px #5B6E4A;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-weight:700;color:#5B6E4A">B</span></div>
+      </div>
+      <!-- dimension sections collapsed feel: show 1 open + rest as rows -->
+      <div style="margin-top:14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;width:26px;height:26px;border-radius:50%;background:#EFE4CF;box-shadow:inset 0 0 0 1.5px #9A6A2E;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-weight:700;color:#9A6A2E;font-size:13px">C</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;color:#5A4632">Argumentation</span></div>
+        <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.55;margin-top:6px">Tes exemples sont justes mais juxtaposés ; il manque le fil qui les relie en une thèse. Travaille les transitions.</div>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:7px">
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14px;color:#221C16;flex:1">Structure · Expression · Connaissances</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14px;color:#221C16;flex:1">Mise en perspective · bilan</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+      </div>
+      <!-- note -->
+      <div style="background:#616E30;color:#FBF8F1;border-radius:11px;padding:14px;margin-top:14px;text-align:center">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:rgba(251,248,241,.7)">Note</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:32px;line-height:1">13<span style="font-size:18px;color:rgba(251,248,241,.7)">/20</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= G — SYNTHÈSE ======================= -->
+<div style="position:absolute;left:80px;top:6320px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#616E30">G · La synthèse de semestre — le télos</div>
+<div style="position:absolute;left:80px;top:6362px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E;width:1100px">En fin de semestre : le bilan d'ensemble. Le sceau s'y déploie en grand — c'est la page à garder. Bilan, points forts (vert), axes de progrès (ambre), et la note de semestre si elle est visible.</div>
+
+<div data-screen-label="Synthèse de semestre — ordi" style="position:absolute;left:80px;top:6440px;width:680px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — le sceau en grand</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#EFE9DC;padding:28px 30px">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center">
+        <span style="width:116px;height:116px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(97,110,48,.16)"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply;filter:saturate(1.05) contrast(1.03)" alt=""></span>
+        <div style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.2em;color:#616E30;margin-top:13px">FRAGMENTS · BILAN DU SEMESTRE</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:28px;color:#221C16;line-height:1.1;margin-top:4px">La mémoire et l'oubli</div>
+      </div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #616E30;border-radius:11px;padding:16px 18px;margin-top:20px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#616E30;margin-bottom:6px">BILAN DU SEMESTRE</div>
+        <div style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;line-height:1.6">Au fil des semaines, tu es passé d'intuitions justes mais isolées à une vraie capacité à confronter des thèses. Tes fragments gagnent en rigueur ; la citation des sources, longtemps fragile, est devenue un réflexe.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div style="background:#E4E8D8;border:1px solid #5B6E4A;border-radius:11px;padding:14px 16px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;color:#5B6E4A;margin-bottom:5px">Points forts</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#3F4A2C;line-height:1.5">Curiosité, finesse des intuitions, progrès constant sur les sources.</div>
+        </div>
+        <div style="background:#EFE4CF;border:1px solid #9A6A2E;border-radius:11px;padding:14px 16px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;color:#9A6A2E;margin-bottom:5px">Axes de progrès</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#7A5320;line-height:1.5">Structurer l'argument : une thèse, une objection, une réponse.</div>
+        </div>
+      </div>
+      <div style="background:#616E30;color:#FBF8F1;border-radius:11px;padding:15px;margin-top:14px;text-align:center">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:rgba(251,248,241,.7)">Note de semestre</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:34px;line-height:1">14<span style="font-size:18px;color:rgba(251,248,241,.7)">/20</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- G mobile -->
+<div data-screen-label="Synthèse — mobile" style="position:absolute;left:800px;top:6440px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#EFE9DC;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#616E30">FRAGMENTS</span></div>
+      <div style="padding:16px 15px;flex:1;overflow:hidden;text-align:center">
+        <span style="width:84px;height:84px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(97,110,48,.16)"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+        <div style="font-family:'Cinzel',serif;font-weight:600;font-size:10px;letter-spacing:.16em;color:#616E30;margin-top:10px">BILAN DU SEMESTRE</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:2px">La mémoire et l'oubli</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #616E30;border-radius:10px;padding:11px 13px;margin-top:12px;text-align:left">
+          <div style="font-family:'EB Garamond',serif;font-size:13px;color:#221C16;line-height:1.55">D'intuitions isolées à une vraie capacité à confronter des thèses. La citation des sources est devenue un réflexe.</div>
+        </div>
+        <div style="background:#E4E8D8;border:1px solid #5B6E4A;border-radius:9px;padding:9px 12px;margin-top:9px;text-align:left"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;font-weight:700;color:#5B6E4A">Points forts</div><div style="font-family:'EB Garamond',serif;font-size:12px;color:#3F4A2C;line-height:1.45;margin-top:2px">Finesse des intuitions, progrès sur les sources.</div></div>
+        <div style="background:#616E30;color:#FBF8F1;border-radius:10px;padding:11px;margin-top:9px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:rgba(251,248,241,.7)">Note de semestre</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;line-height:1">14<span style="font-size:14px;color:rgba(251,248,241,.7)">/20</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= H — ÉTATS LIMITES ======================= -->
+<div style="position:absolute;left:80px;top:7180px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#8A6F4E">H · Les états limites</div>
+<div style="position:absolute;left:80px;top:7222px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Module non disponible, aucune semaine ouverte, pas encore de thème, erreur d'envoi — les écrans qu'on oublie mais que l'élève rencontre.</div>
+
+<div style="position:absolute;left:80px;top:7290px;width:1500px">
+  <div style="display:flex;gap:18px">
+    <!-- module non dispo -->
+    <div data-screen-label="Module non disponible" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#EFE9DC;padding:20px;text-align:center">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;text-align:left;margin-bottom:14px">← Retour</div>
+          <span style="width:54px;height:54px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;opacity:.6"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:10px">Module non disponible</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;margin-top:5px;line-height:1.5">Ce module n'est pas disponible pour ton compte. Demande à ton professeur.</div>
+        </div>
+      </div>
+    </div>
+    <!-- aucune semaine -->
+    <div data-screen-label="Aucune semaine ouverte" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#EFE9DC;padding:20px;text-align:center">
+          <div style="display:flex;align-items:center;gap:11px;text-align:left">
+            <span style="width:46px;height:46px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+            <span style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.16em;color:#616E30">FRAGMENTS</span>
+          </div>
+          <div style="border:1px dashed #C9B89A;border-radius:10px;padding:18px;margin-top:16px;background:#FBF8F1">
+            <div style="font-size:24px">📖</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;margin-top:6px">Aucune semaine ouverte</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:4px;line-height:1.5">Ton professeur en créera une bientôt.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- pas de thème -->
+    <div data-screen-label="Thème non défini" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#EFE9DC;padding:20px">
+          <div style="display:flex;align-items:center;gap:11px">
+            <span style="width:46px;height:46px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden"><img src="sceaux/fragments_medaillon.png" style="width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply" alt=""></span>
+            <div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.16em;color:#616E30">FRAGMENTS</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;line-height:1.05">D'érudition</div></div>
+          </div>
+          <div style="background:#ECE4D6;border:1px solid #E4DBC9;border-radius:10px;padding:14px;margin-top:14px">
+            <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;font-style:italic;line-height:1.5">Ton thème sera défini avec ton professeur.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- erreur -->
+    <div data-screen-label="Échec de l'envoi" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#EFE9DC;padding:20px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-bottom:14px">Semaine 5</div>
+          <div style="background:#EFD9D2;border:1px solid #DDB7AC;border-radius:10px;padding:13px 15px">
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;font-weight:700;color:#A23E2E;margin-bottom:4px">⚠ L'envoi a échoué</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#7A2E22;line-height:1.5">Vérifie ta connexion et réessaie. Tes photos sont conservées.</div>
+          </div>
+          <div style="background:#B26A4A;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:10px;margin-top:12px">Réessayer l'envoi</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- closing -->
+<div style="position:absolute;left:80px;top:7640px;width:840px">
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:18px 20px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.55;color:#5A4632;box-shadow:0 1px 3px rgba(34,28,22,.06)">
+    <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;margin-bottom:6px">Le bilan</div>
+    Fragments n'est pas « deux écrans » mais un monde à quatre brins. Le parti pris contre le clutter : <b>une seule action à la fois</b>, le reste replié — l'accueil mène d'abord à « ce qu'il faut faire maintenant », le retour socratique mène par sa note et son « en un mot », l'archive des semaines devient une liste. Le <b>sceau</b> entre enfin dans l'en-tête du monde et se déploie sur la synthèse. Et la couleur est fixée : olive <span style="color:#616E30">#616E30</span> partout, bouton terracotta <span style="color:#B26A4A">#B26A4A</span> — fini le bleu d'Aletheia emprunté par erreur.
+  </div>
+</div>
+<div style="background: #EFE9DC; border: 1px solid #E4DBC9; border-left: 3px solid #616E30; border-radius: 8px; padding: 14px 16px; font-family: 'EB Garamond',serif; font-size: 14.5px; line-height: 1.5; color: #5A4632; position: absolute; left: 365px; top: 1472px">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#616E30">CE QUI CHANGE</span><br>
+    Le sceau entre dans l'en-tête (il manquait). Une <b>seule</b> action en avant ; les 4 brins deviennent une rangée calme avec une pastille d'état ; le parcours se réduit à une bande, son détail à la demande ; le dernier retour se replie en une ligne.
+  </div></x-dc>
+</body>
+</html>

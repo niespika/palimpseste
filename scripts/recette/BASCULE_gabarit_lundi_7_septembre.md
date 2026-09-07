@@ -31,7 +31,15 @@
    ```
    ⚠️ Le script lit les clés `PROD_*` du `.env.local` sur `--prod` — on n'échange rien dans le fichier.
    ⚠️ L'import REFUSE un `id_import` déjà en base : un second dépôt du même fichier ne fait rien.
-   Attendu : 312 exercices, 312 matériaux entrés, tous `a_concevoir`.
+   ⭐ 06/09 : un TROISIÈME fichier, `gabarit-c2.json` — **24 exercices de cran 2 en TEXTE À TROU** (dérivés en séance le ⛔⛔ **06/09 (après-midi) : jouer le 4 bis AVANT ce fichier.** Le cran 2 ISOLE désormais (`02-` v6.7) et chaque cas porte sa clé « pièce absente » en `probleme` ; le contrôle d'import lit la doctrine DE LA BASE, et refuserait `probleme` au cran 2 tant que la prod porte encore `exerce`. Ordre réel : 1 → 2 (vagues 1 et 2) → 3 → 4 → **4 bis** → 2 (le troisième fichier, `gabarit-c2.json`) → 3 pour lui → 5.
+   06/09, relus par Louis, forme du `10-` v0.9 ; 0 refus aux deux contrôles ; 0 matériau, il réutilise les sujets) :
+   ```
+   … scripts/recette/import-a-blanc.mjs <conception>/generateur/banque/gabarit-c2.json prod
+   node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/register-calibration-resolver.mjs scripts/recette/deposer-import.mjs --prod <…>/gabarit-c2.json
+   ```
+   ⚠️ Ne le déposer en prod QUE si l'écran du cran 2 est mergé (`PROMPT_Code_ecran_cran2.md`, session parallèle) ;
+   sinon les 26 restent en bac à sable et le routeur ne sert pas le 2 en méthode.
+   Attendu : 304 exercices des vagues 1 et 2 (+ 24 de cran 2 si déposés), 304 matériaux entrés, tous `a_concevoir`.
 
 3. **Les instances passent `concu`** (elles n'entrent au vivier qu'en `concu`) :
    ```
@@ -47,6 +55,20 @@
    ```
    ⛔ AVANT : vérifier par requête que la Synthèse est `differee` (`competences_statut_recette`),
    sinon ses élèves ne recevraient plus rien. Mesuré `differee` le 05/09 — re-mesurer dimanche.
+
+4 bis. **La doctrine re-dérivée en production** (écrit ; ⭐ **06/09 après-midi : le cran 2 ISOLE** — `02-` v6.7, `09-` v1.8 avec 206 problèmes, `exercices_types_crans` du cran 2 couvert par les clés « pièce absente » ; 26ᵉ dérivation en bac à sable, 18 IDENTIQUE ; le `09-` est passé en v1.6 le 06/09 : exemplaires et
+   contre-exemples validés par Louis, 18 contre-exemples canoniques lus, 13 exemplaires plus « brouillon ») :
+   ```
+   python3 scripts/derive-doctrine.py --sql > /tmp/derive.sql
+   sed 's/^commit;$/rollback;/' /tmp/derive.sql > /tmp/derive-blanc.sql   # à blanc d'abord
+   psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/derive-blanc.sql
+   psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/derive.sql
+   ```
+   ⛔ `PROD_DB_URL` ÉCRIT en production : lire la référence `ucmngachkxvvlegntuwh` dans la chaîne avant de lancer.
+   Attendu : le constat en pied *(fiches_objets=21, routes=3294, problemes=205…)*, puis par requête
+   `exercices_fiches_objets` : 18 `contre_exemple` non nuls, 0 `exemplaire_brouillon` sur les validés. Joué en bac à
+   sable le 06/09 (ligne du `SUIVI_SQL.md`). Sans cette étape, la fiche servie en semaine de méthode montre des
+   exemplaires marqués brouillons et aucun contre-exemple.
 
 5. **Les portes, dans cet ordre** — Scriptorium › Paramètres, en production :
    d'abord `juge_documents_actif` ON, puis `gabarit_actif` ON. Sans le juge, la porte des crans ne

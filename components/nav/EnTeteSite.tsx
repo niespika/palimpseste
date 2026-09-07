@@ -173,7 +173,11 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
   const sousOngletsParParam = sousOnglets.some((o) => !!o.vue)
 
   return (
-    <header className="hidden sm:block sticky top-0 z-10 print:hidden">
+    // ⚠️ `z-20`, pas `z-10` : les colonnes figées des matrices de pilotage
+    //    (`sticky left-0 z-10`) viennent après dans le DOM et passaient PAR-DESSUS
+    //    l'en-tête au défilement (vu en prod le 05/09). Même palier que les barres
+    //    mobiles ; les panneaux et modales restent à 40/50.
+    <header className="hidden sm:block sticky top-0 z-20 print:hidden">
       {/* ─── Barre 1 — navigation générale ─── */}
       <div className="border-b border-[#E4DBC9] bg-[#FBF8F1]">
         <div className="relative max-w-[1040px] mx-auto px-[28px] py-[11px] flex justify-center">

@@ -61,8 +61,17 @@ interface Props {
   onTermine: (nbRevues: number) => void
 }
 
+// Une carte RATÉE revient en fin de file pour être RELUE — c'est de l'étude, pas
+// une seconde évaluation. Le FSRS a déjà reçu la seule note honnête (« je ne
+// savais pas ») et a posé l'échéance à demain ; la repasse ne lui envoie RIEN.
+// Mesuré le 05/09 : renoter « Bien » cinq minutes après un « Raté » repoussait
+// la carte de 1 à 3 jours, « Facile » à 4 — le souvenir tout frais passait pour
+// acquis. Avant, la repasse n'existait que pour les cartes neuves ou en
+// apprentissage, et sa seconde note écrasait la première.
+type CarteEnFile = CarteRevision & { repasse?: boolean }
+
 export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
-  const [cartes, setCartes] = useState(cartesInitiales)
+  const [cartes, setCartes] = useState<CarteEnFile[]>(cartesInitiales)
   const [index, setIndex] = useState(0)
   const [retournee, setRetournee] = useState(false)
   const [pending, setPending] = useState(false)
@@ -86,30 +95,39 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
     )
   }
 
+  // Retire la carte courante de la file ; `enFin` la remet en queue pour relecture.
+  function avancer(enFin: CarteEnFile | null) {
+    setCartes((prev) => {
+      const reste = prev.filter((_, i) => i !== index)
+      return enFin ? [...reste, enFin] : reste
+    })
+    if (!enFin) {
+      setIndex((i) => Math.min(i, cartes.length - 2))
+      setNbRevues((n) => n + 1)
+    }
+    setRetournee(false)
+  }
+
   async function handleNote(rating: 1 | 2 | 3 | 4) {
     if (pending) return
     setPending(true)
 
     const res = await soumettreNote(carte.flashcard_id, carte.card_state_id, rating)
 
-    // Si raté (1) et nouvelle carte ou état "learning", on remet la carte en fin de file :
-    // elle n'est pas encore acquise, donc elle ne compte pas comme « faite ». On rattache le
-    // vrai card_state_id renvoyé par le serveur (créé au 1er passage) pour que la 2ᵉ révision
-    // mette à jour le bon état FSRS au lieu d'un id factice.
-    if (rating === 1 && carte.state <= 1) {
-      setCartes((prev) => {
-        const reste = prev.filter((_, i) => i !== index)
-        return [...reste, { ...carte, card_state_id: carte.card_state_id ?? res.cardStateId }]
-      })
+    // Ratée, quel que soit son état FSRS : relue en fin de séance, pas encore « faite ».
+    // On garde le vrai card_state_id (créé au 1er passage d'une carte neuve).
+    if (rating === 1) {
+      avancer({ ...carte, card_state_id: carte.card_state_id ?? res.cardStateId, repasse: true })
     } else {
-      // Carte acquise : retirée de la file et comptée dans la progression.
-      setCartes((prev) => prev.filter((_, i) => i !== index))
-      setIndex((i) => Math.min(i, cartes.length - 2))
-      setNbRevues((n) => n + 1)
+      avancer(null)
     }
-
-    setRetournee(false)
     setPending(false)
+  }
+
+  // Repasse : aucune note n'est envoyée — soit la carte est comprise et sort de la
+  // file, soit elle revient encore en fin de file pour une nouvelle lecture.
+  function handleRepasse(comprise: boolean) {
+    avancer(comprise ? null : carte)
   }
 
   // Total fixe pour toute la session ; la barre et le compteur suivent les cartes acquises.
@@ -142,6 +160,9 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
           {carte.concept_tag && (
             <span className="text-xs text-muet">{carte.concept_tag}</span>
           )}
+          {carte.repasse && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-attention-teinte text-attention">relecture</span>
+          )}
           <span className="ml-auto text-xs text-muet">{carte.label_unite}</span>
         </div>
 
@@ -162,8 +183,25 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
         ) : null}
       </div>
 
-      {/* Boutons de notation */}
-      {retournee ? (
+      {/* Boutons : notation FSRS au premier passage, simple relecture en repasse */}
+      {retournee && carte.repasse ? (
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <button
+            onClick={() => handleRepasse(false)}
+            className={`flex flex-col items-center px-2 py-3 rounded-xl border text-xs font-medium transition-colors ${LABELS_RATING[1].couleur}`}
+          >
+            <span className="font-bold text-sm mb-0.5">Encore raté</span>
+            <span className="text-xs opacity-70 leading-tight text-center">Je la relirai en fin de séance</span>
+          </button>
+          <button
+            onClick={() => handleRepasse(true)}
+            className={`flex flex-col items-center px-2 py-3 rounded-xl border text-xs font-medium transition-colors ${LABELS_RATING[3].couleur}`}
+          >
+            <span className="font-bold text-sm mb-0.5">Compris</span>
+            <span className="text-xs opacity-70 leading-tight text-center">Le raté reste compté</span>
+          </button>
+        </div>
+      ) : retournee ? (
         <div className="grid grid-cols-4 gap-2 mt-4">
           {([1, 2, 3, 4] as const).map((r) => {
             const info = LABELS_RATING[r]

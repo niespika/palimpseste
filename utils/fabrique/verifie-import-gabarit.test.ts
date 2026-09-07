@@ -118,8 +118,10 @@ test('le cran 2 exige un constituant et des pièces nommées, et perd son guide'
   const deux = (f: (e: any) => void) => casse((b) => {
     const e = b.exercices[0]
     e.cran = 2; delete e.variante; e.materiau_cible = null; e.guide = null
+    // ⭐ 06/09 — le cran 2 ISOLE : le cas porte la clé « pièce absente » de son trou.
     e.cas = [{ materiau: null, defaut: null, distracteurs: null, constituant: 'le garant',
-      pieces: [{ nom: 'la conclusion', texte: '…' }, { nom: 'la preuve', texte: '…' }],
+      probleme: 'argument.garant.absent',
+      pieces: [{ nom: 'la conclusion', texte: '…' }, { nom: 'le garant', texte: null }, { nom: 'la preuve', texte: '…' }],
       reponse_attendue: 'la pièce attendue' }]
     b.materiaux = []
     f(e)
@@ -127,9 +129,14 @@ test('le cran 2 exige un constituant et des pièces nommées, et perd son guide'
   const ok = controleImport(deux(() => {}), doctrine)
   assert.equal(ok.code, 0, ok.refus.join('\n'))
   assert.ok(aRefus(controleImport(deux((e) => { delete e.cas[0].constituant }), doctrine), 12))
+  // ⭐ 06/09 — sans la clé « pièce absente », le cran 2 n'isole rien : refus (le cran isole ⇒ `probleme` exigé)
+  assert.ok(aRefus(controleImport(deux((e) => { delete e.cas[0].probleme }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'x' }] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'x', texte: 'y', z: 1 }] }), doctrine), 2))
+  // ⭐ 06/09 — le cran 2 est un TEXTE À TROU : exactement une pièce à `texte: null`.
+  assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'a', texte: 'x' }, { nom: 'b', texte: 'y' }] }), doctrine), 12))
+  assert.ok(aRefus(controleImport(deux((e) => { e.cas[0].pieces = [{ nom: 'a', texte: null }, { nom: 'b', texte: null }] }), doctrine), 12))
   assert.ok(aRefus(controleImport(deux((e) => { e.guide = 'un guide' }), doctrine), 12))
   // et hors du cran 2, constituant et pièces sont refusés
   assert.ok(aRefus(controleImport(casse((b) => { b.exercices[0].cas[0].constituant = 'x' }), doctrine), 12))
