@@ -187,3 +187,43 @@ Sur ce décor, Chrome avait été fermé trop tôt par l’ancienne garde ; le j
 Le parcours a donc nécessité une reprise du traitement VF et un rechargement ; il ne faut pas le présenter comme un parcours automatique sans intervention. Le défaut de rafraîchissement de l’écran de révision est consigné à `IDEES_post_rentree.md`, hors du correctif du harnais. Les difficultés de connexion et les répétitions de l’étape confiance ont été enregistrées dans le journal hors dépôt ; la confiance a bien été écrite.
 
 Le dernier passage du harnais a atteint **le vrai retour final**, parcouru ses deux points et sa page de fin, avec captures inspectées à **1280 / 768 / 375**. Les 87 captures du parcours et des échecs sont conservées dans `/Users/louissagnieres/.codex/visualizations/2026/09/08/01a08117-dbdc-7863-a15e-592ec291de25/chantier-6/` ; les preuves finales valides portent le préfixe **plan-final**, les captures intermédiaires le préfixe plan-apres. Le décor a été supprimé et son absence vérifiée. **2577 tests réussis, TypeScript propre et syntaxe du harnais vérifiée.** Aucun changement de porte ni écriture en production.
+
+## ② — Règle validée et appliquée : neuf phrases, quatre joints
+
+Louis valide explicitement la proposition détaillée (`PROPOSITION_Chantier_2_Gras.md`) : **9 phrases entières, 4 joints conservés**, retour du texte à trou pour les neuf, même gras pour l’élève, l’aperçu professeur et le juge. L’amendement est écrit dans `palimpseste-conception/02-exercices.md` §5 et sa décision dans `CONTEXTE.md` ; aucun commit dans ce dépôt de conception.
+
+### Mesure et échec avant correction
+
+Remesure paginée et comptée le 08/09 à **20:57 UTC** : **61 exercices dans chaque base, 13 écarts, 0 dépôt concerné**. Les familles restent réparties en 6 / 3 / 2 / 1 / 1 comme dans les tableaux de la proposition. Quatre corrections ne font qu’ajouter une liaison, à la majuscule initiale près ; neuf réécrivent le contenu, parfois seulement une partie.
+
+Deux nouveaux dépôts de recette, sur des exercices réels inchangés du bac à sable : matériau de **447 caractères** pour `ex-gab-transition-bilan-theme-c5`, de **688** pour `ex-gab-objection-accord-non-retourne-c5`. Captures AVANT : le premier affiche **« lentement. Nous » (15)** et un champ libre ; le second **« humoristique. Une » (17)**, lui aussi avec champ libre. L’aperçu professeur montre alors les phrases complètes dans les deux cas : cette divergence est également capturée. Trois tests ciblés reproduisent le défaut et échouent avant le correctif ; les sept autres gardent les comportements à conserver.
+
+### Correction et preuve exécutée
+
+`marquerLeMateriau` garde son unique algorithme. L’exception approuvée est activée uniquement au **cran 5 du gabarit actif** : si le reste du matériau est conservé et que la seule substitution accompagne l’ajout d’une liaison devant le premier mot devenu minuscule, la couture reste marquée. Toute réécriture du contenu retrouve les bornes de phrase. Aucun seuil de longueur, liste d’exercices ou contenu corrigé servi au client. La citation de consigne, `mot_impropre` et les insertions pures gardent leur priorité.
+
+Écran et contexte du juge passent cette activation avec le même observable. La porte est lue une fois dans le contexte, puis utilisée pour le passage marqué et le réassemblage. L’aperçu professeur lit le gabarit par le lecteur existant de l’écran et transmet son marquage et l’observable pour ce seul périmètre.
+
+Rejeu des **vraies fonctions** sur le corpus des deux bases, à **21:10–21:11 UTC**, production en lecture seule PostgREST :
+
+| Résultat par base | Sandbox | Production |
+|---|---:|---:|
+| Exercices contrôlés | 61 | 61 |
+| Passages étendus à la phrase, trous rétablis | 9 | 9 |
+| Joints conservés parmi les 13 | 4 | 4 |
+| Autres passages inchangés | 48 | 48 |
+| Divergences écran / aperçu / passage du juge / réassemblage | 0 | 0 |
+
+Les fonctions privées du contexte sont seulement exposées par un chargeur temporaire, jamais recopiées. Le lecteur de doctrine, le lecteur de gabarit, le composeur d’aperçu et le calcul des pièces sont les fonctions du dépôt. Chaque réassemblage est comparé aux pièces de l’écran. Sans l’activation nouvelle, le calcul conserve les **61 anciens passages**.
+
+Épreuve complémentaire sur les **vrais chargeurs complets** `chargerLeDeroule`, `lireContexte`, puis `entreeDuContexte` et `assemblerLeJuge`, pour les deux dépôts : porte ouverte, **la phrase de 67 caractères** remplace le gras de 15 et apparaît dans le prompt du juge, avec réassemblage à la même place ; le joint de 17 reste sans trou. Porte fermée réellement dans le bac à sable : retour aux anciens passages, **aucun trou et aucun devoir réassemblé** dans les deux cas. Porte restaurée à `true` puis relue. Aucun appel au modèle ni remise de copie : le contrôle porte sur le document effectivement assemblé pour le juge.
+
+**36 captures avant/après, aux largeurs 1280 / 768 / 375**, sur les deux exercices : lecture, écriture et aperçu professeur. Les rendus corrigés ont été inspectés aux trois tailles ; la phrase tient dans le matériau et le trou occupe exactement sa place. Largeur du document égale à celle de la fenêtre sur ces captures. Conservation : `/Users/louissagnieres/.codex/visualizations/2026/09/08/01a08117-dbdc-7863-a15e-592ec291de25/chantier-2/`.
+
+**2590 tests passent**, TypeScript propre, différence sans erreur d’espacement. Les deux dépôts temporaires ont été supprimés et leur absence vérifiée ; zéro job créé. Les exercices, leurs matériaux, les anciens dépôts et verdicts sont inchangés. Les portes de production restent telles que relues : les quatre ouvertes ; bac à sable : gabarit et documents ouverts, mesure et clé fermés.
+
+### Limites et livraison
+
+Le gras de l’aperçu est aligné dans le périmètre approuvé ; sa consigne composée du gabarit reste absente sur les deux exemples observés, défaut antérieur consigné à `IDEES_post_rentree.md`. Aucun élargissement à la refonte de cet aperçu ni aux autres crans. L’accord et les tableaux de comparaison restent conservés dans la proposition. Aucun SQL pour ce chantier.
+
+Les quatre premiers correctifs ont été poussés sur demande de Louis. Les chantiers **⑥ et ② restent en commits locaux**, sans nouveau déploiement. Le signal du chantier ① reste à activer pour les futurs retours : migration production et choix de sa date de départ sont le geste de Louis.

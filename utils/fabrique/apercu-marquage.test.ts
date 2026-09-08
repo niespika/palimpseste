@@ -206,3 +206,28 @@ test('⚠️ SANS LA COLONNE `marquage`, l\'aperçu montre le matériau NON MARQ
   const g = composerApercu(sansColonne, production(6, `Écris l'argument. ${GUIDE_6}`, GUIDE_6))!
   assert.equal(g.guide, null)
 })
+
+for (const cran of [3, 5]) {
+  test(`APERÇU — la couture du gabarit ne change qu’au cran 5, avec le même observable que l’élève (${cran})`, () => {
+    const texte = 'Le constat reste. Une observation suit.'
+    const cas = [{ ...instance(cran).cas[0], probleme: 'exemple.attache.absente',
+      materiauContenu: texte, materiauVersionCorrigee: 'Le constat reste. Pourtant, une observation suit.' }]
+    const a = composerApercu(doctrine, instance(cran, { cas,
+      gabaritCran5: { observable: 'attache_presente', marquage: 'le passage qui porte le problème' } }))!
+    assert.deepEqual(marques(a), [cran === 5 ? 'reste. Une' : 'Une observation suit.'])
+    // Hors gabarit actif, l’aperçu existant conserve son marquage.
+    assert.deepEqual(marques(composerApercu(doctrine, instance(cran, { cas }))), ['Une observation suit.'])
+    assert.equal(a.cas[0].materiauCibleMarque!.map(x => x.texte).join(''), texte)
+  })
+}
+
+test('APERÇU — au cran 5 gabarit, le contenu réécrit fait marquer la phrase complète', () => {
+  const phrase = "Nous avons donc parlé des notes et de leur importance dans l'école."
+  const a = composerApercu(doctrine, instance(5, {
+    gabaritCran5: { observable: 'jointure_presente', marquage: 'le passage qui porte le problème' },
+    cas: [{ ...instance(5).cas[0], probleme: 'transition.bilan.theme',
+      materiauContenu: 'On progresse lentement. ' + phrase,
+      materiauVersionCorrigee: 'On progresse lentement. La note ne mesure donc pas tous les progrès.' }],
+  }))!
+  assert.deepEqual(marques(a), [phrase])
+})

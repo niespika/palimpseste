@@ -487,11 +487,13 @@ function tirerTrois(banque: string[], graine: string): string[] {
 
 export function composerApercu(d: Doctrine, instance: {
   objet: string; cran: number
+  /** Lu par la même voie que l'écran ; absent hors cran 5 du gabarit actif. */
+  gabaritCran5?: { observable: string | null; marquage: string | null } | null
   materiauSourceTexte: string | null
   materiauCibleTexte: string | null
   coTexte: string | null
   guide: string | null
-  cas: Array<{ consigne: string; distracteurs: string[] | null
+  cas: Array<{ consigne: string; distracteurs: string[] | null; probleme?: string | null
     reponseAttendue: string | null; pourquoiJuste?: string | null
     materiauContenu: string | null
     /**
@@ -516,6 +518,7 @@ export function composerApercu(d: Doctrine, instance: {
         ...(cs.reponseAttendue ? [cs.reponseAttendue] : [])]
       : []
     const materiauCible = cible ? (cs.materiauContenu ?? instance.materiauCibleTexte) : null
+    const gabarit = instance.cran === 5 && cs.probleme ? instance.gabaritCran5 : null
     return {
       ordre: i + 1,
       consigne: cs.consigne,
@@ -530,8 +533,9 @@ export function composerApercu(d: Doctrine, instance: {
       //    marquage colle à ce qui est affiché juste à côté.
       // ⭐ Le tirage lui-même n'est pas touché : il reste déterministe.
       materiauCibleMarque: marquerLeMateriau(
-        materiauCible, d.crans[instance.cran]?.marquage ?? null,
-        { candidats, versionCorrigee: cs.materiauVersionCorrigee ?? null }),
+        materiauCible, gabarit ? gabarit.marquage : d.crans[instance.cran]?.marquage ?? null,
+        { candidats, versionCorrigee: cs.materiauVersionCorrigee ?? null,
+          observable: gabarit?.observable, cran5Gabarit: !!gabarit }),
       candidats,
       // « La correction du premier cas est SERVIE AVANT LE SECOND — c'est elle
       // qui rend l'écart des deux crédences interprétable » (`02-` §2.3.1 a).

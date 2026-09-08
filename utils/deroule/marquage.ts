@@ -214,7 +214,7 @@ function mots(x: string): string[] {
  */
 export function motsAMarquer(
   regime: RegimeMarquage | null,
-  { candidats, contenu, versionCorrigee, consigne, observable }: {
+  { candidats, contenu, versionCorrigee, consigne, observable, cran5Gabarit }: {
     candidats?: readonly string[] | null
     contenu?: string | null
     versionCorrigee?: string | null
@@ -222,6 +222,8 @@ export function motsAMarquer(
     consigne?: string | null
     /** ⭐ L'observable ISOLÉ — il porte les deux exceptions à la règle (1). */
     observable?: string | null
+    /** Décision du 08/09 : seulement au cran 5 du gabarit actif. */
+    cran5Gabarit?: boolean
   },
 ): string[][] {
   const out: string[][] = []
@@ -318,7 +320,8 @@ export function motsAMarquer(
     // La couture, et elle seule — quand elle existe. ⚠️ Si le diff ne commence
     //    pas à une frontière de phrase, il n'y a pas de couture à montrer : on
     //    retombe sur la phrase, plutôt que d'inventer un joint.
-    const c = coutureOuNull(a, t.debut)
+    const c = !cran5Gabarit || ajouteSeulementUneLiaison(a, b, t)
+      ? coutureOuNull(a, t.debut) : null
     const p2 = c ?? bornesDePhrase(a, t.debut, t.fin)
     out.push(a.slice(p2.debut, p2.fin))
     return out
@@ -404,6 +407,23 @@ function coutureOuNull(mots: readonly string[], debut: number):
   if (debut === 0) return null
   const finit = (m: string) => /[.?!\u2026]["\u00bb\u2019)]?$/u.test(m)
   return finit(mots[debut - 1]) ? { debut: debut - 1, fin: debut + 1 } : null
+}
+
+/**
+ * Au cran 5 du gabarit, le joint reste juste si la correction ne fait
+ * qu'ajouter une liaison initiale, le reste du matériau étant conservé.
+ * Le diff a déjà établi l'identité du préfixe et du suffixe. Seul le premier
+ * mot peut encore différer par sa majuscule initiale (Une → Pourtant, une).
+ * Les insertions sans changement de casse sont traitées avant, par le point
+ * d'insertion. Aucun seuil de longueur ni liste d'exercices ici.
+ */
+function ajouteSeulementUneLiaison(
+  a: readonly string[], b: readonly string[], t: { debut: number; fin: number },
+): boolean {
+  const ajoutes = b.length - a.length
+  if (ajoutes <= 0 || t.fin !== t.debut + 1) return false
+  const premier = a[t.debut]
+  return b[t.debut + ajoutes] === premier[0].toLocaleLowerCase('fr') + premier.slice(1)
 }
 
 /**
@@ -645,13 +665,14 @@ export function marquerLeMateriau(
   contenu: string | null | undefined,
   regle: string | null | undefined,
   appui: { candidats?: readonly string[] | null; versionCorrigee?: string | null
-    consigne?: string | null; observable?: string | null } = {},
+    consigne?: string | null; observable?: string | null; cran5Gabarit?: boolean } = {},
 ): SegmentMateriau[] | null {
   if (contenu == null) return null
   const regime = regimeDeMarquage(regle)
   const jetons = motsAMarquer(regime, {
     candidats: appui.candidats, contenu, versionCorrigee: appui.versionCorrigee,
     consigne: appui.consigne, observable: appui.observable,
+    cran5Gabarit: appui.cran5Gabarit,
   })
   const efface = regime === 'candidats' && marqueTout(contenu, jetons)
   return segmenterMateriau(contenu, efface ? [] : jetons)

@@ -704,10 +704,11 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   // Chantier ③ : le cran 5 reçoit le même observable que l'écran. Les autres
   // crans et les cas sans problème du gabarit gardent leur lecture existante.
   const observableDuCran5 = cran === 5 ? exercice.observable_isole_code : null
+  const porteDuCran5 = cran === 5 && await lireLaPorteGabarit(admin)
   const cas = await avecLeReassemblage(admin,
-    await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id, observableDuCran5),
+    await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id, observableDuCran5, porteDuCran5),
       { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
-    { cran, exerciceId: exercice.id, observable: observableDuCran5 })
+    { cran, exerciceId: exercice.id, observable: observableDuCran5, porteOuverte: porteDuCran5 })
 
   return {
     depotId,
@@ -938,6 +939,7 @@ function production(texte: unknown, transcription: unknown): string | null {
  */
 async function casPourLeRetour(
   admin: Admin, exerciceId: string, depotId: string, observableDuCran5: string | null = null,
+  porteDuCran5 = false,
 ): Promise<CasServiAuRetour[]> {
   const { data, error } = await admin
     .from('exercices_cas')
@@ -973,7 +975,8 @@ async function casPourLeRetour(
       defaut: texte(c.defaut),
       passageFautif: cible ? brut.slice(cible[0], cible[1]) : null,
       probleme: texte(c.probleme),
-      passageMarque: passageMarqueDe(brut, versionCorrigee, texte(c.probleme) ? observableDuCran5 : null),
+      passageMarque: passageMarqueDe(brut, versionCorrigee, texte(c.probleme) ? observableDuCran5 : null,
+        porteDuCran5 && !!texte(c.probleme)),
       zone: zoneServie(brut, cible, entree),
       choix: choixServi(entree),
       piece: null,
@@ -992,9 +995,10 @@ async function casPourLeRetour(
  */
 function passageMarqueDe(
   contenu: string, versionCorrigee: string | null, observable: string | null,
+  cran5Gabarit = false,
 ): string | null {
   if (!contenu || !versionCorrigee) return null
-  const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', { versionCorrigee, observable })
+  const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', { versionCorrigee, observable, cran5Gabarit })
   if (!segments) return null
   const marques = segments.filter((s) => s.marque).map((s) => s.texte.trim()).filter(Boolean)
   return marques.length ? marques.join(' ') : null
@@ -1042,7 +1046,7 @@ async function cleDuCas(admin: Admin, cas: readonly CasServiAuRetour[]): Promise
  */
 async function avecLeReassemblage(
   admin: Admin, cas: CasServiAuRetour[],
-  a: { cran: number | null; exerciceId: string; observable: string | null },
+  a: { cran: number | null; exerciceId: string; observable: string | null; porteOuverte: boolean },
 ): Promise<CasServiAuRetour[]> {
   if (a.cran !== 5) return cas
   const { data, error } = await admin.from('exercices_cas')
@@ -1051,7 +1055,7 @@ async function avecLeReassemblage(
   const lignes = (data ?? []) as unknown as Array<{ ordre: number; probleme: unknown; exercices_materiaux: unknown }>
   if (!lignes.some((l) => typeof l.probleme === 'string' && l.probleme)) return cas   // pas du gabarit
   // Sans trou à l'écran, le texte rendu est autonome : ne pas l'insérer dans le devoir.
-  if (!await lireLaPorteGabarit(admin)) return cas
+  if (!a.porteOuverte) return cas
   return cas.map((c) => {
     const l = lignes.find((x) => x.ordre === c.ordre)
     const m = (Array.isArray(l?.exercices_materiaux) ? l!.exercices_materiaux[0] : l?.exercices_materiaux) as
@@ -1060,7 +1064,7 @@ async function avecLeReassemblage(
     const corrigee = typeof m?.version_corrigee === 'string' ? m.version_corrigee : null
     if (!contenu || !corrigee) return c
     const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', {
-      versionCorrigee: corrigee, observable: a.observable,
+      versionCorrigee: corrigee, observable: a.observable, cran5Gabarit: true,
     })
     const p = segments ? morceauxDuPassage(segments, !!pointDInsertion(contenu, corrigee)) : null
     if (!p) return c

@@ -19,6 +19,7 @@ import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import { composerApercu } from '@/utils/fabrique/conception'
 import { lireLaBanque } from '@/utils/deroule/credence'
 import { cranNumero } from '@/utils/cran'
+import { lireLeGabaritDuDepot } from '@/utils/gabarit/lecture'
 import Edition from './Edition'
 import Apercu from './Apercu'
 import Assignation from './Assignation'
@@ -125,16 +126,22 @@ export default async function EditionEtApercu({
   const consignes = Array.isArray(e.consigne_instanciee)
     ? e.consigne_instanciee.map(txt)
     : [txt(e.consigne_instanciee)]
+  const gabarit = cran === 5 ? await lireLeGabaritDuDepot(admin, id, cran,
+    casTries.map(cs => ({ ordre: Number(cs.ordre), distracteurs: cs.distracteurs }))) : null
 
   // Sans cran, il n'y a rien à composer : l'aperçu se tait plutôt que de rendre
   // un placement tiré d'un cran inventé.
   const apercu = cran === null ? null : composerApercu(d, {
     objet, cran,
+    gabaritCran5: gabarit?.actif
+      ? { observable: txt(e.observable_isole_code) || null, marquage: gabarit.marquage }
+      : null,
     materiauSourceTexte: sourceTexte,
     materiauCibleTexte: cibleTexte,
     coTexte,
     guide: e.guide === null ? null : txt(e.guide),
     cas: casTries.map((cs, i) => ({
+      probleme: txt(cs.probleme) || null,
       consigne: consignes[i] ?? '',
       // ⭐⭐ C4-L15 / R2b — LES DEUX FORMES PHYSIQUES, ET C'EST `lireLaBanque` QUI
       //    LES TIENT. `exercices_cas.distracteurs` porte DEUX formes en base,

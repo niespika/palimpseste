@@ -832,6 +832,7 @@ export async function chargerLeDeroule(
         consigne: gabarit.actif ? null : (consignes[i] ?? null),
         // ⭐ Les deux exceptions du `02-` 6.2 §5 se lisent sur l'observable.
         observable: depot.exercice.observable_isole_code,
+        cran5Gabarit: gabarit.actif && ctx.cran === 5,
       })
 
     // ⚠️⚠️ UN CRAN QUI DEVAIT MARQUER ET QUI NE MARQUE RIEN SE DIT AU PROFESSEUR.
