@@ -1980,7 +1980,18 @@ export const TENTATIVES_AVANT_TOLERANCE = 3
  *    déterministe sur une copie sans réussite — brûlerait un appel par tour, à
  *    la minute, indéfiniment.
  */
-async function programmerLeRejeuDuRetour(
+/**
+ * ⭐⭐ 07/09/2026 — EXPORTÉE, parce qu'elle n'avait QU'UN SEUL APPELANT et que
+ *    ce n'était pas le bon. `tourDeFile` — le cron — la déclenchait ; la remise
+ *    d'un élève, elle, passe par `traiterLaMesureEnFile` (`utils/deroule/mesure.ts`),
+ *    qui clôt le job `abouti` et n'appelait rien. Mesuré en production le 07/09 :
+ *    **9 rejeux sur 9 par le cron, 0 sur 31 par la remise**.
+ * ⛔ Conséquence : le filet des trois tentatives — décision de Louis du 27/08,
+ *    « au bout de trois tentatives, on sert le retour et le professeur relit » —
+ *    n'a JAMAIS tiré sur un exercice de maison. Il s'arme à `tentatives >= 3`,
+ *    et le job aboutissait à la première.
+ */
+export async function programmerLeRejeuDuRetour(
   admin: Admin, job: Job, bilan: BilanDepot,
 ): Promise<void> {
   if (bilan.retourEcrit) return

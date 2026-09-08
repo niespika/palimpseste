@@ -318,8 +318,12 @@ export function verdictDeLaVersion(verdicts: unknown, version: 'v1' | 'vf'): boo
  *    explique l'écart ; elle ne l'adoucit pas et ne le contredit pas. *Dire
  *    « pas juste » sans dire pourquoi, sur une sélection qui touchait le bon
  *    passage, serait exact et incompréhensible.*
- * ⚠️ `ratissage` n'est pas ici : il a son propre écran (`vue.fin = 'non_fait'`),
- *    et il ne compte pas comme une réponse du tout.
+ * ⚠️ `ratissage` A DEUX VOIES, et il n'est ici que pour l'une. Sur la voie de la
+ *    REMISE, il porte le dépôt à `non_fait` et a son propre écran
+ *    (`vue.fin = 'non_fait'`) : l'exercice ne compte pas. Sur la voie de la
+ *    CLÔTURE — la paire 4(b)/4(b), qui ne se remet pas —, il n'y a pas d'écran
+ *    dédié, l'exercice est COMPTÉ FAUX (décision de Louis, 07/09) et le
+ *    professeur est averti à part. C'est donc ici que l'élève apprend pourquoi.
  *
  * ⛔⛔ ET `faux` NON PLUS — retiré le 07/09 au soir, sur le smoke, par Louis :
  *     « cette mention ne sert en fait à rien, le reste explique déjà tout ».
@@ -332,6 +336,8 @@ export function verdictDeLaVersion(verdicts: unknown, version: 'v1' | 'vf'): boo
  */
 export function precisionDeLaZone(verdict: string | null | undefined): string | null {
   switch (verdict) {
+    case 'ratissage':
+      return 'Surligner presque tout le texte, ce n’est pas répondre.'
     case 'mal_bornee':
       return 'Tu étais au bon endroit, mais ta sélection débordait largement du passage.'
     case 'a_voir':

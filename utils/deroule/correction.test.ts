@@ -312,8 +312,8 @@ test('⭐ un verdict RÉUSSI se dit — la réussite se célèbre, elle ne se ta
 
 // ── ⭐ LE JUGEMENT ALGORITHMIQUE DU 4(b), DIT À L'ÉLÈVE (07/09/2026) ─────────
 
-test('l’explication couvre les TROIS échecs qui ont quelque chose à dire', () => {
-  for (const v of ['mal_bornee', 'a_voir', 'probablement_faux']) {
+test('l’explication couvre les QUATRE échecs qui ont quelque chose à dire', () => {
+  for (const v of ['ratissage', 'mal_bornee', 'a_voir', 'probablement_faux']) {
     const p = precisionDeLaZone(v)
     assert.ok(p && p.length > 20, v)
     // ⛔ Elle explique, elle ne juge pas une seconde fois.
@@ -321,11 +321,12 @@ test('l’explication couvre les TROIS échecs qui ont quelque chose à dire', (
   }
 })
 
-test('⛔ « juste », « faux » et le ratissage n’ont AUCUNE explication ici', () => {
-  // `juste` n'a rien à expliquer ; `ratissage` a son propre écran (`vue.fin`) ;
-  // et `faux` ne ferait que REDIRE le verdict — retiré le 07/09 sur le smoke,
-  // Louis : « cette mention ne sert à rien, le reste explique déjà tout ».
-  for (const v of ['juste', 'faux', 'ratissage', null, undefined, '', 'inconnu']) {
+test('⛔ « juste » et « faux » n’ont AUCUNE explication ici', () => {
+  // `juste` n'a rien à expliquer ; et `faux` ne ferait que REDIRE le verdict —
+  // retiré le 07/09 sur le smoke, Louis : « cette mention ne sert à rien, le
+  // reste explique déjà tout ». ⚠️ `ratissage`, lui, EST ici depuis que la
+  // clôture du 4(b) n'a plus d'écran dédié pour le dire.
+  for (const v of ['juste', 'faux', null, undefined, '', 'inconnu']) {
     assert.equal(precisionDeLaZone(v), null, String(v))
   }
 })

@@ -324,7 +324,7 @@ export async function actionCredence(
   // ⚠️ APRÈS l'écriture de la crédence, jamais avant : `enregistrerLaCredence`
   //    REFUSE une saisie sur un dépôt déjà remis. L'ordre inverse fermerait la
   //    porte à la crédence qui la déclenche.
-  await clore(p.admin, depotId, vue)
+  await clore(p.admin, depotId, vue, p.userId, p.depot)
   rafraichir()
   return succes('')
 }
@@ -339,6 +339,8 @@ async function clore(
   depotId: string,
   vue: { credenceEstLaReponse: boolean; geste: string | null; v1RemiseLe: string | null;
     aucuneRemise: boolean },
+  eleveId: string,
+  depot: DepotMaison,
 ): Promise<void> {
   try {
     const { data } = await admin.from('exercices_metacognition')
@@ -361,6 +363,46 @@ async function clore(
     const c = await cloturerLeCranGuide(admin, depotId, new Date().toISOString())
     if (!c.ok) { console.error(`[deroule] clôture guidée refusée — ${depotId} : ${c.message}`); return }
     if (c.valeur?.dejaClos) return   // un autre appel l'a fait : rien à ajouter.
+
+    // ⭐⭐ 07/09/2026 — LE RATISSAGE, SUR LA VOIE DE LA CLÔTURE (Louis : « il doit
+    //    être compté faux. Et je dois être averti. »).
+    //
+    // ⛔ CE QUI MANQUAIT, ET POURQUOI. « Surligner presque tout le texte » n'est
+    //    pas une mauvaise réponse, c'est une NON-RÉPONSE, et le professeur doit
+    //    le savoir. Le signalement vivait dans `remettre` (`depot.ts`, statut
+    //    `non_fait`) — or une paire 4(b)/4(b) NE SE REMET PAS : elle se clôt
+    //    ici. Le filet était donc percé exactement là où le lot de ce soir a
+    //    supprimé la remise.
+    //
+    // ⭐ LE STATUT NE BOUGE PAS : `clos`, et l'issue reste `rate` par la porte
+    //    de zone (`ratissage` n'est pas `juste`). Décision de Louis : au 4(b) un
+    //    ratissage est COMPTÉ FAUX — pas écarté comme sur la voie de la remise,
+    //    où il vaut `non_fait`. Le professeur est averti, l'exercice compte.
+    //
+    // ⚠️ Ne fait JAMAIS échouer la clôture : elle est déjà écrite en base, et
+    //    une comptabilité qui tombe ne doit pas défaire un geste qui a réussi.
+    if (vue.aucuneRemise) {
+      try {
+        const zone = await leVerdictDeLaZone(
+          admin, depotId, depot.exercice_id, cranNumero(depot.exercice.cran))
+        if (zone?.cas === '0') {
+          await signalerEnAttenteIA(admin, {
+            eleveId, module: 'exercices', renduRef: depotId, type: TYPE_FAISCEAU,
+            motif: `Désignation qui couvre le matériau au cas ${zone.ordre} : la zone prend `
+              + `${zone.partMateriau} % du texte, soit ${zone.foisLaCible} fois le passage visé. `
+              + `${zone.credence === null ? 'Aucune crédence déclarée.'
+                : `Crédence déclarée : ${zone.credence} %.`} `
+              + (zone.confirmee
+                ? 'L’élève a confirmé son choix à la saisie. '
+                : 'Zone posée sans confirmation. ')
+              + 'Cran 4(b) : aucune remise, l’exercice s’est clos tout seul et compte '
+              + 'pour FAUX — rien n’a été envoyé au modèle.',
+          })
+        }
+      } catch (e) {
+        console.error(`[deroule] ratissage à la clôture — ${depotId} :`, e)
+      }
+    }
 
     // ⭐⭐ C7-L9 — « pour écrire une mesure convertie, il faut un chemin » (piège 11) :
     //    porte `juge_mesure_actif` ouverte, la clôture met
