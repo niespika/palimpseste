@@ -44,6 +44,7 @@ export const NATURES_DRAPEAU = [
   //    la même matière — une citation qui ne tient pas — mais qu'ici c'est la
   //    PLATEFORME qui a fauté, pas l'élève qui conteste.
   'citation_composee',
+  'retour_a_relire',
   'contestations_repetees',
   'fraicheur_ancre',
 ] as const
@@ -54,6 +55,7 @@ export const LIBELLE_NATURE: Record<NatureDrapeau, string> = {
   dossier_n3: 'Dossier N3',
   faisceau_integrite: 'Faisceau d’intégrité',
   citation_composee: 'Citation composée',
+  retour_a_relire: 'Retour à relire',
   contestations_repetees: 'Contestations répétées',
   fraicheur_ancre: 'Fraîcheur d’ancre',
 }

@@ -57,6 +57,7 @@ const TEINTE_NATURE: Record<NatureDrapeau, string> = {
   //    depuis cette liste ; ici, le seul geste est « Effacer » le signal (02/09 :
   //    l'OCR avait mal lu des copies, et 19 signaux n'avaient rien à corriger).
   citation_composee: 'border-retard/40 bg-retard-teinte',
+  retour_a_relire: 'border-retard/40 bg-retard-teinte',
   contestations_repetees: 'border-attention/40 bg-attention-teinte',
   fraicheur_ancre: 'border-bordure bg-parchemin-fonce',
 }

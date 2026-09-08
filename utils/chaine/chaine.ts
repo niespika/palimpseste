@@ -396,7 +396,7 @@ export async function traiterDepot(
 }
 
 /** Les codes `observables_mesure` de l'instrument DÉRIVÉ d'une compétence ouverte — `null` sinon. */
-function codesDeLInstrument(competence: string): readonly string[] | null {
+export function codesDeLInstrument(competence: string): readonly string[] | null {
   const e = etatCompetence(competence as Competence)
   return e.ouverte && e.instrument ? Object.keys(e.instrument.observables_mesure) : null
 }

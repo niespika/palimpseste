@@ -22,6 +22,7 @@
 // de la base arrive ici en paramètre — un seul domicile pour chaque chose.
 // ============================================================================
 
+import { controlerLaFormeDuRetour, plafondApplicable } from './forme-retour'
 import { messageAvecMateriau } from './anti-injection'
 import type { ChoixServiAuJuge, PieceServieAuJuge, VerdictCran, ZoneServieAuJuge } from './juge-cran'
 import { assemblerLObjet } from '../gabarit/pieces'
@@ -196,11 +197,7 @@ export interface CoucheType {
  *    celui-ci borne ce qu'un exercice MESURE, celui-là ce que le retour NOMME
  *    (piège 37 ; `07-` §4).
  */
-export const PLAFOND_NOMME: Record<Grain, number> = { micro: 2, meso: 3, macro: 5 }
-
-export function plafondApplicable(grain: Grain, moment: Version): { plafond: number; porte: 'tout' | 'reussites' } {
-  return { plafond: PLAFOND_NOMME[grain], porte: moment === 'v1' ? 'tout' : 'reussites' }
-}
+export { PLAFOND_NOMME, plafondApplicable } from './forme-retour'
 
 // ── L'assemblage ────────────────────────────────────────────────────────────
 
@@ -1189,33 +1186,9 @@ export function controlerRetour(
 
   const r = verdict.valeur
 
-  // La règle 5 : en v1 une action de révision, en vf le pont. Toujours l'un des deux.
-  if (attendu.moment === 'v1' && !r.action_revision) {
-    controle.refus.push('règle 5 : la v1 se termine par une action de révision concrète — champ vide')
-  }
-  if (attendu.moment === 'vf' && !r.feed_forward) {
-    controle.refus.push('règle 5 : la version finale se termine par le pont — champ vide')
-  }
-
-  // Le plafond de la règle 2.
-  const { plafond, porte } = plafondApplicable(attendu.grain, attendu.moment)
-  const compte = porte === 'tout' ? r.points.length : r.points.filter((p) => p.nature === 'reussite').length
-  if (compte > plafond) {
-    controle.refus.push(
-      `règle 2 : au grain ${attendu.grain}, le retour nomme au plus ${plafond} `
-      + `${porte === 'tout' ? 'point(s) en tout' : 'réussite(s)'} — reçu ${compte}`)
-  }
-
-  // La règle 2 encore : « COMMENCE PAR UNE RÉUSSITE réelle, citée. »
-  // ⭐ C7-L9 — sur un verdict RATÉ, « aucune réussite n'est inventée » (§ 4 bis) :
-  //    un retour qui n'en porte aucune est juste, et le contrôle l'admet.
-  if (r.points.length && r.points[0].nature !== 'reussite') {
-    if (attendu.sansReussiteAdmise && !r.points.some((p) => p.nature === 'reussite')) {
-      controle.alertes.push('règle 2 : aucune réussite — admis, le verdict du cran est raté (C7-L9, § 4 bis)')
-    } else {
-      controle.refus.push('règle 2 : le retour commence par une réussite réelle, citée')
-    }
-  }
+  const forme = controlerLaFormeDuRetour(r, attendu)
+  controle.refus.push(...forme.refus)
+  controle.alertes.push(...forme.alertes)
 
   for (const p of r.points) {
     if (!attendu.competencesAdmises.includes(p.competence)) {

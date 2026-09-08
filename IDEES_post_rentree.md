@@ -1445,3 +1445,5 @@ le second cas est réussi seul » était écrite en tête du fichier et le code 
 
 ⚠️ Rien de tout cela n'est décidé. La seule chose arrêtée est le point de départ : **pour le
 moment, c'est le cas 2 qui marque la réussite.**
+
+- 08/09/2026, six chantiers ① : le profil de classe professeur (`?vue=competences`) déborde sur téléphone avant comme après le signal : viewport demandé 375 px, `innerWidth` et `scrollWidth` 759 px, réduction automatique de toute la page. Captures avant/après au relevé de session ; hors périmètre, non corrigé.

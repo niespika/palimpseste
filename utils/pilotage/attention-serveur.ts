@@ -79,6 +79,7 @@ import { signalerEnAttenteIA, lireParamsIntegrite, TYPE_FAISCEAU } from '@/utils
 //    normalisations qui se ressemblent finissent par diverger en silence.
 import { citationTient } from '@/utils/chaine/citation-verifiee'
 import { citationsAttribueesDansLaProse } from '@/utils/chaine/retour'
+import { drapeauxDeRetourARelire } from './retour-a-relire-serveur'
 import {
   cyclesEcoules, distributionDesContestations, elevesQuiRepetent, fileDExamenHumain,
   lireLesActes, ordonnerLesDrapeaux, type ActeLu, type CycleDuCalendrier, type Drapeau,
@@ -1048,13 +1049,14 @@ export async function chargerLAttentionDeLaClasse(
 
   const mesures = await lireLesMesuresDeLaClasse(admin, eleveIds, incidents)
 
-  const [ancre, n3, contestations, citations] = await Promise.all([
+  const [ancre, n3, contestations, citations, retoursARelire] = await Promise.all([
     drapeauxDeFraicheurDAncre(
       admin, eleveIds, nomDe, mesures, cycles, aujourdHui, fuseau, optOut, incidents),
     drapeauxDeDossierN3(
       admin, eleveIds, nomDe, mesures, cycles, aujourdHui, fuseau, optOut, incidents, pondere),
     lireLesContestations(admin, eleveIds, incidents),
     drapeauxDeCitationComposee(admin, eleveIds, nomDe, incidents),
+    drapeauxDeRetourARelire(admin, eleveIds, nomDe, incidents),
   ])
   // ⚠️ Le faisceau ÉCRIT (par le canal existant) : il part APRÈS les lectures,
   //    seul, pour que rien ne dépende de l'ordre d'exécution d'un `Promise.all`.
@@ -1065,6 +1067,7 @@ export async function chargerLAttentionDeLaClasse(
     ...n3.drapeaux,
     ...faisceau.drapeaux,
     ...citations,
+    ...retoursARelire,
     ...drapeauxDeContestation(contestations, nomDe, reglages.contestations, fuseau),
     ...ancre,
   ])
