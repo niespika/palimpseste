@@ -363,10 +363,13 @@ async function clore(
     if (c.valeur?.dejaClos) return   // un autre appel l'a fait : rien à ajouter.
 
     // ⭐⭐ C7-L9 — « pour écrire une mesure convertie, il faut un chemin » (piège 11) :
-    //    porte `juge_mesure_actif` ouverte, sur un dépôt du ROUTEUR, la clôture met
+    //    porte `juge_mesure_actif` ouverte, la clôture met
     //    le dépôt en file `mesure_v1` (idempotent). La chaîne y accepte un dépôt sans
     //    production aux crans 1·3, dérive l'issue de la crédence, écrit la mesure et
-    //    N'APPELLE PERSONNE. Porte fermée, ou dépôt du professeur : rien, comme hier.
+    //    N'APPELLE PERSONNE. Porte fermée : rien, comme hier.
+    //    ⚠️ « dépôt du professeur : rien » : PLUS VRAI depuis le 07/09 au soir —
+    //    le périmètre ne lit plus l'origine (`regimeJugeMesure`). Le commentaire
+    //    d'un appelant survit à la garde qu'il décrit : le relire aussi.
     //    ⚠️ Le périmètre entier (juge ouvert, clé, lieu, forme) se juge dans la chaîne,
     //    qui refuse proprement ce qui n'en est pas ; ici on n'ouvre que le chemin.
     await mettreEnFileSiLeJugeEstLaMesure(admin, depotId)

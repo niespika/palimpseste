@@ -128,7 +128,7 @@ function lireLaSelection(conteneur: HTMLElement): LectureDeSelection {
 }
 
 export function DesignationDansLeMateriau({
-  contenu, zoneDonnee, repondu, enregistrer, gele = false,
+  contenu, zoneDonnee, repondu, enregistrer, gele = false, apresPose,
 }: {
   /** Le matériau, tel qu'il est stocké — la concaténation des segments servis. */
   contenu: string
@@ -138,6 +138,21 @@ export function DesignationDansLeMateriau({
   /** `confirmee` : l'élève a répondu « oui » à la question sur une zone qui couvre presque tout. */
   enregistrer: (zone: [number, number] | null, confirmee?: boolean) => Promise<{ ok: boolean; message: string }>
   gele?: boolean
+  /**
+   * ⭐⭐ 07/09/2026 — LE GESTE A ABOUTI, ET IL FAUT LE DIRE AU PARENT.
+   *
+   * ⛔ **Sans ce rappel, un cas SANS ÉCRITURE ne tourne jamais sa page.**
+   *    `actionDesignation` ne revalide pas (décision du 01/09, et elle est
+   *    bonne : revalider remonte ce composant et perd la sélection), donc
+   *    `designationDonnee` reste FAUX côté client tant qu'aucun autre rendu
+   *    serveur n'a lieu — or le seul atteignable était la crédence, elle-même
+   *    fermée tant que la page n'a pas tourné. **Le circuit se refermait sur
+   *    lui-même.** Trouvé par la revue adversariale du 07/09, jamais par les
+   *    tests : ils passaient `redactionFinie: true` en cadeau.
+   * ⚠️ Appelé UNIQUEMENT sur succès, et seulement là où le parent le demande —
+   *    aux crans 7 et 9 la page ne doit PAS tourner, l'élève a encore à écrire.
+   */
+  apresPose?: () => void
 }) {
   const boite = useRef<HTMLParagraphElement>(null)
   const [zone, setZone] = useState<[number, number] | null>(zoneDonnee)
@@ -204,12 +219,13 @@ export function DesignationDansLeMateriau({
       if (r.ok) {
         setZone(z); setARepondu(true); setAConfirmer(null)
         oublierLaRetenue()
+        apresPose?.()
         // La zone est maintenant PEINTE dans le texte : la sélection vivante
         // ne dirait plus rien de plus, et elle cache la marque sur ordinateur.
         if (typeof window !== 'undefined') window.getSelection()?.removeAllRanges()
       } else { setRefus(r.message) }
     })
-  }, [enregistrer, enCours, oublierLaRetenue])
+  }, [enregistrer, enCours, oublierLaRetenue, apresPose])
 
   /** Garde une zone lue — en passant par la question si elle couvre presque tout. */
   const garderLesBornes = useCallback((b: [number, number]) => {

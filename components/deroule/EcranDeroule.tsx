@@ -162,9 +162,14 @@ export function EcranDeroule(
     aucuneRemise: vue.aucuneRemise,
     // ⭐ Sur un cas sans écriture, « la rédaction est finie » veut dire « la
     //    zone est posée » : c'est la désignation qui tourne la page.
-    redactionFinie: casCourant?.sansEcriture
-      ? casCourant.designationDonnee
-      : (redactionFinie[cleCourante] ?? false),
+    // ⛔⛔ LES DEUX SOURCES, ET C'EST LE CORRECTIF DU 07/09 AU SOIR. Le seul
+    //    `casCourant.designationDonnee` vient du SERVEUR, et `actionDesignation`
+    //    ne revalide pas (01/09) : l'élève surlignait, la page ne tournait pas,
+    //    l'onglet Crédence restait inerte, et il n'avait plus aucune sortie.
+    //    L'état d'écran (`redactionFinie`, posé par `apresPose`) tourne la page
+    //    tout de suite ; la valeur serveur la garde tournée au rechargement.
+    redactionFinie: (redactionFinie[cleCourante] ?? false)
+      || (casCourant?.sansEcriture ? casCourant.designationDonnee : false),
   })
   const suite = etapesServies({
     estUnePaire: vue.estUnePaire, credenceEstLaReponse: vue.credenceEstLaReponse,
@@ -543,9 +548,13 @@ function PlanDeTravail({
   //    les gestes et la remise, « La correction » entre les deux cas).
   const troisEntrees = credenceASaisir && (etape === 'ecrire' || etape === 'credence')
   type Entree = 'lire' | 'ecrire' | 'credence'
+  // ⭐ 07/09 — le cas MONTRÉ décide du mot, jamais l'exercice : sur une paire
+  //    4(a)/4(b), le cas 1 écrit et le cas 2 surligne.
+  const casMuet = vue.cas.find((c) => pages.casAffiche === null || c.ordre === pages.casAffiche)?.sansEcriture
   const entrees: Array<[Entree, string]> = [
     ['lire', forme === 'surligner' ? 'Lire · surligner' : 'Lire'],
-    ['ecrire', troisEntrees ? 'Écrire' : libelleDuVoletDeTravail(etape)],
+    // ⛔ « Écrire » sur un 4(b) nommait une tâche que la consigne ne demande pas.
+    ['ecrire', troisEntrees ? (casMuet ? 'Surligner' : 'Écrire') : libelleDuVoletDeTravail(etape)],
     ...(troisEntrees ? [['credence', 'Crédence'] as [Entree, string]] : []),
   ]
   const active: Entree = volet === 'lire' ? 'lire' : (etape === 'credence' ? 'credence' : 'ecrire')
@@ -602,6 +611,11 @@ function PlanDeTravail({
         <ColonneMatiere
           vue={vue} forme={forme} cache={volet !== 'lire'} moment={pages.moment}
           casAffiche={pages.casAffiche}
+          /* ⭐ 07/09 — sur un cas SANS ÉCRITURE, poser la zone tourne la page :
+             c'est le seul geste de réponse, il n'y a pas de bouton
+             « Enregistrer » pour le faire. `ColonneMatiere` ne le transmet
+             qu'aux cas muets — aux crans 7 et 9, l'élève a encore à écrire. */
+          apresPose={() => tournerLaPage(true)}
         >
           {/* ⭐ Sur un exercice à surligner, le pont vers la réponse est DANS la
               vue `Lire` : le passage désigné vient d'être posé, et l'élève passe
@@ -661,10 +675,12 @@ function ConsigneCollante({ vue, casAffiche }: { vue: VueDuDeroule; casAffiche: 
 // ── La colonne de gauche : LA MATIÈRE ───────────────────────────────────────
 
 function ColonneMatiere({
-  vue, forme, cache, children, moment = null, casAffiche = null,
+  vue, forme, cache, children, moment = null, casAffiche = null, apresPose,
 }: {
   vue: VueDuDeroule; forme: FormeDuTravail; cache: boolean; children?: React.ReactNode
   moment?: MomentDeLaPaire | null; casAffiche?: 1 | 2 | null
+  /** ⭐ 07/09 — la zone vient d'être posée sur un cas SANS ÉCRITURE. */
+  apresPose?: () => void
 }) {
   // ⭐⭐ 04/09 — UN CAS À LA FOIS : la colonne ne montre que le cas du moment.
   const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
@@ -832,6 +848,9 @@ function ColonneMatiere({
                   repondu={c.designationDonnee}
                   enregistrer={(zone, confirmee) => actionDesignation(vue.depotId, c.ordre, zone, confirmee)}
                   gele={vue.tempsCourant !== 'ecrire' && vue.tempsCourant !== 'preparer'}
+                  /* ⛔ Aux crans 7 et 9 la page ne doit PAS tourner sur la seule
+                     zone : l'élève doit encore dire ce qui cloche. */
+                  apresPose={c.sansEcriture ? apresPose : undefined}
                 />
               ) : (
                 <MateriauMarque
@@ -1075,10 +1094,16 @@ function ColonneTravail({
   const surLaPageDuChamp = champDu && etape === 'ecrire'
   /** Le texte se modifie encore tant que la crédence n'est pas donnée (ou qu'aucune n'est demandée). */
   const modifiable = !casCourant?.credenceDonnee
+  // ⛔⛔ 07/09 — NE PROMETS PAS UNE REMISE QUI N'EXISTE PAS. Sur une paire
+  //    4(b)/4(b) il n'y a AUCUN bouton « Rendre » : l'exercice se clôt à la
+  //    dernière crédence. La phrase disait « puis tu pourras rendre » sur les
+  //    18 dépôts que ce lot vient précisément de rendre inrendables.
   const phraseDeSuite = credenceASaisir
     ? (vue.estUnePaire && casAffiche === 1
       ? 'Ensuite : ta crédence, puis la correction de ce premier cas.'
-      : 'Ensuite : ta crédence, puis tu pourras rendre.')
+      : vue.aucuneRemise
+        ? 'Ensuite : ta crédence, et ce sera terminé.'
+        : 'Ensuite : ta crédence, puis tu pourras rendre.')
     : vue.estUnePaire && casAffiche === 1
       ? 'Ensuite : la correction de ce premier cas.'
       : 'Ensuite : quelques questions rapides, puis tu pourras rendre.'
