@@ -182,7 +182,7 @@ function vueFarcie(): VueDuDeroule {
     grain: s('grain') as unknown as VueDuDeroule['grain'],
     cranCode: s('cranCode'),
     geste: s('geste'),
-    verdictParCas: [], precisionParCas: [],
+    verdictParCas: [], precisionParCas: [], passageParCas: [],
     aucuneRemise: false,
     estUnePaire: true,
     etapePaire: s('etapePaire') as unknown as VueDuDeroule['etapePaire'],

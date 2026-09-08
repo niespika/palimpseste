@@ -1002,9 +1002,12 @@ function ColonneTravail({
         {vue.fin === 'sans_remise' && (
           <Encart>
             <p className="text-sm text-encre">
-              <strong>Cet exercice est terminé.</strong> Tu as surligné, c’était tout ce qui
-              était demandé — il n’y a rien à rendre et pas de retour à attendre. La correction
-              est ci-dessous.
+              {/* ⛔ 08/09 — disait « tu as surligné, c’était tout ce qui était
+                  demandé » JUSTE AU-DESSUS de « ce n’est pas répondre ». L’encart
+                  dit la FIN de l’exercice ; le verdict, lui, est plus bas et
+                  n’a pas à être contredit trois lignes plus haut. */}
+              <strong>Cet exercice est terminé.</strong> Il n’y a rien à rendre et pas de
+              retour à attendre : la correction est ci-dessous.
             </p>
           </Encart>
         )}
@@ -1024,13 +1027,15 @@ function ColonneTravail({
             {vue.corrections[1] && (
               <Correction correction={vue.corrections[1]} reponse={reponseDeLEleve(vue, 2)}
                 verdict={vue.verdictParCas[1] ?? null}
-                  precision={vue.precisionParCas[1] ?? null} />
+                  precision={vue.precisionParCas[1] ?? null}
+                  passage={vue.passageParCas[1] ?? null} />
             )}
             {vue.corrections[0] && (
               <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
                 <Correction correction={vue.corrections[0]} reponse={reponseDeLEleve(vue, 1)}
                   verdict={vue.verdictParCas[0] ?? null}
-                  precision={vue.precisionParCas[0] ?? null} />
+                  precision={vue.precisionParCas[0] ?? null}
+                  passage={vue.passageParCas[0] ?? null} />
               </Depliable>
             )}
           </>
@@ -1038,7 +1043,8 @@ function ColonneTravail({
           correction
             ? <Correction key={i} correction={correction} reponse={reponseDeLEleve(vue, i === 0 ? 1 : 2)}
                 verdict={vue.verdictParCas[i] ?? null}
-                precision={vue.precisionParCas[i] ?? null} />
+                precision={vue.precisionParCas[i] ?? null}
+                passage={vue.passageParCas[i] ?? null} />
             : null
         ))}
 
@@ -2015,7 +2021,7 @@ const SUR_TITRE = 'font-marque text-[11px] font-semibold uppercase tracking-[0.1
  *    trois) : c'est ce que la vue sert, et ce que cette page montre.
  */
 function Correction({
-  correction, reponse = null, verdict = null, precision = null,
+  correction, reponse = null, verdict = null, precision = null, passage = null,
 }: {
   correction: NonNullable<VueDuDeroule['corrections'][number]>
   reponse?: ReponseDeLEleve | null
@@ -2031,6 +2037,14 @@ function Correction({
   /** ⭐ 07/09 — ce que la ZONE a manqué. Une explication de l'écart, jamais un
    *  second verdict : le verdict reste celui du registre. */
   precision?: string | null
+  /**
+   * ⭐⭐ LE PASSAGE QU'IL FALLAIT SURLIGNER — au 4(b), et là seulement.
+   * ⛔ Il REMPLACE « Ce qu'il fallait voir », qui y resservait l'ÉNONCÉ — le
+   *    texte même que la consigne venait de citer (« Le devoir a ce problème :
+   *    "…" »). L'élève relisait la consigne au lieu de voir ce qu'il cherchait.
+   *    *Relevé par Louis sur le smoke du 08/09.*
+   */
+  passage?: string | null
 }) {
   const juste = reponse?.forme === 'candidat' ? reponse.juste : null
   const refutation = correction.refutation
@@ -2070,9 +2084,17 @@ function Correction({
       {reponse?.forme === 'texte' && (
         <div className="rounded-xl border border-bordure bg-surface-retrait p-4 sm:px-[18px]">
           <p className={`${SUR_TITRE} text-muet`}>Ta réponse</p>
+          {/* ⛔ 08/09 — BORNÉE. Sur un ratissage, l'écran recitait les 668 signes
+              du matériau pour dire « tu en as pris trop » : la démonstration par
+              l'absurde, et tout le reste repoussé sous la ligne de flottaison.
+              On en montre le début, et on dit qu'il y en a plus. */}
           {reponse.zone && (
             <p className="mt-1.5 font-corps text-[15px] italic leading-[1.5] text-encre-douce">
-              Le passage que tu as surligné : « {reponse.zone} »
+              Le passage que tu as surligné : « {reponse.zone.length > 180
+                ? `${reponse.zone.slice(0, 180).trimEnd()}…` : reponse.zone} »
+              {reponse.zone.length > 180 && (
+                <span className="not-italic text-muet"> ({reponse.zone.length} signes)</span>
+              )}
             </p>
           )}
           {reponse.texte.trim() !== '' && (
@@ -2106,7 +2128,15 @@ function Correction({
       )}
 
       {/* Ce qu'on tient pour vrai — sauf quand la réponse de l'élève l'EST déjà. */}
-      {juste !== true && (
+      {juste !== true && passage && (
+        <div className="rounded-xl border border-ok/25 bg-ok-teinte p-4 sm:px-[18px]">
+          <p className={`${SUR_TITRE} text-ok`}>Le passage qu’il fallait surligner</p>
+          <TexteBrut texte={passage}
+            className="mt-1.5 font-corps text-[16px] leading-[1.55] text-encre" />
+        </div>
+      )}
+
+      {juste !== true && !passage && (
         <div className="rounded-xl border border-ok/25 bg-ok-teinte p-4 sm:px-[18px]">
           <p className={`${SUR_TITRE} text-ok`}>
             {reponse?.forme === 'texte' ? 'Ce qu’il fallait voir — compare avec ta réponse'

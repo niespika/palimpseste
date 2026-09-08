@@ -436,6 +436,13 @@ export interface VueDuDeroule {
    *    incompréhensible.
    */
   precisionParCas: Array<string | null>
+  /**
+   * ⭐⭐ LE PASSAGE QU'IL FALLAIT SURLIGNER, par cas — au 4(b) seulement, et
+   *    seulement après la remise. `null` partout ailleurs.
+   * ⛔ Il REMPLACE « Ce qu'il fallait voir » sur ces cas : y resservir l'énoncé
+   *    faisait relire à l'élève la consigne qu'il venait de lire.
+   */
+  passageParCas: Array<string | null>
   fin: 'hors_cible' | 'non_fait' | 'sans_remise' | null
   /**
    * ⭐⭐ CET EXERCICE NE SE REMET JAMAIS — tous ses cas se surlignent (4(b)/4(b)).
@@ -694,6 +701,8 @@ export async function chargerLeDeroule(
   /** ⭐ 07/09 — le jugement algorithmique du 4(b), par cas, et son explication. */
   const verdictsDeZone: Array<boolean | null> = []
   const precisionsDeZone: Array<string | null> = []
+  /** ⭐ Le passage que l'élève devait surligner — au 4(b), et après la remise. */
+  const passagesAttendus: Array<string | null> = []
   for (let i = 0; i < Math.max(1, nbCas); i++) {
     const brut = casBruts.find((c) => c.ordre === i + 1)
     const mat = brut
@@ -758,6 +767,20 @@ export async function chargerLeDeroule(
       && depot.v1_remis_at && cibleDuCas && designation.zoneDonnee && materiauBrut
       ? verdictDeLaZone(materiauBrut, cibleDuCas, designation.zoneDonnee)
       : null
+    // ⭐⭐ 08/09/2026 — LE PASSAGE QU'IL FALLAIT SURLIGNER (Louis, sur le smoke :
+    //    « le "ce qu'il fallait voir" est simplement la redite de la consigne »).
+    //    Au 4(b) la consigne CITE déjà l'énoncé — « Le devoir a ce problème :
+    //    "…" » — et la correction resservait ce MÊME texte : l'élève relisait ce
+    //    qu'on venait de lui dire. Ce qu'il devait trouver, c'est LE PASSAGE.
+    // ⭐ La doctrine l'avait pressenti (`correction.ts`) : « la version corrigée
+    //    donne le texte réparé, JAMAIS LA ZONE que l'élève devait désigner ».
+    // ⛔ Après la remise SEULEMENT, comme le verdict : servi plus tôt, il
+    //    donnerait la réponse avant que l'élève n'ait cherché.
+    passagesAttendus.push(
+      cibleDuCas && materiauBrut && depot.v1_remis_at
+        && gabarit.actif && designeSansEcrire(ctx.cran, vCas)
+        ? materiauBrut.slice(cibleDuCas[0], cibleDuCas[1])
+        : null)
     verdictsDeZone.push(zoneJugee ? zoneJugee.verdict === 'juste' : null)
     precisionsDeZone.push(zoneJugee ? precisionDeLaZone(zoneJugee.verdict) : null)
 
@@ -1080,6 +1103,7 @@ export async function chargerLeDeroule(
         depot.verdicts_cran, estUnePaire && c.ordre === 2 ? 'vf' : 'v1') ?? verdictsDeZone[i] ?? null)
       : cas.map(() => null),
     precisionParCas: depot.v1_remis_at ? precisionsDeZone : cas.map(() => null),
+    passageParCas: passagesAttendus,
 
     // ⭐ C7-L3 — au gabarit, la consigne de l'exercice est celle du premier cas, dérivée.
     consigne: baliser(gabarit.actif && consignesGabarit[0] ? consignesGabarit[0] : ctx.consigne),

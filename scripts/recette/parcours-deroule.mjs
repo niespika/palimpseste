@@ -29,10 +29,27 @@ if (!DEPOT || !NOM || !DOSSIER) throw new Error('usage : parcours-deroule.mjs <d
 const arg = (nom, defaut) => { const i = process.argv.indexOf(nom); return i > 0 ? Number(process.argv[i + 1]) : defaut }
 const MAX = arg('--max', 40)
 const PORT = arg('--port', 9339)
+/** ⭐ Surligner TOUT, exprès — la non-réponse du cas 0. Voir plus bas. */
+const RATISSE = process.argv.includes('--ratisse')
 fs.mkdirSync(DOSSIER, { recursive: true })
 const BASE = 'http://localhost:3000'
 const TAILLES = [1280, 768, 375]
 const dors = (ms) => new Promise((r) => setTimeout(r, ms))
+/**
+ * ⭐⭐ 07/09/2026 — `--faible` : UNE COPIE SANS RIEN À CITER.
+ *
+ * La règle 2 du gabarit de Calame exige que le retour « COMMENCE PAR UNE
+ * RÉUSSITE réelle, citée » ; sur une copie très faible il n'y en a pas, le
+ * contrôle refuse, et c'est le refus de FORME qui doit déclencher un rejeu.
+ * ⛔ C'est le SEUL moyen d'éprouver ce chemin par exécution : un refus dépend
+ *    de ce que le modèle rend, et les copies ci-dessous sont trop bonnes pour
+ *    en provoquer un.
+ * ⚠️ Le régime C7-L9 admet l'absence de réussite sur un verdict raté
+ *    (`sansReussiteAdmise`) : ce mode ne prouve donc rien porte OUVERTE. Le
+ *    bac à sable a `juge_mesure_actif = false`, ce qui reproduit la condition
+ *    des dépôts de production restés muets.
+ */
+const FAIBLE = 'je sais pas trop. ça va pas.'
 const TEXTES = {
   1: 'Le passage en gras conclut alors que rien ne le justifie : « donc » relie deux idées sans que la raison du lien soit dite. Il manque la phrase qui explique pourquoi la distraction entraîne l’interdiction.',
   2: 'Ici encore, la conclusion arrive sans son appui : on affirme qu’il faut interdire, mais la raison qui fait passer du constat à la décision n’est pas écrite. Le lecteur doit la deviner.',
@@ -188,6 +205,20 @@ try {
       if (!fini) { await capture('attente'); break }
       continue
     }
+    // ⭐⭐ 07/09/2026 — `--ratisse` : SURLIGNER TOUT, exprès. C'est la non-réponse
+    //    du cas 0 (`estUnRatissage`), et le seul moyen d'éprouver par EXÉCUTION
+    //    ce que la clôture d'un 4(b)/4(b) en fait : compté faux, professeur
+    //    averti. ⚠️ L'écran POSE UNE QUESTION avant d'écrire une telle zone
+    //    (« Tu as surligné presque tout le texte. C'est bien ce que tu veux
+    //    désigner ? ») — il faut donc répondre « Oui », et c'est ce que fait ce
+    //    mode. Sans la réponse, rien ne s'écrit et le smoke ne prouve rien.
+    if (RATISSE && etat.surlignable && etat.rienSurligne) {
+      await cdp.evalue(`(() => { const p = document.querySelector('p.cursor-text'); if (!p) return false; const r = document.createRange(); r.selectNodeContents(p); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return true })()`)
+      await dors(400); await clique('Garde ce passage'); await dors(900)
+      await capture(`cas${cas}-ratisse-question`, { lire: true })
+      await clique('Oui, c’est mon choix'); await dors(1500)
+      await capture(`cas${cas}-ratisse`, { lire: true }); continue
+    }
     // 1. surligner d'abord, si le texte s'y prête et que rien n'est encore posé
     if (etat.surlignable && etat.rienSurligne) {
       await cdp.evalue(`(() => { const p = document.querySelector('p.cursor-text'); const m = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let nd, x = null; while ((nd = m.nextNode())) { const r = /[A-Za-zÀ-ÿ]{5,}[^.]{0,40}\\./.exec(nd.textContent); if (r) { x = { nd, i: r.index, l: r[0].length }; break } } if (!x) return false; const r = document.createRange(); r.setStart(x.nd, x.i); r.setEnd(x.nd, x.i + x.l); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return true })()`)
@@ -203,7 +234,7 @@ try {
     // 3. un champ vide : on écrit, on capture le texte écrit, puis « Enregistrer » tourne la page
     if (etat.textareas.some((x) => x.rows >= 9 && x.vide)) {
       const idx = etat.textareas.findIndex((x) => x.rows >= 9 && x.vide)
-      await tape(idx, TEXTES[cas] ?? TEXTES[1]); await dors(400)
+      await tape(idx, process.argv.includes('--faible') ? FAIBLE : (TEXTES[cas] ?? TEXTES[1])); await dors(400)
       await capture(`cas${cas}-ecrit`)
       await clique('Enregistrer'); await attendQue((e2) => !e2.textareas.some((x) => x.rows >= 9))
       const e2 = await lire()
