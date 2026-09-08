@@ -11,6 +11,7 @@ import PorteJugeDocuments from './PorteJugeDocuments'
 import PorteGabarit from './PorteGabarit'
 import PorteChaineCle from './PorteChaineCle'
 import PorteJugeMesure from './PorteJugeMesure'
+import PorteRetoursARelire from './PorteRetoursARelire'
 
 // Onglet « Paramètres » de Scriptorium : réglages du Scriptorium ÉLÈVE (RAG L5 —
 // gate, modèles, quota, prompt de synthèse), prompt du TUTEUR par sections (L9)
@@ -45,6 +46,8 @@ export default async function SectionParametresScriptorium() {
       <PorteChaineCle actif={!!p.chaine_cle_actif} />
       {/* C7-L9 (07/09) — sur un cran qui isole, le juge est la mesure. Même domicile, même tolérance, à OFF ; n'a d'effet que le juge ouvert. */}
       <PorteJugeMesure actif={!!p.juge_mesure_actif} jugeOuvert={!!p.juge_documents_actif} />
+      <PorteRetoursARelire depuis={texte('retours_a_relire_depuis')}
+        disponible={Object.hasOwn(p, 'retours_a_relire_depuis')} />
       <FormulaireReglagesRag
         initial={{
           actif: !!p.rag_actif,
