@@ -340,6 +340,62 @@ def empreintes(racine):
 # La mise en lignes — ce que chaque table reçoit
 # ---------------------------------------------------------------------------
 
+# ── ⭐⭐ LE GARDE-FOU DES ÉNONCÉS POSITIONNELS (2026-09-07) ───────────────────
+# Au cran 4 variante (b), la consigne CITE l'énoncé du problème puis demande
+# « Surligne le passage qui le porte » (`10-Gabarit.md` §3). Un énoncé qui dit
+# « La DERNIÈRE phrase… » désigne donc déjà le passage à trouver : il ne reste
+# rien à chercher, et le geste du cran s'annule.
+#
+# ⛔⛔ IL SIGNALE, IL NE REFUSE PAS — et c'est délibéré, pas de la prudence.
+#     Sur les 18 clés que ce filtre attrape, **7 sont DÉFINITIONNELLES** — « la
+#     dernière partie » d'un plan, « la question finale » d'une
+#     problématisation : la position NOMME l'objet, et la retirer rendrait
+#     l'énoncé faux — et **4 sont du CONTEXTE**, où le marqueur désigne un
+#     repère et non la cible. Refuser bloquerait la dérivation sur onze énoncés
+#     justes, et ce script est porteur : `npm test` compare ses dérivés.
+#
+# ⚠️ CE QUE CE CONTRÔLE NE SAIT PAS FAIRE : dire si la clé est routée à un
+#    4(b). Le routage ne vit pas dans ce fichier. Il liste donc des CANDIDATS,
+#    et le tri reste humain — il a été fait le 07/09, clé par clé, et les cinq
+#    qui fuyaient ont été réécrites (`enonces_positionnels_*.sql`).
+#
+# ⛔ Il écrit sur `sys.stderr`, JAMAIS sur `sys.stdout` : stdout porte le SQL et
+#    la fixture. Un octet de plus là-dedans entrerait dans une migration.
+MARQUEUR_POSITIONNEL = re.compile(
+    r"\b[Ll]a (dernière|première|deuxième|troisième|quatrième|cinquième|avant-dernière)"
+    r" (phrase|partie|paragraphe|question|moment)\b"
+    r"|\b[Ll]e (dernier|premier|deuxième|troisième) (paragraphe|moment|mot)\b"
+    r"|\b[Ll]a (question|phrase|réponse) finale\b")
+
+
+_positionnels_signales = False
+
+
+def signale_les_enonces_positionnels(problemes):
+    """Les clés dont l'énoncé DÉSIGNE le passage. Signalé, jamais refusé.
+
+    ⚠️ UNE FOIS PAR PROCESSUS. `lignes(d)` est appelée plusieurs fois dans un
+       même run — le SQL de contrôle, puis la comparaison de fixture —, et sans
+       ce drapeau la liste s'imprimait en double : un signal qu'on apprend à
+       sauter n'est plus un signal.
+    """
+    global _positionnels_signales
+    if _positionnels_signales:
+        return
+    vus = [p for p in problemes if MARQUEUR_POSITIONNEL.search(p.enonce or "")]
+    if not vus:
+        return
+    _positionnels_signales = True
+    sys.stderr.write(
+        "\u26a0\ufe0f  %d énoncé(s) à MARQUEUR POSITIONNEL — au 4(b) le marqueur "
+        "donne la réponse :\n" % len(vus))
+    for x in vus:
+        sys.stderr.write("     %-38s %s\n" % (x.cle, (x.enonce or "")[:70]))
+    sys.stderr.write(
+        "     → à trier À LA MAIN : le marqueur SITUE-t-il le passage (fuite), "
+        "ou NOMME-t-il l'objet (légitime) ?\n")
+
+
 def lignes(d):
     """Toutes les lignes dérivées, table par table. Aucune valeur en dur."""
     L = {}
@@ -491,6 +547,7 @@ def lignes(d):
          p.observable_code, p.competence, p.mode_receptif, p.route, p.forme, p.grains,
          p.enonce, p.exemple, p.correction, p.banque, p.note, p.section)
         for p in d.problemes]
+    signale_les_enonces_positionnels(d.problemes)
     L["exercices_tests"] = [(t.objet, t.genre, t.cle, t.variante, t.enonce) for t in d.tests]
     L["exercices_pieces"] = [(pc.objet, pc.genre, pc.cle, pc.constituant, pc.enonce)
                              for pc in d.pieces]
