@@ -255,10 +255,14 @@ export interface ContexteDepot {
    * ⭐⭐ C7-L9 — la porte du lot « le juge est la mesure » (`porte-mesure.ts`,
    *    colonne absente ⇒ OFF), et L'ORIGINE DU DÉPÔT (`exercices_depots.origine`,
    *    `routeur` ou `prof`) : « le périmètre se lit sur trois choses, pas une »
-   *    — le cran, l'origine, le lieu et la forme (prompt C7-L9, piège 4).
+   *    — le cran, le lieu et la forme.
+   * ⛔⛔ 07/09/2026, soir — L'ORIGINE N'EN FAIT PLUS PARTIE, et le champ a été
+   *    RETIRÉ d'ici avec la garde. Un champ mort qui porte le nom d'une règle
+   *    abolie est une invitation à la reconstruire : le périmètre se décide en
+   *    UN lieu, `regimeJugeMesure`. *La colonne reste lue en base par
+   *    `LigneDepot` là où elle sert vraiment (le routeur, l'assiduité).*
    */
   jugeMesureActif: boolean
-  origine: string | null
   /** ⭐ 07/09 — `exercices.variante` (`'a'` | `'b'` | `null`) : la garde de production. */
   variante: string | null
   /**
@@ -752,9 +756,9 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     // ⭐⭐ C7-L8 — la porte du lot, lue UNE fois ; et la clé du cas.
     chaineCleActif: await lireLaPorteChaineCle(admin as never),
     cle: await cleDuCas(admin, cas),
-    // ⭐⭐ C7-L9 — la porte du lot, lue UNE fois ; l'origine du dépôt, pour le périmètre.
+    // ⭐⭐ C7-L9 — la porte du lot, lue UNE fois. ⛔ L'origine ne descend plus :
+    //    elle n'est plus du périmètre (07/09, soir).
     jugeMesureActif: await lireLaPorteJugeMesure(admin as never),
-    origine: depot.origine ?? null,
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
     estSyntheseEnClasse: typeExercice === 'synthese' && exercice.lieu === 'classe',

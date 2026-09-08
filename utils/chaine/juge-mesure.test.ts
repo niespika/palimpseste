@@ -215,9 +215,11 @@ test('piège 4 — le périmètre se lit sur trois choses : le cran, le lieu et 
 //    *Motif et mesures : l'en-tête de `juge-mesure.ts`. En prod le 07/09, 21 des
 //    688 dépôts de crans qui isolent étaient `prof`, tous `lieu: maison`.*
 test('l\'origine du dépôt NE borne PLUS le périmètre — un dépôt posé à la main entre', () => {
-  // Le contexte réel PORTE `origine` (`contexte.ts` la lit) ; le régime ne doit
-  // plus la regarder. On le passe donc par une VARIABLE — un littéral serait
-  // refusé par le contrôle de propriétés en trop, et ne prouverait rien.
+  // ⭐ Le champ a été RETIRÉ du contexte le 07/09 au soir, avec la garde. On le
+  // passe quand même, par une VARIABLE : c'est la seule façon de prouver qu'un
+  // contexte qui le porterait — un rappel de l'ancienne forme, ou un objet plus
+  // large — ne changerait rien. Un littéral serait refusé par le contrôle de
+  // propriétés en trop, et ne prouverait rien.
   for (const origine of ['prof', 'routeur', null]) {
     const depot = { ...ctx({ cran: 4 }), origine }
     assert.equal(regimeJugeMesure(depot, codes).actif, true, `origine ${origine}`)

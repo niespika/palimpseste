@@ -23,7 +23,7 @@ export default function PorteJugeMesure({ actif, jugeOuvert }: { actif: boolean;
               {actif ? 'Le juge est la mesure.' : 'La chaîne mesure comme avant.'}
             </strong>{' '}
             {actif
-              ? 'Aux crans 1, 2, 3, 4, 5, 7 et 9 servis par le routeur, P1 et P2 ne tournent plus : le verdict du juge du cran (ou de l’algorithme aux crans 1 et 3) devient la mesure, sans lettre ; en version finale le juge rejuge à l’aveugle ; Calame reçoit le verdict et les documents, jamais un squelette ; le taux de réussite pèse les mesures par cran, et une trajectoire nette déclenche une sonde de montée au cran 6 ou 8.'
+              ? 'Aux crans 1, 2, 3, 4, 5, 7 et 9, sur un exercice de maison en formatif, P1 et P2 ne tournent plus : le verdict du juge du cran (ou de l’algorithme aux crans 1 et 3) devient la mesure, sans lettre ; en version finale le juge rejuge à l’aveugle ; Calame reçoit le verdict et les documents, jamais un squelette ; le taux de réussite pèse les mesures par cran, et une trajectoire nette déclenche une sonde de montée au cran 6 ou 8.'
               : 'Sur les crans qui isolent, P1 et P2 tournent, la lettre-équivalente s’écrit, Calame reçoit le squelette, le taux de réussite compte chaque mesure pour une. Rien de ce lot ne s’applique.'}
             {' '}
             <span className="text-muet-clair">
