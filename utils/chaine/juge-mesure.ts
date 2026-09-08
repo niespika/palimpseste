@@ -17,9 +17,30 @@
 //   (5) Calame reçoit le verdict, la copie, les documents et la dimension — jamais
 //       un squelette (`07-` §4 bis).
 //
-// ⭐ LE PÉRIMÈTRE SE LIT SUR TROIS CHOSES, PAS UNE (piège 4) : le cran, l'origine
-//    du dépôt (`exercices_depots.origine = 'routeur'`), le lieu et la forme.
-//    Un dépôt `prof`, une passation en classe, une ancre : la chaîne d'hier.
+// ⭐ LE PÉRIMÈTRE SE LIT SUR TROIS CHOSES (piège 4) : le cran, le lieu et la
+//    forme. Une passation en classe, une ancre, les crans 6·8 : la chaîne d'hier.
+//
+// ⛔⛔ L'ORIGINE DU DÉPÔT N'EN FAIT PLUS PARTIE — garde retirée le 07/09/2026 au
+//    soir, sur mesure, à la demande de Louis.
+//    · CE QUE LA DÉCISION DIT VRAIMENT (`RELEVE_Arbitrage_Crans_Isoles_2026-09-07`
+//      §142) : « les mesures EN CLASSE, les ANCRES et les crans 6·8 gardent la
+//      valeur réelle ». Les trois sont nommés, et les trois ont DÉJÀ leur propre
+//      condition ici (`lieu`, `forme`, `CRANS_QUI_ISOLENT`). L'origine n'y était
+//      pas : « servis par le routeur » DÉCRIVAIT le corpus du jour — le même
+//      relevé note §19 que les 480 dépôts d'alors étaient « tous d'origine
+//      `routeur` ». Une observation était devenue une garde.
+//    · CE QU'ELLE COÛTAIT : sur les 688 dépôts de crans qui isolent en prod,
+//      21 sont `origine = 'prof'` (crans 1·3·4, **tous `lieu: maison`**) — les
+//      exercices posés à la main. Ils tournaient sur la chaîne d'hier : P1 et P2
+//      en plus du juge, et `sansReussiteAdmise` jamais posé, donc la règle 2
+//      exigeait une réussite sur une copie que la chaîne venait de déclarer en
+//      défaillance forte. **Le retour était refusé et rien ne le rejouait.**
+//      Mesuré sur le dépôt `e7784465` (Élo, cran 4, 07/09) : 4 appels au lieu de
+//      2, 0,086 $, un `D` écrit, aucun retour publié.
+//    · ET C'EST LE CHEMIN DE RECETTE DE LOUIS : tant que la garde était là, il ne
+//      pouvait pas éprouver en production le régime qu'il venait d'arbitrer.
+//    ⚠️ Un dépôt hors gabarit reste exclu par les gardes d'AVAL, pas par celle-ci :
+//       sans `probleme` sur le cas, `observableDeLaCle` rend `null` (piège 9).
 // ⛔ Tout passe par UNE porte, `juge_mesure_actif` (`porte-mesure.ts`) — qui n'a
 //    de sens que `juge_documents_actif` ouvert (piège 5) : fermée, chaque
 //    fonction d'ici rend « inactif », et la chaîne est celle d'hier à l'octet.
@@ -60,7 +81,6 @@ export function regimeJugeMesure(
     jugeMesureActif: boolean
     jugeDocumentsActif: boolean
     cran: number | null
-    origine: string | null
     lieu: Lieu
     forme: Forme
     cle: CleDuCas | null
@@ -75,7 +95,9 @@ export function regimeJugeMesure(
       + 'aucun verdict ne peut exister (C7-L9, piège 5)')
   }
   if (ctx.cran == null || !CRANS_QUI_ISOLENT.has(ctx.cran)) return inactif()
-  if (ctx.origine !== 'routeur') return inactif()
+  // ⛔ Pas de garde sur `exercices_depots.origine` : voir l'en-tête du fichier.
+  //    Un exercice de maison formatif est le même objet, qu'il ait été tiré par
+  //    le routeur ou posé à la main.
   if (ctx.lieu !== 'maison' || ctx.forme !== 'formatif') return inactif()
   // Piège 9 — « sans observable de clé, il n'y a rien à convertir : la chaîne d'hier ».
   const o = observableDeLaCle({ chaineCleActif: true, cle: ctx.cle })

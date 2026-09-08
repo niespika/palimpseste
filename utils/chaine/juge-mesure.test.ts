@@ -186,7 +186,7 @@ test('`observablesConvertis` : le verdict sur le SEUL observable de la clé, n/a
 const CLE: CleDuCas = { cle: 'argument.garant.absent', observableCode: 'garant_present', observableCompetence: 'argumentation', observableRoute: true, lecture: 'ok' }
 const codes = (c: string) => Object.keys(etatCompetence(c as Competence).instrument?.observables_mesure ?? {})
 const ctx = (p: Partial<Parameters<typeof regimeJugeMesure>[0]> = {}): Parameters<typeof regimeJugeMesure>[0] => ({
-  jugeMesureActif: true, jugeDocumentsActif: true, cran: 5, origine: 'routeur', lieu: 'maison', forme: 'formatif', cle: CLE, ...p,
+  jugeMesureActif: true, jugeDocumentsActif: true, cran: 5, lieu: 'maison', forme: 'formatif', cle: CLE, ...p,
 })
 
 test('⛔ porte FERMÉE : inactif, sans un mot (la chaîne d\'hier à l\'octet)', () => {
@@ -199,15 +199,40 @@ test('piège 5 — porte ouverte et juge FERMÉ : rien ne change, et une alerte 
   assert.match(r.alertes[0], /`juge_mesure_actif` sans `juge_documents_actif` : rien ne change/)
 })
 
-test('piège 4 — le périmètre se lit sur trois choses : le cran, l\'origine, le lieu et la forme', () => {
+test('piège 4 — le périmètre se lit sur trois choses : le cran, le lieu et la forme', () => {
   for (const cran of [1, 2, 3, 4, 5, 7, 9]) assert.equal(regimeJugeMesure(ctx({ cran }), codes).actif, true, `cran ${cran}`)
   for (const cran of [6, 8, null]) assert.equal(regimeJugeMesure(ctx({ cran }), codes).actif, false, `cran ${cran}`)
-  assert.equal(regimeJugeMesure(ctx({ origine: 'prof' }), codes).actif, false)
-  assert.equal(regimeJugeMesure(ctx({ origine: null }), codes).actif, false)
   assert.equal(regimeJugeMesure(ctx({ lieu: 'classe' }), codes).actif, false)
   assert.equal(regimeJugeMesure(ctx({ forme: 'sommatif' }), codes).actif, false)
   assert.deepEqual([...CRANS_QUI_ISOLENT].sort(), [1, 2, 3, 4, 5, 7, 9])
   assert.deepEqual([...CRANS_SANS_APPEL].sort(), [1, 3])
+})
+
+// ⭐⭐ L'ÉPREUVE PAR L'ÉCHEC — le contraire de ce que le lot tenait pour vrai le
+//    07/09 au matin. Le périmètre ne lit PLUS `exercices_depots.origine` : un
+//    exercice de maison formatif posé À LA MAIN entre dans le régime, comme
+//    celui que le routeur a tiré. Sans ce test, la garde reviendrait sans bruit.
+//    *Motif et mesures : l'en-tête de `juge-mesure.ts`. En prod le 07/09, 21 des
+//    688 dépôts de crans qui isolent étaient `prof`, tous `lieu: maison`.*
+test('l\'origine du dépôt NE borne PLUS le périmètre — un dépôt posé à la main entre', () => {
+  // Le contexte réel PORTE `origine` (`contexte.ts` la lit) ; le régime ne doit
+  // plus la regarder. On le passe donc par une VARIABLE — un littéral serait
+  // refusé par le contrôle de propriétés en trop, et ne prouverait rien.
+  for (const origine of ['prof', 'routeur', null]) {
+    const depot = { ...ctx({ cran: 4 }), origine }
+    assert.equal(regimeJugeMesure(depot, codes).actif, true, `origine ${origine}`)
+  }
+  // ⛔ Et ce qui doit rester dehors le reste, quelle que soit la main qui a posé.
+  for (const origine of ['prof', 'routeur']) {
+    const enClasse = { ...ctx({ lieu: 'classe' }), origine }
+    const ancre = { ...ctx({ forme: 'sommatif' }), origine }
+    assert.equal(regimeJugeMesure(enClasse, codes).actif, false, `classe, origine ${origine}`)
+    assert.equal(regimeJugeMesure(ancre, codes).actif, false, `ancre, origine ${origine}`)
+    for (const cran of [6, 8]) {
+      const horsPerimetre = { ...ctx({ cran }), origine }
+      assert.equal(regimeJugeMesure(horsPerimetre, codes).actif, false, `cran ${cran}, origine ${origine}`)
+    }
+  }
 })
 
 test('piège 9 — sans observable de clé, rien à convertir : la chaîne d\'hier, et l\'alerte le dit', () => {
