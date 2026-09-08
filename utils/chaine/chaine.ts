@@ -2006,6 +2006,30 @@ export async function programmerLeRejeuDuRetour(
   admin: Admin, job: Job, bilan: BilanDepot,
 ): Promise<void> {
   if (bilan.retourEcrit) return
+
+  // ⛔⛔ 08/09/2026 — LA VERSION DU JOB COMMANDE, ET ELLE N'ÉTAIT PAS LUE.
+  //    Cette fonction met en file `retour_v1`, TOUJOURS. Or `rejouerLeRetour`
+  //    code `version: 'v1'` en dur et `ecrireRetour` en tire `moment = 'chaud'`
+  //    avec un upsert sur `(depot_id, moment)` : appelée sur un `mesure_vf`
+  //    refusé, elle aurait **régénéré et ÉCRASÉ le retour chaud déjà publié**,
+  //    en le re-datant — sans jamais écrire le retour FINAL, qui est celui qui
+  //    manquait. Et si le `retour_v1` avait déjà consommé ses trois tentatives
+  //    (le cas normal après un refus en v1), il ne se serait rien passé du tout.
+  // ⭐ Mesuré en production le 08/09 : **0 job `mesure_vf`, 0 retour `final`,
+  //    0 dépôt avec `vf_remis_at`** — le chemin est ouvert dans le code et
+  //    n'a jamais été emprunté. On le FERME, plutôt que d'inventer aujourd'hui
+  //    une étape `retour_vf` que rien n'exerce et que rien ne prouverait.
+  // ⚠️ CE QU'IL FAUDRA FAIRE LE JOUR OÙ UNE VERSION FINALE SERA RENDUE À DOMICILE :
+  //    une étape `retour_vf` propre — dans `ETAPES_DE_MESURE` (la route la lit
+  //    de là, elle ne se recopie pas), avec `rejouerLeRetour` paramétré par la
+  //    version au lieu de son `'v1'` en dur. Tant que ce n'est pas fait, le
+  //    refus d'un retour final reste au message du job, et il le dit.
+  if (job.etape !== 'mesure_v1' && job.etape !== 'retour_v1') {
+    console.warn(`[chaine] rejeu du retour NON programmé — étape « ${job.etape} » : `
+      + 'seul le retour de la v1 sait se rejouer aujourd\'hui (aucune étape `retour_vf`). '
+      + `Le motif du refus reste au message du job — dépôt ${job.depot_id}.`)
+    return
+  }
   const refus = (bilan.alertes ?? []).find((x) => x.startsWith('retour refusé'))
   if (!refus) return   // pas de retour à écrire (sonde, aucune compétence) : rien à rejouer
 
