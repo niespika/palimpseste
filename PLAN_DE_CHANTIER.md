@@ -506,6 +506,51 @@ Un prompt de lot se fabrique, il ne s'invente pas. **Six pièces, dans cet ordre
 
 ## 6. Ce qui reste ouvert, et qui ne bloque rien
 
+### ⭐ Ce que `C10-L2` laisse derrière lui — trié par CE QUI LE DÉBLOQUE (08/09/2026)
+
+*Les cinq restes sont déjà consignés un par un au `SUIVI_tests_manuels.md`, section `C10-L2`, avec
+leur condition de reprise. **On ne les recopie pas ici** — une trace n'est pas la chose, et un second
+domicile diverge. Ce bloc ne fait qu'une seule chose : dire **lequel est une tâche**, parce qu'à la
+mesure ils ne sont pas de même nature et qu'une liste plate ferait croire à cinq travaux.*
+
+**UN SEUL SE LANCE** — c'est le seul qui demande du temps de séance :
+
+- 🔧 **`C10L2-x6` — rejouer `smoke-c10l2.mjs` en entier.** Le chemin professeur de Codex passe déjà
+  en un run *(19 contrôles, 0 échec)* ; il s'arrête à la **première compilation** de la route prof
+  d'Aletheia. ⛔ **Condition : un `next dev` NON PARTAGÉ** — Next refuse un second serveur sur le
+  même arbre, et le port 3000 appartenait à une autre séance. *À défaut, visiter une fois chaque
+  route pour la faire compiler avant de lancer.*
+
+**UN SE TRANCHE, ET IL NE COÛTE RIEN** — une phrase de Louis suffit :
+
+- ⚖️ **`C10L2-x5` — un dépôt `abandonne` reste retirable par deux chemins professeur**, et un retrait
+  de pool l'emporte. ⚠️ **La question a changé de nature le 07/09** : elle était théorique tant que
+  `abandonne` n'existait nulle part ; **il y en a 15 en production depuis la clôture des quatre
+  passations**. Le retrait les convertirait en `retire`, ce qui les **sortirait du dénominateur
+  d'assiduité** — l'inverse de l'intention du lot. ⭐ **Assumé et motivé** *(relevé §5.7 : le `07-`
+  §1.1 dit « le retrait reste permis tant que le dépôt n'est pas `clos` »)*. Si Louis veut fermer
+  cette porte, c'est **une ligne dans chacun des deux refus**.
+
+**TROIS NE SE LANCENT PAS : ils attendent le TERRAIN, pas une séance.** Population **zéro**, mesurée
+en production le 07/09 — construire pour eux serait construire à l'aveugle, ce que le lot interdit :
+
+- 👁️ **`C10L2-x2` — la branche `assigne`** : `statut='assigne' ∧ routeur_decision_id IS NULL` → **0**.
+  Elle est **déjà fabriquée et éprouvée au décor du bac à sable**. *S'ouvre : à la première passation
+  où le professeur assigne un jour et ouvre le lendemain — la fenêtre dure des heures (10 h 30
+  mesurées sur une instance réelle).*
+- 👁️ **`C10L2-x3` — le bouton de la MAISON** : `origine='prof' ∧ lieu='maison'` → **0** ; les 195
+  dépôts de maison jouables sont **tous** du routeur, donc de `C10-L1`. Déjà déposé à la boîte aux
+  lettres du §5. *S'ouvre : à la première assignation à la main sur une instance de maison.*
+- 👁️ **`C10L2-x4` — la phrase de Fragments-érudition** qui promettrait « deux retours » sur une copie
+  déclarée jamais rendue. **0 instance de classe Fragments** ; déjà à `IDEES_post_rentree.md`.
+  *S'ouvre : à la première passation en classe de Fragments-érudition.*
+
+⚠️ **Et un rappel qui n'est pas de ce lot** : `proxy.ts` porte `TRAVAUX = true` depuis le 07/09
+*(commits `b6adb15` et `1631465`, une autre séance, pour réparer la chaîne des retours)*. `/prof`
+reste ouvert, **toute page élève est réécrite vers `/travaux`** — l'écran élève de `C10-L2` est juste
+mais **injoignable** tant que l'interrupteur est à `true`. Le smoke élève en dépend.
+
+
 ⭐ **LE « LOT DE CORRECTIFS » A UN NUMÉRO DEPUIS LE 22/08 : c'est `C4-L11`, et son inventaire fait foi au `07-Implementation.md` §2.** Il n'existait qu'en prose, ici et au `SUIVI_tests_manuels.md`, sous un nom sans destinataire. **Tout ce que cette section lui adresse y est désormais décrit — douze chantiers en six familles — et cette section n'en garde que le récit et les échéances.** *Ce qui reste ci-dessous et ne lui appartient PAS : la table de conversion du Monitoring et la préférence de l'élève, qui sont des **décisions à prendre**, pas des correctifs.*
 
 - **La table de conversion 0-3 du Monitoring** — la fiche le dit elle-même : *« Ce n'est pas un trou : `n/a` est une valeur déclarée dans l'échelle, elle se compare comme les autres, et le jour où la table arrive le calcul cesse de la rendre. »* Elle se remplit sur la collecte de l'année *(`competences/monitoring.md` §9)*.
