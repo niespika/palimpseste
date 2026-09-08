@@ -401,6 +401,7 @@ interface LigneDepot {
 }
 interface LigneExercice {
   id: string; type_id: string; classe_id: string | null; lieu: string
+  observable_isole_code: string | null
   consigne_instanciee: unknown; paire_diagnostic: boolean; cran: string | number | null
   variante?: string | null
   cible_primaire: string | null
@@ -449,7 +450,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, variante, '
       + 'cible_primaire, modes_par_competence, exercice_planifie_id, reference_id, '
       + 'materiau_source_texte_id, materiau_source_englobant, materiau_source_localisation, '
-      + 'cotexte_materiau_id')
+      + 'cotexte_materiau_id, observable_isole_code')
     .eq('id', depot.exercice_id).maybeSingle()
   if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
   const exercice = exerciceBrut as unknown as LigneExercice
@@ -699,10 +700,13 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   }
 
   // ⭐ 06/09 — au cran 2 du gabarit, chaque cas porte ses pièces ; au 5, le devoir réassemblé.
+  // Chantier ③ : le cran 5 reçoit le même observable que l'écran. Les autres
+  // crans et les cas sans problème du gabarit gardent leur lecture existante.
+  const observableDuCran5 = cran === 5 ? exercice.observable_isole_code : null
   const cas = await avecLeReassemblage(admin,
-    await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id),
+    await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id, observableDuCran5),
       { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
-    { cran, exerciceId: exercice.id })
+    { cran, exerciceId: exercice.id, observable: observableDuCran5 })
 
   return {
     depotId,
@@ -932,7 +936,7 @@ function production(texte: unknown, transcription: unknown): string | null {
  *    sans matériau.*
  */
 async function casPourLeRetour(
-  admin: Admin, exerciceId: string, depotId: string,
+  admin: Admin, exerciceId: string, depotId: string, observableDuCran5: string | null = null,
 ): Promise<CasServiAuRetour[]> {
   const { data, error } = await admin
     .from('exercices_cas')
@@ -968,7 +972,7 @@ async function casPourLeRetour(
       defaut: texte(c.defaut),
       passageFautif: cible ? brut.slice(cible[0], cible[1]) : null,
       probleme: texte(c.probleme),
-      passageMarque: passageMarqueDe(brut, versionCorrigee),
+      passageMarque: passageMarqueDe(brut, versionCorrigee, texte(c.probleme) ? observableDuCran5 : null),
       zone: zoneServie(brut, cible, entree),
       choix: choixServi(entree),
       piece: null,
@@ -985,9 +989,11 @@ async function casPourLeRetour(
  *    marqués, joints. `null` sans diff ou sans version corrigée.
  * ⛔ Aucun diff recalculé ici.
  */
-function passageMarqueDe(contenu: string, versionCorrigee: string | null): string | null {
+function passageMarqueDe(
+  contenu: string, versionCorrigee: string | null, observable: string | null,
+): string | null {
   if (!contenu || !versionCorrigee) return null
-  const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', { versionCorrigee })
+  const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', { versionCorrigee, observable })
   if (!segments) return null
   const marques = segments.filter((s) => s.marque).map((s) => s.texte.trim()).filter(Boolean)
   return marques.length ? marques.join(' ') : null
@@ -1034,7 +1040,8 @@ async function cleDuCas(admin: Admin, cas: readonly CasServiAuRetour[]): Promise
  *    mêmes que l'écran : un seul domicile. Porte fermée ou hors gabarit, rien.
  */
 async function avecLeReassemblage(
-  admin: Admin, cas: CasServiAuRetour[], a: { cran: number | null; exerciceId: string },
+  admin: Admin, cas: CasServiAuRetour[],
+  a: { cran: number | null; exerciceId: string; observable: string | null },
 ): Promise<CasServiAuRetour[]> {
   if (a.cran !== 5) return cas
   const { data, error } = await admin.from('exercices_cas')
@@ -1049,7 +1056,9 @@ async function avecLeReassemblage(
     const contenu = typeof m?.contenu === 'string' ? m.contenu : null
     const corrigee = typeof m?.version_corrigee === 'string' ? m.version_corrigee : null
     if (!contenu || !corrigee) return c
-    const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', { versionCorrigee: corrigee })
+    const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', {
+      versionCorrigee: corrigee, observable: a.observable,
+    })
     const p = segments ? morceauxDuPassage(segments, !!pointDInsertion(contenu, corrigee)) : null
     if (!p) return c
     const avant = p.pieces.slice(0, p.place).map((x) => x.texte).join(' ')

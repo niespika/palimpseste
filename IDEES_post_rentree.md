@@ -1447,3 +1447,5 @@ le second cas est réussi seul » était écrite en tête du fichier et le code 
 moment, c'est le cas 2 qui marque la réussite.**
 
 - 08/09/2026, six chantiers ① : le profil de classe professeur (`?vue=competences`) déborde sur téléphone avant comme après le signal : viewport demandé 375 px, `innerWidth` et `scrollWidth` 759 px, réduction automatique de toute la page. Captures avant/après au relevé de session ; hors périmètre, non corrigé.
+
+- 08/09/2026, six chantiers ③ : l’ancienne banque de cran 5 porte aussi deux divergences de marquage (`ex-transition-composer-05-jointure-presente-1`, `ex-transition-composer-05-charniere-formule-1`) : 17 dépôts de production, dont 10 remis. Exclus du correctif borné au gabarit ; aucun rattrapage. Mesure détaillée au relevé de session.

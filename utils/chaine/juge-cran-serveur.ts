@@ -37,7 +37,11 @@ export function entreeDuContexte(ctx: ContexteDepot, version: Version, productio
     productionV1: version === 'vf' ? ctx.productionV1 : null,
     cas: ctx.casPourLeRetour.map((c) => ({
       ordre: c.ordre, materiau: c.materiau, versionCorrigee: c.versionCorrigee, defaut: c.defaut,
-      reponseAttendue: c.reponseAttendue, passageFautif: c.passageFautif, zone: c.zone, choix: c.choix,
+      reponseAttendue: c.reponseAttendue,
+      // Cran 5 du gabarit : ce bloc nomme le passage montré, pas un troisième
+      // fragment tiré du diff brut. Le gras lui-même reste au chantier ②.
+      passageFautif: ctx.cran === 5 && c.probleme ? c.passageMarque : c.passageFautif,
+      zone: c.zone, choix: c.choix,
       piece: c.piece ?? null,
       reassemble: c.reassemble ?? null,
     })),
