@@ -1482,11 +1482,19 @@ function RetourDUnTexte({
    *    `texteV1` cacherait donc le cas du transfert — celui qui porte toute la
    *    raison d'être de la paire.
    */
+  // ⭐⭐ 07/09 (soir) — LE VERDICT SUIT LA COPIE JUSQUE DANS LE RETOUR.
+  //    Il ne vivait que dans `ColonneTravail` (étape `apres`), et `ecranDuDeroule`
+  //    bascule ici DÈS QU'UN RETOUR EXISTE : mesuré en prod, 22 à 48 secondes
+  //    après l'écriture du verdict. Aux crans par paires la bascule est
+  //    TERMINALE — l'élève ne serait jamais revenu le lire. **Le lot ne servait
+  //    que la fenêtre d'attente.** Trouvé par la passe adversariale.
+  // ⛔ Le verdict est attaché AVANT le `filter` : filtrer d'abord décalerait les
+  //    index et collerait le verdict du cas 1 sous la réponse du cas 2.
   const copies = vue.estUnePaire
-    ? [{ libelle: 'Premier cas', texte: vue.texteV1 ?? '' },
-      { libelle: 'Un cas neuf, de la même famille', texte: vue.texteVf ?? '' }]
+    ? [{ libelle: 'Premier cas', texte: vue.texteV1 ?? '', ordre: 0 },
+      { libelle: 'Un cas neuf, de la même famille', texte: vue.texteVf ?? '', ordre: 1 }]
       .filter((c) => c.texte.trim() !== '')
-    : [{ libelle: null,
+    : [{ libelle: null, ordre: 0,
       texte: (vue.tempsCourant === 'retour_final' ? vue.texteVf ?? vue.texteV1 : vue.texteV1) ?? '' }]
 
   const suiteVf = etapesServies({
@@ -1565,6 +1573,16 @@ function RetourDUnTexte({
               {/* ⭐ LE RENVOI D'UN POINT SURLIGNE ICI (handoff §6). Le découpage
                  est celui du matériau — **pas un octet retouché** —, et une
                  citation introuvable ne surligne RIEN plutôt que d'à-peu-près. */}
+              {/* ⭐ Le verdict, au-dessus de la copie qu'il juge — mêmes jetons
+                  que partout ailleurs dans le déroulé. */}
+              {vue.verdictParCas[c.ordre] !== null && vue.verdictParCas[c.ordre] !== undefined && (
+                <p className={`mb-1.5 font-corps text-[15.5px] font-semibold
+                  ${vue.verdictParCas[c.ordre] ? 'text-ok' : 'text-attention'}`}>
+                  {vue.verdictParCas[c.ordre] ? 'Ta réponse est juste.' : 'Ta réponse n’est pas celle qu’il fallait.'}
+                  {vue.verdictParCas[c.ordre] === false && vue.precisionParCas[c.ordre]
+                    ? ` ${vue.precisionParCas[c.ordre]}` : ''}
+                </p>
+              )}
               <MateriauMarque
                 segments={segmentsDuRenvoi(c.texte, renvoi)}
                 className="rounded-xl border border-bordure bg-surface-retrait p-4 font-corps
