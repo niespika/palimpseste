@@ -133,6 +133,20 @@ try {
   for (let i = 0; i < 50 && !t; i++) { try { t = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: 'PUT' })).json() } catch { await dors(200) } }
   const ws = new WebSocket(t.webSocketDebuggerUrl); await new Promise((r) => ws.addEventListener('open', r))
   cdp = new CDP(ws); await cdp.envoie('Page.enable'); await metrics(1280)
+  // ⭐⭐ 07/09/2026 — FRANCHIR LA PAGE DES TRAVAUX, quand il y en a une.
+  //    `proxy.ts` peut porter `TRAVAUX = true` : toute page humaine est alors
+  //    réécrite vers `/travaux`, et le parcours ne verrait qu'elle. Le profil
+  //    Chrome est NEUF à chaque run (`--user-data-dir`), donc aucun cookie de
+  //    laissez-passer n'y survit : il faut le poser ici, avant le lien magique.
+  // ⚠️ Sans `TRAVAUX_LAISSEZ_PASSER` dans l'environnement, on ne fait RIEN —
+  //    c'est le cas normal, site ouvert. Le dépôt étant PUBLIC, il n'y a pas de
+  //    valeur par défaut : sans la variable, il n'existe pas de laissez-passer.
+  if (env.TRAVAUX_LAISSEZ_PASSER) {
+    const chT = cdp.attendChargement()
+    await cdp.envoie('Page.navigate', { url: `${BASE}/?atelier=${encodeURIComponent(env.TRAVAUX_LAISSEZ_PASSER)}` })
+    await chT; await dors(400)
+    console.log(NOM, '· laissez-passer des travaux posé')
+  }
   const { data: lien, error } = await admin.auth.admin.generateLink({ type: 'magiclink', email: env.TEST_ELEVE_EMAIL })
   if (error) throw error
   const ch = cdp.attendChargement()

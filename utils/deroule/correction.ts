@@ -320,11 +320,18 @@ export function verdictDeLaVersion(verdicts: unknown, version: 'v1' | 'vf'): boo
  *    passage, serait exact et incompréhensible.*
  * ⚠️ `ratissage` n'est pas ici : il a son propre écran (`vue.fin = 'non_fait'`),
  *    et il ne compte pas comme une réponse du tout.
+ *
+ * ⛔⛔ ET `faux` NON PLUS — retiré le 07/09 au soir, sur le smoke, par Louis :
+ *     « cette mention ne sert en fait à rien, le reste explique déjà tout ».
+ *     Il avait raison, et ça affine la règle : « le passage que tu as surligné
+ *     n'est pas celui qui posait problème » ne fait que REDIRE le verdict, à
+ *     trois lignes de distance, entre la zone citée et « Ce qu'il fallait
+ *     voir ». **Une redite n'est pas une explication.** Les trois autres
+ *     restent, parce qu'elles disent ce que le verdict tait : que l'élève était
+ *     au bon endroit, ou dans le bon passage, ou qu'il le touchait.
  */
 export function precisionDeLaZone(verdict: string | null | undefined): string | null {
   switch (verdict) {
-    case 'faux':
-      return 'Le passage que tu as surligné n’est pas celui qui posait problème.'
     case 'mal_bornee':
       return 'Tu étais au bon endroit, mais ta sélection débordait largement du passage.'
     case 'a_voir':

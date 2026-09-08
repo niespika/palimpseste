@@ -166,3 +166,20 @@ test('le téléphone s’ouvre sur la matière quand il faut y surligner, sur le
   assert.equal(voletInitial('rediger'), 'ecrire')
   assert.equal(voletInitial('choisir'), 'ecrire')
 })
+
+// ── ⭐ 07/09/2026, TROUVÉ AU SMOKE — le fil ne promet plus une réponse ────────
+// « Surligner ET RÉPONDRE » s'affichait sur une paire 4(b)/4(b), où l'élève
+// surligne et c'est tout ce qui est demandé. Vu à l'écran, pas en lisant.
+
+test('le temps 2 d’un exercice SANS REMISE dit « Surligner », pas « et répondre »', () => {
+  assert.equal(libelleDuTemps('ecrire', 'surligner', true), 'Surligner')
+})
+
+test('⛔ et rien ne bouge ailleurs — le libellé est JUSTE sur une paire 4(a)/4(b)', () => {
+  // Le premier cas d'un 4(a) répond bien : « et répondre » y est vrai.
+  assert.equal(libelleDuTemps('ecrire', 'surligner', false), 'Surligner et répondre')
+  assert.equal(libelleDuTemps('ecrire', 'surligner'), 'Surligner et répondre')
+  assert.equal(libelleDuTemps('ecrire', 'rediger', true), libelleDuTemps('ecrire', 'rediger'))
+  assert.equal(libelleDuTemps('ecrire', 'choisir', true), libelleDuTemps('ecrire', 'choisir'))
+  assert.equal(libelleDuTemps('retour', 'surligner', true), libelleDuTemps('retour', 'surligner'))
+})

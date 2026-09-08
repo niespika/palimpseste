@@ -479,7 +479,7 @@ function FilDesTemps({
     >
       <ol className="flex shrink-0 gap-1.5">
         {vue.temps.map((t) => <PastilleDeTemps
-          key={t} temps={t} etat={etatDuTemps(t, courant, vue.temps)} forme={forme} />)}
+          key={t} temps={t} etat={etatDuTemps(t, courant, vue.temps)} forme={forme} aucuneRemise={vue.aucuneRemise} />)}
       </ol>
       {vue.echeanceVf.quand && (
         <span className="ml-auto hidden shrink-0 whitespace-nowrap rounded-full
@@ -493,8 +493,10 @@ function FilDesTemps({
 }
 
 function PastilleDeTemps(
-  { temps, etat, forme }:
-  { temps: Temps; etat: 'fait' | 'courant' | 'a_venir'; forme: FormeDuTravail },
+  { temps, etat, forme, aucuneRemise = false }:
+  { temps: Temps; etat: 'fait' | 'courant' | 'a_venir'; forme: FormeDuTravail
+    /** ⭐ 07/09 — sur un exercice qui ne se remet pas, le temps 2 ne « répond » pas. */
+    aucuneRemise?: boolean },
 ) {
   const cls = etat === 'courant'
     ? 'bg-pigment text-[color:var(--fond-module)] font-semibold'
@@ -508,7 +510,7 @@ function PastilleDeTemps(
     >
       {etat === 'fait' && <span aria-hidden>✓ </span>}
       <span className="sr-only">{etat === 'fait' ? 'fait : ' : etat === 'courant' ? 'en cours : ' : 'à venir : '}</span>
-      {libelleDuTemps(temps, forme)}
+      {libelleDuTemps(temps, forme, aucuneRemise)}
     </li>
   )
 }
@@ -981,9 +983,15 @@ function ColonneTravail({
         {vue.fin === 'hors_cible' && (
           <Encart ton="attention">
             <p className="text-sm text-encre">
-              <strong>Cet exercice est terminé.</strong> Le passage que tu avais surligné n’est pas
-              celui qui posait problème : la correction est là, et il n’y a pas de retour à attendre.
-              La prochaine fois, relis le document avant de choisir où pointer.
+              {/* ⛔ 07/09, vu au smoke — cet encart disait « le passage que tu avais
+                  surligné n’est pas celui qui posait problème », et la précision du
+                  verdict, trois lignes plus bas, disait LA MÊME PHRASE. Le verdict
+                  est désormais servi au bon endroit — sous la réponse de l’élève —,
+                  donc l’encart n’a plus qu’à dire que c’est fini, et pourquoi il n’y
+                  a pas de retour. */}
+              <strong>Cet exercice est terminé.</strong> Il n’y a pas de retour à attendre :
+              la correction est ci-dessous. La prochaine fois, relis le document avant de
+              choisir où pointer.
             </p>
           </Encart>
         )}
@@ -1578,7 +1586,7 @@ function RetourDUnTexte({
               {vue.verdictParCas[c.ordre] !== null && vue.verdictParCas[c.ordre] !== undefined && (
                 <p className={`mb-1.5 font-corps text-[15.5px] font-semibold
                   ${vue.verdictParCas[c.ordre] ? 'text-ok' : 'text-attention'}`}>
-                  {vue.verdictParCas[c.ordre] ? 'Ta réponse est juste.' : 'Ta réponse n’est pas celle qu’il fallait.'}
+                  {vue.verdictParCas[c.ordre] ? 'Ta réponse est juste.' : 'Ta réponse n’est pas la bonne.'}
                   {vue.verdictParCas[c.ordre] === false && vue.precisionParCas[c.ordre]
                     ? ` ${vue.precisionParCas[c.ordre]}` : ''}
                 </p>
@@ -2077,9 +2085,14 @@ function Correction({
           {verdict !== null && (
             <p className={`mt-2.5 font-corps text-[15.5px] font-semibold
               ${verdict ? 'text-ok' : 'text-attention'}`}>
-              {verdict
-                ? 'Ta réponse est juste.'
-                : 'Ta réponse n’est pas celle qu’il fallait — compare-la à ce qui suit.'}
+              {/* ⛔ 07/09, vu au smoke par Louis — ce verdict disait « compare-la à
+                  ce qui suit », et le titre juste en dessous dit « Ce qu’il fallait
+                  voir — COMPARE AVEC TA RÉPONSE ». La même consigne deux fois, plus
+                  l’écho de « ce qu’il fallait ». Le titre la porte déjà, et mieux
+                  placée : le verdict se contente de juger.
+                  ⭐ Et il reprend les mots de la branche à candidats (« Ce n’est pas
+                  la bonne réponse ») — une seule grammaire dans tout le déroulé. */}
+              {verdict ? 'Ta réponse est juste.' : 'Ta réponse n’est pas la bonne.'}
             </p>
           )}
           {/* ⛔ L'explication vient APRÈS le verdict et ne le contredit jamais :

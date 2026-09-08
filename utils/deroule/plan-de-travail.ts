@@ -86,7 +86,15 @@ const LIBELLE: Record<Temps, string> = {
   retour_final: 'Retour final',
 }
 
-export function libelleDuTemps(temps: Temps, forme: FormeDuTravail): string {
+export function libelleDuTemps(
+  temps: Temps, forme: FormeDuTravail, aucuneRemise = false,
+): string {
+  // ⭐ 07/09/2026, vu au smoke — « Surligner ET RÉPONDRE » s'affichait sur une
+  //    paire 4(b)/4(b), où l'élève ne répond JAMAIS : il surligne, et c'est
+  //    tout ce qui est demandé. Le fil nommait une tâche que la consigne ne
+  //    demande pas. ⚠️ Trouvé à l'écran, pas en lisant : le libellé est juste
+  //    sur une paire 4(a)/4(b), où le premier cas répond bien.
+  if (temps === 'ecrire' && forme === 'surligner' && aucuneRemise) return 'Surligner'
   return temps === 'ecrire' ? TEMPS_2[forme] : LIBELLE[temps]
 }
 
