@@ -89,6 +89,7 @@ const { comptesDeLaSemaine } = await import(`${RACINE}/utils/assiduite/collecte.
 const { estRendu, entreAuDenominateur } = await import(`${RACINE}/utils/routeur/assiduite.ts`)
 const { lireLesDecisions } = await import(`${RACINE}/utils/routeur/donnees.ts`)
 const { KdeR5 } = await import(`${RACINE}/utils/routeur/ciblage.ts`)
+const { aServiUneSemaine } = await import(`${RACINE}/utils/routeur/profil.ts`)
 const { lundiDuCycle } = await import(`${RACINE}/utils/deroule/echeance.ts`)
 const { toISODate } = await import(`${RACINE}/utils/calendrier-grille.ts`)
 const { signauxDeLancement } = await import(`${RACINE}/utils/examens/signal.ts`)
@@ -378,7 +379,10 @@ async function mesuresDeReference() {
     // ⑥ LE ROUTEUR — K de R5, dérivé de `exercicesParCycle`, lui-même dérivé du
     //    journal. C'est le chiffre que la ligne d'override déplaçait.
     const dec = await lireLesDecisions(admin, eleveId)
-    const servies = dec.filter((d) => d.exerciceId)
+    // ⛔ Le discriminant est la RÈGLE, pas la nullité de l'exercice : la clé
+    //    étrangère est `ON DELETE SET NULL` (mesuré le 08/09), donc une vraie
+    //    décision dont l'exercice a été supprimé porte `exercice_id` NULL.
+    const servies = dec.filter((d) => aServiUneSemaine(d))
     const parCycle = new Map()
     for (const d of servies) parCycle.set(d.cycleLundi, (parCycle.get(d.cycleLundi) ?? 0) + 1)
     const pleins = [...parCycle.values()].filter((n) => n > 0)
@@ -687,11 +691,11 @@ async function lesChiffres(ref) {
   // exercice posé de la semaine, en silence.
   for (const eleveId of [registre.eleveId, registre.autreEleveId]) {
     const dec = await lireLesDecisions(admin, eleveId)
-    const overrides = dec.filter((d) => !d.exerciceId)
+    const overrides = dec.filter((d) => !aServiUneSemaine(d))
     const cyclesDoverride = [...new Set(overrides.map((d) => d.cycleLundi))]
     for (const cycle of cyclesDoverride) {
       const sansFiltre = dec.some((d) => d.cycleLundi === cycle && !d.bonus)
-      const avecFiltre = dec.some((d) => d.cycleLundi === cycle && !d.bonus && !!d.exerciceId)
+      const avecFiltre = dec.some((d) => d.cycleLundi === cycle && !d.bonus && aServiUneSemaine(d))
       dire(avecFiltre === false || dec.some((d) => d.cycleLundi === cycle && d.exerciceId),
         `⛔⛔ GARDE D’IDEMPOTENCE — élève ${eleveId.slice(0, 8)}, cycle ${cycle} : la ligne `
         + 'd’override ne fait PAS croire que la semaine est servie',
@@ -701,6 +705,20 @@ async function lesChiffres(ref) {
     if (cyclesDoverride.length === 0) {
       note(`élève ${eleveId.slice(0, 8)} : aucune ligne d’override — rien à éprouver ici`)
     }
+
+    // ⛔⛔ LE CONTRÔLE QUI MANQUAIT, ET QU'UN AUDIT A DÛ TROUVER (08/09). La clé
+    //    `routeur_decisions_exercice_id_fkey` est `ON DELETE SET NULL` : une
+    //    VRAIE décision dont l'exercice est supprimé porte `exercice_id` NULL.
+    //    Discriminer sur cette nullité l'aurait prise pour un override — et
+    //    aurait fait déclarer l'élève NON servi, donc REPOSER sa semaine.
+    const vraieSansExercice = { cycleLundi: '2026-08-31', bonus: false,
+      exerciceId: null, regleDeclenchee: 'R2' }
+    dire(aServiUneSemaine(vraieSansExercice) === true,
+      '⛔⛔ une VRAIE décision dont l’EXERCICE A ÉTÉ SUPPRIMÉ compte encore comme SERVIE',
+      `exerciceId=null mais regleDeclenchee='R2' → servie=${aServiUneSemaine(vraieSansExercice)} `
+      + '(la nullité de l’exercice ne prouve rien : `ON DELETE SET NULL`)')
+    dire(aServiUneSemaine({ regleDeclenchee: 'override_prof' }) === false,
+      '⭐ et une ligne d’override, elle, ne sert aucune semaine')
   }
 }
 

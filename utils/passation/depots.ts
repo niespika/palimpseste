@@ -328,7 +328,10 @@ export async function preparerDepotDesPhotos(
     return refus('Le dépôt n’est pas encore ouvert : le professeur l’ouvre quand la rédaction est finie.')
   }
   // ⭐ C10 · L2 — la condition qui vivait ici EN CLAIR est devenue le prédicat,
-  //    et le prédicat est posé aux HUIT autres chemins. Un prédicat, neuf appels.
+  //    et le prédicat est posé aux DIX autres chemins d'écriture de l'élève.
+  //    Un prédicat, ONZE appels — les deux derniers (le RPC de collage, gardé
+  //    dans son appelant, et le re-dépôt de l'essai de Fragments) ont été
+  //    tranchés en séance plutôt qu'écartés.
   if (depotClos(d)) return refus(MESSAGE_DEPOT_CLOS)
   if (d.v1_remis_at) return refus('Tu as déjà validé ta copie.')
   if (nb < 1) return refus('Ajoute au moins une page.')

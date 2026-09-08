@@ -88,8 +88,26 @@ export interface DecisionLue {
   /** ⭐ `routeur_decisions.bonus` — « en faire plus » n'est pas la semaine ; la garde d'idempotence l'ignore. */
   bonus: boolean
   /**
-   * ⭐⭐ C10 · L2 — `routeur_decisions.exercice_id`, ET IL DISCRIMINE UNE LIGNE
-   * QUI N'A SERVI AUCUN EXERCICE.
+   * `routeur_decisions.regle_declenchee` — ⭐⭐ LE DISCRIMINANT D'UNE LIGNE
+   * D'OVERRIDE, et c'est LUI qu'il faut lire, jamais la nullité de l'exercice.
+   *
+   * ⛔⛔ POURQUOI PAS `exercice_id`, QUI SEMBLAIT ÉVIDENT ET QUI EST FAUX.
+   *    Mesuré en base le 08/09 : `routeur_decisions_exercice_id_fkey` est
+   *    **`ON DELETE SET NULL`**. Une VRAIE décision de routeur dont l'exercice
+   *    est supprimé porte donc `exercice_id` NULL elle aussi — et devient
+   *    indiscernable d'un override. Discriminer sur la nullité, c'est traiter
+   *    une semaine réellement servie comme si elle ne l'avait pas été :
+   *    `exercicesParCycle` la cesserait de compter *(K de R5 baisse — la
+   *    régression que C10-L2 répare, retournée)*, et la garde d'idempotence
+   *    déclarerait l'élève NON servi, si bien qu'un second passage du cron
+   *    pourrait REPOSER une semaine déjà posée.
+   *    ⭐ `regle_declenchee` ne ment pas : seul l'override l'écrit
+   *    `'override_prof'`, et il l'écrit toujours.
+   */
+  regleDeclenchee: string | null
+  /**
+   * ⭐ C10 · L2 — `routeur_decisions.exercice_id`. Conservé pour ce qu'il DIT
+   * vraiment — quel exercice cette décision a posé —, jamais comme discriminant.
    *
    * Le journal porte deux natures de ligne. Celles du ROUTEUR nomment l'exercice
    * qu'elles ont posé. Celles de l'OVERRIDE DU PROFESSEUR — le retrait
@@ -104,6 +122,31 @@ export interface DecisionLue {
    *    `!!l.exercice_id` de son côté : ce champ ne fait qu'aligner les autres.
    */
   exerciceId: string | null
+}
+
+/**
+ * ⭐⭐ La règle que le professeur écrit quand il passe outre le routeur — retrait
+ * *(`app/prof/routeur/actions.ts`)* et clôture d'une passation
+ * *(`app/passation/actions.ts`, C10-L2)*. **Un seul domicile pour la chaîne.**
+ */
+export const REGLE_OVERRIDE_PROF = 'override_prof'
+
+/**
+ * ⭐⭐ CETTE DÉCISION A-T-ELLE SERVI UNE SEMAINE ? — le prédicat que les lecteurs
+ * du journal partagent, et il n'y en a qu'un.
+ *
+ * ⛔ Il se lit sur `regleDeclenchee`, PAS sur la nullité de `exerciceId` : la
+ *    clé étrangère est `ON DELETE SET NULL` *(mesuré en base le 08/09)*, donc
+ *    une vraie décision dont l'exercice a été supprimé porte `exerciceId` NULL
+ *    sans cesser d'avoir servi. Seul l'override n'a jamais rien servi.
+ *
+ * ⚠️ Et il refuse par la POSITIVE : tout ce qui n'est pas explicitement un
+ *    override compte comme servi. Une règle inconnue — ou nulle — penche donc
+ *    du côté « servi », qui est le côté PRUDENT : au pire on ne ferme pas une
+ *    semaine, jamais on n'en efface une.
+ */
+export function aServiUneSemaine(d: { regleDeclenchee: string | null }): boolean {
+  return d.regleDeclenchee !== REGLE_OVERRIDE_PROF
 }
 
 export function historiqueDesCibles(decisions: readonly DecisionLue[]): Competence[] {

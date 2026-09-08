@@ -41,7 +41,7 @@ import {
 } from '@/utils/routeur/ciblage'
 import { jugerLaLettre } from '@/utils/routeur/lettres'
 import { mesuresQuiComptent, parDate } from '@/utils/routeur/mesure'
-import { fenetreDEvidence, historiqueDesCibles, signalDeCiblage } from '@/utils/routeur/profil'
+import { fenetreDEvidence, historiqueDesCibles, signalDeCiblage, aServiUneSemaine } from '@/utils/routeur/profil'
 import { controlesDeLaCompetence } from '@/utils/routeur/proportions'
 import { ordonnerLesSondes, type CandidateSonde } from '@/utils/routeur/sondes'
 import { poserLaSemaine, poserLesSondes, type SondePosee } from '@/utils/routeur/semaine'
@@ -800,13 +800,20 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   //    même lundi ne sert que ceux que le premier n'a pas atteints. ⚠️ Le bonus
   //    ne compte pas : « en faire plus » n'est pas la semaine.
   // ⛔⛔ C10 · L2 — LE `exerciceId` EST DANS CE PRÉDICAT, ET IL Y EST VITAL. Une
-  //    ligne d'override porte `bonus` NULL (donc `!d.bonus` est VRAI) : sans ce
+  //    ligne d'override porte `bonus` à FAUX (la colonne est `not null default
+  //    false` — mesuré ; le commentaire disait NULL, c'était faux et la
+  //    conclusion tenait quand même), donc `!d.bonus` est VRAI : sans ce
   //    filtre, une clôture de passation posée sur le cycle courant faisait
   //    déclarer l'élève « déjà servi », et LE CRON NE LUI POSAIT AUCUN EXERCICE
   //    DE LA SEMAINE — silencieusement, en `dejaServi`, sans incident ni erreur.
   //    Ce n'est pas un chiffre qui bouge, c'est une semaine perdue. « Déjà servi »
-  //    veut dire « un exercice a été posé », pas « une ligne existe ».
-  if (compo.decisions.some((d) => d.cycleLundi === c.cycleLundi && !d.bonus && !!d.exerciceId)) {
+  //    veut dire « une semaine a été servie », pas « une ligne existe ».
+  // ⛔⛔ ET LE SENS DE L'ERREUR COMPTE ICI PLUS QU'AILLEURS : discriminer sur la
+  //    nullité de l'exercice ferait déclarer NON SERVI un élève dont l'exercice
+  //    a simplement été supprimé (`ON DELETE SET NULL`), et le cron lui
+  //    REPOSERAIT une semaine déjà posée. `aServiUneSemaine` penche du côté
+  //    « servi », qui est le côté prudent.
+  if (compo.decisions.some((d) => d.cycleLundi === c.cycleLundi && !d.bonus && aServiUneSemaine(d))) {
     out.dejaServi = true
     return out
   }
@@ -1031,10 +1038,12 @@ async function remplirLesMinutes(
   // Les décisions du cycle À REMPLIR — « tu les retrouves dans TON PROPRE
   // JOURNAL ». Les durées, elles, viennent de la doctrine, jamais d'une valeur
   // recopiée : `duree_exercice_min` ne se saisit jamais à la main.
-  let decisions: Array<{ eleve_id: string; exercice_id: string | null }>
+  let decisions: Array<{ eleve_id: string; exercice_id: string | null
+    regle_declenchee: string | null }>
   try {
-    decisions = (await lirePagine<{ eleve_id: string; exercice_id: string | null }>(
-      admin, 'routeur_decisions', 'eleve_id, exercice_id, id', ['id'],
+    decisions = (await lirePagine<{ eleve_id: string; exercice_id: string | null
+      regle_declenchee: string | null }>(
+      admin, 'routeur_decisions', 'eleve_id, exercice_id, regle_declenchee, id', ['id'],
       (q) => (q as never as { eq: (a: string, b: string) => unknown }).eq('cycle_lundi', cycle)))
       // ⭐ C10 · L2 — la SOMME était déjà immunisée (`minutesAssignees` mappe
       //    `null → 0`), mais pas l'ENTRÉE DANS LA BOUCLE : `if (siennes.length
@@ -1042,7 +1051,9 @@ async function remplirLesMinutes(
       //    un élève SANS aucune décision réelle sur ce cycle, à qui l'on écrivait
       //    alors `assiduite_hebdo.minutes_assignees = 0` — un chiffre que
       //    `lireLAssiduite` sélectionne et que l'écran montre.
-      .filter((d) => !!d.exercice_id)
+      // ⛔ Sur `regle_declenchee`, pas sur la nullité de l'exercice : voir
+      //    `aServiUneSemaine` (`utils/routeur/profil.ts`).
+      .filter((d) => aServiUneSemaine({ regleDeclenchee: d.regle_declenchee ?? null }))
   } catch (e) {
     erreurs.push(`décisions du cycle ${cycle} : ${(e as Error).message}`)
     return { remplies: 0, sansLigne: 0, budgetsRefuses, erreurs }
@@ -1184,7 +1195,7 @@ async function cyclesDepuisR3(
  *    produit ; à défaut, ce que le budget et les durées du vivier permettent.
  */
 function exercicesParCycle(
-  decisions: readonly { cycleLundi: string; exerciceId: string | null }[],
+  decisions: readonly { cycleLundi: string; regleDeclenchee: string | null }[],
   vivier: readonly InstanceRetenue[],
   plafond: number,
 ): number {
@@ -1197,10 +1208,14 @@ function exercicesParCycle(
   //    K de R5 avec elle (15→9, jusqu'à 27→15). ⚠️ Et dans le MAUVAIS sens : K
   //    plus bas ⇒ PLUS de dettes R5 (`dettesDeR5` filtre `anciennete > K`), donc
   //    R5 mord plus souvent et écrase R1/R2/R3 — le « tourniquet » que `KdeR5`
-  //    dit vouloir éviter. `decisionsDuCycle` (`bonus-serveur.ts`) filtrait déjà
-  //    de la même façon : on ne fait qu'aligner le second lecteur sur le premier.
+  //    dit vouloir éviter.
+  // ⛔⛔ ET LE DISCRIMINANT EST `regle_declenchee`, PAS LA NULLITÉ DE L'EXERCICE :
+  //    `routeur_decisions_exercice_id_fkey` est `ON DELETE SET NULL` (mesuré en
+  //    base le 08/09), donc une VRAIE décision dont l'exercice a été supprimé
+  //    porte `exercice_id` NULL — la filtrer ici sous-compterait un cycle
+  //    réellement servi, c'est-à-dire la même régression à l'envers.
   for (const d of decisions) {
-    if (!d.exerciceId) continue
+    if (!aServiUneSemaine(d)) continue
     parCycle.set(d.cycleLundi, (parCycle.get(d.cycleLundi) ?? 0) + 1)
   }
   const pleins = [...parCycle.values()].filter((n) => n > 0)

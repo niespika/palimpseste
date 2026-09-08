@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   signalDeCiblage, fenetreDEvidence, historiqueDesCibles, ancienneteEnExercices,
-  moinsRecemmentCiblee, estInciblable,
+  moinsRecemmentCiblee, estInciblable, aServiUneSemaine, REGLE_OVERRIDE_PROF,
 } from './profil'
 import { ordonnerLesSondes, prioriteDe, estSondable, departagerParLeModeEnRetard,
   type CandidateSonde } from './sondes'
@@ -105,9 +105,9 @@ test('la fenêtre d\'évidence garde LES QUATRE DERNIÈRES, dans l\'ordre', () =
 
 test('l\'historique se LIT sur les décisions, dans l\'ordre chronologique', () => {
   const h = historiqueDesCibles([
-    { cibleRetenue: 'structure', cycleLundi: '2026-09-07', createdAt: '2026-09-07T09:00:00Z', bonus: false, exerciceId: 'ex-1' },
-    { cibleRetenue: null, cycleLundi: '2026-09-07', createdAt: '2026-09-07T10:00:00Z', bonus: false, exerciceId: 'ex-2' },
-    { cibleRetenue: 'expression', cycleLundi: '2026-09-14', createdAt: '2026-09-14T09:00:00Z', bonus: false, exerciceId: 'ex-3' },
+    { cibleRetenue: 'structure', cycleLundi: '2026-09-07', createdAt: '2026-09-07T09:00:00Z', bonus: false, exerciceId: 'ex-1', regleDeclenchee: 'R2' },
+    { cibleRetenue: null, cycleLundi: '2026-09-07', createdAt: '2026-09-07T10:00:00Z', bonus: false, exerciceId: 'ex-2', regleDeclenchee: 'R2' },
+    { cibleRetenue: 'expression', cycleLundi: '2026-09-14', createdAt: '2026-09-14T09:00:00Z', bonus: false, exerciceId: 'ex-3', regleDeclenchee: 'R2' },
   ])
   assert.deepEqual(h, ['structure', 'expression'], 'les décisions sans cible ne comptent pas')
 })
@@ -234,9 +234,43 @@ test('une ligne d\'override (exerciceId null) ne compte dans AUCUN historique', 
   //    et c'est ce qu'on veut : l'immunité tenait à une valeur nulle, pas à une
   //    intention.
   const h = historiqueDesCibles([
-    { cibleRetenue: 'structure', cycleLundi: '2026-08-31', createdAt: '2026-08-31T09:00:00Z', bonus: false, exerciceId: 'ex-1' },
+    { cibleRetenue: 'structure', cycleLundi: '2026-08-31', createdAt: '2026-08-31T09:00:00Z', bonus: false, exerciceId: 'ex-1', regleDeclenchee: 'R2' },
     // La clôture d'une passation en classe, journalisée : aucun exercice servi.
-    { cibleRetenue: null, cycleLundi: '2026-08-24', createdAt: '2026-09-07T17:00:00Z', bonus: false, exerciceId: null },
+    { cibleRetenue: null, cycleLundi: '2026-08-24', createdAt: '2026-09-07T17:00:00Z', bonus: false, exerciceId: null, regleDeclenchee: 'override_prof' },
   ])
   assert.deepEqual(h, ['structure'])
+})
+
+// ── C10 · L2 (08/09) — le discriminant d'une ligne d'OVERRIDE ───────────────
+//
+// ⛔⛔ La première version de ce lot discriminait sur la NULLITÉ de `exerciceId`.
+//    C'était faux, et l'audit indépendant du 08/09 l'a trouvé :
+//    `routeur_decisions_exercice_id_fkey` est **`ON DELETE SET NULL`** (mesuré
+//    en base). Une VRAIE décision dont l'exercice a été supprimé porte donc
+//    `exercice_id` NULL — et devenait indiscernable d'un override.
+
+test('une ligne d\'override est reconnue par sa RÈGLE, jamais par un exercice absent', () => {
+  assert.equal(aServiUneSemaine({ regleDeclenchee: REGLE_OVERRIDE_PROF }), false)
+  assert.equal(aServiUneSemaine({ regleDeclenchee: 'R2' }), true)
+  assert.equal(aServiUneSemaine({ regleDeclenchee: 'R5' }), true)
+})
+
+test('⛔ une VRAIE décision dont l\'exercice a été SUPPRIMÉ compte encore comme servie', () => {
+  // `ON DELETE SET NULL` : l'exercice disparaît, la décision reste. La traiter
+  // comme un override ferait sous-compter K de R5 — et, plus grave, ferait
+  // déclarer l'élève NON servi, si bien que le cron lui REPOSERAIT sa semaine.
+  assert.equal(aServiUneSemaine({ regleDeclenchee: 'R3' }), true,
+    'un exercice supprimé n\'efface pas la semaine qu\'il a servie')
+})
+
+test('une règle INCONNUE ou nulle penche du côté « servi » — le côté prudent', () => {
+  // Au pire on ne ferme pas une semaine ; jamais on n'en efface une.
+  assert.equal(aServiUneSemaine({ regleDeclenchee: null }), true)
+  assert.equal(aServiUneSemaine({ regleDeclenchee: 'une_regle_future' }), true)
+})
+
+test('la règle d\'override a UN SEUL domicile, et c\'est celle que le code écrit', () => {
+  // `app/prof/routeur/actions.ts` (retrait) et `app/passation/actions.ts`
+  // (clôture C10-L2) écrivent cette valeur ; `cyclesDepuisR3` lit `'R3'`.
+  assert.equal(REGLE_OVERRIDE_PROF, 'override_prof')
 })
