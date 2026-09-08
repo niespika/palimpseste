@@ -12,7 +12,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi, verdictDeLaVersion} from './correction'
+  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi, verdictDeLaVersion, precisionDeLaZone} from './correction'
 
 // La banque telle que l'IMPORT l'écrit : des objets `{texte, pourquoi_faux}`.
 const BANQUE = [
@@ -308,4 +308,31 @@ test('⛔ tout ce qui n’est pas un booléen ne dit RIEN — on n’invente pas
 
 test('⭐ un verdict RÉUSSI se dit — la réussite se célèbre, elle ne se tait pas', () => {
   assert.equal(verdictDeLaVersion({ v1: { reussi: true } }, 'v1'), true)
+})
+
+// ── ⭐ LE JUGEMENT ALGORITHMIQUE DU 4(b), DIT À L'ÉLÈVE (07/09/2026) ─────────
+
+test('l’explication couvre les quatre échecs de zone, et EUX SEULS', () => {
+  for (const v of ['faux', 'mal_bornee', 'a_voir', 'probablement_faux']) {
+    const p = precisionDeLaZone(v)
+    assert.ok(p && p.length > 20, v)
+    // ⛔ Elle explique, elle ne juge pas une seconde fois.
+    assert.ok(!/juste\b/i.test(p), `« ${v} » ne doit pas rejuger : ${p}`)
+  }
+})
+
+test('⛔ « juste » et le ratissage n’ont AUCUNE explication ici', () => {
+  // `juste` n'a rien à expliquer ; `ratissage` a son propre écran (`vue.fin`).
+  for (const v of ['juste', 'ratissage', null, undefined, '', 'inconnu']) {
+    assert.equal(precisionDeLaZone(v), null, String(v))
+  }
+})
+
+test('⭐ le verdict binaire suit le REGISTRE : seul « juste » réussit', () => {
+  // Le miroir de `issueDuDepot` (`utils/registre/reussites.ts`) : l'écran dit
+  // exactement ce que la mesure compte. Ici on éprouve la conséquence — les
+  // trois verdicts « partiels » portent une explication, donc ils ont ÉCHOUÉ.
+  for (const v of ['mal_bornee', 'a_voir', 'probablement_faux']) {
+    assert.notEqual(precisionDeLaZone(v), null, v)
+  }
 })

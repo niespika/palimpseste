@@ -1015,19 +1015,22 @@ function ColonneTravail({
           <>
             {vue.corrections[1] && (
               <Correction correction={vue.corrections[1]} reponse={reponseDeLEleve(vue, 2)}
-                verdict={vue.verdictParCas[1] ?? null} />
+                verdict={vue.verdictParCas[1] ?? null}
+                  precision={vue.precisionParCas[1] ?? null} />
             )}
             {vue.corrections[0] && (
               <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
                 <Correction correction={vue.corrections[0]} reponse={reponseDeLEleve(vue, 1)}
-                  verdict={vue.verdictParCas[0] ?? null} />
+                  verdict={vue.verdictParCas[0] ?? null}
+                  precision={vue.precisionParCas[0] ?? null} />
               </Depliable>
             )}
           </>
         ) : vue.corrections.map((correction, i) => (
           correction
             ? <Correction key={i} correction={correction} reponse={reponseDeLEleve(vue, i === 0 ? 1 : 2)}
-                verdict={vue.verdictParCas[i] ?? null} />
+                verdict={vue.verdictParCas[i] ?? null}
+                precision={vue.precisionParCas[i] ?? null} />
             : null
         ))}
 
@@ -1986,7 +1989,7 @@ const SUR_TITRE = 'font-marque text-[11px] font-semibold uppercase tracking-[0.1
  *    trois) : c'est ce que la vue sert, et ce que cette page montre.
  */
 function Correction({
-  correction, reponse = null, verdict = null,
+  correction, reponse = null, verdict = null, precision = null,
 }: {
   correction: NonNullable<VueDuDeroule['corrections'][number]>
   reponse?: ReponseDeLEleve | null
@@ -1999,6 +2002,9 @@ function Correction({
    *    7, 9 — où le verdict existait en base et n'atteignait aucun écran.
    */
   verdict?: boolean | null
+  /** ⭐ 07/09 — ce que la ZONE a manqué. Une explication de l'écart, jamais un
+   *  second verdict : le verdict reste celui du registre. */
+  precision?: string | null
 }) {
   const juste = reponse?.forme === 'candidat' ? reponse.juste : null
   const refutation = correction.refutation
@@ -2056,6 +2062,13 @@ function Correction({
               {verdict
                 ? 'Ta réponse est juste.'
                 : 'Ta réponse n’est pas celle qu’il fallait — compare-la à ce qui suit.'}
+            </p>
+          )}
+          {/* ⛔ L'explication vient APRÈS le verdict et ne le contredit jamais :
+              « tu étais au bon endroit » ne veut pas dire « c'est juste ». */}
+          {verdict === false && precision && (
+            <p className="mt-1 font-corps text-[15px] leading-[1.5] text-encre-douce">
+              {precision}
             </p>
           )}
         </div>

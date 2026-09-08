@@ -309,3 +309,29 @@ export function verdictDeLaVersion(verdicts: unknown, version: 'v1' | 'vf'): boo
   return typeof r === 'boolean' ? r : null
 }
 
+
+/**
+ * ⭐⭐ CE QUE LA ZONE A MANQUÉ — dit à l'élève, quand ce n'est pas « juste ».
+ *
+ * ⛔ **Ce n'est PAS un second verdict.** Le verdict reste binaire et il est
+ *    celui du registre (`issueDuDepot` : seul `juste` réussit). Cette phrase
+ *    explique l'écart ; elle ne l'adoucit pas et ne le contredit pas. *Dire
+ *    « pas juste » sans dire pourquoi, sur une sélection qui touchait le bon
+ *    passage, serait exact et incompréhensible.*
+ * ⚠️ `ratissage` n'est pas ici : il a son propre écran (`vue.fin = 'non_fait'`),
+ *    et il ne compte pas comme une réponse du tout.
+ */
+export function precisionDeLaZone(verdict: string | null | undefined): string | null {
+  switch (verdict) {
+    case 'faux':
+      return 'Le passage que tu as surligné n’est pas celui qui posait problème.'
+    case 'mal_bornee':
+      return 'Tu étais au bon endroit, mais ta sélection débordait largement du passage.'
+    case 'a_voir':
+      return 'Tu étais dans le bon passage, mais tu n’en as pris qu’une partie.'
+    case 'probablement_faux':
+      return 'Ta sélection touche le passage sans le couvrir, et déborde à côté.'
+    default:
+      return null
+  }
+}
