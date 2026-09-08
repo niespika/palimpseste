@@ -2244,7 +2244,16 @@ function Attente({ vue }: { vue: VueDuDeroule }) {
           <strong>Ton retour n’a pas pu être préparé.</strong> Préviens ton professeur — ton
           travail est enregistré, rien n’est perdu.
         </p>
-        {etat.message && <p className="mt-1 text-xs text-muet">{etat.message}</p>}
+        {/* ⛔⛔ 08/09/2026 — LE MESSAGE DU JOB NE DESCEND PLUS ICI. Il était rendu
+            en petit sous l'encart ; il est écrit POUR LE PROFESSEUR et c'est son
+            seul domicile, donc il porte le motif technique. Or un motif de refus
+            peut NOMMER DES OBSERVABLES — « RR4 : le texte nomme des observables
+            — lien_explicite » —, et le vocabulaire de la grille ne va jamais à
+            l'élève (RR4). Le chemin est devenu atteignable le 08/09 avec la
+            clôture des rejeux épuisés (`clorePourEpuisement`) : avant, seuls des
+            motifs d'infrastructure y passaient. ⭐ Ce que l'élève a besoin de
+            savoir est déjà dit au-dessus : préviens ton professeur, rien n'est
+            perdu. */}
       </Encart>
     )
   }

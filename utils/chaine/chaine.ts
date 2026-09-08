@@ -67,7 +67,7 @@ import {
 // recopiés (`07-` §4). ⚠️ `REGISTRE` est ici le registre de LANGUE : il ne
 // touche jamais `{{REGISTRE}}`, qui est le registre de RETOUR du `01-` §8.7.
 import { IDENTITE, REGISTRE as TON_PARTAGE } from '@/utils/ia-commun'
-import { mettreEnFile, remettreEnFile, reposerJob, terminerJob, type Job } from './file'
+import { clorePourEpuisement, mettreEnFile, remettreEnFile, reposerJob, terminerJob, type Job } from './file'
 import type { Lieu,Competence, Registre, RetourSegmente, Version } from './types'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -2015,13 +2015,43 @@ export async function programmerLeRejeuDuRetour(
 
   // ⛔ `remettreEnFile`, JAMAIS `relancerUnJob` : celui-ci rend ses tentatives au
   //    job — c'est le geste de l'HUMAIN —, et le compteur ne monterait jamais.
-  const { remis, raison } = await remettreEnFile(
+  const { remis, raison, motif } = await remettreEnFile(
     admin, job.depot_id, 'retour_v1', `rejeu automatique — ${refus}`)
-  if (!remis) {
-    console.warn(`[chaine] retour NON écrit et rejeu arrêté — dépôt ${job.depot_id} : ${raison}. `
-      + `Motif du refus : ${refus}. ⚠️ Il reste au message du job ; l'écran du professeur qui le `
-      + 'servira est à C6-L1.')
+  if (remis) return
+
+  // ⭐⭐ 08/09/2026 — LE CUL-DE-SAC, ET SA SORTIE.
+  //
+  // ⛔⛔ CE QUI SE PASSAIT. Au plafond, on se contentait d'un `console.warn`. Le
+  //    job `retour_v1` restait alors `abouti` / `echec_definitif = false` / sans
+  //    retour — et `attenteDuDepot` rend là-dessus `enCours: false,
+  //    echecDefinitif: false`, ce que l'écran traduit par RIEN DU TOUT. L'élève
+  //    voyait sa copie en lecture seule et pas un mot sur son retour ; le
+  //    professeur ne voyait rien non plus. Fin de course, silencieuse, définitive.
+  // ⚠️ Les refus de FORME n'y menaient pas — ils sont servis au 3ᵉ essai. Ce
+  //    chemin est celui des refus JAMAIS tolérables, et deux dépôts de
+  //    production en portaient déjà un le 08/09.
+  // ⭐ La sortie ne crée aucun canal : elle pose l'`echec_definitif` que la file
+  //    sait déjà rendre lisible, et l'écran dit alors « ton retour n'a pas pu
+  //    être préparé ».
+  // ⛔ ON LIT `motif`, PAS `raison` : décider sur une phrase française est le
+  //    patron qui a déjà coûté ici. Seul le PLAFOND est un cul-de-sac — « déjà
+  //    en file » veut dire qu'un tour s'en occupe, et une erreur de lecture ne
+  //    prouve rien.
+  if (motif === 'plafond') {
+    // ⚠️ CE MESSAGE EST PERSISTÉ, ET IL EST LU PAR LE PROFESSEUR. Il porte le
+    //    motif technique exprès — c'est son seul domicile aujourd'hui. ⛔ Il ne
+    //    doit PAS atteindre l'élève tel quel : un motif RR4 nomme des
+    //    observables. C'est l'écran qui s'en garde (`EcranDeroule`, l'attente).
+    const { close, raison: r2 } = await clorePourEpuisement(admin, job.depot_id, 'retour_v1',
+      `retour NON écrit après ${TENTATIVES_AVANT_TOLERANCE} tentatives, et le refus n'est pas `
+      + `tolérable — ${refus}`)
+    console.warn(`[chaine] retour NON écrit, rejeu épuisé — dépôt ${job.depot_id} : ${refus}. `
+      + `Clôture visible : ${close ? 'posée' : `NON posée (${r2})`}.`)
+    return
   }
+  console.warn(`[chaine] retour NON écrit et rejeu arrêté — dépôt ${job.depot_id} : ${raison}. `
+    + `Motif du refus : ${refus}. ⚠️ Il reste au message du job ; l'écran du professeur qui le `
+    + 'servira est à C6-L1.')
 }
 
 export async function tourDeFile(

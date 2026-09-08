@@ -31,8 +31,9 @@ const env = Object.fromEntries(fs.readFileSync('.env.local', 'utf-8').split('\n'
 for (const [k, v] of Object.entries(env)) process.env[k] ??= v
 
 const RACINE = process.cwd()
-const { remettreEnFile, mettreEnFile, relancerUnJob, cleIdempotence } =
+const { remettreEnFile, mettreEnFile, relancerUnJob, cleIdempotence, clorePourEpuisement } =
   await import(`${RACINE}/utils/chaine/file.ts`)
+const { attenteDuDepot } = await import(`${RACINE}/utils/deroule/mesure.ts`)
 const { refusDeFormeSeulement } = await import(`${RACINE}/utils/chaine/retour.ts`)
 
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY,
@@ -115,6 +116,37 @@ try {
   await admin.from('exercices_jobs').update({ statut: 'en_attente' }).eq('id', job.id)
   const { remis, raison } = await remettreEnFile(admin, DEPOT, ETAPE, 'tentative de vol')
   dire(!remis && /déjà en file/.test(raison), `refusé : ${raison}`)
+
+  titre('F. ⭐⭐ LE CUL-DE-SAC MUET, ET SA SORTIE (08/09) — l\'épreuve par l\'ÉCHEC d\'abord')
+  note('Le plafond arrêtait bien la boucle — mais il laissait le job `abouti`, sans retour,')
+  note('et `echec_definitif` à FAUX. Personne ne voyait cet état : ni la file (qui ne reprend')
+  note('pas un `abouti`), ni l\'élève (l\'écran ne rend rien), ni le professeur.')
+  // On remet le job dans l'état EXACT du défaut : abouti, au plafond, sans retour.
+  await admin.from('exercices_jobs')
+    .update({ statut: 'abouti', tentatives: 3, echec_definitif: false }).eq('id', job.id)
+  let att = await attenteDuDepot(admin, DEPOT)
+  dire(att.enCours === false && att.echecDefinitif === false,
+    '⛔ AVANT — abouti 3/3 sans retour : `enCours` FAUX et `echecDefinitif` FAUX, '
+    + 'donc l\'écran d\'attente ne rend RIEN')
+  const auPlafond = await remettreEnFile(admin, DEPOT, ETAPE, 'refus jamais tolérable')
+  dire(!auPlafond.remis && auPlafond.motif === 'plafond',
+    `la file refuse, et son motif est un DISCRIMINANT : « ${auPlafond.motif} » `
+    + '— on ne relit plus une phrase française pour décider')
+  const sortie = await clorePourEpuisement(admin, DEPOT, ETAPE,
+    'retour NON écrit après 3 tentatives, et le refus n\'est pas tolérable — <motif du refus>')
+  dire(sortie.close, `la sortie est posée : ${sortie.raison}`)
+  att = await attenteDuDepot(admin, DEPOT)
+  dire(att.echecDefinitif === true,
+    '⭐ APRÈS — `echecDefinitif` est VRAI : l\'écran dit « ton retour n\'a pas pu être préparé, '
+    + 'préviens ton professeur »')
+  dire((att.message ?? '').includes('après 3 tentatives'),
+    'et le motif est persisté pour le PROFESSEUR (l\'écran de l\'élève ne le montre pas — RR4)')
+  // ⛔ La contre-épreuve : un job qui TOURNE n'est jamais déclaré perdu.
+  await admin.from('exercices_jobs')
+    .update({ statut: 'en_cours', echec_definitif: false }).eq('id', job.id)
+  const refusee = await clorePourEpuisement(admin, DEPOT, ETAPE, 'ne doit pas passer')
+  dire(!refusee.close && /tourne encore/.test(refusee.raison),
+    `⛔ et elle REFUSE un job qui tourne encore : ${refusee.raison}`)
 } catch (e) {
   ko++
   console.error(`\n✗ ARRÊT : ${e.message}`)
