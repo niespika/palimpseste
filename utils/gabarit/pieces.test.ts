@@ -181,6 +181,63 @@ test('au cran 5, le passage marqué devient le trou ; avant et après sont les d
   assert.equal(morceauxDuPassage([{ texte: 'Rien.', marque: false }], false), null)
 })
 
+// ── ⛔⛔ 08/09 — LA GARDE DU TROU RÉÉCRIVABLE (13 exercices de cran 5 insolubles) ──
+//
+// Le trou se dérive du MARQUAGE, en supposant qu'il est « le passage étendu aux
+// bornes de sa phrase ». Pour la famille du LIEN (`jointure_`, `charniere_`,
+// `attache_`, `bloc_relie`), le marquage est « LA COUTURE, ET ELLE SEULE » : le
+// dernier mot avant le joint, le premier après. Deux décisions justes chacune de
+// son côté, fausses ensemble. **Mesuré sur les 61 exercices de cran 5 du
+// gabarit : 13 trous coupaient deux phrases en deux, et l'exercice devenait
+// insoluble** — la phrase que l'énoncé accuse restait derrière le champ.
+
+test('⛔ un passage marqué qui CHEVAUCHE deux phrases ne fait pas un trou — l’écran d’hier', () => {
+  // Le marquage de couture, tel que `marquerLeMateriau` le rend sur la famille
+  // du lien : « lentement. Nous » — la fin d'une phrase et le début de la suivante.
+  const seg = [
+    { texte: 'Un chiffre unique décourage celui qui progresse ', marque: false },
+    { texte: 'lentement. Nous', marque: true },
+    { texte: ' avons donc parlé des notes.', marque: false },
+  ]
+  assert.equal(morceauxDuPassage(seg, false), null,
+    'le retirer casserait la fin d’une phrase et le début d’une autre')
+})
+
+test('⭐ mais UN MOT au milieu d’une phrase reste un trou parfaitement légitime', () => {
+  // ⚠️ C'est pour ce cas que le discriminant n'est pas « le trou est en milieu
+  //    de phrase » : `mot_impropre` au cran 5 marque UN MOT, et il s'écrit.
+  const seg = [
+    { texte: 'Cette ', marque: false },
+    { texte: 'chose', marque: true },
+    { texte: ' n’est pas gratuite.', marque: false },
+  ]
+  const p = morceauxDuPassage(seg, false)!
+  assert.deepEqual(p.pieces.map((x) => x.texte), ['Cette', 'n’est pas gratuite.'])
+  assert.equal(p.place, 1)
+})
+
+test('⭐ une phrase ENTIÈRE marquée finit par un point, et c’est le cas normal', () => {
+  const seg = [
+    { texte: 'On les met partout. ', marque: false },
+    { texte: 'Les notes ne servent qu’à classer.', marque: true },
+    { texte: ' Voilà.', marque: false },
+  ]
+  const p = morceauxDuPassage(seg, false)!
+  assert.equal(p.place, 1, 'la ponctuation FINALE ne compte pas comme une traversée')
+})
+
+test('⭐ et une INSERTION traverse impunément : elle ne retire rien', () => {
+  // La couture, quand c'en est VRAIMENT une : le trou se glisse, rien n'est ôté.
+  const seg = [
+    { texte: 'Il progresse ', marque: false },
+    { texte: 'lentement. Nous', marque: true },
+    { texte: ' avons parlé des notes.', marque: false },
+  ]
+  const p = morceauxDuPassage(seg, true)
+  assert.notEqual(p, null, 'la garde ne vise QUE le remplacement')
+  assert.equal(p!.trou, TROU_DU_CRAN_5.insertion)
+})
+
 test('sur une INSERTION, le trou se glisse entre les deux mots marqués — rien n’est retiré', () => {
   const seg = [
     { texte: "L'homme est ", marque: false },

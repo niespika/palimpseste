@@ -349,6 +349,16 @@ export const TROU_DU_CRAN_5 = {
  *    rien n'est retiré. `null` quand rien n'est marqué : pas de trou à servir,
  *    l'écran reste celui d'hier.
  */
+/**
+ * La zone porte-t-elle une fin de phrase AVEC du texte après, en son sein ? Une
+ * telle zone chevauche deux phrases : la retirer les casse toutes les deux.
+ * ⚠️ Une ponctuation FINALE ne compte pas — une phrase entière marquée finit
+ *    par un point, et c'est le cas normal.
+ */
+function traverseUneFinDePhrase(zone: string): boolean {
+  return /[.!?…][\s\u00a0]+\S/u.test(zone)
+}
+
 export function morceauxDuPassage(
   segments: ReadonlyArray<{ texte: string; marque: boolean }>, insertion: boolean,
 ): PiecesServies | null {
@@ -369,6 +379,37 @@ export function morceauxDuPassage(
   } else {
     avant = contenu.slice(0, debut)
     apres = contenu.slice(fin)
+    // ⛔⛔ 08/09/2026 — LA GARDE DU TROU RÉÉCRIVABLE, et voici ce qu'elle répare.
+    //
+    // Ce module dérive le trou des segments que l'écran MARQUE, en supposant
+    // que le marquage est « le passage étendu aux bornes de sa phrase »
+    // (`10-` §5, règle 1). ⚠️ POUR UNE FAMILLE, C'EST FAUX : la famille du LIEN
+    // (`jointure_`, `charniere_`, `attache_`, `bloc_relie`) marque « LA COUTURE,
+    // ET ELLE SEULE » — le dernier mot avant le joint et le premier après
+    // (`marquage.ts`, exception du `02-` 6.2 §5, décision de Louis du 29/08).
+    // Deux décisions justes chacune de son côté, et fausses ensemble.
+    //
+    // ⛔ CE QUE ÇA DONNAIT, MESURÉ SUR LES 61 EXERCICES DE CRAN 5 : **13 trous
+    //    coupaient deux phrases en deux.** Sur `mat-gab-transition-bilan-theme-a`,
+    //    le champ remplaçait « lentement. Nous » — et la phrase que l'énoncé
+    //    accuse restait servie derrière, intouchable. **Aucune saisie ne pouvait
+    //    mener à l'étalon : l'exercice était insoluble.** *Aucun élève n'y avait
+    //    encore été servi (0 dépôt sur ces 61 exercices en production).*
+    //
+    // ⭐ LE DISCRIMINANT — la zone marquée porte-t-elle une FIN DE PHRASE avec
+    //    du texte APRÈS, à l'intérieur d'elle-même ? Alors la retirer casse la
+    //    fin d'une phrase et le début d'une autre : ce n'est pas un passage
+    //    réécrivable. ⚠️ Il faut ce discriminant-là et pas « le trou est en
+    //    milieu de phrase » : un `mot_impropre` au cran 5 est UN MOT au milieu
+    //    d'une phrase, et c'est un trou parfaitement légitime.
+    //
+    // ⭐ ET ON REND `null`, PLUTÔT QUE D'INVENTER DES BORNES. C'est le contrat
+    //    déjà écrit de cette fonction : « pas de trou à servir, l'écran reste
+    //    celui d'hier » — un champ de rédaction et le passage en gras à côté,
+    //    ce qui se tient. ⛔ Deviner un trou serait servir un exercice faux ; le
+    //    gras, lui, n'est pas touché ici (c'est une question de doctrine, pas
+    //    d'écran).
+    if (traverseUneFinDePhrase(contenu.slice(debut, fin))) return null
   }
   const pieces: Piece[] = []
   if (avant.trim() !== '') pieces.push({ nom: TROU_DU_CRAN_5.devoir, texte: avant.trim() })
