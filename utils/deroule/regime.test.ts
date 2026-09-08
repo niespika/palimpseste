@@ -182,3 +182,34 @@ test('le déroulé se clôt au RETOUR FINAL au régime plein, au RETOUR CHAUD au
   assert.equal(deroulTermine('sans_vf', { retourFinalLu: false, retourChaudLu: true }), true)
   assert.equal(deroulTermine('par_paires', { retourFinalLu: false, retourChaudLu: true }), true)
 })
+
+
+// ── ⭐⭐ SUR UN CAS SANS ÉCRITURE, C'EST LA ZONE QUI RÉPOND (07/09/2026) ──────
+
+test('⛔ un cas 4(b) sans texte ne fige plus la paire sur la correction du cas 1', () => {
+  const credences = [{ pourcentage: 70 }, { pourcentage: 80 }]
+  // Le cas 2 ne porte AUCUN texte — c'est le 4(b) : sa zone est sa réponse.
+  const sansLaZone = etapeDeLaPaire(['une nomination', null], credences, false)
+  assert.equal(sansLaZone, 'correction', 'avant le lot : l’élève tournait ici sans fin')
+
+  const avecLaZone = etapeDeLaPaire(['une nomination', null], credences, false, [false, true])
+  assert.equal(avecLaZone, 'correction_2')
+})
+
+test('une paire 4(b)/4(b) avance sur les seules zones', () => {
+  const rien = [null, null] as Array<string | null>
+  assert.equal(etapeDeLaPaire(rien, [null, null], false, [false, false]), 'cas_1')
+  assert.equal(etapeDeLaPaire(rien, [null, null], false, [true, false]), 'credence_1')
+  assert.equal(etapeDeLaPaire(rien, [{ p: 1 }, null], false, [true, false]), 'correction')
+  assert.equal(etapeDeLaPaire(rien, [{ p: 1 }, null], false, [true, true]), 'credence_2')
+  assert.equal(etapeDeLaPaire(rien, [{ p: 1 }, { p: 2 }], false, [true, true]), 'correction_2')
+})
+
+test('le quatrième argument S’AJOUTE au texte, il ne le remplace pas', () => {
+  // Un dépôt d'avant le lot, où l'élève avait dû écrire pour passer, reste lisible.
+  const avecTexte = etapeDeLaPaire(['a', 'b'], [{ p: 1 }, { p: 2 }], false, [false, true])
+  assert.equal(avecTexte, 'correction_2')
+  // Et sans le quatrième argument, le comportement d'hier à l'octet.
+  assert.equal(etapeDeLaPaire(['a', 'b'], [{ p: 1 }, { p: 2 }], false), 'correction_2')
+  assert.equal(etapeDeLaPaire(['a', null], [{ p: 1 }, null], false), 'correction')
+})

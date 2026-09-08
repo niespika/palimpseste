@@ -182,6 +182,7 @@ function vueFarcie(): VueDuDeroule {
     grain: s('grain') as unknown as VueDuDeroule['grain'],
     cranCode: s('cranCode'),
     geste: s('geste'),
+    aucuneRemise: false,
     estUnePaire: true,
     etapePaire: s('etapePaire') as unknown as VueDuDeroule['etapePaire'],
     rappel: { observables: [s('rappel')], motif: s('rappelMotif'), formulationsManquantes: [s('rappelManq')] } as unknown as VueDuDeroule['rappel'],

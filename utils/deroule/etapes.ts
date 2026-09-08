@@ -28,6 +28,7 @@ export type GesteDeLaRemise = 'confiance' | 'conditions' | 'restitution'
 /**
  * Les pages que la colonne de travail sait tourner :
  *   · `ecrire`     — le champ, et son bouton « Enregistrer » ;
+ *   · `designer`   — le 4(b) : l'élève surligne dans le devoir, et ne dit rien ;
  *   · `repondre`   — les quatre lectures et les jetons (crans 1 et 3) ;
  *   · `credence`   — « À quel point es-tu sûr ? », seule ;
  *   · les trois gestes, un par page, dans l'ordre de la doctrine (`06-` §3) ;
@@ -36,7 +37,7 @@ export type GesteDeLaRemise = 'confiance' | 'conditions' | 'restitution'
  *   · `apres`      — la copie est rendue : l'attente, ce qui a été rendu.
  */
 export type EtapeDuTravail =
-  | 'ecrire' | 'repondre' | 'credence'
+  | 'ecrire' | 'designer' | 'repondre' | 'credence'
   | GesteDeLaRemise
   | 'rendre' | 'correction' | 'apres'
 
@@ -45,6 +46,26 @@ export interface EtatDuTravail {
   moment: MomentDeLaPaire | null
   /** La crédence EST-elle la réponse (crans 1 et 3) ? */
   credenceEstLaReponse: boolean
+  /**
+   * ⭐⭐ CE CAS SE SURLIGNE ET NE S'ÉCRIT PAS — le 4(b) (Louis, 07/09/2026).
+   *
+   * ⛔ **PAR CAS, jamais par exercice** : le second cas d'une paire de cran 4
+   *    est toujours (b) (`varianteDuCas`), si bien qu'un même exercice a un cas
+   *    qui écrit et un cas qui ne l'écrit pas. C'est la faute que l'écran
+   *    faisait — il lisait `vue.cas.some(…)` et servait la même forme aux deux.
+   *
+   * ⚠️ `redactionFinie` garde alors son sens, décalé : « la réponse de ce cas
+   *    est posée » — la zone désignée, et non un texte enregistré. C'est
+   *    l'appelant qui le calcule ; ce module ne lit aucune donnée.
+   */
+  sansEcriture: boolean
+  /**
+   * ⭐⭐ CET EXERCICE NE SE REMET PAS — tous ses cas se surlignent (4(b)/4(b)).
+   *    Il se clôt tout seul à la dernière crédence, comme les crans guidés.
+   * ⛔ À ne pas confondre avec `sansRemise`, qui dit « pas ENCORE » pour le cas
+   *    courant d'une paire. Celui-ci dit « jamais, pour cet exercice ».
+   */
+  aucuneRemise: boolean
   /** Le temps courant permet-il encore d'écrire cette version ? */
   enRedaction: boolean
   /** Une offre de crédence existe pour ce cas, sans empêchement, et n'est pas donnée. */
@@ -72,9 +93,17 @@ export function etapeDuTravail(e: EtatDuTravail): EtapeDuTravail {
   if (e.moment === 'correction_1') return 'correction'
   if (!e.enRedaction) return 'apres'
   if (e.credenceEstLaReponse) return 'repondre'
-  if (!e.redactionFinie) return 'ecrire'
+  // ⭐ Le 4(b) n'a pas de page d'écriture : le travail se fait dans le devoir,
+  //    à gauche. `designer` tient la place, dit le geste, et ne réclame rien.
+  const avantLaCredence: EtapeDuTravail = e.sansEcriture ? 'designer' : 'ecrire'
+  if (!e.redactionFinie) return avantLaCredence
   if (e.credenceASaisir) return 'credence'
-  if (e.sansRemise) return 'ecrire'
+  // ⛔ Sans remise, il n'y a ni gestes ni bouton : la dernière crédence clôt
+  //    l'exercice côté serveur, et le rafraîchissement amène `apres`. On tient
+  //    la page neutre le temps de l'aller-retour plutôt que d'offrir un bouton
+  //    qui serait refusé (« Ta copie est vide. »).
+  if (e.aucuneRemise) return avantLaCredence
+  if (e.sansRemise) return avantLaCredence
   if (e.gesteRestant) return e.gesteRestant
   return 'rendre'
 }
@@ -104,6 +133,13 @@ export function etapesServies(a: {
   credenceDemandee: boolean
   gestes: readonly GesteDeLaRemise[]
   versionFinale: boolean
+  /**
+   * ⭐ Les cas qui se surlignent sans s'écrire, par ORDRE (index 0 = cas 1).
+   *    Absent ou trop court : le cas écrit, comme avant ce lot.
+   */
+  sansEcriture?: readonly boolean[]
+  /** ⭐ Aucun geste, aucune remise : la suite s'arrête à la dernière crédence. */
+  aucuneRemise?: boolean
 }): EtapeServie[] {
   if (a.versionFinale) return [{ etape: 'ecrire', cas: null }, { etape: 'rendre', cas: null }]
   if (a.credenceEstLaReponse) {
@@ -112,10 +148,10 @@ export function etapesServies(a: {
       : [{ etape: 'repondre', cas: null }]
   }
   const unCas = (cas: 1 | 2 | null): EtapeServie[] => [
-    { etape: 'ecrire', cas },
+    { etape: a.sansEcriture?.[(cas ?? 1) - 1] ? 'designer' : 'ecrire', cas },
     ...(a.credenceDemandee ? [{ etape: 'credence' as const, cas }] : []),
   ]
-  const fin: EtapeServie[] = [
+  const fin: EtapeServie[] = a.aucuneRemise ? [] : [
     ...a.gestes.map((g) => ({ etape: g, cas: null })),
     { etape: 'rendre', cas: null },
   ]
@@ -167,6 +203,9 @@ export function tempsDeLaPage(etape: EtapeDuTravail): Temps | null {
 export function titreDeLEtape(etape: EtapeDuTravail, forme: 'rediger' | 'choisir' | 'surligner'): string {
   switch (etape) {
     case 'ecrire': return forme === 'surligner' ? 'Ce que tu en dis' : 'Ton écriture'
+    // ⛔ Surtout pas « Ce que tu en dis » : au 4(b) l'élève n'en dit RIEN.
+    //    Le titre nommait une tâche que la consigne ne demande pas.
+    case 'designer': return 'Le passage à surligner'
     case 'repondre': return 'Ta réponse'
     case 'credence': return 'Ta crédence'
     case 'confiance': case 'conditions': case 'restitution': return 'Avant de rendre'
@@ -184,6 +223,7 @@ export function titreDeLEtape(etape: EtapeDuTravail, forme: 'rediger' | 'choisir
 export function libelleDuVoletDeTravail(etape: EtapeDuTravail): string {
   switch (etape) {
     case 'ecrire': return 'Écrire'
+    case 'designer': return 'Surligner'
     case 'repondre': return 'Répondre'
     case 'credence': return 'Crédence'
     case 'confiance': case 'conditions': case 'restitution': case 'rendre': return 'Rendre'

@@ -18,7 +18,7 @@ import {
 
 const base: EtatDuTravail = {
   moment: null, credenceEstLaReponse: false, enRedaction: true, credenceASaisir: true,
-  gesteRestant: 'confiance', sansRemise: false, redactionFinie: false,
+  gesteRestant: 'confiance', sansRemise: false, redactionFinie: false, sansEcriture: false, aucuneRemise: false,
 }
 
 test('la page suit l’ordre du geste, une tâche à la fois', () => {
@@ -120,4 +120,61 @@ test('les libellés suivent la page', () => {
   assert.equal(libelleDuVoletDeTravail('credence'), 'Crédence')
   assert.equal(libelleDuVoletDeTravail('restitution'), 'Rendre')
   assert.equal(libelleDuVoletDeTravail('correction'), 'La correction')
+})
+
+
+// ── ⭐⭐ LE 4(b) SURLIGNE ET NE DIT RIEN (Louis, 07/09/2026) ──────────────────
+// *« Quand il y a juste du surlignage à faire, il ne devrait pas y avoir
+// d'écriture. L'écriture ne vaut qu'au cran où on demande EN PLUS de nommer. »*
+
+test('un cas sans écriture n’a pas de page « écrire » — il désigne', () => {
+  const muet: EtatDuTravail = { ...base, sansEcriture: true }
+  assert.equal(etapeDuTravail({ ...muet, redactionFinie: false }), 'designer')
+  // La zone posée, la page tourne vers la crédence, comme un texte enregistré.
+  assert.equal(etapeDuTravail({ ...muet, redactionFinie: true }), 'credence')
+  // ⛔ Et le repli du premier cas d'une paire ne renvoie plus vers le champ.
+  assert.equal(
+    etapeDuTravail({ ...muet, redactionFinie: true, credenceASaisir: false, sansRemise: true }),
+    'designer')
+})
+
+test('⛔ le cas qui écrit garde sa page — le drapeau est PAR CAS', () => {
+  assert.equal(etapeDuTravail({ ...base, sansEcriture: false }), 'ecrire')
+  assert.equal(etapeDuTravail({ ...base, sansEcriture: false, redactionFinie: true }), 'credence')
+})
+
+test('la suite d’une paire 4(a)/4(b) : le cas 1 écrit, le cas 2 surligne', () => {
+  const suite = etapesServies({
+    estUnePaire: true, credenceEstLaReponse: false, credenceDemandee: true,
+    gestes: ['conditions'], versionFinale: false, sansEcriture: [false, true],
+  })
+  assert.deepEqual(suite.map((s) => [s.etape, s.cas]), [
+    ['ecrire', 1], ['credence', 1], ['correction', 1],
+    ['designer', 2], ['credence', 2],
+    ['conditions', null], ['rendre', null],
+  ])
+})
+
+test('la suite d’une paire 4(b)/4(b) : aucune page d’écriture', () => {
+  const suite = etapesServies({
+    estUnePaire: true, credenceEstLaReponse: false, credenceDemandee: true,
+    gestes: [], versionFinale: false, sansEcriture: [true, true],
+  })
+  assert.equal(suite.filter((s) => s.etape === 'ecrire').length, 0)
+  assert.equal(suite.filter((s) => s.etape === 'designer').length, 2)
+})
+
+test('sans le drapeau, rien ne bouge — les exercices d’avant ce lot', () => {
+  const avant = etapesServies({
+    estUnePaire: true, credenceEstLaReponse: false, credenceDemandee: true,
+    gestes: ['conditions'], versionFinale: false,
+  })
+  assert.equal(avant.filter((s) => s.etape === 'designer').length, 0)
+  assert.equal(avant.filter((s) => s.etape === 'ecrire').length, 2)
+})
+
+test('⛔ le titre ne promet plus « ce que tu en dis » là où l’élève ne dit rien', () => {
+  assert.equal(titreDeLEtape('designer', 'surligner'), 'Le passage à surligner')
+  assert.equal(titreDeLEtape('ecrire', 'surligner'), 'Ce que tu en dis')
+  assert.equal(libelleDuVoletDeTravail('designer'), 'Surligner')
 })

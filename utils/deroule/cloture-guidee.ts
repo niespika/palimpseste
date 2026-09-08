@@ -98,8 +98,57 @@ export function clotureDue(a: {
   dejaRemis: boolean
   credences: unknown
   nombreDeCas: number
+  /**
+   * ⭐⭐ 07/09/2026 — LA SECONDE FAMILLE : tous les cas se SURLIGNENT (le 4(b)).
+   *
+   * ⛔ **C'est une règle différente, et elle a son drapeau plutôt que d'élargir
+   *    `forme`.** Aux crans guidés, « la crédence EST la réponse » ; au 4(b),
+   *    « la ZONE est la réponse ». Les deux aboutissent à la même conséquence —
+   *    il n'y a rien à remettre — mais confondre les deux ferait clore un
+   *    exercice sur une crédence donnée avant tout surlignage.
+   */
+  sansRemise?: boolean
 }): boolean {
-  if (a.forme !== 'choisir') return false
   if (a.dejaRemis) return false
+  // ⚠️ L'ORDRE COMPTE : au 4(b) la forme vaut `surligner`, jamais `choisir` —
+  //    tester `forme` d'abord renverrait `false` avant d'avoir rien regardé.
+  if (a.sansRemise) return zonesEtCredencesCompletes(a.credences, a.nombreDeCas)
+  if (a.forme !== 'choisir') return false
   return credencesCompletes(a.credences, a.nombreDeCas)
+}
+
+/**
+ * ⭐⭐ TOUS LES CAS ONT-ILS LEUR ZONE **ET** LEUR CRÉDENCE ? — la complétude du 4(b).
+ *
+ * ⛔⛔ **LES DEUX, ET LA ZONE D'ABORD.** Zone et crédence vivent dans la MÊME
+ *    entrée de `exercices_metacognition.credence` (`gestes.ts`), et ce sont deux
+ *    gestes séparés : clore sur la seule crédence fermerait l'exercice d'un
+ *    élève qui n'a pas encore surligné. C'est la faute symétrique de celle que
+ *    la note du haut de ce fichier signale.
+ *
+ * ⚠️ **`zone_at`, jamais `zone`.** Une zone NULLE est une réponse — « rien à
+ *    signaler » —, et lire les bornes seules compterait cette réponse-là pour
+ *    une absence. C'est la même lecture que `lireLaDesignation` (`vue.ts`).
+ *
+ * ⚠️ La crédence d'un cran qui isole sans candidat est un POURCENTAGE
+ *    (`credence.ts`) : ni `jetons`, ni `index_correct`. `credencesCompletes`
+ *    l'aurait refusée — c'est pourquoi cette fonction existe.
+ */
+export function zonesEtCredencesCompletes(credences: unknown, nombreDeCas: number): boolean {
+  if (!Number.isInteger(nombreDeCas) || nombreDeCas < 1) return false
+  if (!Array.isArray(credences)) return false
+
+  const vus = new Set<number>()
+  for (const c of credences) {
+    if (!c || typeof c !== 'object') continue
+    const o = c as Record<string, unknown>
+    const cas = typeof o.cas === 'number' ? o.cas : null
+    if (cas === null) continue
+    if (typeof o.zone_at !== 'string') continue
+    if (o.forme !== 'pourcentage' || typeof o.pourcentage !== 'number') continue
+    if (!Number.isFinite(o.pourcentage)) continue
+    vus.add(cas)
+  }
+  for (let cas = 1; cas <= nombreDeCas; cas += 1) if (!vus.has(cas)) return false
+  return true
 }

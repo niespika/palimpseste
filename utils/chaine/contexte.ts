@@ -259,6 +259,8 @@ export interface ContexteDepot {
    */
   jugeMesureActif: boolean
   origine: string | null
+  /** ⭐ 07/09 — `exercices.variante` (`'a'` | `'b'` | `null`) : la garde de production. */
+  variante: string | null
   /**
    * Ce que la DÉCISION D'ASSIGNATION porte. « Le drapeau [de sonde de montée]
    * vient de la décision d'assignation ; la chaîne LE RECOPIE sur la mesure,
@@ -396,6 +398,7 @@ interface LigneDepot {
 interface LigneExercice {
   id: string; type_id: string; classe_id: string | null; lieu: string
   consigne_instanciee: unknown; paire_diagnostic: boolean; cran: string | number | null
+  variante?: string | null
   cible_primaire: string | null
   genre: string | null; modes_par_competence: Record<string, string[]> | null
   // ⛔ `exercices.bonus` N'EST PLUS SÉLECTIONNÉ — C6-L3. La colonne existe
@@ -439,7 +442,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     //    MONDE, sur tous les exercices, y compris ceux qui n'ont pas de
     //    co-texte. C'est l'avertissement de C5-L2 juste au-dessus, et il vaut
     //    exactement de la même façon ici.
-    .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, '
+    .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, variante, '
       + 'cible_primaire, modes_par_competence, exercice_planifie_id, reference_id, '
       + 'materiau_source_texte_id, materiau_source_englobant, materiau_source_localisation, '
       + 'cotexte_materiau_id')
@@ -707,6 +710,11 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     objet: type.code,
     grain: type.grain ?? 'meso',
     cran,
+    // ⭐⭐ 07/09 — LA VARIANTE DE L'EXERCICE, pour que la garde de production
+    //    reconnaisse un 4(b)/4(b), où l'élève ne rédige RIEN. Elle n'était lue
+    //    que par le registre (`d.variante`, `chaine.ts`), donc TROP TARD : la
+    //    garde de production lève bien avant.
+    variante: (exercice as unknown as { variante?: string | null }).variante ?? null,
     cranCode,
     ciblePrimaire: (COMPETENCES as readonly string[]).includes(String(exercice.cible_primaire ?? ''))
       ? exercice.cible_primaire as Competence : null,

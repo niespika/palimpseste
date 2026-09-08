@@ -155,7 +155,16 @@ export function EcranDeroule(
     //    passe au second ; et le second ne se rend qu'une fois sa crédence donnée.
     sansRemise: vue.estUnePaire
       && (casAffiche === 1 || (casAffiche === 2 && casCourant?.credenceDonnee == null)),
-    redactionFinie: redactionFinie[cleCourante] ?? false,
+    // ⭐⭐ 07/09 — PAR CAS, jamais par exercice : sur une paire 4(a)/4(b), le
+    //    cas 1 écrit et le cas 2 surligne. Lire `vue.cas.some(…)` ici servirait
+    //    la même forme aux deux — c'est la faute que ce lot répare.
+    sansEcriture: casCourant?.sansEcriture ?? false,
+    aucuneRemise: vue.aucuneRemise,
+    // ⭐ Sur un cas sans écriture, « la rédaction est finie » veut dire « la
+    //    zone est posée » : c'est la désignation qui tourne la page.
+    redactionFinie: casCourant?.sansEcriture
+      ? casCourant.designationDonnee
+      : (redactionFinie[cleCourante] ?? false),
   })
   const suite = etapesServies({
     estUnePaire: vue.estUnePaire, credenceEstLaReponse: vue.credenceEstLaReponse,
@@ -166,6 +175,8 @@ export function EcranDeroule(
       restitutionDemandee: vue.gestesRestants.includes('restitution') || vue.restitutionAChaud !== null,
     }),
     versionFinale: false,
+    sansEcriture: vue.cas.map((c) => c.sansEcriture),
+    aucuneRemise: vue.aucuneRemise,
   })
   const rang = rangDeLEtape(suite, etape, casAffiche)
 
@@ -205,8 +216,15 @@ export function EcranDeroule(
       //    ⚠️ La chaîne mesure la v1 comme hier ; le second cas est désormais
       //    ÉCRIT (il ne l'était jamais : 0 `texte_vf` sur 28 paires en prod).
       if (vue.estUnePaire && casAffiche === 2 && vue.tempsCourant !== 'reviser') {
-        const b = await actionEnregistrerBrouillon(vue.depotId, 'vf', etat.texte, etat.t)
-        if (!b.ok) throw new Error(b.message)
+        // ⛔⛔ 07/09 — AU 4(b), IL N'Y A AUCUN TEXTE À SCELLER, et il ne faut
+        //    surtout pas en écrire un. Le champ n'étant plus monté, `etat`
+        //    retombe sur `vue.texteVf ?? ''` : on aurait déposé une CHAÎNE VIDE
+        //    en `texte_vf`, c'est-à-dire fait passer une absence pour une
+        //    réponse. La réponse du second cas est sa ZONE, déjà en base.
+        if (!casCourant?.sansEcriture) {
+          const b = await actionEnregistrerBrouillon(vue.depotId, 'vf', etat.texte, etat.t)
+          if (!b.ok) throw new Error(b.message)
+        }
         const r = await actionRemettre(vue.depotId, 'v1', vue.texteV1 ?? '', null)
         if (!r.ok) throw new Error(r.message)
         router.refresh()
@@ -558,9 +576,13 @@ function PlanDeTravail({
           className="flex overflow-hidden rounded-[10px] border border-bordure-bouton bg-surface"
         >
           {entrees.map(([v, libelle]) => {
-            // La crédence ne se déclare que sur un texte : sans texte, l'entrée
-            // se voit mais ne mène nulle part — et elle le dit à l'œil.
-            const inerte = v === 'credence' && etape === 'ecrire' && !aDuTexte
+            // La crédence ne se déclare que sur une réponse DONNÉE : sans elle,
+            // l'entrée se voit mais ne mène nulle part — et elle le dit à l'œil.
+            // ⭐ 07/09 — au 4(b) la réponse est la ZONE, pas un texte : tant que
+            //    la page est `designer`, rien n'a encore été désigné (l'étape
+            //    passe à `credence` dès que la zone est posée).
+            const inerte = v === 'credence'
+              && (etape === 'designer' || (etape === 'ecrire' && !aDuTexte))
             return (
               <button
                 key={v} type="button" onClick={() => { void basculer(v) }}
@@ -946,6 +968,19 @@ function ColonneTravail({
             </p>
           </Encart>
         )}
+        {/* ⭐ 07/09 — LA CLÔTURE ALGORITHMIQUE D'UN 4(b)/4(b). ⛔ On ne dit RIEN
+            de la justesse : le verdict de zone vit au registre, et l'écran qui
+            annoncerait « tu t'es trompé » sur un `clos` mentait à un élève sur
+            deux (c'est ce que faisait `hors_cible`, faute d'un discriminant). */}
+        {vue.fin === 'sans_remise' && (
+          <Encart>
+            <p className="text-sm text-encre">
+              <strong>Cet exercice est terminé.</strong> Tu as surligné, c’était tout ce qui
+              était demandé — il n’y a rien à rendre et pas de retour à attendre. La correction
+              est ci-dessous.
+            </p>
+          </Encart>
+        )}
         {vue.fin === 'non_fait' && (
           <Encart ton="attention">
             <p className="text-sm text-encre">
@@ -1031,7 +1066,13 @@ function ColonneTravail({
   // ── LES PAGES DE LA RÉDACTION : écrire → crédence → gestes → rendre ────────
   const versionDuChamp = casAffiche === 2 ? 'vf' : 'v1'
   const cleDuCas = casAffiche ?? 'seul'
-  const surLaPageDuChamp = etape === 'ecrire'
+  // ⛔⛔ SUR UN CAS SANS ÉCRITURE, LE CHAMP N'EST PAS « CACHÉ » : IL N'EXISTE PAS.
+  //    Le monter caché suffirait à le faire revivre au premier `hidden` oublié,
+  //    et surtout `ChampDeRedaction` porte des gardes qui EXIGENT un texte
+  //    (bouton désactivé, enregistrement refusé) — c'est par elles que l'élève
+  //    se trouvait obligé d'écrire « il ne devrait rien y avoir ici ».
+  const champDu = !casCourant?.sansEcriture
+  const surLaPageDuChamp = champDu && etape === 'ecrire'
   /** Le texte se modifie encore tant que la crédence n'est pas donnée (ou qu'aucune n'est demandée). */
   const modifiable = !casCourant?.credenceDonnee
   const phraseDeSuite = credenceASaisir
@@ -1046,7 +1087,19 @@ function ColonneTravail({
     <div className={cadre}>
       <EnTeteDePage titre={titreDeLEtape(etape, forme)} rang={rang} />
 
+      {/* ── PAGE « SURLIGNER » (4(b)) — le travail est dans le devoir, à gauche ── */}
+      {etape === 'designer' && (
+        <div className="page-tourne flex flex-col gap-3">
+          <p className="font-corps text-base leading-relaxed text-encre-douce">
+            Surligne le passage dans le devoir, puis touche « Garde ce passage ».
+            Il n’y a rien à écrire ici.
+          </p>
+          <p className="font-ui text-sm text-muet">{phraseDeSuite}</p>
+        </div>
+      )}
+
       {/* ── PAGE « ÉCRIRE » — le champ reste monté (caché) sur les pages suivantes ── */}
+      {champDu && (
       <div className={surLaPageDuChamp ? 'page-tourne flex flex-col gap-3' : 'hidden'}>
         {/* ⭐ Sur un exercice à surligner, le passage désigné est RAPPELÉ en haut
             de la vue `Écrire` (handoff §4) : l'élève écrit ce qu'il en dit sans
@@ -1102,6 +1155,7 @@ function ColonneTravail({
         />
         )}
       </div>
+      )}
 
       {/* ── PAGE « CRÉDENCE » — seule, avec son bouton « Enregistrer » ─────── */}
       {etape === 'credence' && casCourant?.credence && (
@@ -1109,7 +1163,7 @@ function ColonneTravail({
           {/* Sur une paire, la crédence porte sur le texte ENREGISTRÉ : sans
               enregistrement, l'étape serveur ne peut pas avancer. Le bouton
               « Enregistrer » du champ y a veillé ; on le redit ici sans le cacher. */}
-          {vue.estUnePaire && !texteSauve[casCourant.ordre] ? (
+          {vue.estUnePaire && !casCourant.sansEcriture && !texteSauve[casCourant.ordre] ? (
             <Encart ton="attention">
               <p className="text-sm text-encre">
                 Ta réponse n’est pas encore enregistrée : reviens à ton texte et enregistre-le.

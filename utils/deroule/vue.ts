@@ -55,7 +55,8 @@ import { lireLeGabaritDuDepot, lireLeCran2, type GabaritDuDepot } from '@/utils/
 import { composerLesPieces, formeDuTrou, morceauxDuPassage, type PiecesServies } from '@/utils/gabarit/pieces'
 import { appuiDu1a, appuiDu1b } from '@/utils/gabarit/candidats'
 import {
-  consigneDuGabarit, demandeUneDesignationAuGabarit, sansDocuments, varianteDuCas, type Variante,
+  consigneDuGabarit, demandeUneDesignationAuGabarit, designeSansEcrire, sansDocuments,
+  varianteDuCas, type Variante,
 } from '@/utils/gabarit/consigne'
 import { pointDInsertion } from './marquage'
 import { lireTelemetrie } from './telemetrie'
@@ -106,6 +107,18 @@ export interface CasServi {
    * seule forme de la page, que le défaut est une absence.
    */
   designationDemandee: boolean
+  /**
+   * ⭐⭐ CE CAS SE SURLIGNE ET NE S'ÉCRIT PAS — le 4(b) (Louis, 07/09/2026 :
+   * *« quand il y a juste du surlignage à faire, il ne devrait pas y avoir
+   * d'écriture »*). L'écran ne monte alors AUCUN champ de rédaction.
+   *
+   * ⛔ **Sous-ensemble strict de `designationDemandee`** : les crans 7 et 9
+   *    désignent aussi, mais leur consigne demande un mot en plus (`10-` §3) —
+   *    le champ y reste dû.
+   * ⛔ **Par CAS.** Le second cas d'une paire de cran 4 est toujours (b), donc
+   *    un même exercice a un cas qui écrit et un cas qui se tait.
+   */
+  sansEcriture: boolean
   /** ⭐ C7-L3 — au 1(b), aucun document : les quatre devoirs sont l'exercice. Par CAS depuis le 04/09. */
   sansDocuments: boolean
   /**
@@ -397,7 +410,21 @@ export interface VueDuDeroule {
    *    ratissage (cas 0). `null` sinon. Vu au parcours du 04/09 : un fil à
    *    « Retour », aucun retour, aucun mot — « jamais un écran muet ».
    */
-  fin: 'hors_cible' | 'non_fait' | null
+  /**
+   * ⚠️ `hors_cible` et `non_fait` viennent de la REMISE (`depot.ts`, 04/09).
+   * ⭐ `sans_remise` est la clôture ALGORITHMIQUE d'un 4(b)/4(b) (07/09) :
+   *    l'exercice est fini et **on ne sait rien de la justesse ici** — le
+   *    verdict de zone vit au registre. Sans cette troisième valeur, un `clos`
+   *    algorithmique se lisait `hors_cible` et l'écran annonçait à un élève
+   *    dont la zone était JUSTE qu'il avait pointé au mauvais endroit.
+   */
+  fin: 'hors_cible' | 'non_fait' | 'sans_remise' | null
+  /**
+   * ⭐⭐ CET EXERCICE NE SE REMET JAMAIS — tous ses cas se surlignent (4(b)/4(b)).
+   *    Il se clôt à la dernière crédence. **Dérivé ici, jamais recalculé à
+   *    l'écran** : deux lectures de la même règle finiraient par diverger.
+   */
+  aucuneRemise: boolean
   /** Ce que le professeur doit savoir — trace serveur, jamais l'élève. */
   avertissements: string[]
 }
@@ -769,6 +796,12 @@ export async function chargerLeDeroule(
       designationDemandee: gabarit.actif && ctx.cran != null
         ? demandeUneDesignationAuGabarit(ctx.cran, vCas)
         : demandeUneDesignation(regimeDeMarquage(cran?.marquage as string | null)),
+      // ⭐⭐ 07/09 — LE 4(b) SURLIGNE ET NE DIT RIEN (Louis). Dérivé du cran et
+      //    de la variante DU CAS, jamais de celle de l'exercice.
+      //    ⛔ Hors gabarit, toujours faux : le `02-` §5 veut « sélectionne PUIS
+      //    dis ce qui cloche », et on ne retire un champ qu'à ce que le gabarit
+      //    nomme.
+      sansEcriture: gabarit.actif && designeSansEcrire(ctx.cran, vCas),
       ...lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1)),
       // ⭐ 06/09 — les pièces du cran 2, composées par la règle pure ; et, au
       //    CRAN 5 du gabarit, le passage marqué devient le trou (`10-` v0.12
@@ -803,11 +836,27 @@ export async function chargerLeDeroule(
   //    deux restent `null`, l'étape ne dépassait jamais `cas_1`, et la
   //    correction n'était JAMAIS servie. Éprouvé en vrai : crédence écrite en
   //    base, `repondu(0) = false`, `correctionDue = false`.
+  // ⭐⭐ 07/09 — CET EXERCICE NE SE REMET PAS : tous ses cas se surlignent.
+  //    C'est la paire 4(b)/4(b). Plus aucun texte n'est écrit, `remettre`
+  //    refuserait « Ta copie est vide. », et l'exercice se clôt donc à la
+  //    dernière crédence, comme les crans guidés 1·3.
+  // ⛔ `every` sur une liste VIDE rend `true` : le garde-fou de longueur n'est
+  //    pas décoratif — un exercice sans cas lu ne doit pas se déclarer clos.
+  const aucuneRemise = cas.length > 0 && cas.every((c) => c.sansEcriture)
+
+  // ⭐⭐ 07/09 — SUR UN CAS SANS ÉCRITURE, C'EST LA ZONE QUI RÉPOND. Sans ce
+  //    quatrième argument, `repondu(1)` restait faux sur un cas 4(b), l'étape
+  //    ne dépassait pas `correction`, et l'élève tournait sans fin sur la
+  //    correction du premier cas.
+  // ⚠️ `designationDonnee` — et non `zoneDonnee` — parce qu'une zone NULLE est
+  //    une réponse (« rien à signaler ») : lire les bornes seules compterait
+  //    cette réponse-là pour une absence de réponse.
   const etape: EtapePaire | null = estUnePaire
     ? etapeDeLaPaire(
       [depot.texte_v1, depot.texte_vf].map((t) => t),
       [cas[0]?.credenceDonnee, cas[1]?.credenceDonnee],
-      surDesCandidats)
+      surDesCandidats,
+      cas.map((c) => c.sansEcriture && c.designationDonnee))
     : null
   const sertUneCorrection = correctionServieAuCran(geste, ctx.cranCode)
   const corrections: Array<CorrectionServie | null> = cas.map((c) => {
@@ -967,7 +1016,7 @@ export async function chargerLeDeroule(
     // ⭐ Le CODE, résolu depuis le numéro par `lireContexte` — jamais la colonne
     //    brute, qui portait tantôt le code tantôt le numéro (C4-L11).
     grain: ctx.grain, cranCode: ctx.cranCode, geste,
-    estUnePaire, etapePaire: etape,
+    estUnePaire, etapePaire: etape, aucuneRemise,
 
     // ⭐ C7-L3 — au gabarit, la consigne de l'exercice est celle du premier cas, dérivée.
     consigne: baliser(gabarit.actif && consignesGabarit[0] ? consignesGabarit[0] : ctx.consigne),
@@ -1023,7 +1072,11 @@ export async function chargerLeDeroule(
     signalement,
 
     fin: !retours.chaud && depot.v1_remis_at
-      ? (depot.statut === 'non_fait' ? 'non_fait' : depot.statut === 'clos' ? 'hors_cible' : null)
+      ? (depot.statut === 'non_fait' ? 'non_fait'
+        // ⛔ L'ORDRE COMPTE : `sans_remise` se teste AVANT `hors_cible`, qui
+        //    n'était qu'un synonyme de `clos` et les confondait tous les deux.
+        : depot.statut === 'clos' ? (aucuneRemise ? 'sans_remise' : 'hors_cible')
+          : null)
       : null,
     avertissements,
   }

@@ -337,7 +337,8 @@ export async function actionCredence(
 async function clore(
   admin: Awaited<ReturnType<typeof garderEleveDeroule>>['admin'],
   depotId: string,
-  vue: { credenceEstLaReponse: boolean; geste: string | null; v1RemiseLe: string | null },
+  vue: { credenceEstLaReponse: boolean; geste: string | null; v1RemiseLe: string | null;
+    aucuneRemise: boolean },
 ): Promise<void> {
   try {
     const { data } = await admin.from('exercices_metacognition')
@@ -347,6 +348,13 @@ async function clore(
       dejaRemis: vue.v1RemiseLe !== null,
       credences: data?.credence,
       nombreDeCas: vue.geste ? nombreDeCas(vue.geste as never) : 1,
+      // ⭐⭐ 07/09 — LA SECONDE FAMILLE DE CLÔTURE : la paire 4(b)/4(b), dont
+      //    tous les cas se surlignent. Sans elle, ces exercices seraient
+      //    INFINISSABLES depuis que le champ ne s'y monte plus : plus de texte,
+      //    et `remettre` refuse « Ta copie est vide. »
+      // ⛔ Le drapeau vient de la VUE, jamais recalculé ici — `vue.aucuneRemise`
+      //    est dérivé des cas, et une seconde lecture de la règle divergerait.
+      sansRemise: vue.aucuneRemise,
     })
     if (!due) return
 

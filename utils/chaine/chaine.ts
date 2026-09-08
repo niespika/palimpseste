@@ -190,12 +190,21 @@ export async function traiterDepot(
   alertes.push(...regime.alertes)
   const sansAppel = regime.actif && ctx.cran != null && CRANS_SANS_APPEL.has(ctx.cran)
 
+  // ⭐⭐ 07/09/2026 — LE 4(b)/4(b) N'A AUCUNE PRODUCTION, ET C'EST LA RÈGLE.
+  //    L'élève y SURLIGNE et ne dit rien (`10-` §2) ; l'exercice se clôt à la
+  //    dernière crédence, sans remise. `quatreB` existait déjà plus bas — le
+  //    juge ne s'y appelle pas — mais il se lit sur le REGISTRE, chargé APRÈS
+  //    cette garde : la chaîne aurait levé `DepotInexploitable` avant d'y
+  //    arriver, le job aurait échoué trois fois, et l'écran aurait annoncé
+  //    « ton retour n'a pas pu être préparé » sur un exercice qui n'en attend
+  //    aucun. On le lit donc ici, sur le CONTEXTE, au plus tôt.
+  const quatreBSansTexte = ctx.cran === 4 && ctx.variante === 'b'
   const production = version === 'v1' ? ctx.productionV1 : ctx.productionVf
   if (!production || production.trim() === '') {
     // ⭐ C7-L9, piège 11 — aux crans 1·3 « la crédence EST la réponse » (`regime.ts`) :
     //    porte ouverte, un dépôt sans production y est la règle, et la mesure se
     //    dérive de la crédence. Partout ailleurs, le refus d'hier.
-    if (!(sansAppel && version === 'v1')) {
+    if (!((sansAppel || quatreBSansTexte) && version === 'v1')) {
       throw new DepotInexploitable(`le dépôt ${depotId} n'a pas de production en ${version}.`)
     }
   }

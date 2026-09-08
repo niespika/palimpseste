@@ -132,6 +132,34 @@ export function demandeUneDesignationAuGabarit(cran: number, variante: Variante)
   return (cran === 4 && variante === 'b') || cran === 7 || cran === 9
 }
 
+/**
+ * ⭐⭐ LE 4(b) DÉSIGNE ET NE DIT RIEN — décision de Louis, 07/09/2026 au soir.
+ *
+ * *« Quand il y a juste du surlignage à faire, il ne devrait pas y avoir
+ * d'écriture. L'écriture ne vaut qu'au cran où on demande EN PLUS de nommer de
+ * manière explicite. »*
+ *
+ * ⛔ **C'est un sous-ensemble STRICT de `demandeUneDesignationAuGabarit`, et
+ *    c'est tout l'intérêt de la distinguer.** Les crans 7 et 9 désignent AUSSI,
+ *    mais leur consigne demande un mot en plus — « surligne **et corrige-le** »,
+ *    « surligne **et dis lequel** » (`10-` §3) : le champ y est légitime. Le
+ *    4(b) est le seul dont la consigne s'arrête à « Surligne le passage qui le
+ *    porte. » (`10-` §2 et §3), et dont le jugement est **algorithmique — la
+ *    zone se compare à la cible, sans IA** (`10-` §6, §7).
+ *
+ * ⚠️ Le second cas d'une paire de cran 4 est TOUJOURS (b) (`varianteDuCas`) :
+ *    un exercice `variante: 'a'` a donc un cas 2 sans écriture, et un exercice
+ *    `variante: 'b'` n'a **aucun cas** qui écrit — c'est celui-là qui ne peut
+ *    plus se remettre, et qui se clôt à la dernière crédence.
+ *
+ * ⚠️ Hors gabarit (`variante === null`), la réponse est FAUSSE : le chemin du
+ *    `02-` §5 veut que l'élève « sélectionne **puis dise** ce qui cloche ». On
+ *    ne retire un champ qu'à ce que le gabarit nomme.
+ */
+export function designeSansEcrire(cran: number | null, variante: Variante): boolean {
+  return cran === 4 && variante === 'b'
+}
+
 /** Le 1(b) ne sert AUCUN document : les quatre devoirs sont l'exercice (`10-` §3). */
 export function sansDocuments(cran: number, variante: Variante): boolean {
   return cran === 1 && variante === 'b'

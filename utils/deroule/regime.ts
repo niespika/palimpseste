@@ -230,11 +230,20 @@ export function etapeDeLaPaire(
   reponses: ReadonlyArray<string | null>,
   credences: ReadonlyArray<unknown>,
   laCredenceEstLaReponse = false,
+  reponduAutrement: ReadonlyArray<boolean> = [],
 ): EtapePaire {
   const credencee = (i: number) => credences[i] != null
+  // ⭐⭐ 07/09/2026 — UN CAS PEUT RÉPONDRE SANS ÉCRIRE : le 4(b) SURLIGNE, et sa
+  //    zone désignée EST sa réponse (`10-` §2). Sans ce quatrième argument,
+  //    `repondu(1)` restait faux à jamais sur un cas 4(b), l'étape ne dépassait
+  //    pas `correction`, et **l'élève était renvoyé sans fin sur la correction
+  //    du premier cas** — le piège même que le troisième argument avait réparé
+  //    pour les crans 1·3 le 24/08, repris par l'autre bout.
+  // ⚠️ Il ne REMPLACE pas le texte, il s'y ajoute : un dépôt d'avant ce lot, où
+  //    l'élève avait dû écrire pour passer, reste lisible tel quel.
   const repondu = (i: number) => (laCredenceEstLaReponse
     ? credencee(i)
-    : (reponses[i] ?? '').trim() !== '')
+    : (reponduAutrement[i] === true || (reponses[i] ?? '').trim() !== ''))
 
   if (!repondu(0)) return 'cas_1'
   if (!credencee(0)) return 'credence_1'
