@@ -130,3 +130,24 @@ Production remesurée : **11 dépôts de cran 2, 106 de cran 5, 92 de cran 7**. 
 `verdictDeLaCopie` suit la version effectivement affichée : VF au retour final si son texte existe, V1 si l’écran se replie sur elle. Les deux cas d’une paire gardent leur version et leur recours au verdict de zone. Une VF seule sans verdict n’hérite pas d’un verdict V1. Deux tests de régression couvrent ces branches. **TypeScript propre, 2577 tests réussis.** Aucune migration, aucun changement de porte.
 
 Après correction, le chargeur complet rend bien `verdictParCas: [true]`. Le décor a été supprimé et son absence vérifiée.
+
+## ⑤ — Le réassemblage respecte la porte du gabarit
+
+Gardes constatées avant correction : `utils/deroule/vue.ts:890` exige `gabarit.actif && ctx.cran === 5` pour le trou ; `utils/gabarit/lecture.ts:67` lit la porte et la ligne 68 rend le gabarit inactif si elle est fermée. `utils/chaine/contexte.ts`, fonction `avecLeReassemblage`, n’exigeait que le cran 5 et au moins un cas avec `probleme`. Son commentaire « Porte fermée […] rien » était faux.
+
+La doctrine, `07-Implementation.md:144` (§1.1), dit « Rien de ceci ne s’allume sans son interrupteur : gabarit_actif ». `10-Gabarit.md:176` (§2 bis.6) prévoit le passage réécrit à sa place dans le devoir réassemblé. **Le côté chaîne est corrigé** : il lit désormais `lireLaPorteGabarit`, exactement comme le lecteur écran. Fermer cette porte doit supprimer le réassemblage, puisque le trou a disparu ; l’écran respecte déjà cette garde.
+
+Production remesurée : **106 dépôts de cran 5, 0 avec un cas à problème du gabarit ; 61 exercices de cette banque**. Aucun dépôt rejoué.
+
+Épreuve par les chargeurs réels `chargerLeDeroule`, `lireContexte`, `entreeDuContexte`, `assemblerLeJuge`, sur un dépôt temporaire de `ex-gab-argument-garant-vague-d2-c5` :
+
+| État du code | Porte | Trou écran | Réassemblage dans le contexte | Bloc effectif dans le prompt du juge |
+|---|---|---|---|---|
+| Avant | ouverte | oui | oui | oui |
+| Avant | fermée | non | oui | oui |
+| Après | ouverte | oui | oui | oui |
+| Après | fermée | non | non | non |
+
+Le prompt réel de chaque cas est enregistré hors dépôt. Aucun appel IA : on vérifie le document assemblé qui lui serait envoyé. L’écran n’est pas modifié par ce lot. **TypeScript propre et 2577 tests réussis.** Aucun SQL.
+
+Le dépôt de recette a été supprimé et la porte sandbox restaurée à `true`, puis les deux états ont été relus. La lecture intermédiaire de 14:48:51 UTC avait vu `false` pendant l’épreuve ; elle ne décrivait pas l’état restauré. La production n’a pas été modifiée.

@@ -28,6 +28,7 @@ import { lireLaPorteJugeMesure } from './porte-mesure'
 import type { CleDuCas } from './cle'
 import type { ChoixServiAuJuge, PieceServieAuJuge, ZoneServieAuJuge } from './juge-cran'
 import { lireLeCran2 } from '@/utils/gabarit/lecture'
+import { lireLaPorteGabarit } from '@/utils/gabarit/porte'
 import { formeDuTrou, morceauxDuPassage, separerLeTrou } from '@/utils/gabarit/pieces'
 import { marquerLeMateriau, pointDInsertion } from '@/utils/deroule/marquage'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
@@ -1049,6 +1050,8 @@ async function avecLeReassemblage(
   if (error) return cas
   const lignes = (data ?? []) as unknown as Array<{ ordre: number; probleme: unknown; exercices_materiaux: unknown }>
   if (!lignes.some((l) => typeof l.probleme === 'string' && l.probleme)) return cas   // pas du gabarit
+  // Sans trou à l'écran, le texte rendu est autonome : ne pas l'insérer dans le devoir.
+  if (!await lireLaPorteGabarit(admin)) return cas
   return cas.map((c) => {
     const l = lignes.find((x) => x.ordre === c.ordre)
     const m = (Array.isArray(l?.exercices_materiaux) ? l!.exercices_materiaux[0] : l?.exercices_materiaux) as
