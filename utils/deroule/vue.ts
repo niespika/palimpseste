@@ -41,7 +41,7 @@ import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, restitutio
 import { rappelDuTemps1, momentDeLaDemonstration, type Rappel } from './rappel'
 import { offreDeCredence, credenceDonneeDe, CRANS_GUIDES, type OffreCredence } from './credence'
 import { composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi,
-  type CorrectionServie } from './correction'
+  verdictDeLaVersion, type CorrectionServie } from './correction'
 import { phaseServie, candidates, offreSeJugerMaison, verdictDeCalibration,
   type CouvertureTestee, type LigneDeVerdict, type OffreSeJuger } from './juger'
 import { choisirLaDemonstration, lireLeContenu,
@@ -418,6 +418,17 @@ export interface VueDuDeroule {
    *    algorithmique se lisait `hors_cible` et l'écran annonçait à un élève
    *    dont la zone était JUSTE qu'il avait pointé au mauvais endroit.
    */
+  /**
+   * ⭐⭐ 07/09/2026 — « ON NE LUI DIT PAS SI L'EXERCICE EST RÉUSSI » (Louis).
+   *    Le verdict du juge, PAR CAS, dans l'ordre des cas. `null` = aucun
+   *    verdict pour ce cas (le juge n'a pas tourné, ou pas encore).
+   * ⛔ **Par CAS, jamais par dépôt** : sur une paire, `texte_v1` porte la
+   *    réponse au cas 1 et `texte_vf` celle au cas 2 (`paire.ts`). Servir le
+   *    verdict de la v1 en face de la réponse du cas 2 dirait à l'élève qu'il
+   *    s'est trompé là où il ne s'était pas trompé.
+   * ⚠️ Gardé derrière `v1_remis_at` : rien avant la remise, jamais.
+   */
+  verdictParCas: Array<boolean | null>
   fin: 'hors_cible' | 'non_fait' | 'sans_remise' | null
   /**
    * ⭐⭐ CET EXERCICE NE SE REMET JAMAIS — tous ses cas se surlignent (4(b)/4(b)).
@@ -1017,6 +1028,10 @@ export async function chargerLeDeroule(
     //    brute, qui portait tantôt le code tantôt le numéro (C4-L11).
     grain: ctx.grain, cranCode: ctx.cranCode, geste,
     estUnePaire, etapePaire: etape, aucuneRemise,
+    verdictParCas: depot.v1_remis_at
+      ? cas.map((c) => verdictDeLaVersion(
+        depot.verdicts_cran, estUnePaire && c.ordre === 2 ? 'vf' : 'v1'))
+      : cas.map(() => null),
 
     // ⭐ C7-L3 — au gabarit, la consigne de l'exercice est celle du premier cas, dérivée.
     consigne: baliser(gabarit.actif && consignesGabarit[0] ? consignesGabarit[0] : ctx.consigne),

@@ -289,3 +289,23 @@ export function composerLaCorrection(
   return { reponse, pourquoiJuste, refutation: { candidat, pourquoiFaux },
     silence: null, surDesCandidats: true, derivee }
 }
+
+/**
+ * ⭐⭐ LE VERDICT DU JUGE POUR UNE VERSION — lu, jamais recalculé.
+ *
+ * ⛔ On ne rend QUE `reussi`. Les deux autres champs du verdict — `probleme_vu`
+ *    et `motif` — sont écrits **à la troisième personne, sur l'élève** : mesuré
+ *    en production le 07/09, « L'élève n'a pas introduit le mot… », 6 sur 8 et
+ *    4 sur 8, et **aucun des huit ne tutoie**. Les servir tels quels mettrait
+ *    un jugement rédigé pour un adulte sur l'écran d'un élève de seconde. Leur
+ *    affichage est un ARBITRAGE ouvert (il demande une règle de tutoiement au
+ *    prompt du juge), pas un oubli.
+ */
+export function verdictDeLaVersion(verdicts: unknown, version: 'v1' | 'vf'): boolean | null {
+  if (!verdicts || typeof verdicts !== 'object') return null
+  const v = (verdicts as Record<string, unknown>)[version]
+  if (!v || typeof v !== 'object') return null
+  const r = (v as Record<string, unknown>).reussi
+  return typeof r === 'boolean' ? r : null
+}
+

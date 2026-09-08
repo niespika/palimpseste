@@ -77,6 +77,20 @@ export interface DepotMaison {
   saisie_telemetrie: unknown
   aide_consommee: number
   routeur_decision_id: string | null
+  /**
+   * ⭐⭐ 07/09/2026 — LE VERDICT DU JUGE DU CRAN, PAR VERSION (`C7-L1`).
+   *
+   * ⛔⛔ **IL EXISTAIT EN BASE ET N'AVAIT AUCUN CHEMIN VERS L'ÉCRAN.** Mesuré le
+   *    07/09 : `grep verdicts_cran app components` rendait **zéro** ligne. Le
+   *    juge disait `reussi: false` avec son motif, et l'élève lisait « Ce qu'il
+   *    fallait voir » sans jamais savoir s'il avait eu raison. *Constat de
+   *    Louis sur sa propre recette : « si on dit à l'élève quelle est la bonne
+   *    réponse, on ne lui dit pas si l'exercice est réussi ».*
+   * ⚠️ Il n'existe qu'APRÈS la remise (le juge tourne au job `mesure_v1`) :
+   *    aucun risque de le servir avant une crédence, et `vue.ts` le garde
+   *    quand même derrière `v1_remis_at`.
+   */
+  verdicts_cran: Record<string, unknown> | null
   exercice: {
     id: string
     lieu: string
@@ -111,7 +125,7 @@ const CHAMPS =
   'id, eleve_id, exercice_id, statut, echeance, assigne_at, texte_v1, texte_vf, '
   + 'confiance_declaree, conditions_declarees, restitution_a_chaud, motif_depassement, '
   + 'ouvert_at, v1_remis_at, vf_remis_at, juger_debut_at, juger_fin_at, duree_taguee, '
-  + 'collages_bloques, saisie_telemetrie, aide_consommee, routeur_decision_id, '
+  + 'collages_bloques, saisie_telemetrie, aide_consommee, routeur_decision_id, verdicts_cran, '
   + 'exercice:exercices!inner(id, lieu, classe_id, type_id, consigne_instanciee, cran, genre, '
   // ⭐⭐ **`cible_primaire` EST DANS CE SELECT DEPUIS C4-L11, ET C'EST LE POINT.**
   //    Le `07-` §1.1 la nomme sur l'instance — « la compétence qui commande le

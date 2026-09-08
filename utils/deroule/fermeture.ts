@@ -199,6 +199,7 @@ export function vueFermee(v: VueDuDeroule): VueDuDeroule {
     grain: 'micro',
     cranCode: null,
     geste: null,
+    verdictParCas: [],
     aucuneRemise: false,
     estUnePaire: false,
     etapePaire: null,

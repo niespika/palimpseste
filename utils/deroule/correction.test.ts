@@ -12,7 +12,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi } from './correction'
+  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi, verdictDeLaVersion} from './correction'
 
 // La banque telle que l'IMPORT l'écrit : des objets `{texte, pourquoi_faux}`.
 const BANQUE = [
@@ -282,4 +282,30 @@ test('ÉTALON — un texte vide ou blanc ne se sert pas, et un cran nul non plus
   assert.equal(etalonServi(2, true, null), null)
   assert.equal(etalonServi(2, true, 42), null, 'un non-texte ne passe pas')
   assert.equal(etalonServi(null, true, 'un modèle'), null)
+})
+
+// ── ⭐⭐ LE VERDICT DIT À L'ÉLÈVE (Louis, 07/09/2026) ────────────────────────
+// « Si on dit à l'élève quelle est la bonne réponse, on ne lui dit pas si
+// l'exercice est réussi. C'est important dans le cas d'un retour IA (mais
+// aussi pour les jugements algo). »
+// ⛔ Le verdict EXISTAIT en base depuis C7-L1 et n'avait AUCUN chemin vers un
+//    écran : `grep verdicts_cran app components` rendait zéro ligne le 07/09.
+
+test('le verdict se lit par VERSION — sur une paire, la v1 est le cas 1', () => {
+  const v = { v1: { reussi: false, motif: 'x' }, vf: { reussi: true } }
+  assert.equal(verdictDeLaVersion(v, 'v1'), false)
+  assert.equal(verdictDeLaVersion(v, 'vf'), true)
+})
+
+test('⛔ tout ce qui n’est pas un booléen ne dit RIEN — on n’invente pas un verdict', () => {
+  for (const cas of [
+    null, undefined, 'raté', 42, [], {}, { v1: null }, { v1: {} },
+    { v1: { reussi: 'false' } }, { v1: { reussi: 0 } }, { vf: { reussi: true } },
+  ]) {
+    assert.equal(verdictDeLaVersion(cas, 'v1'), null, JSON.stringify(cas) ?? 'undefined')
+  }
+})
+
+test('⭐ un verdict RÉUSSI se dit — la réussite se célèbre, elle ne se tait pas', () => {
+  assert.equal(verdictDeLaVersion({ v1: { reussi: true } }, 'v1'), true)
 })

@@ -1014,17 +1014,20 @@ function ColonneTravail({
         {vue.estUnePaire ? (
           <>
             {vue.corrections[1] && (
-              <Correction correction={vue.corrections[1]} reponse={reponseDeLEleve(vue, 2)} />
+              <Correction correction={vue.corrections[1]} reponse={reponseDeLEleve(vue, 2)}
+                verdict={vue.verdictParCas[1] ?? null} />
             )}
             {vue.corrections[0] && (
               <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
-                <Correction correction={vue.corrections[0]} reponse={reponseDeLEleve(vue, 1)} />
+                <Correction correction={vue.corrections[0]} reponse={reponseDeLEleve(vue, 1)}
+                  verdict={vue.verdictParCas[0] ?? null} />
               </Depliable>
             )}
           </>
         ) : vue.corrections.map((correction, i) => (
           correction
-            ? <Correction key={i} correction={correction} reponse={reponseDeLEleve(vue, i === 0 ? 1 : 2)} />
+            ? <Correction key={i} correction={correction} reponse={reponseDeLEleve(vue, i === 0 ? 1 : 2)}
+                verdict={vue.verdictParCas[i] ?? null} />
             : null
         ))}
 
@@ -1983,10 +1986,19 @@ const SUR_TITRE = 'font-marque text-[11px] font-semibold uppercase tracking-[0.1
  *    trois) : c'est ce que la vue sert, et ce que cette page montre.
  */
 function Correction({
-  correction, reponse = null,
+  correction, reponse = null, verdict = null,
 }: {
   correction: NonNullable<VueDuDeroule['corrections'][number]>
   reponse?: ReponseDeLEleve | null
+  /**
+   * ⭐⭐ 07/09/2026 — LE VERDICT DU JUGE, DIT À L'ÉLÈVE (Louis : « si on dit à
+   *    l'élève quelle est la bonne réponse, on ne lui dit pas si l'exercice est
+   *    réussi »). `null` = aucun verdict, on ne dit rien.
+   * ⛔ Aux crans à candidats, ce n'est PAS ce chemin : `juste` le dit déjà
+   *    depuis la crédence. Celui-ci sert les crans où l'élève RÉDIGE — 2, 4, 5,
+   *    7, 9 — où le verdict existait en base et n'atteignait aucun écran.
+   */
+  verdict?: boolean | null
 }) {
   const juste = reponse?.forme === 'candidat' ? reponse.juste : null
   const refutation = correction.refutation
@@ -2034,6 +2046,17 @@ function Correction({
           {reponse.texte.trim() !== '' && (
             <TexteBrut texte={reponse.texte}
               className="mt-1.5 font-corps text-[16px] leading-[1.55] text-encre" />
+          )}
+          {/* ⭐⭐ 07/09 — LE VERDICT. Mêmes jetons que la branche à candidats
+              (`text-ok` / `text-attention`) : une seule grammaire de couleur
+              pour « juste » et « pas juste » dans tout le déroulé. */}
+          {verdict !== null && (
+            <p className={`mt-2.5 font-corps text-[15.5px] font-semibold
+              ${verdict ? 'text-ok' : 'text-attention'}`}>
+              {verdict
+                ? 'Ta réponse est juste.'
+                : 'Ta réponse n’est pas celle qu’il fallait — compare-la à ce qui suit.'}
+            </p>
           )}
         </div>
       )}
