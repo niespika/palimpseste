@@ -23,7 +23,12 @@ import { updateSession } from '@/utils/supabase/middleware'
 //    ⛔ AUCUNE valeur par défaut, et c'est exprès : le dépôt est PUBLIC.
 //    Sans la variable, il n'y a pas de laissez-passer du tout.
 // ============================================================================
-const TRAVAUX = true
+// ⭐ ROUVERT le 07/09/2026 à 23:5x, sur décision de Louis, après le smoke du
+//    4(b) joué de bout en bout en bac à sable (deux parcours complets,
+//    captures aux trois tailles). Le reste du fichier est laissé tel quel :
+//    la page `/travaux` et le laissez-passer restent prêts pour la prochaine
+//    fois — c'est un interrupteur, pas un échafaudage à démonter.
+const TRAVAUX = false
 
 /** Le cookie que pose le laissez-passer. Sa valeur est comparée à l'env. */
 const COOKIE_ATELIER = 'palimpseste_atelier'
