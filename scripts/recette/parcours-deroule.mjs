@@ -7,6 +7,11 @@
 // gestes de la remise, rendre, attendre le retour, tourner ses pages. À chaque
 // changement d'état : une capture à 1280, une à 768 et une à 375.
 //   node scripts/recette/parcours-deroule.mjs <depotId> <nom> <dossier> [--max N] [--port P]
+//                                             [--ratisse] [--faible]
+// ⭐ 08/09 — il sait désormais écrire DANS LE FIL (crans 2 et 5, « le trou est
+//    le champ ») et RECONNAÎTRE l'écran d'attente, dont les mots ont changé le
+//    06/09. Sans ces deux-là, tout parcours de cran 2 ou 5 s'arrêtait au
+//    premier pas, et tout parcours s'arrêtait juste après la remise.
 // ⛔ Bac à sable seulement : la remise déclenche la chaîne (appels IA).
 // ⚠️ Un lien magique en annule un autre : deux parcours ne se jouent PAS en
 //    parallèle sur le même compte — en série, toujours.
@@ -31,6 +36,8 @@ const MAX = arg('--max', 40)
 const PORT = arg('--port', 9339)
 /** ⭐ Surligner TOUT, exprès — la non-réponse du cas 0. Voir plus bas. */
 const RATISSE = process.argv.includes('--ratisse')
+/** ⭐ Écrire une copie sans rien à citer, pour provoquer un refus de FORME. Voir `FAIBLE`. */
+const FAIBLE_MODE = process.argv.includes('--faible')
 fs.mkdirSync(DOSSIER, { recursive: true })
 const BASE = 'http://localhost:3000'
 const TAILLES = [1280, 768, 375]
@@ -51,6 +58,9 @@ const dors = (ms) => new Promise((r) => setTimeout(r, ms))
  */
 const FAIBLE = 'je sais pas trop. ça va pas.'
 const TEXTES = {
+  // ⭐ 08/09 — LE TROU tient dans une phrase, pas dans un paragraphe : c'est UN
+  //    morceau du devoir qu'on réécrit, posé dans le fil du reste (voir plus bas).
+  trou: 'et cette distraction coûte aux élèves une partie du cours, ce qui justifie de l’interdire',
   1: 'Le passage en gras conclut alors que rien ne le justifie : « donc » relie deux idées sans que la raison du lien soit dite. Il manque la phrase qui explique pourquoi la distraction entraîne l’interdiction.',
   2: 'Ici encore, la conclusion arrive sans son appui : on affirme qu’il faut interdire, mais la raison qui fait passer du constat à la décision n’est pas écrite. Le lecteur doit la deviner.',
   vf: 'Le passage en gras conclut alors que rien ne le justifie. Le « donc » relie deux idées sans que la raison du lien soit dite : il manque la phrase qui explique pourquoi la distraction entraîne l’interdiction.\n\nC’est cette phrase, entre le constat et la décision, qui ferait de l’affirmation un argument.',
@@ -101,7 +111,11 @@ async function lire() {
   return cdp.evalue(`(() => {
     const t = document.body.innerText
     const boutons = [...document.querySelectorAll('button')].filter((b) => !b.disabled && b.offsetParent !== null).map((b) => b.textContent.trim())
-    const ta = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly).map((x) => ({ rows: x.rows, vide: x.value.trim() === '' }))
+    // ⭐⭐ 08/09 — « trou » : la fente du fil (crans 2 et 5). Voir la branche 3 bis.
+    //    ⚠️ On lit l'aria-label, PAS le placeholder : PlanAOrdonner porte le même
+    //    placeholder « Écris ici » sur un input d'un tout autre écran.
+    //    ⛔ Aucun accent grave dans ce commentaire : il vit DANS un gabarit.
+    const ta = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly).map((x) => ({ rows: x.rows, vide: x.value.trim() === '', trou: x.getAttribute('aria-label') === 'Écris ici' }))
     const ranges = [...document.querySelectorAll('input[type=range]')].filter((x) => x.offsetParent !== null).length
     const geste = /Ta thèse en une phrase/i.test(t) ? 'restitution' : /degré de confiance/i.test(t) ? 'confiance' : /Dans quelles conditions as-tu travaillé/i.test(t) ? 'conditions' : null
     return { boutons, textareas: ta, ranges, geste,
@@ -111,9 +125,18 @@ async function lire() {
       lu: boutons.find((b) => /^J’ai lu mon retour/.test(b)) ?? null,
       reprendre: boutons.find((b) => /^Reprendre mon texte/.test(b)) ?? null,
       versionFinale: /version finale/i.test(t),
-      preparation: /retour est en préparation/i.test(t),
+      // ⭐⭐ 08/09 — L'ÉCRAN D'ATTENTE A CHANGÉ DE MOTS LE 06/09 (Louis : « il faut
+      //    prévoir un écran ton retour est en construction ») et la sonde ne l'a
+      //    pas suivi : elle cherchait « retour est en préparation », qui ne
+      //    s'écrit plus nulle part sur cet écran. Résultat, le parcours ne
+      //    VOYAIT PAS l'attente — il tombait dans « rien à faire » et s'arrêtait
+      //    juste après la remise. Les trois formulations sont gardées : celle
+      //    d'avant vit encore ailleurs (liste des exercices, Fragments).
+      preparation: /retour est en préparation|retour est en construction|copie est partie à la lecture/i.test(t),
+      // L'échec DÉFINITIF a son écran à lui : le dire, plutôt que « rien à faire ».
+      echec: /retour n’a pas pu être préparé/i.test(t),
       // ⚠️ Pas /Ton retour/ : la page de remise dit « ton retour se préparera ». Les titres des écrans de retour, eux, sont sûrs.
-      retour: /Ce qui a bougé|Retour à mes exercices|Ce que tu as écrit|point \d+ sur \d+|pour finir/i.test(t) && !/retour est en préparation/i.test(t),
+      retour: /Ce qui a bougé|Retour à mes exercices|Ce que tu as écrit|point \d+ sur \d+|pour finir/i.test(t) && !/retour est en préparation|retour est en construction/i.test(t),
       fini: /Cet exercice est terminé|Cet exercice ne compte pas/i.test(t),
       surlignable: !!document.querySelector('p.cursor-text'), rienSurligne: /rien de surligné pour l’instant/i.test(t),
       pasEncoreOuvert: /pas encore ouvert/i.test(t), texte: t.slice(0, 200) }
@@ -172,10 +195,15 @@ try {
   console.log(NOM, '→', await cdp.evalue('location.pathname'))
   let etat = await lire()
   let cas = 1
-  await capture(etat.surlignable ? 'cas1-a-surligner' : (etat.ranges >= 4 ? 'cas1-repondre' : 'cas1-ecrire'), { lire: etat.surlignable })
+  await capture(etat.retour ? 'retour-deja-la'
+    : etat.preparation ? 'attente-deja-la'
+    : etat.surlignable ? 'cas1-a-surligner'
+    : etat.ranges >= 4 ? 'cas1-repondre'
+    : etat.textareas.some((x) => x.trou) ? 'cas1-trou' : 'cas1-ecrire', { lire: etat.surlignable })
   for (let pas = 0; pas < MAX; pas++) {
     etat = await lire()
     if (etat.pasEncoreOuvert) { console.log('  porte fermée'); break }
+    if (etat.echec) { await capture('retour-echec-definitif'); console.log('  ⛔ échec DÉFINITIF du retour'); break }
     if (etat.fini) { await capture('fini'); break }
     if (etat.retour && !etat.rendre) {
       await pagesDuRetour('retour')
@@ -231,10 +259,30 @@ try {
       await attendQue((e2) => e2.ranges === 0 || e2.retour)
       await capture(cas === 1 && (await lire()).boutons.some((b) => b.startsWith('Passer au second cas')) ? 'correction-du-premier-cas' : `cas${cas}-repondu`); continue
     }
+    // ⭐⭐ 08/09/2026 — LA FENTE DU FIL, et c'est pour elle que le smoke du rejeu
+    //    a échoué deux fois. Aux crans 2 et 5, « le trou est le champ » : le
+    //    devoir se rend dans le fil du texte, avec un `<textarea rows=1>` posé
+    //    au milieu (`ChampDeRedaction`, mode `enTrou`). Le harnais ne savait
+    //    écrire que dans le GRAND champ (`rows >= 9`) : sur ces deux crans il
+    //    lisait l'écran, ne trouvait rien à faire, et s'arrêtait au premier pas
+    //    — dépôt laissé `ouvert`, `texte_v1` jamais posé. **Ces deux crans
+    //    n'avaient donc JAMAIS été parcourus de bout en bout.**
+    // ⚠️ La fente tient une PHRASE : `TEXTES.trou`, pas le paragraphe des
+    //    autres crans. Et « Enregistrer » naît désactivé — il n'apparaît dans
+    //    `boutons` (qui filtre `!disabled`) qu'une fois la fente remplie.
+    if (etat.textareas.some((x) => x.trou && x.vide)) {
+      const idx = etat.textareas.findIndex((x) => x.trou && x.vide)
+      await tape(idx, FAIBLE_MODE ? FAIBLE : TEXTES.trou); await dors(500)
+      await capture(`cas${cas}-trou-ecrit`)
+      await clique('Enregistrer'); await attendQue((e2) => !e2.textareas.some((x) => x.trou))
+      const e2 = await lire()
+      await capture(e2.ranges === 1 ? `cas${cas}-credence` : e2.geste ? `remise-${e2.geste}` : e2.rendre ? 'rendre' : `cas${cas}-trou-enregistre`)
+      continue
+    }
     // 3. un champ vide : on écrit, on capture le texte écrit, puis « Enregistrer » tourne la page
     if (etat.textareas.some((x) => x.rows >= 9 && x.vide)) {
       const idx = etat.textareas.findIndex((x) => x.rows >= 9 && x.vide)
-      await tape(idx, process.argv.includes('--faible') ? FAIBLE : (TEXTES[cas] ?? TEXTES[1])); await dors(400)
+      await tape(idx, FAIBLE_MODE ? FAIBLE : (TEXTES[cas] ?? TEXTES[1])); await dors(400)
       await capture(`cas${cas}-ecrit`)
       await clique('Enregistrer'); await attendQue((e2) => !e2.textareas.some((x) => x.rows >= 9))
       const e2 = await lire()
