@@ -376,15 +376,28 @@ async function clore(
 
 /**
  * ⭐ C7-L9 — le chemin des crans 1·3 vers la mesure convertie : la file, porte
- *    ouverte et dépôt du routeur seulement. Ne fait jamais échouer la clôture.
+ *    ouverte. Ne fait jamais échouer la clôture.
+ * ⚠️ « dépôt du routeur seulement » : PLUS VRAI depuis le 07/09 au soir — le
+ *    périmètre ne lit plus l'origine, et il se décide dans `regimeJugeMesure`.
  */
 async function mettreEnFileSiLeJugeEstLaMesure(
   admin: Awaited<ReturnType<typeof garderEleveDeroule>>['admin'], depotId: string,
 ): Promise<void> {
   try {
     if (!(await lireLaPorteJugeMesure(admin as never))) return
-    const { data } = await admin.from('exercices_depots').select('origine').eq('id', depotId).maybeSingle()
-    if ((data as { origine?: string } | null)?.origine !== 'routeur') return
+    // ⛔⛔ 07/09/2026, soir — LA GARDE SUR `origine` EST RETIRÉE ICI AUSSI.
+    //    C'était le SECOND domicile de la même règle, et le retirer de
+    //    `regimeJugeMesure` seul n'aurait rien changé sur ce chemin : un
+    //    exercice de cran 1·3 posé à la main se serait clos sans jamais être
+    //    mesuré. *Trouvé en cartographiant la clôture, une heure après avoir
+    //    cru la règle réparée — une règle dupliquée ne se corrige pas d'un
+    //    côté.* Le périmètre se décide en UN lieu, `regimeJugeMesure`.
+    // ⚠️ Ce qu'il reste à surveiller : un dépôt sans clé ferait lever
+    //    `DepotInexploitable` (`chaine.ts:193`, faute de production). Mesuré en
+    //    prod le 07/09 : les 21 dépôts `prof` des crans qui isolent portent
+    //    tous une clé sur chacun de leurs cas — le cas ne se présente pas
+    //    aujourd'hui. Il se présenterait si la banque 1.4 était réassignée à la
+    //    main.
     const f = await mettreLaMesureEnFile(admin, depotId, 'v1')
     if (f.erreur) console.warn(`[deroule] C7-L9 — dépôt ${depotId} NON mis en file après clôture : ${f.erreur}`)
   } catch (e) {
