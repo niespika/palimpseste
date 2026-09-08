@@ -186,3 +186,52 @@ test('« cran 2 réussi sur l’objet » se lit sur la pièce JOINT : deux réus
   assert.deepEqual(cransDebloques(sansRien, 'argument'), [1, 2, 3, 6])
   assert.equal(sansRien[0]!.constituant, null)
 })
+
+// ── ⭐⭐ « TOUTE PAIRE : LE SECOND CAS EST RÉUSSI SEUL » — appliqué le 07/09/2026
+// La règle était écrite en tête de `reussites.ts` et le code faisait l'inverse
+// sur les paires 4(a)/4(b) : il scorait le CAS 1 (l'échauffement, où le passage
+// est montré en gras) et jetait la zone du CAS 2 (le transfert). Décision de
+// Louis le 07/09 au soir, sur un dépôt réel qui contredisait l'écran.
+
+test('cran 4 · paire « a » — c’est la ZONE DU SECOND CAS qui score, pas le juge du premier', () => {
+  const d = depot({
+    cran: 4, variante: 'a',
+    // Le juge a jugé le cas 1 RATÉ — et il ne doit plus décider.
+    verdicts: { v1: verdict(false) },
+    zones: [{ cas: 1, verdict: null }, { cas: 2, verdict: 'juste' }],
+  })
+  assert.equal(issueDuDepot(d), 'reussi')
+})
+
+test('cran 4 · paire « b » — inchangé, la zone du dernier cas scorait déjà', () => {
+  assert.equal(issueDuDepot(depot({
+    cran: 4, variante: 'b', zones: [{ cas: 1, verdict: 'juste' }, { cas: 2, verdict: 'faux' }],
+  })), 'rate')
+})
+
+test('⛔⛔ l’ANCIENNE BANQUE (variante NULLE) reste sur le juge — 58 dépôts sur 60 portent une zone', () => {
+  // `02-` §5 : « sélectionne PUIS dis ce qui cloche » — le texte compte autant
+  // que la zone, et c'est le juge qui le lit. Retirer la garde sans la remplacer
+  // aurait rescoré 58 dépôts de production sur leur zone seule.
+  const d = depot({
+    cran: 4, variante: null,
+    verdicts: { v1: verdict(true) },
+    zones: [{ cas: 1, verdict: 'faux' }, { cas: 2, verdict: 'faux' }],
+  })
+  assert.equal(issueDuDepot(d), 'reussi', 'le juge décide, la zone est ignorée')
+})
+
+test('⭐ un dépôt du gabarit SANS zone lisible retombe sur le juge — la ligne ne se perd pas', () => {
+  // Un dépôt d'AVANT le lot du 07/09, où rien n'obligeait à surligner.
+  assert.equal(issueDuDepot(depot({
+    cran: 4, variante: 'a', verdicts: { v1: verdict(true) }, zones: [],
+  })), 'reussi')
+  assert.equal(issueDuDepot(depot({
+    cran: 4, variante: 'b', verdicts: { v1: verdict(false) },
+    zones: [{ cas: 1, verdict: null }],
+  })), 'rate')
+})
+
+test('⛔ sans zone ET sans verdict, on ne dit rien — on n’invente pas une issue', () => {
+  assert.equal(issueDuDepot(depot({ cran: 4, variante: 'b', zones: [], verdicts: {} })), null)
+})

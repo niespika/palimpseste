@@ -744,25 +744,17 @@ export async function chargerLeDeroule(
     //    désigner (4 cas sur 183 en prod) : on ne juge alors rien du tout.
     const designation = lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1))
     const cibleDuCas = materiauBrut ? cibleDansLeMateriau(materiauBrut, mat?.version_corrigee) : null
-    // ⛔⛔ ET SEULEMENT LÀ OÙ LE REGISTRE LE COMPTE — `gabarit.variante === 'b'`,
-    //    la variante de l'EXERCICE, pas celle du cas. C'est la garde exacte
-    //    d'`issueDuDepot` (`utils/registre/reussites.ts`, branche cran 4) :
-    //    sur une paire 4(a)/4(b), l'exercice est de variante « a », la branche
-    //    des zones ne s'exécute JAMAIS et le registre score la paire sur le
-    //    verdict du juge, c'est-à-dire sur le CAS 1.
-    // ⛔ Servir quand même le verdict de zone du cas 2 mettait l'écran et la
-    //    mesure en CONTRADICTION sur le même dépôt : mesuré sur `e7784465`
-    //    (prod, 07/09) — le registre rend `rate` (cas 1 jugé faux) pendant que
-    //    l'écran aurait affiché « Ta réponse est juste. » en tête, pour la zone
-    //    du cas 2. Un élève lisant du vert et prenant un échec.
-    // ⚠️ **CE N'EST PAS LA BONNE FIN, C'EST LA FIN SÛRE.** Le registre
-    //    contredit sa PROPRE règle, écrite en tête de son fichier — « toute
-    //    paire : LE SECOND CAS est réussi seul » — et le juge ne juge jamais ce
-    //    second cas (0 verdict `vf` sur 8 en prod). Réparer le registre change
-    //    ce qui COMPTE pour 61 exercices : c'est un arbitrage de Louis, pas un
-    //    correctif d'écran. En attendant, l'écran se tait plutôt que de mentir.
+    // ⛔ ET SEULEMENT LÀ OÙ LE REGISTRE LE COMPTE — `gabarit.variante !== null`,
+    //    c'est-à-dire sur le GABARIT et lui seul. C'est la garde exacte
+    //    d'`issueDuDepot` (`utils/registre/reussites.ts`, branche cran 4), et
+    //    les deux doivent bouger ENSEMBLE : l'écran ne dit jamais réussi là où
+    //    la mesure compte raté.
+    // ⚠️ L'ancienne banque (variante NULLE) reste dehors : elle suit le `02-`
+    //    §5, « sélectionne PUIS dis ce qui cloche », où c'est le juge qui lit le
+    //    texte. 58 de ses 60 dépôts rendus portent pourtant une zone — la garde
+    //    n'est pas décorative.
     const zoneJugee = gabarit.actif && designeSansEcrire(ctx.cran, vCas)
-      && gabarit.variante === 'b'
+      && gabarit.variante !== null
       && depot.v1_remis_at && cibleDuCas && designation.zoneDonnee && materiauBrut
       ? verdictDeLaZone(materiauBrut, cibleDuCas, designation.zoneDonnee)
       : null

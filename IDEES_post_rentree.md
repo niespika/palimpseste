@@ -1351,3 +1351,97 @@ Après une clôture, l'élève lirait donc *« **abandonné** · ton essai a deu
 
 **5. ⚠️ `actionContester` sur une semaine fermée — le commentaire dit l'inverse du code.**
 `app/deroule/actions.ts:98-104` affirme que la contestation reste possible sur une semaine fermée ; le code appelle `portier` **en mode écriture**, donc la refuse. ⛔ **C'est un défaut de `C10-L1`, pas de `C10-L2`** — il est nommé ici pour ne pas être redécouvert. ⭐ *La question miroir a été tranchée par `C10-L2` : après `abandonne`, l'élève garde la lecture de son retour publié — la vue close le sert encore. Structurellement il n'y en a aucun (`publier` ne bascule que `v1_remis` et `ouvert`, que la clôture a quittés), mais le lui retirer aurait été lui reprendre ce qu'il a le droit de lire.*
+
+## ⭐ Vidéos de méthode « Calame » — une par objet (08/09/2026) — MESURÉ, pas tranché
+
+Idée de Louis : une capsule de 2-3 min par objet où Calame présente l'objet — ce qu'il contient,
+les erreurs à éviter — sur un ton un peu insolent. **Rien n'est décidé ; ce qui suit est le
+relevé, pour que la question ne se rouvre pas à froid.**
+
+**Ce que la mesure a donné** *(sur `09-Objets.md` v1.9 et `generateur/banque/banque.json` du 31/08)* :
+- **Ce n'est pas 13 unités, c'est 21** — `introduction` ×4 genres, `conclusion` ×4, `partie` ×3.
+  21 fiches portent un `Exemplaire` et une phrase de cran 6 ; le fixture déployé
+  (`doctrine.fixture.json`) en porte 24 cellules `guide_cran6`, 21 non nulles ; le §0 du `09-`
+  en annonce « dix-neuf ». **Les trois comptes divergent déjà.**
+- **16 de ces 21 fiches ont des exercices en banque** ; 5 n'en ont aucun
+  (`introduction` et `conclusion` en `explication_texte_tc` et `interpretation_hlp`,
+  `partie` en `explication_texte_tc`).
+- ⛔ **Sur 2 des 16, le `04-` §14.2 FERME le guide du cran 6** — `reference` (§6) et `mot` (§10)
+  disent `fermé`. Une vidéo y dirait ce que la source a décidé de taire. **Reste 14.**
+- **La liste des problèmes ne tient pas dans une vidéo** : 206 problèmes, de 8 (`exemple`) à 33
+  (`paragraphe`, `partie`) par objet ; lus à 880 car./min, les 33 du `paragraphe` font **3 min 40
+  à eux seuls**, pour un cœur de fiche de 0 min 50. **La vidéo peut en porter deux, pas la liste.**
+- Le filtre honnête pour choisir ces deux : les entrées marquées `(banque)` — **55 sur 206 (26 %)**,
+  celles que la fabrique a réellement produites. ⚠️ `introduction` et `conclusion` en ont **ZÉRO**
+  alors que la banque sert 23 et 24 exercices dessus : leur liste de problèmes n'a jamais été
+  recroisée avec ce que la fabrique produit. **C'est un défaut du `09-`, indépendamment des vidéos.**
+- Un gabarit qui tient : accroche (contre-exemple, plafonné à 300 car.) · le démontage · ce que
+  c'est · les constituants **par leurs questions seules** · le joint · **deux** erreurs
+  (énoncé dit, exemple et correction MONTRÉS 8 s en silence) · l'exemplaire montré 8 s ·
+  deux questions du test · la phrase du cran 6 mot pour mot en dernière réplique.
+  Mesuré sur les 16 : **médiane 2 min 25, max 2 min 44, aucune au-dessus de 2 min 50**, 38 min en tout.
+
+**Les quatre objections à lever avant d'en tourner une seule.**
+1. ⛔ `09-Objets.md` est **`[à valider]`**, et son propre en-tête dit *« Aucun lot Code ne s'appuie
+   sur ce document avant son arrêt. »* Il est passé de v1.2 à v1.9 en cinq jours ; entre le 02 et
+   le 06/09, **9 des 21 tests ont été récrits (43 %)**. Une vidéo est un média gelé.
+2. ⭐⭐ **La dérive épargne exactement la ligne dont une vidéo aurait besoin** : les 19 phrases du
+   cran 6 n'ont **pas bougé d'un caractère** sur la même période, et sont identiques au fixture
+   déployé. C'est la seule zone à 0 % de dérive du document.
+3. ⛔ `verifie-vocabulaire.py` ne sait lire **que du texte**. Une piste audio lui est invisible —
+   et le jargon a déjà fui **deux fois**, trouvé à la main les deux fois (`garant` au guide du
+   cran 6 de `argument`, vu par Louis à l'écran le 24/08). Une fuite trouvée après la prise coûte
+   un re-tournage, pas un `sed`.
+4. ⛔ **Il n'y a aucune place pour une vidéo dans le produit** : `grep -rin video` sur tout le
+   dépôt rend **un seul résultat** (`video: false`, dans l'enregistreur audio). Et
+   `utils/deroule/etapes.ts` pose « une tâche par écran » — un écran de vidéo est un écran sans
+   tâche. La vidéo vit donc **hors du déroulé**, ou pas du tout.
+
+**Ce que dit la recherche, si on en tourne une.** La vidéo ne doit **jamais** être servie seule :
+une tâche de haut niveau sur un cas **nouveau**, immédiatement après, réduit l'illusion de
+compréhension (d = 0,69 ; Hörnlein & Kulgemeyer 2026 — les auteurs concluent explicitement contre
+l'usage isolé). ⛔⛔ Et le piège central : **le sentiment d'avoir compris est insensible à la
+justesse du contenu** (Kulgemeyer & Wittwer 2022, N = 149) ; la fluidité perçue achète à elle
+seule +0,51 SD de sentiment d'apprentissage (Deslauriers, PNAS 2019). **« Les élèves ont adoré »
+ne vaudra rien comme signal.** Le seul verdict valable est l'écart de réussite au cran suivant.
+
+**La forme minimale qui échappe à tout ça, si on veut du Calame parlé tout de suite** : pas une
+vidéo — **19 clips de 10-15 s, la phrase du cran 6 lue par Calame**, un bouton « écouter » à côté
+de la phrase déjà affichée. 397 mots en tout, ancrés sur la zone à 0 % de dérive, régénérables par
+un script qui compare les 19 chaînes au fixture déployé. Et ça arrive **au** cran 6, pas une
+semaine avant.
+
+**Le coût n'est pas où on le cherche** : les 16 vidéos coûtent **2,80 $ de synthèse vocale par
+passe complète** (ElevenLabs v3 à 0,10 $/1000 car., relevé 08/09/2026 ; Remotion est gratuit
+jusqu'à 3 personnes). Le coût réel est le dessin de Calame, et **les 38 minutes que Louis devra
+regarder à chaque re-passe**. ⛔ Corollaire : **ne pas générer l'image par IA** — aucun modèle ne
+mémorise une identité, donc corriger la vidéo 7 la désolidarise visuellement des quinze autres.
+Calame doit être **un fichier versionné**, et la vidéo se compiler par le code.
+
+*Scénario pilote écrit sur `argument` (98 exercices en banque, 8 problèmes marqués `(banque)` sur
+13 — le meilleur taux des treize) : 2 min 12 mesurées. Non tourné.*
+
+## 2026-09-07 — Le DELTA cas 1 / cas 2 d'une paire, et le découplage dans le temps
+
+**Décision du soir (Louis), déjà appliquée** : sur une paire de cran 4, c'est **le cas 2 qui
+marque la réussite** (`utils/registre/reussites.ts`, `issueDuDepot`) — la règle « toute paire :
+le second cas est réussi seul » était écrite en tête du fichier et le code faisait l'inverse.
+
+**Ce que Louis a noté dans le même souffle, et qui reste ouvert :**
+
+1. ⭐⭐ **Le delta cas 1 → cas 2 est intéressant à noter, et on le jette.** Aujourd'hui seule
+   l'issue du cas 2 survit ; le verdict du juge sur le cas 1 ne sert qu'au retour. Or l'écart
+   entre les deux dit quelque chose : l'élève sait-il nommer sans aide, ou seulement situer
+   quand on lui a nommé ?
+2. ⭐ **Le cas 1 est PLUS DUR que le cas 2** — « nommer sans aide » contre « situer un problème
+   qu'on vient de te dire ». L'ordre actuel fait donc passer le difficile d'abord et le facile
+   ensuite, ce qui n'est pas l'ordre d'une progression.
+3. **Et la seule raison de cet ordre est une contrainte de fuite** : « si je nomme dans la
+   consigne avant de demander le nom, je donne la réponse ». Le 4(b) dit le problème ; le poser
+   avant le 4(a) rendrait le 4(a) trivial.
+4. **Une piste, explicitement NON prise ce soir** : *découpler le cas 1 et le cas 2 dans le
+   temps* — les servir à deux moments différents, plutôt que dans le même exercice. Cela lèverait
+   la contrainte de fuite et rendrait le delta mesurable. « Let's not go there tonight. »
+
+⚠️ Rien de tout cela n'est décidé. La seule chose arrêtée est le point de départ : **pour le
+moment, c'est le cas 2 qui marque la réussite.**

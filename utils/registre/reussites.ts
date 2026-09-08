@@ -121,10 +121,33 @@ export function issueDuDepot(d: DepotPourLeRegistre): Issue | null {
       return dernier.reussi ? 'reussi' : 'rate'
     }
     case 4: {
-      if (d.variante === 'b') {
+      // ⭐⭐ 07/09/2026 — « TOUTE PAIRE : LE SECOND CAS EST RÉUSSI SEUL », la règle
+      //    écrite en tête de ce fichier, enfin appliquée. Le second cas d'une
+      //    paire de cran 4 est TOUJOURS un 4(b) (`varianteDuCas`), **quelle que
+      //    soit la variante de l'EXERCICE** : c'est donc la zone du DERNIER cas
+      //    qui score, sur un « a » comme sur un « b ».
+      // ⛔ Ce qu'on faisait avant : la garde lisait `d.variante === 'b'`, la
+      //    variante de l'exercice — laquelle décrit son PREMIER cas. Sur une
+      //    paire 4(a)/4(b) la branche ne s'exécutait donc jamais, la zone du cas
+      //    2 était calculée puis JETÉE, et la paire était scorée sur
+      //    l'échauffement. *L'écran, lui, montrait le cas 2 : les deux se sont
+      //    contredits sur un dépôt réel (`e7784465`, 07/09) — registre `rate`,
+      //    écran « Ta réponse est juste ». Décision de Louis le soir même.*
+      // ⛔⛔ MAIS SEULEMENT SUR LE GABARIT, et ce n'est pas un détail. L'ancienne
+      //    banque (variante NULLE) suit le `02-` §5 — « sélectionne PUIS dis ce
+      //    qui cloche » — où le texte compte autant que la zone, et c'est le
+      //    juge qui le lit. **Mesuré le 07/09 : 58 des 60 dépôts rendus de
+      //    l'ancienne banque portent une zone.** Retirer la garde sans la
+      //    remplacer les aurait tous rescorés sur la zone seule.
+      if (d.variante !== null) {
         const dernier = [...d.zones].sort((a, b) => a.cas - b.cas).at(-1)
-        if (!dernier || dernier.verdict === null) return null
-        return dernier.verdict === 'juste' ? 'reussi' : 'rate'
+        if (dernier && dernier.verdict !== null) {
+          return dernier.verdict === 'juste' ? 'reussi' : 'rate'
+        }
+        // ⭐ Pas de zone lisible : un dépôt d'AVANT le lot du 07/09, où rien
+        //    n'obligeait l'élève à surligner. On retombe sur le juge plutôt que
+        //    de rendre `null` — perdre une ligne de registre serait pire que la
+        //    scorer sur l'échauffement.
       }
       return issueDesVerdicts(d.verdicts)
     }
