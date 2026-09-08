@@ -151,3 +151,39 @@ Production remesurée : **106 dépôts de cran 5, 0 avec un cas à problème du 
 Le prompt réel de chaque cas est enregistré hors dépôt. Aucun appel IA : on vérifie le document assemblé qui lui serait envoyé. L’écran n’est pas modifié par ce lot. **TypeScript propre et 2577 tests réussis.** Aucun SQL.
 
 Le dépôt de recette a été supprimé et la porte sandbox restaurée à `true`, puis les deux états ont été relus. La lecture intermédiaire de 14:48:51 UTC avait vu `false` pendant l’épreuve ; elle ne décrivait pas l’état restauré. La production n’a pas été modifiée.
+
+## ⑥ — Mesure faite, arrêt avant création du décor et modification du harnais
+
+**0 exercice cran 2 · plan en sandbox ; 1 en production.** La prémisse du prompt est plus étroite que le problème réel : le seul exercice de production (`1b94f00a-352a-4499-85c9-c9a6b562ad3d`) porte `pieces: null`, `constituant: null`, `probleme: null`. Il appartient à l’ancienne banque et ne déclenche donc pas `PlanAOrdonner`. Aucun exercice de production modifié.
+
+Le format `08-FORMAT_IMPORT.md:203` exige au cran 2 une clé de problème « pièce absente », dont se dérive l’observable ; la ligne 204 définit l’exception du plan pour les pièces (trois thèses dans le désordre, aucun texte nul), mais ne désigne pas sa clé. La base sandbox porte **13 clés du plan**, dont **aucune `plan.ordre.absent`**. La tentative de préparation a été arrêtée par une assertion AVANT toute création d’exercice ou de dépôt ; aucun décor ⑥ n’a été créé.
+
+**Précision après lecture de la doctrine :** il existe bien une clé classée dans le mode « absent », `plan.ordre.liste` (`09-` §7, ligne 868), qui décrit l’absence de « mais » et de « donc ». `plan.ordre.inverse` (ligne 864) décrit les parties dans le mauvais sens. Il serait donc faux d’affirmer que le plan n’a aucune clé d’absence : ce qui n’est pas tranché est la clé du cran 2 « l’ordre, écrit », qui demande à la fois de déplacer les thèses et de les lier. Le script antérieur `scripts/recette/smoke-cran2.mjs:90` laisse `probleme: null`, en contradiction avec l’exigence du format.
+
+**Question pour Louis : quelle clé de problème rattacher au décor de cran 2 · plan ?** Utiliser une clé existante, en créer une, ou dispenser ce décor de clé engagerait la mesure faite pendant le parcours complet ; aucune de ces décisions n’a été prise ici. Arrêt conformément à la consigne de session « en cas de doute ou de décision non tranchée […] note la question et arrête-toi ».
+
+Le harnais n’a pas encore été modifié ni exécuté sur ce décor. **Le chantier ② n’a pas été entamé**, pour conserver l’ordre imposé ; aucune règle de gras ni doctrine de marquage modifiée. Les quatre correctifs ①, ③, ④, ⑤ sont dans des commits locaux ; aucun push ni déploiement.
+
+### ⑥ — Reprise après décision de Louis
+
+Louis approuve le rattachement du **seul décor neuf** à `plan.ordre.inverse` : l’ordre du raisonnement est visé, les liaisons rendent cet ordre compréhensible. Décision consignée dans `CONTEXTE.md` du dépôt de conception, sans commit de ce dépôt et sans changement de la règle générale d’import.
+
+Décor sandbox créé : trois phrases copiées d’un matériau réel du plan (`de001ed4-7ab5-4ef8-a5e9-caad74394f1e`), longueurs **139 / 167 / 141 caractères** dans l’ordre proposé à l’écran ; aucune pièce nulle, constituant « l’ordre, écrit ». La dernière thèse est posée en premier. Le plan attendu est assemblé par la vraie fonction `composerLePlan`, **459 caractères**. Cible professeur Structure, celle que porte la clé approuvée. Ce sont des données de recette composées à partir de la banque, pas la copie d’un élève réel.
+
+**Échec avant correction :** le harnais inchangé capture l’écran aux trois tailles, voit les flèches mais aucun champ de rédaction, puis s’arrête sur « rien à faire ». **Correction :** reconnaissance du composant par `data-plan`, déplacement vérifié des cartes, saisie et relecture des deux champs de liaison ; cette saisie est aussi reconnue en VF. Le harnais ne prétend pas résoudre n’importe quel plan : il effectue un ordre de recette déterministe, puis reformule les deux liaisons lors de la VF.
+
+Première tentative après correction interrompue par un délai réseau dépassé lors de la création du lien de connexion, avant interaction avec l’exercice ; relancée sur le même décor. Les captures de saisie après correction aux trois tailles ont été inspectées. Aucun code d’écran modifié.
+
+### Vérification de la fin du parcours, et limites observées
+
+V1 déplacée et enregistrée, confiance et conditions déclarées, remise V1, retour réel parcouru et marqué lu, VF écrite dans les champs du plan puis rendue. **V1 : 459 caractères, ordre [1,2,0], liaisons Mais / Donc. VF : 464 caractères, même ordre, liaisons Pourtant / Ainsi.** Les vraies fonctions `lireLePlan` et `composerLePlan` relisent les deux textes et vérifient ces valeurs exactement.
+
+La recette a exposé une seconde erreur du harnais : « Ce que tu as écrit », titre de la copie V1 encore visible pendant l’envoi VF, suffisait à déclarer un retour final. Une capture appelée à tort « retour-final-point-1 » montrait en fait **Envoi…**, sans retour final en base. Cette capture est conservée comme preuve d’échec et ne compte pas comme validation.
+
+La garde du harnais exige désormais que **Retour final soit l’étape active**. Elle attend sa publication, signale explicitement un rechargement si nécessaire, puis exige sa présence réelle à l’écran. Une recette reprise avec `vf_remis_at` ne renvoie pas la VF. L’absence de retour final à l’échéance produit une erreur, plus un succès apparent.
+
+Sur ce décor, Chrome avait été fermé trop tôt par l’ancienne garde ; le job VF était encore en attente, **zéro tentative**. Le vrai `traiterLaMesureEnFile`, limité à ce seul dépôt neuf, l’a achevé. Les jobs V1/VF ont abouti en **une tentative chacun**, respectivement **6 appels / 54 s** et **4 appels / 42 s**. Le juge a accepté V1 et refusé VF : le but de cette recette est de vérifier le parcours et la persistance des gestes, pas de forcer la réussite pédagogique d’une liaison choisie par le harnais. Aucun prompt du juge modifié.
+
+Le parcours a donc nécessité une reprise du traitement VF et un rechargement ; il ne faut pas le présenter comme un parcours automatique sans intervention. Le défaut de rafraîchissement de l’écran de révision est consigné à `IDEES_post_rentree.md`, hors du correctif du harnais. Les difficultés de connexion et les répétitions de l’étape confiance ont été enregistrées dans le journal hors dépôt ; la confiance a bien été écrite.
+
+Le dernier passage du harnais a atteint **le vrai retour final**, parcouru ses deux points et sa page de fin, avec captures inspectées à **1280 / 768 / 375**. Les 87 captures du parcours et des échecs sont conservées dans `/Users/louissagnieres/.codex/visualizations/2026/09/08/01a08117-dbdc-7863-a15e-592ec291de25/chantier-6/` ; les preuves finales valides portent le préfixe **plan-final**, les captures intermédiaires le préfixe plan-apres. Le décor a été supprimé et son absence vérifiée. **2577 tests réussis, TypeScript propre et syntaxe du harnais vérifiée.** Aucun changement de porte ni écriture en production.

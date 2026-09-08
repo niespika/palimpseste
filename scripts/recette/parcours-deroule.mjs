@@ -12,6 +12,7 @@
 //    le champ ») et RECONNAÎTRE l'écran d'attente, dont les mots ont changé le
 //    06/09. Sans ces deux-là, tout parcours de cran 2 ou 5 s'arrêtait au
 //    premier pas, et tout parcours s'arrêtait juste après la remise.
+// ⭐ Chantier ⑥ — les cartes du plan et leurs liaisons se jouent en V1 et en VF.
 // ⛔ Bac à sable seulement : la remise déclenche la chaîne (appels IA).
 // ⚠️ Un lien magique en annule un autre : deux parcours ne se jouent PAS en
 //    parallèle sur le même compte — en série, toujours.
@@ -118,13 +119,16 @@ async function lire() {
     const ta = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly).map((x) => ({ rows: x.rows, vide: x.value.trim() === '', trou: x.getAttribute('aria-label') === 'Écris ici' }))
     const ranges = [...document.querySelectorAll('input[type=range]')].filter((x) => x.offsetParent !== null).length
     const geste = /Ta thèse en une phrase/i.test(t) ? 'restitution' : /degré de confiance/i.test(t) ? 'confiance' : /Dans quelles conditions as-tu travaillé/i.test(t) ? 'conditions' : null
-    return { boutons, textareas: ta, ranges, geste,
+    const plan = [...document.querySelectorAll('[data-plan]')].some((p) =>
+      p.offsetParent !== null && p.querySelector('button[aria-label="Descendre cette partie"]'))
+    return { boutons, textareas: ta, ranges, geste, plan,
       enregistrer: boutons.includes('Enregistrer'),
       rendre: boutons.find((b) => /^Rendre/.test(b)) ?? null,
       suivant: boutons.find((b) => /^(Point suivant|Pour finir)/.test(b)) ?? null,
       lu: boutons.find((b) => /^J’ai lu mon retour/.test(b)) ?? null,
       reprendre: boutons.find((b) => /^Reprendre mon texte/.test(b)) ?? null,
       versionFinale: /version finale/i.test(t),
+      retourFinal: [...document.querySelectorAll('[aria-current=step]')].some((x) => /Retour final/i.test(x.textContent)),
       // ⭐⭐ 08/09 — « SE JUGER » EST UN MUR ENTRE LA REMISE ET LE RETOUR, et le
       //    harnais n'avait AUCUNE sonde pour lui. L'écran est EXCLUSIF (ni
       //    matière ni champ, voir plan-de-travail.ts) : après la remise il
@@ -179,6 +183,49 @@ async function tape(selecteurIndex, texte) {
   await cdp.envoie('Input.insertText', { text: texte })
   return true
 }
+/** Le décor place la dernière thèse en tête : la descendre, puis écrire les liens.
+ * En VF, l'ordre enregistré est conservé ; les deux mots sont reformulés.
+ * Ce sont des gestes de recette, pas une résolution pédagogique universelle. */
+async function ordonnerLePlan(revision = false) {
+  const theses = () => cdp.evalue(`(() => {
+    const p = [...document.querySelectorAll('[data-plan]')].find((x) => x.offsetParent !== null)
+    return p ? [...p.querySelectorAll('ol > li p > span')].map((x) => x.textContent.trim()) : []
+  })()`)
+  const avant = await theses()
+  if (avant.length < 2) throw new Error('Plan : moins de deux thèses visibles')
+  if (!revision) {
+    for (let i = 0; i < avant.length - 1; i++) {
+      const ok = await cdp.evalue(`(() => {
+        const p = [...document.querySelectorAll('[data-plan]')].find((x) => x.offsetParent !== null)
+        const b = p?.querySelectorAll('ol > li')[${i}]?.querySelector('button[aria-label="Descendre cette partie"]')
+        if (!b || b.disabled) return false
+        b.click(); return true
+      })()`)
+      if (!ok) throw new Error('Plan : déplacement refusé')
+      await dors(250)
+    }
+  }
+  const attendu = revision ? avant : [...avant.slice(1), avant[0]]
+  if (JSON.stringify(await theses()) !== JSON.stringify(attendu)) throw new Error('Plan : ordre inchangé ou incomplet après déplacement')
+  const mots = revision ? ['Pourtant', 'Ainsi'] : ['Mais', 'Donc']
+  for (let i = 0; i < avant.length - 1; i++) {
+    const ok = await cdp.evalue(`(() => {
+      const p = [...document.querySelectorAll('[data-plan]')].find((x) => x.offsetParent !== null)
+      const x = p?.querySelectorAll('input[aria-label="Le mot qui lie cette partie à la précédente"]')[${i}]
+      if (!x || x.readOnly) return false
+      x.scrollIntoView({ block: 'center' }); x.focus(); x.select(); return true
+    })()`)
+    if (!ok) throw new Error('Plan : champ de liaison introuvable')
+    const mot = mots[Math.min(i, mots.length - 1)]
+    await cdp.envoie('Input.insertText', { text: mot }); await dors(250)
+    const lu = await cdp.evalue(`(() => {
+      const p = [...document.querySelectorAll('[data-plan]')].find((x) => x.offsetParent !== null)
+      return p?.querySelectorAll('input')[${i}]?.value
+    })()`)
+    if (lu !== mot) throw new Error('Plan : liaison non saisie')
+  }
+  console.log(`  · plan ${revision ? 'VF' : 'V1'} : ${avant.length} thèses, ${avant.length - 1} liaisons vérifiées`)
+}
 /** Attendre qu'une lecture change de forme, ~14 s au plus. */
 async function attendQue(pred, fois = 20) { for (let k = 0; k < fois; k++) { await dors(700); const e = await lire(); if (pred(e)) return e } return lire() }
 /** Tourner les pages du retour et les capturer, jusqu'à « pour finir ». */
@@ -196,6 +243,27 @@ async function pagesDuRetour(prefixe) {
     await capture(fin ? `${prefixe}-fin` : `${prefixe}-point-${p}`)
     if (fin) break
   }
+}
+/** La copie V1 reste visible pendant l'envoi VF : elle ne prouve aucun retour final. */
+async function attendreLeRetourFinal() {
+  let recharge = false
+  for (let k = 0; k < 60; k++) {
+    const e = await lire()
+    if (e.retourFinal) { await pagesDuRetour('retour-final'); return }
+    if (e.echec) throw new Error('La préparation du retour final a échoué')
+    // Le retour peut être publié sans rafraîchissement de la page de révision.
+    // Un rechargement explicite, annoncé, puis l'écran doit en apporter la preuve.
+    const { data: final, error } = await admin.from('exercices_retours')
+      .select('published_at').eq('depot_id', DEPOT).eq('moment', 'final').maybeSingle()
+    if (error) throw new Error(error.message)
+    if (final?.published_at && !recharge) {
+      console.log('  · retour final publié : rechargement explicite de la page de recette')
+      await cdp.envoie('Page.reload', { ignoreCache: true }); recharge = true
+    }
+    await dors(5000)
+  }
+  await capture('vf-attente')
+  throw new Error('Retour final non atteint : le parcours est incomplet')
 }
 try {
   let t
@@ -223,13 +291,20 @@ try {
   await ch; await dors(2500)
   console.log(NOM, '→', await cdp.evalue('location.pathname'))
   let etat = await lire()
+  const { data: depotAuDepart, error: eDepot } = await admin.from('exercices_depots')
+    .select('vf_remis_at').eq('id', DEPOT).single()
+  if (eDepot) throw new Error(eDepot.message)
+  // Reprendre une recette après sa remise VF sans la soumettre une seconde fois.
+  const vfDejaRemise = !!depotAuDepart.vf_remis_at
+  if (vfDejaRemise) await attendreLeRetourFinal()
   let cas = 1
-  await capture(etat.retour ? 'retour-deja-la'
+  if (!vfDejaRemise) await capture(etat.retour ? 'retour-deja-la'
     : etat.preparation ? 'attente-deja-la'
     : etat.surlignable ? 'cas1-a-surligner'
     : etat.ranges >= 4 ? 'cas1-repondre'
+    : etat.plan ? 'cas1-plan'
     : etat.textareas.some((x) => x.trou) ? 'cas1-trou' : 'cas1-ecrire', { lire: etat.surlignable })
-  for (let pas = 0; pas < MAX; pas++) {
+  for (let pas = 0; !vfDejaRemise && pas < MAX; pas++) {
     etat = await lire()
     if (etat.pasEncoreOuvert) { console.log('  porte fermée'); break }
     if (etat.echec) { await capture('retour-echec-definitif'); console.log('  ⛔ échec DÉFINITIF du retour'); break }
@@ -258,7 +333,8 @@ try {
       //    champ de la version finale est là et le bouton « Reprendre » n'y est
       //    plus : chercher le bouton d'abord faisait sortir le parcours sur un
       //    écran qui offrait exactement ce qu'il cherchait. On regarde le CHAMP.
-      if (!(await lire()).textareas.some((x) => x.rows >= 9 || x.trou)) {
+      const reprise = await lire()
+      if (!reprise.plan && !reprise.textareas.some((x) => x.rows >= 9 || x.trou)) {
         const e2 = await attendQue((x) => !!x.reprendre, 30)
         if (!e2.reprendre) {
           console.log('  ⛔ version finale due, mais « Reprendre mon texte » ne vient pas')
@@ -277,14 +353,19 @@ try {
       //    un parcours complet alors que `texte_vf` n'avait jamais été posé.
       //    ⚠️ Le cran 2 est en régime `plein` (vf TOUJOURS) : 40 exercices de
       //    production passent par là.
-      const champsVf = (await lire()).textareas
-      const i = champsVf.findIndex((x) => x.rows >= 9 || x.trou)
-      if (i < 0) {
-        console.log('  ⛔ version finale : aucun champ (ni grand, ni fente) — on ne prétend pas')
-        await capture('vf-sans-champ'); break
+      const ecritureVf = await lire()
+      if (ecritureVf.plan) {
+        await ordonnerLePlan(true)
+      } else {
+        const champsVf = ecritureVf.textareas
+        const i = champsVf.findIndex((x) => x.rows >= 9 || x.trou)
+        if (i < 0) {
+          console.log('  ⛔ version finale : aucun champ (ni grand, ni fente) — on ne prétend pas')
+          await capture('vf-sans-champ'); break
+        }
+        await cdp.evalue(`(() => { const x = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly)[${i}]; x.focus(); x.select(); return true })()`)
+        await cdp.envoie('Input.insertText', { text: champsVf[i].trou ? TEXTES.trou : TEXTES.vf })
       }
-      await cdp.evalue(`(() => { const x = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly)[${i}]; x.focus(); x.select(); return true })()`)
-      await cdp.envoie('Input.insertText', { text: champsVf[i].trou ? TEXTES.trou : TEXTES.vf })
       await dors(300)
       await capture('vf-ecrit')
       if (!(await clique('Enregistrer'))) { await capture('vf-non-enregistre'); break }
@@ -298,9 +379,7 @@ try {
       const r = e3.rendre
       if (!r) { console.log('  ⛔ version finale écrite, mais rien à cliquer pour la rendre'); await capture('vf-sans-rendre'); break }
       await clique(r); await attendQue((x) => x.preparation || x.retour, 60); await capture('vf-rendue')
-      let fini = false
-      for (let k = 0; k < 40 && !fini; k++) { await dors(5000); const e3 = await lire(); if (e3.retour && !e3.preparation) fini = true }
-      if (fini) await pagesDuRetour('retour-final'); else await capture('vf-attente')
+      await attendreLeRetourFinal()
       break
     }
     // ⭐⭐ « SE JUGER » — une question par groupe de boutons `role=radio`, puis
@@ -363,6 +442,16 @@ try {
       await posePlage(1, 100); await dors(300); await clique('Enregistrer ma réponse')
       await attendQue((e2) => e2.ranges === 0 || e2.retour)
       await capture(cas === 1 && (await lire()).boutons.some((b) => b.startsWith('Passer au second cas')) ? 'correction-du-premier-cas' : `cas${cas}-repondu`); continue
+    }
+    // Le plan n'a aucun textarea : ses cartes et ses deux champs sont une saisie entière.
+    if (etat.plan) {
+      await ordonnerLePlan()
+      await capture(`cas${cas}-plan-ecrit`)
+      if (!(await clique('Enregistrer'))) throw new Error('Plan : enregistrement indisponible')
+      const suite = await attendQue((e) => !e.plan)
+      if (suite.plan) throw new Error('Plan : la page ne quitte pas la saisie après enregistrement')
+      await capture(`cas${cas}-plan-enregistre`)
+      continue
     }
     // ⭐⭐ 08/09/2026 — LA FENTE DU FIL, et c'est pour elle que le smoke du rejeu
     //    a échoué deux fois. Aux crans 2 et 5, « le trou est le champ » : le

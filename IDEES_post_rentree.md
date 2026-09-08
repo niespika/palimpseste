@@ -1450,3 +1450,4 @@ moment, c'est le cas 2 qui marque la réussite.**
 
 - 08/09/2026, six chantiers ③ : l’ancienne banque de cran 5 porte aussi deux divergences de marquage (`ex-transition-composer-05-jointure-presente-1`, `ex-transition-composer-05-charniere-formule-1`) : 17 dépôts de production, dont 10 remis. Exclus du correctif borné au gabarit ; aucun rattrapage. Mesure détaillée au relevé de session.
 - 08/09/2026 — Recette chantier ④ : écran élève de retour final, largeur demandée 375 mais largeur de mise en page 404 avant comme après correction ; vérifier le débordement mobile hors du lot verdict VF (captures dans le relevé des six chantiers).
+- 08/09/2026 — Chantier ⑥, décor plan : après VF remise et retour final publié, une page déjà ouverte reste en « Réviser » sans sondage du retour final ; le rechargement montre le retour. Le harnais attend la publication puis annonce un rechargement de recette ; le rafraîchissement automatique de l’écran élève reste hors périmètre.
