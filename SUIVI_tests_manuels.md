@@ -9217,3 +9217,58 @@ le veut.
 - [x] **C10L2-31 — la pose hebdomadaire du soir n'a oublié personne : les 13 élèves dont la passation venait d'être close ont TOUS été servis sur le cycle courant (13/13, 0 oublié).** ⚠️ **Honnêteté sur ce que cela prouve, et sur ce que cela ne prouve pas** : la régression `dejaServi` réparée par ce lot n'a **pas** été exercée ce soir — les lignes d'override sont sur `2026-08-24` et la pose portait sur `2026-09-07`, deux cycles différents. Elle aurait mordu si la passation close avait été **de la semaine en cours**. Le contrôle ci-dessus dit que rien n'a cassé ; c'est la couture (⑥) qui prouve la réparation, dans les deux sens.
 - [ ] **C10L2-x6 — UN PASSAGE UNIQUE DE `smoke-c10l2.mjs`, VERT DE BOUT EN BOUT — reste décoché, et la cause est enfin PRÉCISE.** ⭐ **Le chemin PROFESSEUR de Codex passe désormais en entier, en un seul run** *(19 contrôles, 0 échec, 07/09 soir)* : le bouton avec son compte, la clôture placée avant « 2 · Déclencher », **le clic réel qui ouvre la confirmation**, la phrase « un **constat**, pas une absolution », le brouillon nommé à part, les six noms en clair, la soumission, **`{v1_remis: 1, abandonne: 6}` en base**, et l'écran d'après — le tout aux trois largeurs, 0 débordement. ⛔ **Il s'arrête à la PREMIÈRE COMPILATION de la route prof d'Aletheia** : `next dev` compile une route à sa première visite, et sur un serveur **partagé avec une autre séance** cela dépasse la borne de 90 s. *(Cette branche-là a été vue verte dans des passages antérieurs, prof et élève ; ce qui manque est de tout tenir dans le MÊME run.)* ⭐ **Le script n'est plus en cause** : cinq défauts de harnais ont été trouvés et corrigés — la renavigation vers la même url à chaque largeur *(le coût principal)*, la renavigation du bloc de confirmation, les bornes en tours de boucle au lieu du temps, l'absence d'échéance sur les appels CDP, et l'attente d'hydratation muette. *Condition de reprise : rejouer sur un serveur de développement NON PARTAGÉ — ou visiter une fois chaque route pour la faire compiler avant de lancer le smoke.*
 - [ ] **C10L2-x5 — UN DÉPÔT `abandonne` RESTE RETIRABLE par deux chemins prof, et emporté par un retrait de pool.** `app/prof/routeur/actions.ts` et `utils/signalements/serveur.ts` ne refusent que `clos` ; `emportesParLeRetraitDuPool` n'exclut pas `abandonne` **délibérément** (son commentaire le dit). ⭐ **Assumé, et motivé au relevé §5.7** : le `07-` §1.1 dit « le retrait reste permis tant que le dépôt n'est pas `clos` ». *Condition de reprise : une décision de Louis, s'il veut fermer cette porte.*
+
+## C9 — Le rejeu du retour refusé, branché sur la voie de l'élève (séance du 08/09/2026, matin)
+
+> **Prouvé par exécution, deux fois, en bac à sable** — `juge_mesure_actif = false`, qui reproduit
+> la condition des dépôts de production restés muets. Harnais : `scripts/recette/parcours-deroule.mjs
+> <depotId> <nom> <dossier> --faible`, plus un tour de `/api/chaine` joué à la main pendant que
+> l'élève attend devant son écran, comme le fait le cron de la minute.
+> ⚠️ Les deux échecs de smoke de la veille venaient du HARNAIS, jamais du code — voir `C9-6` et `C9-7`.
+
+- [x] **C9-1 — LA REMISE DE L'ÉLÈVE CRÉE LE JOB `retour_v1`.** Deux dépôts de cran 5, 11:06:35 et
+  11:12:57, **à la seconde où `mesure_v1` s'est close** — et rien d'autre ne tourne en local, donc
+  aucun autre appelant possible. ⭐ C'est exactement ce qui manquait : `programmerLeRejeuDuRetour`
+  n'avait que `tourDeFile` (le cron) pour appelant. *Mesuré en production le 07/09 : 9 rejeux sur 9
+  par le cron, **0 sur 31 par la remise**.*
+- [x] **C9-2 — le motif du refus est de FORME, et il s'écrit en clair** : « rejeu automatique —
+  retour refusé : **règle 2 : le retour commence par une réussite réelle, citée** ». Sur une copie
+  sans rien à citer (`--faible`, 28 signes), le refus est déterministe : c'est ce qui rend ce mode
+  utilisable comme décor.
+- [x] **C9-3 — LE FILET DES TROIS TENTATIVES TIRE — pour la première fois sur un exercice de
+  maison.** `/api/chaine` rend `{"reclames":3,"traites":3,"arret":"file vide"}` en UNE invocation :
+  deux refus, puis `tolererLaForme` à la 3e prise et **retour écrit** (`tentatives 3/3`, `abouti`,
+  `published_at` posé). ⭐ La route réclame bien `retour_v1` — l'étape vient de `ETAPES_DE_MESURE`
+  et ne se recopie plus (`C4L11-F`).
+- [x] **C9-4 — L'ÉCRAN DE L'ÉLÈVE SE REMPLIT TOUT SEUL**, sans rechargement : `rendu` → « Ton retour
+  est en construction » → `retour-point-1`, capturé aux trois largeurs. C'est le sondage du client
+  plus `router.refresh()`, éprouvé et non déduit. *(La photo 5 du 07/09 — « le retour est tjrs
+  indiqué comme en préparation » — n'a plus de cas.)*
+- [x] **C9-5 — le verdict atteint le cran 5** : l'écran dit « **Ta réponse n'est pas la bonne.** »
+  au-dessus de la copie citée, et le point de travail est réel. *(Lot du 07/09 au soir, vérifié ici
+  sur un autre cran que ceux où il avait été construit.)*
+- [x] **C9-6 — ⭐⭐ LA FENTE DU FIL : les crans 2 et 5 n'avaient JAMAIS été parcourus de bout en
+  bout.** « Le trou est le champ » — le devoir s'y rend dans un `<textarea rows=1>` posé au milieu du
+  texte (`ChampDeRedaction`, mode `enTrou`). Le harnais ne savait écrire que dans le grand champ
+  (`rows >= 9`) : il lisait l'écran, ne trouvait rien à faire, et s'arrêtait **au premier pas**,
+  dépôt laissé `ouvert`. ⚠️ La fente se reconnaît à son `aria-label`, **pas** à son placeholder :
+  `PlanAOrdonner` porte le même « Écris ici » sur un `<input>` d'un tout autre écran.
+- [x] **C9-7 — ⭐⭐ L'ÉCRAN D'ATTENTE A CHANGÉ DE MOTS LE 06/09, ET LA SONDE NE L'A PAS SUIVI.** Elle
+  cherchait « retour est en préparation » ; l'écran dit « Ton retour est en construction / Ta copie
+  est partie à la lecture ». **Le parcours ne voyait donc plus l'attente sur AUCUN cran** — il
+  tombait dans « rien à faire » juste après la remise. *Le motif de `C4L11-F` encore une fois : une
+  copie privée d'une chaîne de caractères survit à l'évolution de sa source, en silence.*
+
+### Reste à faire — décoché, avec sa condition de reprise
+
+- [ ] **C9-x1 — ⛔⛔ « ET LE PROFESSEUR RELIT » N'A AUCUN DOMICILE POUR LA RÈGLE 2 ET LA RÈGLE 5.**
+  La décision de Louis du 27/08 a deux moitiés : « au bout de trois tentatives on sert le retour, **et
+  le professeur relit** ». La seconde ne se pose nulle part. `chaine.ts` pousse bien l'alerte
+  « ⚠️ RETOUR SERVI SANS QUE LE CONTRAT DE FORME SOIT TENU — À RELIRE », mais `resumeBilan` ne
+  consulte `motifDuRetourManquant` **que si le retour n'est PAS écrit** : servi, l'alerte disparaît du
+  seul champ persisté. **Mesuré en production le 08/09** : 7 jobs `retour_v1` servis à la 3e
+  tentative, **7 retours sur 7 sans aucune réussite** (premier point `point_de_travail` dans les
+  sept), **6 sur 7 déjà LUS par l'élève**, et **0 message de job portant « CONTRAT DE FORME »**.
+  ⚠️ Le filet `citation_composee` du panneau d'attention n'attrape que les refus **RR3** : la règle 2
+  et la règle 5 passent au travers. *Condition de reprise : une décision de Louis — la réparation
+  tient en une ligne de `resumeBilan`, mais elle rouvre la question de ce que le professeur doit voir.*
