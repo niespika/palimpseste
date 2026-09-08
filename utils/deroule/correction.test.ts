@@ -12,7 +12,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi, verdictDeLaVersion, precisionDeLaZone} from './correction'
+  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi, verdictDeLaVersion, verdictDeLaCopie, precisionDeLaZone} from './correction'
 
 // La banque telle que l'IMPORT l'écrit : des objets `{texte, pourquoi_faux}`.
 const BANQUE = [
@@ -338,4 +338,21 @@ test('⭐ le verdict binaire suit le REGISTRE : seul « juste » réussit', () =
   for (const v of ['mal_bornee', 'a_voir', 'probablement_faux']) {
     assert.notEqual(precisionDeLaZone(v), null, v)
   }
+})
+
+test('retour final : le verdict suit la VF affichée, même si V1 était ratée', () => {
+  const copie = { estUnePaire: false, ordre: 1, retourFinal: true, texteVf: 'Texte corrigé' }
+  const verdicts = { v1: { reussi: false }, vf: { reussi: true } }
+  assert.equal(verdictDeLaCopie(verdicts, copie, false), true)
+  assert.equal(verdictDeLaCopie(verdicts, { ...copie, retourFinal: false }, null), false)
+  assert.equal(verdictDeLaCopie(verdicts, { ...copie, texteVf: null }, null), false)
+  assert.equal(verdictDeLaCopie({ v1: { reussi: false } }, copie, false), null)
+})
+
+test('paire : chaque cas garde son verdict et son recours à la porte de zone', () => {
+  const copie = { estUnePaire: true, ordre: 1, retourFinal: true, texteVf: 'Second cas' }
+  const verdicts = { v1: { reussi: false }, vf: { reussi: true } }
+  assert.equal(verdictDeLaCopie(verdicts, copie, true), false)
+  assert.equal(verdictDeLaCopie(verdicts, { ...copie, ordre: 2 }, false), true)
+  assert.equal(verdictDeLaCopie({}, { ...copie, ordre: 2 }, true), true)
 })

@@ -309,6 +309,19 @@ export function verdictDeLaVersion(verdicts: unknown, version: 'v1' | 'vf'): boo
   return typeof r === 'boolean' ? r : null
 }
 
+/** Le verdict suit la copie affichée ; une VF sans verdict ne reprend pas celui de V1. */
+export function verdictDeLaCopie(
+  verdicts: unknown,
+  copie: { estUnePaire: boolean; ordre: number; retourFinal: boolean; texteVf: string | null },
+  verdictDeZone: boolean | null,
+): boolean | null {
+  const vf = copie.estUnePaire
+    ? copie.ordre === 2
+    : copie.retourFinal && copie.texteVf !== null
+  return verdictDeLaVersion(verdicts, vf ? 'vf' : 'v1')
+    ?? (vf && !copie.estUnePaire ? null : verdictDeZone)
+}
+
 
 /**
  * ⭐⭐ CE QUE LA ZONE A MANQUÉ — dit à l'élève, quand ce n'est pas « juste ».

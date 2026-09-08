@@ -118,3 +118,15 @@ Sur deux dépôts temporaires de sandbox, `chargerLeDeroule`, `lireContexte`, `e
 - `ex-gab-argument-garant-vague-d2-c5` : trou présent, mêmes morceaux avant/après côté écran et juge, passage du juge identique au gras, bloc de devoir réassemblé présent.
 
 Les deux dépôts ont été supprimés après l’épreuve ; leur absence a été vérifiée. Le rendu de l’écran lui-même n’est pas modifié par le chantier ③. Les différences sont celles du document donné au juge.
+
+## ④ — Le verdict au-dessus de la VF
+
+Production remesurée : **11 dépôts de cran 2, 106 de cran 5, 92 de cran 7**. Pour chacun de ces crans : **0** date de remise VF, **0** texte VF non nul, **0** verdict VF, **0** paire. Aucune donnée historique reprise.
+
+Épreuve avant code sur localhost : exercice réel de cran 2 du bac à sable `0710c408-4677-4298-8815-335c80e991a7`, cloné dans un décor temporaire. V1 de **188 caractères** reprise d’une pièce du matériau ; VF de **143 caractères**, la réponse attendue de cet exercice. Verdicts de recette explicitement fabriqués : V1 fausse, VF vraie. Le retour publié est emprunté à un autre retour réel de sandbox : il sert à ouvrir l’écran final, sans prétendre être l’évaluation de cette copie. Aucun appel IA. Le scénario est contrôlé, ce n’est pas un dépôt réel d’élève.
+
+**Avant :** `chargerLeDeroule` rend `retour_final`, `verdictParCas: [false]` ; l’écran affiche la VF et « Ta réponse n’est pas la bonne ». **Après :** la même copie affiche « Ta réponse est juste ». Captures avant/après aux trois largeurs 1280 / 768 / 375, inspectées, dans `/Users/louissagnieres/.codex/visualizations/2026/09/08/01a08117-dbdc-7863-a15e-592ec291de25/chantier-4/`. À 375, la largeur de mise en page mesurée est **404** avant comme après : débordement préexistant, consigné hors périmètre ; le verdict et la VF restent lisibles.
+
+`verdictDeLaCopie` suit la version effectivement affichée : VF au retour final si son texte existe, V1 si l’écran se replie sur elle. Les deux cas d’une paire gardent leur version et leur recours au verdict de zone. Une VF seule sans verdict n’hérite pas d’un verdict V1. Deux tests de régression couvrent ces branches. **TypeScript propre, 2577 tests réussis.** Aucune migration, aucun changement de porte.
+
+Après correction, le chargeur complet rend bien `verdictParCas: [true]`. Le décor a été supprimé et son absence vérifiée.

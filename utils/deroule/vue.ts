@@ -41,7 +41,7 @@ import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, restitutio
 import { rappelDuTemps1, momentDeLaDemonstration, type Rappel } from './rappel'
 import { offreDeCredence, credenceDonneeDe, CRANS_GUIDES, type OffreCredence } from './credence'
 import { composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi,
-  verdictDeLaVersion, precisionDeLaZone, type CorrectionServie } from './correction'
+  verdictDeLaCopie, precisionDeLaZone, type CorrectionServie } from './correction'
 import { phaseServie, candidates, offreSeJugerMaison, verdictDeCalibration,
   type CouvertureTestee, type LigneDeVerdict, type OffreSeJuger } from './juger'
 import { choisirLaDemonstration, lireLeContenu,
@@ -1073,6 +1073,8 @@ export async function chargerLeDeroule(
     cyclesComptes: cycles,
   })
 
+  const tempsCourant = tempsCourantDe(depot, regime, retours,
+    seJuger.servie && (seJuger.offre?.questions.length ?? 0) > 0)
   const vue: VueDuDeroule = {
     depotId, ouvert: a.ouvert, fermee,
     // ⚠️ La MÊME fonction que la liste de l'accueil (`utils/codex-onglets/regles`) :
@@ -1089,8 +1091,7 @@ export async function chargerLeDeroule(
     //    (`juger_fin_at` jamais posé) — et la révision ne s'ouvrait JAMAIS :
     //    « Reprendre mon texte » n'apparaissait pas, la version finale était
     //    perdue. La même règle des deux côtés.
-    tempsCourant: tempsCourantDe(depot, regime, retours,
-      seJuger.servie && (seJuger.offre?.questions.length ?? 0) > 0),
+    tempsCourant,
     // ⭐ Le CODE, résolu depuis le numéro par `lireContexte` — jamais la colonne
     //    brute, qui portait tantôt le code tantôt le numéro (C4-L11).
     grain: ctx.grain, cranCode: ctx.cranCode, geste,
@@ -1099,8 +1100,9 @@ export async function chargerLeDeroule(
     //    le juge ne tourne pas (`chaine.ts`, « le verdict est la porte de zone »),
     //    et ailleurs il n'y a pas de zone à comparer.
     verdictParCas: depot.v1_remis_at
-      ? cas.map((c, i) => verdictDeLaVersion(
-        depot.verdicts_cran, estUnePaire && c.ordre === 2 ? 'vf' : 'v1') ?? verdictsDeZone[i] ?? null)
+      ? cas.map((c, i) => verdictDeLaCopie(depot.verdicts_cran,
+        { estUnePaire, ordre: c.ordre, retourFinal: tempsCourant === 'retour_final',
+          texteVf: depot.texte_vf }, verdictsDeZone[i] ?? null))
       : cas.map(() => null),
     precisionParCas: depot.v1_remis_at ? precisionsDeZone : cas.map(() => null),
     passageParCas: passagesAttendus,
