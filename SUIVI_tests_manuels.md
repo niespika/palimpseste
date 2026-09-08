@@ -9259,6 +9259,25 @@ le veut.
   tombait dans « rien à faire » juste après la remise. *Le motif de `C4L11-F` encore une fois : une
   copie privée d'une chaîne de caractères survit à l'évolution de sa source, en silence.*
 
+- [x] **C9-8 — ⛔⛔ « SE JUGER » ÉTAIT UN MUR ENTRE LA REMISE ET LE RETOUR, et le harnais n'avait AUCUNE sonde pour lui.** Après la remise, cet écran est **exclusif** — « ni matière, ni champ » (`plan-de-travail.ts`) : il remplace tout tant que `juger_fin_at` n'est pas posé, et il ne porte aucune des chaînes que `lire()` cherchait. Le parcours attendait donc **42 s** un retour qui ne pouvait pas venir, capturait `rendu` sur un écran qui dit « Avant de voir ton retour », puis sortait en **code 0**. **Mesuré : 33 exercices de production le servent, et 59 dépôts portent déjà `juger_fin_at`** — l'écran est vivant chez les élèves. ⭐ Sonde + branche posées : le parcours répond à chaque groupe `role=radio` et envoie.
+- [x] **C9-9 — ⛔⛔ LA VERSION FINALE DES CRANS 2 ET 5 EST DANS LE TROU, ELLE AUSSI.** La réparation du matin n'avait appris la fente qu'à la V1 ; le chemin de la vf cherchait encore le grand champ (`rows >= 9`). Or `EcranDeroule` sert la vf avec `forme={cas[0].pieces ? 'trou' : 'page'}` et `ChampDeRedaction` fait `rows={enTrou ? 1 : rows}` — le `rows={14}` est écrasé, `findIndex` rend −1, et le parcours sortait par un **`break` MUET, code 0, dossier de captures plein** : il se lisait comme un parcours complet alors que `texte_vf` n'avait jamais été posé. ⚠️ Le cran 2 est en régime `plein` (vf TOUJOURS) : **40 exercices de production** passent par là.
+- [x] **C9-10 — ⛔ UN GESTE MANQUÉ SE VOIT MAINTENANT, et il a mordu au PREMIER essai.** `clique()` et `tape()` rendaient `false` en silence, et **aucun des dix-sept appels ne lisait leur retour**. Le coût n'était pas l'échec, c'était la CAPTURE : un `tape` raté produisait trois PNG d'un champ vide nommés « …-ecrit », versés au registre comme preuve ; un « Enregistrer » raté relançait la même branche jusqu'à quarante tours sans un log. ⭐ Éprouvé sans le chercher : au premier run de cran 2, `⛔ geste manqué : bouton « Continuer » introuvable ou inactif` — un clic perdu sur la page de crédence, **transitoire** (la boucle s'est rattrapée au tour suivant), et jusqu'ici parfaitement invisible.
+- [x] **C9-11 — l'écran de la SEMAINE FERMÉE est nommé** (`Semaine terminée`, C10-L1 par dérivation ou C10-L2 par le bouton du professeur) : c'est un état légitime, pas une panne, et le parcours le dit au lieu de tomber dans « rien à faire ».
+- [x] **C9-12 — ⚠️ L'ENREGISTREMENT EST ASYNCHRONE, et le harnais comptait les millisecondes.** Après « Enregistrer », le bouton dit « Enregistrement… » et « Rendre ta version finale » n'existe pas encore : un `dors(600)` fixe le manquait, et le parcours concluait « rien à cliquer pour la rendre » **sur un écran parfaitement sain** (capture à l'appui). Il ATTEND l'offre maintenant.
+- [x] **C9-13 — le parcours sait REPRENDRE un dépôt en cours de route.** Il exigeait le bouton « J'ai lu mon retour » et sortait sans lui : sur tout dépôt dont la lecture était déjà validée — le cas de toute reprise de recette —, il ne pouvait donc **jamais** atteindre la version finale.
+
+> ⛔⛔ **AMENDEMENT DU 08/09, APRÈS-MIDI — TROIS AFFIRMATIONS CI-DESSUS ÉTAIENT TROP LARGES, et une
+> passe adversariale les a reprises.** `C9-6` disait « les crans 2 et 5 n'avaient jamais été
+> parcourus de bout en bout », ce qui laissait entendre qu'ils l'étaient désormais : **seule la V1
+> l'était**, la version finale sortait par un `break` muet. `C9-4` (« l'écran se remplit tout
+> seul ») est vrai, mais a été **prouvé sur le cran 5, le seul qui ne sert jamais « Se juger »** —
+> la famille où le mur n'existe pas. Et le run était vert : **code 0 sur un parcours arrêté à
+> mi-chemin, dossier de captures plein.** ⭐ *Le motif de `C9-7` retourné contre ma propre preuve :
+> une chaîne recopiée survit à sa source, en silence — y compris quand la chaîne est un raisonnement.*
+> ⭐⭐ **Le parcours complet est maintenant joué, en une fois, sur un cran 2** : trou de la V1 →
+> crédence → gestes → remise → retour (3 pages) → reprise → **version finale DANS LE TROU** →
+> rendue → retour final. Mesuré en base : `statut = vf_remis`, `texte_vf` posé (89 signes).
+
 ### Reste à faire — décoché, avec sa condition de reprise
 
 - [ ] **C9-x1 — ⛔⛔ « ET LE PROFESSEUR RELIT » N'A AUCUN DOMICILE POUR LA RÈGLE 2 ET LA RÈGLE 5.**

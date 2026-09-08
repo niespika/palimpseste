@@ -125,6 +125,18 @@ async function lire() {
       lu: boutons.find((b) => /^J’ai lu mon retour/.test(b)) ?? null,
       reprendre: boutons.find((b) => /^Reprendre mon texte/.test(b)) ?? null,
       versionFinale: /version finale/i.test(t),
+      // ⭐⭐ 08/09 — « SE JUGER » EST UN MUR ENTRE LA REMISE ET LE RETOUR, et le
+      //    harnais n'avait AUCUNE sonde pour lui. L'écran est EXCLUSIF (ni
+      //    matière ni champ, voir plan-de-travail.ts) : après la remise il
+      //    remplace tout tant que juger_fin_at n'est pas posé. Il ne porte
+      //    aucune des autres chaînes — pas de textarea, pas de curseur, pas de
+      //    bouton « rendre », pas d'attente. Le parcours attendait donc 42 s un
+      //    retour qui ne pouvait pas venir, capturait « rendu » sur un écran qui
+      //    dit « Avant de voir ton retour », puis sortait en CODE 0.
+      // ⚠️ 33 exercices de production le servent, et 59 dépôts portent déjà
+      //    juger_fin_at : l'écran est vivant chez les élèves.
+      // ⛔ Aucun accent grave ici : ce commentaire vit DANS un gabarit.
+      seJuger: /Avant de voir ton retour/i.test(t),
       // ⭐⭐ 08/09 — L'ÉCRAN D'ATTENTE A CHANGÉ DE MOTS LE 06/09 (Louis : « il faut
       //    prévoir un écran ton retour est en construction ») et la sonde ne l'a
       //    pas suivi : elle cherchait « retour est en préparation », qui ne
@@ -138,15 +150,32 @@ async function lire() {
       // ⚠️ Pas /Ton retour/ : la page de remise dit « ton retour se préparera ». Les titres des écrans de retour, eux, sont sûrs.
       retour: /Ce qui a bougé|Retour à mes exercices|Ce que tu as écrit|point \d+ sur \d+|pour finir/i.test(t) && !/retour est en préparation|retour est en construction/i.test(t),
       fini: /Cet exercice est terminé|Cet exercice ne compte pas/i.test(t),
+      // ⭐ 08/09 — L'ÉCRAN DE LA SEMAINE FERMÉE (C10-L1 par dérivation, C10-L2 par
+      //    le bouton du professeur) n'était reconnu par AUCUNE sonde : le
+      //    parcours tombait dans « rien à faire » et s'arrêtait sans le dire.
+      //    C'est un état LÉGITIME, pas une panne — il faut le nommer.
+      semaineFermee: /Semaine terminée/i.test(t),
       surlignable: !!document.querySelector('p.cursor-text'), rienSurligne: /rien de surligné pour l’instant/i.test(t),
       pasEncoreOuvert: /pas encore ouvert/i.test(t), texte: t.slice(0, 200) }
   })()`)
 }
-const clique = (texte) => cdp.evalue(`(() => { const b = [...document.querySelectorAll('button')].find((x) => !x.disabled && x.offsetParent !== null && x.textContent.trim().startsWith(${JSON.stringify(texte)})); if (!b) return false; b.scrollIntoView({ block: 'center' }); b.click(); return true })()`)
+/**
+ * ⭐⭐ 08/09 — UN GESTE MANQUÉ SE DIT. Ces deux fonctions rendaient `false` en
+ *    silence, et AUCUN des dix-sept appels ne lisait leur retour. Le coût n'est
+ *    pas l'échec : c'est la CAPTURE. Un `tape` raté produisait trois PNG d'un
+ *    champ vide nommés « …-ecrit », versés au registre comme preuve ; un
+ *    `clique('Enregistrer')` raté relançait la même branche jusqu'à quarante
+ *    tours sans un log. ⛔ Une capture qui ment coûte plus cher qu'un échec.
+ */
+const dire = (ok, quoi) => { if (!ok) console.log(`  ⛔ geste manqué : ${quoi}`); return ok }
+
+const cliqueBrut = (texte) => cdp.evalue(`(() => { const b = [...document.querySelectorAll('button')].find((x) => !x.disabled && x.offsetParent !== null && x.textContent.trim().startsWith(${JSON.stringify(texte)})); if (!b) return false; b.scrollIntoView({ block: 'center' }); b.click(); return true })()`)
 const posePlage = (i, v) => cdp.evalue(`(() => { const r = [...document.querySelectorAll('input[type=range]')].filter((x) => x.offsetParent !== null)[${i}]; if (!r) return false; const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; s.call(r, '${v}'); r.dispatchEvent(new Event('input', { bubbles: true })); return true })()`)
+const clique = async (texte) => dire(await cliqueBrut(texte), `bouton « ${texte} » introuvable ou inactif`)
+
 async function tape(selecteurIndex, texte) {
   const ok = await cdp.evalue(`(() => { const x = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly)[${selecteurIndex}]; if (!x) return false; x.scrollIntoView({ block: 'center' }); x.focus(); return true })()`)
-  if (!ok) return false
+  if (!dire(ok, `champ n° ${selecteurIndex} introuvable`)) return false
   await cdp.envoie('Input.insertText', { text: texte })
   return true
 }
@@ -204,28 +233,104 @@ try {
     etat = await lire()
     if (etat.pasEncoreOuvert) { console.log('  porte fermée'); break }
     if (etat.echec) { await capture('retour-echec-definitif'); console.log('  ⛔ échec DÉFINITIF du retour'); break }
+    if (etat.semaineFermee) { await capture('semaine-fermee'); console.log('  · la semaine est fermée — l’exercice ne se joue plus'); break }
     if (etat.fini) { await capture('fini'); break }
     if (etat.retour && !etat.rendre) {
       await pagesDuRetour('retour')
       // Au régime plein : valider la lecture, reprendre, écrire la version finale, la rendre, lire le retour final.
+      // ⭐⭐ 08/09 — CE BLOC SORTAIT PAR TROIS `break` MUETS. Un run vert, un
+      //    dossier de captures plein, et la version finale jamais écrite : le
+      //    parcours se lisait comme complet. Chaque sortie DIT maintenant
+      //    pourquoi, et laisse une capture nommée.
       const e = await lire()
-      if (!(e.lu && e.versionFinale)) break
-      await clique(e.lu); await attendQue((x) => !x.lu); await capture('retour-lu')
-      const e2 = await lire()
-      if (!e2.reprendre) break
-      await clique(e2.reprendre); await dors(600); await capture('vf-ecrire')
-      const i = (await lire()).textareas.findIndex((x) => x.rows >= 9)
-      if (i < 0) break
+      if (!e.versionFinale) { console.log('  · aucune version finale due sur ce dépôt'); break }
+      // ⚠️ 08/09 — LA VALIDATION DE LECTURE PEUT ÊTRE DÉJÀ FAITE. Le parcours
+      //    exigeait le bouton « J'ai lu mon retour » et sortait sans lui : sur
+      //    un dépôt REPRIS en cours de route — le cas de toute reprise de
+      //    recette —, il ne pouvait donc jamais atteindre la version finale.
+      if (e.lu) { await clique(e.lu); await attendQue((x) => !x.lu); await capture('retour-lu') }
+      else console.log('  · lecture déjà validée — on va droit à la reprise')
+      // ⚠️ « Reprendre mon texte » n'apparaît qu'APRÈS la validation de lecture,
+      //    sur la dernière page (`apresLecture`, `EcranDeroule`) : le lire tout
+      //    de suite le manquait une fois sur deux. On l'ATTEND.
+      // ⚠️ 08/09 — LA REPRISE PEUT ÊTRE DÉJÀ OUVERTE. Sur un dépôt repris en
+      //    cours de route (une reprise de recette, un élève qui revient), le
+      //    champ de la version finale est là et le bouton « Reprendre » n'y est
+      //    plus : chercher le bouton d'abord faisait sortir le parcours sur un
+      //    écran qui offrait exactement ce qu'il cherchait. On regarde le CHAMP.
+      if (!(await lire()).textareas.some((x) => x.rows >= 9 || x.trou)) {
+        const e2 = await attendQue((x) => !!x.reprendre, 30)
+        if (!e2.reprendre) {
+          console.log('  ⛔ version finale due, mais « Reprendre mon texte » ne vient pas')
+          await capture('vf-sans-reprise'); break
+        }
+        await clique(e2.reprendre); await dors(600)
+      } else console.log('  · la reprise est déjà ouverte — le champ est là')
+      await capture('vf-ecrire')
+      // ⭐⭐ 08/09 — LA VERSION FINALE DES CRANS 2 ET 5 EST DANS LE TROU, ELLE AUSSI.
+      //    La réparation du matin n'avait appris la fente qu'à la V1 ; ici on
+      //    cherchait encore le GRAND champ (`rows >= 9`). Or `EcranDeroule` sert
+      //    la vf avec `forme={vue.cas[0]?.pieces ? 'trou' : 'page'}`, et
+      //    `ChampDeRedaction` fait `rows={enTrou ? 1 : rows}` — le `rows={14}`
+      //    est écrasé. `findIndex` rendait −1 et le parcours sortait par un
+      //    `break` MUET, code 0, dossier de captures plein : il se lisait comme
+      //    un parcours complet alors que `texte_vf` n'avait jamais été posé.
+      //    ⚠️ Le cran 2 est en régime `plein` (vf TOUJOURS) : 40 exercices de
+      //    production passent par là.
+      const champsVf = (await lire()).textareas
+      const i = champsVf.findIndex((x) => x.rows >= 9 || x.trou)
+      if (i < 0) {
+        console.log('  ⛔ version finale : aucun champ (ni grand, ni fente) — on ne prétend pas')
+        await capture('vf-sans-champ'); break
+      }
       await cdp.evalue(`(() => { const x = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly)[${i}]; x.focus(); x.select(); return true })()`)
-      await cdp.envoie('Input.insertText', { text: TEXTES.vf }); await dors(300)
-      await capture('vf-ecrit'); await clique('Enregistrer'); await dors(600); await capture('vf-rendre')
-      const r = (await lire()).rendre; if (!r) break
+      await cdp.envoie('Input.insertText', { text: champsVf[i].trou ? TEXTES.trou : TEXTES.vf })
+      await dors(300)
+      await capture('vf-ecrit')
+      if (!(await clique('Enregistrer'))) { await capture('vf-non-enregistre'); break }
+      // ⚠️ 08/09 — L'ENREGISTREMENT EST ASYNCHRONE. Le bouton dit « Enregistrement… »
+      //    et « Rendre » n'existe pas encore : lire l'écran après un `dors(600)`
+      //    fixe le manquait, et le parcours concluait « rien à cliquer pour la
+      //    rendre » sur un écran parfaitement sain. On ATTEND l'offre, on ne
+      //    compte pas les millisecondes.
+      const e3 = await attendQue((x) => !!x.rendre, 30)
+      await capture('vf-rendre')
+      const r = e3.rendre
+      if (!r) { console.log('  ⛔ version finale écrite, mais rien à cliquer pour la rendre'); await capture('vf-sans-rendre'); break }
       await clique(r); await attendQue((x) => x.preparation || x.retour, 60); await capture('vf-rendue')
       let fini = false
       for (let k = 0; k < 40 && !fini; k++) { await dors(5000); const e3 = await lire(); if (e3.retour && !e3.preparation) fini = true }
       if (fini) await pagesDuRetour('retour-final'); else await capture('vf-attente')
       break
     }
+    // ⭐⭐ « SE JUGER » — une question par groupe de boutons `role=radio`, puis
+    //    « Envoyer mes réponses », qui ne s'active qu'une fois TOUTES répondues.
+    if (etat.seJuger) {
+      await capture('se-juger')
+      const poses = await cdp.evalue(`(() => {
+        const groupes = new Map()
+        for (const b of document.querySelectorAll('[role=radio]')) {
+          const g = b.closest('[aria-label]') ?? b.parentElement
+          if (!groupes.has(g)) groupes.set(g, [])
+          groupes.get(g).push(b)
+        }
+        let n = 0
+        for (const [, boutons] of groupes) {
+          if (boutons.some((x) => x.getAttribute('aria-checked') === 'true')) continue
+          const cible = boutons[Math.min(1, boutons.length - 1)]
+          if (cible) { cible.click(); n++ }
+        }
+        return n
+      })()`)
+      await dors(500)
+      if (!(await clique('Envoyer mes réponses'))) {
+        console.log(`  ⛔ « Se juger » : ${poses} réponse(s) posée(s), et « Envoyer » reste inactif`)
+        await capture('se-juger-bloque'); break
+      }
+      await attendQue((e2) => !e2.seJuger, 30)
+      await capture('se-juger-envoye'); continue
+    }
+
     if (etat.preparation) {
       console.log('  … retour en préparation, on attend')
       let fini = false
@@ -272,9 +377,13 @@ try {
     //    `boutons` (qui filtre `!disabled`) qu'une fois la fente remplie.
     if (etat.textareas.some((x) => x.trou && x.vide)) {
       const idx = etat.textareas.findIndex((x) => x.trou && x.vide)
-      await tape(idx, FAIBLE_MODE ? FAIBLE : TEXTES.trou); await dors(500)
+      // ⛔ On ne capture RIEN tant que la frappe n'a pas pris : une capture
+      //    nommée « écrit » sur un champ vide est pire qu'un échec.
+      if (!(await tape(idx, FAIBLE_MODE ? FAIBLE : TEXTES.trou))) { await capture('cas1-fente-inatteignable'); break }
+      await dors(500)
       await capture(`cas${cas}-trou-ecrit`)
-      await clique('Enregistrer'); await attendQue((e2) => !e2.textareas.some((x) => x.trou))
+      if (!(await clique('Enregistrer'))) { await capture(`cas${cas}-trou-non-enregistre`); break }
+      await attendQue((e2) => !e2.textareas.some((x) => x.trou))
       const e2 = await lire()
       await capture(e2.ranges === 1 ? `cas${cas}-credence` : e2.geste ? `remise-${e2.geste}` : e2.rendre ? 'rendre' : `cas${cas}-trou-enregistre`)
       continue
@@ -282,16 +391,23 @@ try {
     // 3. un champ vide : on écrit, on capture le texte écrit, puis « Enregistrer » tourne la page
     if (etat.textareas.some((x) => x.rows >= 9 && x.vide)) {
       const idx = etat.textareas.findIndex((x) => x.rows >= 9 && x.vide)
-      await tape(idx, FAIBLE_MODE ? FAIBLE : (TEXTES[cas] ?? TEXTES[1])); await dors(400)
+      if (!(await tape(idx, FAIBLE_MODE ? FAIBLE : (TEXTES[cas] ?? TEXTES[1])))) { await capture('cas1-champ-inatteignable'); break }
+      await dors(400)
       await capture(`cas${cas}-ecrit`)
-      await clique('Enregistrer'); await attendQue((e2) => !e2.textareas.some((x) => x.rows >= 9))
+      if (!(await clique('Enregistrer'))) { await capture(`cas${cas}-non-enregistre`); break }
+      await attendQue((e2) => !e2.textareas.some((x) => x.rows >= 9))
       const e2 = await lire()
       await capture(e2.ranges === 1 ? `cas${cas}-credence` : e2.geste ? `remise-${e2.geste}` : e2.rendre ? 'rendre' : `cas${cas}-enregistre`)
       continue
     }
     // 3 bis. un champ déjà écrit (rechargement) : « Enregistrer » tourne la page
     if (etat.textareas.some((x) => x.rows >= 9) && etat.enregistrer) {
-      await clique('Enregistrer'); await attendQue((e2) => !e2.textareas.some((x) => x.rows >= 9)); continue
+      // ⛔ 08/09 — CETTE BRANCHE BOUCLAIT EN SILENCE. Si « Enregistrer » ne
+      //    prend pas, le champ reste rempli, la branche se rejoue, et le
+      //    parcours tournait jusqu'à MAX sans UNE capture ni UN log — neuf
+      //    minutes de rien, puis code 0.
+      if (!(await clique('Enregistrer'))) { await capture('enregistrement-bloque'); break }
+      await attendQue((e2) => !e2.textareas.some((x) => x.rows >= 9)); continue
     }
     // 4. la chance d'avoir juste (un seul curseur) puis « Enregistrer »
     if (etat.ranges === 1) {
