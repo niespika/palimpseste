@@ -130,8 +130,8 @@ export function QuazianDashboard({ stats, file, toutesCartes, coursOuvert }: Pro
             servies. Deux notions, deux mots, et le bouton ne promet que ce qu'il tient. */}
         {stats.mures > stats.aFaire && (
           <p className="text-xs text-muet mb-4 text-center">
-            Tu as {stats.mures} cartes mûres — aujourd&apos;hui tu en révises {stats.aFaire}.
-            Le reste attendra demain, c&apos;est le principe.
+            Tu as {stats.mures} cartes mûres — cette séance en propose {stats.aFaire}.
+            Tu pourras commencer une autre séance pour continuer, ou revenir demain.
           </p>
         )}
 

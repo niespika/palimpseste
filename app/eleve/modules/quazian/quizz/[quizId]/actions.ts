@@ -135,14 +135,17 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
   }
 
   // Réponses existantes
-  const { data: reponsesDB } = await supabase
+  const { data: reponsesDB, error: erreurReponses } = await supabase
     .from('quazian_answers')
     .select('question_id, p_a, p_b, p_c, p_d')
     .eq('session_id', sessionId)
+  if (erreurReponses) return { error: 'Lecture de tes réponses impossible. Recharge la page pour réessayer.' }
 
   const reponsesMap: Record<string, [number, number, number, number]> = {}
   for (const r of reponsesDB ?? []) {
-    reponsesMap[r.question_id] = [r.p_a * 100, r.p_b * 100, r.p_c * 100, r.p_d * 100]
+    const originaux = [r.p_a * 100, r.p_b * 100, r.p_c * 100, r.p_d * 100]
+    const mapping = ordreOptions[r.question_id] ?? [0, 1, 2, 3]
+    reponsesMap[r.question_id] = mapping.map((i) => originaux[i]) as [number, number, number, number]
   }
 
   // Construire les questions dans l'ordre randomisé
@@ -177,23 +180,32 @@ export async function sauvegarderReponse(
   questionId: string,
   jetonsRandomises: [number, number, number, number],
   optionMapping: number[]
-): Promise<void> {
+): Promise<{ error?: string; ferme?: boolean }> {
   const { supabase, userId } = await verifierEleve()
+  if (jetonsRandomises.length !== 4 || jetonsRandomises.some((j) => !Number.isFinite(j) || j < 0 || j > 100)
+      || Math.abs(jetonsRandomises.reduce((a, b) => a + b, 0) - 100) > 0.001
+      || optionMapping.length !== 4 || new Set(optionMapping).size !== 4
+      || optionMapping.some((i) => !Number.isInteger(i) || i < 0 || i > 3)) {
+    return { error: 'Répartis les 100 points avant de continuer.' }
+  }
 
   // Garde serveur : aucune écriture après soumission, fermeture du quizz ou échéance.
   // Le timer / l'auto-submit côté client ne protègent rien (l'action est appelable
   // directement) → sans ça, un élève peut éditer ses réponses après l'expiration.
-  const { data: session } = await supabase
+  const { data: session, error: erreurSession } = await supabase
     .from('quazian_sessions')
     .select('quiz_id, submitted_at')
     .eq('id', sessionId)
     .eq('eleve_id', userId)
     .maybeSingle()
-  if (!session || session.submitted_at) return
+  if (erreurSession) return { error: 'Lecture de ta session impossible. Réessaie.' }
+  if (!session || session.submitted_at) return { error: 'Cette session n’est plus modifiable.' }
   // Garde de classe (C1) en plus du statut/échéance : même helper que la page.
   const quizzGarde = await chargerQuizAccessible(supabase, userId, session.quiz_id as string)
-  if (!quizzGarde || quizzGarde.statut !== 'lance') return
-  if (quizzGarde.ferme_at && new Date(quizzGarde.ferme_at as string) < new Date()) return
+  if (!quizzGarde) return { error: 'Quizz inaccessible. Réessaie.' }
+  if (quizzGarde.statut !== 'lance' || (quizzGarde.ferme_at && new Date(quizzGarde.ferme_at as string) <= new Date())) {
+    return { error: 'Le temps est écoulé. Seules les réponses déjà enregistrées seront soumises.', ferme: true }
+  }
 
   // Remettre dans l'ordre original
   const jetonsOriginaux: [number, number, number, number] = [0, 0, 0, 0]
@@ -206,7 +218,7 @@ export async function sauvegarderReponse(
   // Écriture serveur (C1) : quazian_answers n'a plus de policy d'écriture
   // élève — l'upsert passe par le client admin, la propriété de la session et
   // l'état du quizz ayant été revalidés ci-dessus.
-  await createAdminClient().from('quazian_answers').upsert({
+  const { error } = await createAdminClient().from('quazian_answers').upsert({
     session_id: sessionId,
     question_id: questionId,
     p_a: pa,
@@ -215,6 +227,7 @@ export async function sauvegarderReponse(
     p_d: pd,
     repondu: true,
   }, { onConflict: 'session_id,question_id' })
+  return error ? { error: 'Ta réponse n’a pas été enregistrée. Réessaie.' } : {}
 }
 
 // Soumettre le quizz

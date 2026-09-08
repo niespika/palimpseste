@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { soumettreNote, type CarteRevision } from './actions'
 
 // Marqueur cloze utilisé à la génération et à la saisie manuelle : {{réponse}}
@@ -76,6 +76,9 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
   const [retournee, setRetournee] = useState(false)
   const [pending, setPending] = useState(false)
   const [nbRevues, setNbRevues] = useState(0)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [avertissement, setAvertissement] = useState<string | null>(null)
+  const envoiEnCours = useRef(false)
 
   const carte = cartes[index]
 
@@ -85,6 +88,7 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
         <div className="text-4xl mb-4">✓</div>
         <h3 className="text-lg font-serif text-encre mb-2">Session terminée !</h3>
         <p className="text-sm text-encre-douce mb-6">{nbRevues} carte{nbRevues > 1 ? 's' : ''} révisée{nbRevues > 1 ? 's' : ''}</p>
+        {avertissement && <p role="status" className="text-sm text-attention mb-4">{avertissement}</p>}
         <button
           onClick={() => onTermine(nbRevues)}
           className="px-6 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90"
@@ -109,19 +113,27 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
   }
 
   async function handleNote(rating: 1 | 2 | 3 | 4) {
-    if (pending) return
+    if (envoiEnCours.current) return
+    envoiEnCours.current = true
     setPending(true)
+    setErreur(null)
+    try {
+      const res = await soumettreNote(carte.flashcard_id, carte.card_state_id, rating)
+      if ('error' in res) { setErreur(res.error); return }
+      if (res.avertissement) setAvertissement(res.avertissement)
 
-    const res = await soumettreNote(carte.flashcard_id, carte.card_state_id, rating)
-
-    // Ratée, quel que soit son état FSRS : relue en fin de séance, pas encore « faite ».
-    // On garde le vrai card_state_id (créé au 1er passage d'une carte neuve).
-    if (rating === 1) {
-      avancer({ ...carte, card_state_id: carte.card_state_id ?? res.cardStateId, repasse: true })
-    } else {
-      avancer(null)
+      // Une carte ratée est relue sans seconde note, après sauvegarde confirmée.
+      if (rating === 1) {
+        avancer({ ...carte, card_state_id: res.cardStateId, repasse: true })
+      } else {
+        avancer(null)
+      }
+    } catch {
+      setErreur('La sauvegarde n’a pas pu être confirmée. Vérifie ta connexion et réessaie.')
+    } finally {
+      envoiEnCours.current = false
+      setPending(false)
     }
-    setPending(false)
   }
 
   // Repasse : aucune note n'est envoyée — soit la carte est comprise et sort de la
@@ -136,6 +148,8 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
 
   return (
     <div className="max-w-xl mx-auto">
+      {erreur && <p role="alert" className="text-sm text-attention mb-4">{erreur}</p>}
+      {avertissement && <p role="status" className="text-sm text-attention mb-4">{avertissement}</p>}
       {/* Barre de progression */}
       <div className="flex items-center gap-3 mb-6">
         <div className="flex-1 h-1.5 bg-parchemin-fonce rounded-full overflow-hidden">

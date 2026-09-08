@@ -16,7 +16,10 @@ interface Props {
 export function PassationJetons({ sessionId, quizId, questions, reponsesInitiales, fermeAt }: Props) {
   const [indexQuestion, setIndexQuestion] = useState(0)
   const [reponses, setReponses] = useState<Record<string, [number, number, number, number]>>(reponsesInitiales)
+  const reponsesSauvees = useRef(reponsesInitiales)
   const [pending, setPending] = useState(false)
+  const envoiEnCours = useRef(false)
+  const [avisSoumission, setAvisSoumission] = useState<string | null>(null)
   const [soumis, setSoumis] = useState(false)
   // ⚠️ Distinct de `soumis` : une soumission REFUSÉE n'est pas une soumission.
   const [erreur, setErreur] = useState<string | null>(null)
@@ -89,40 +92,75 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
     setReponses((prev) => ({ ...prev, [question.id]: [25, 25, 25, 25] }))
   }
 
-  async function validerEtSuivant() {
-    if (!peutSoumettre || pending) return
+  // Tous les chemins de navigation passent par la sauvegarde, y compris les
+  // numéros et « Précédent ». En cas d'échec, la réponse reste à l'écran.
+  async function allerA(index: number) {
+    if (envoiEnCours.current || index === indexQuestion) return
+    if (!peutSoumettre) { setErreur('Répartis les 100 points avant de changer de question.'); return }
+    envoiEnCours.current = true
     setPending(true)
-    await sauvegarderReponse(sessionId, question.id, jetonsActuels, question.optionMapping)
-    setPending(false)
-    if (indexQuestion < questions.length - 1) {
-      setIndexQuestion(indexQuestion + 1)
+    setErreur(null)
+    try {
+      const retour = await sauvegarderReponse(sessionId, question.id, jetonsActuels, question.optionMapping)
+      if (retour.error) { setErreur(retour.error); return }
+      reponsesSauvees.current = { ...reponsesSauvees.current, [question.id]: jetonsActuels }
+      setReponses((prev) => ({ ...prev, [question.id]: jetonsActuels }))
+      setIndexQuestion(index)
+    } catch {
+      setErreur('La sauvegarde n’a pas pu être confirmée. Réessaie.')
+    } finally {
+      envoiEnCours.current = false
+      setPending(false)
     }
   }
 
-  const handleSoumettre = useCallback(async () => {
-    if (soumis || pending) return
+  const handleSoumettre = useCallback(async (automatique = false) => {
+    if (soumis || envoiEnCours.current) return
+    envoiEnCours.current = true
     setPending(true)
-    // Sauvegarder la question courante si complète
-    if (peutSoumettre) {
-      await sauvegarderReponse(sessionId, question.id, jetonsActuels, question.optionMapping)
+    setErreur(null)
+    try {
+      // Ce gestionnaire s'exécute au clic ou au timer, jamais pendant le rendu.
+      // eslint-disable-next-line react-hooks/purity
+      const expire = !!fermeAt && new Date(fermeAt).getTime() <= Date.now()
+      let avis = expire ? 'Le temps est écoulé : les réponses enregistrées avant l’échéance ont été soumises.' : null
+      if (!expire) {
+        // Vérifier toutes les réponses présentes. Ne renvoyer que celles qui
+        // ont changé, pour ne pas consommer le temps restant en doubles envois.
+        const aSauver = { ...reponses, [question.id]: jetonsActuels }
+        const incomplet = questions.findIndex((q) => aSauver[q.id] && aSauver[q.id].reduce((a, b) => a + b, 0) !== 100)
+        if (incomplet >= 0 && !automatique) {
+          setIndexQuestion(incomplet)
+          setErreur('Répartis les 100 points de cette question avant de soumettre.')
+          return
+        }
+        for (const q of questions) {
+          const jetons = aSauver[q.id]
+          if (!jetons || jetons.reduce((a, b) => a + b, 0) !== 100) continue
+          if (reponsesSauvees.current[q.id]?.every((v, i) => v === jetons[i])) continue
+          const retour = await sauvegarderReponse(sessionId, q.id, jetons, q.optionMapping)
+          if (retour.ferme) {
+            avis = retour.error ?? null
+            break // L'échéance serveur fait foi, même si l'horloge locale diffère.
+          }
+          if (retour.error) { setErreur(retour.error); return }
+          reponsesSauvees.current = { ...reponsesSauvees.current, [q.id]: jetons }
+        }
+      }
+      const retour = await soumettreQuizz(sessionId, quizId)
+      if (retour.error) { setErreur(retour.error); return }
+      setAvisSoumission(avis)
+      setSoumis(true)
+    } catch {
+      setErreur('L’envoi n’a pas pu être confirmé. Réessaie.')
+    } finally {
+      envoiEnCours.current = false
+      setPending(false)
     }
-    // ⛔⛔ LE RETOUR DE L'ACTION SE LIT — trouvé au smoke du 29/08, et par lui
-    //    SEUL. Il était jeté : `setSoumis(true)` suivait l'appel sans condition,
-    //    si bien qu'un refus du serveur affichait « Quizz soumis ! ». *Éprouvé en
-    //    retirant ses questions au quizz sous les pieds de l'élève* : le serveur
-    //    refusait bien — `submitted_at` restait NULL, aucune note écrite, l'élève
-    //    pouvait recommencer —, mais l'écran lui disait le contraire et il
-    //    serait parti. **Une garde serveur qui refuse en silence ne protège que
-    //    la base ; l'élève, lui, a besoin qu'on le lui dise.**
-    const retour = await soumettreQuizz(sessionId, quizId)
-    setPending(false)
-    if (retour?.error) { setErreur(retour.error); return }
-    setSoumis(true)
-  }, [soumis, pending, peutSoumettre, sessionId, question, jetonsActuels, quizId])
+  }, [soumis, fermeAt, reponses, questions, sessionId, question, jetonsActuels, quizId])
 
-  // Garder la ref à jour (toujours la dernière closure)
   useEffect(() => {
-    handleSoumettreRef.current = handleSoumettre
+    handleSoumettreRef.current = () => { void handleSoumettre(true) }
   }, [handleSoumettre])
 
   function formatTemps(s: number) {
@@ -136,6 +174,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
       <div className="text-center py-16">
         <div className="text-4xl mb-4">✓</div>
         <h3 className="text-lg font-serif text-encre mb-2">Quizz soumis !</h3>
+        {avisSoumission && <p role="status" className="text-sm text-attention mb-4">{avisSoumission}</p>}
         <p className="text-sm text-encre-douce">
           Le retour sera disponible une fois que ton professeur aura fermé le quizz.
         </p>
@@ -151,7 +190,8 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
           {questions.map((_, i) => (
             <button
               key={i}
-              onClick={() => setIndexQuestion(i)}
+              onClick={() => allerA(i)}
+              disabled={pending}
               className={`w-7 h-7 text-xs rounded-md transition-colors ${
                 i === indexQuestion
                   ? 'bg-bouton text-surface'
@@ -195,6 +235,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
             </span>
             <button
               onClick={resetNeutral}
+              disabled={pending}
               className="text-xs text-muet hover:text-encre-douce underline"
             >
               Je ne sais pas
@@ -210,7 +251,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => modifierJeton(i, -5)}
-                  disabled={jetonsActuels[i] <= 0}
+                  disabled={pending || jetonsActuels[i] <= 0}
                   aria-label={`Retirer 5 points à la réponse ${LETTRES[i]}`}
                   className="w-11 h-11 sm:w-8 sm:h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
                 >
@@ -221,7 +262,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
                 </span>
                 <button
                   onClick={() => modifierJeton(i, 5)}
-                  disabled={restants <= 0}
+                  disabled={pending || restants <= 0}
                   aria-label={`Ajouter 5 points à la réponse ${LETTRES[i]}`}
                   className="w-11 h-11 sm:w-8 sm:h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
                 >
@@ -237,7 +278,8 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
       <div className="flex gap-3">
         {indexQuestion > 0 && (
           <button
-            onClick={() => setIndexQuestion(indexQuestion - 1)}
+            onClick={() => allerA(indexQuestion - 1)}
+            disabled={pending}
             className="px-4 py-2.5 text-sm bg-parchemin-fonce text-encre-douce rounded-xl hover:bg-bordure"
           >
             ← Précédent
@@ -246,7 +288,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
 
         {indexQuestion < questions.length - 1 ? (
           <button
-            onClick={validerEtSuivant}
+            onClick={() => allerA(indexQuestion + 1)}
             disabled={!peutSoumettre || pending}
             className="flex-1 py-2.5 text-sm bg-bouton text-surface rounded-xl hover:opacity-90 disabled:opacity-40 transition-colors"
           >
@@ -254,7 +296,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
           </button>
         ) : (
           <button
-            onClick={handleSoumettre}
+            onClick={() => handleSoumettre()}
             disabled={pending}
             className="flex-1 py-2.5 text-sm bg-ok text-surface rounded-xl hover:opacity-90 disabled:opacity-40 transition-colors font-medium"
           >
@@ -270,7 +312,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
         <p role="alert" className="mt-4 text-sm text-attention text-center">
           {erreur}
           <span className="block text-muet mt-1">
-            Rien n’est perdu — tes réponses sont enregistrées. Réessaie dans un instant.
+            Tes réponses restent à l’écran. Garde cette page ouverte pour réessayer.
           </span>
         </p>
       )}

@@ -348,13 +348,14 @@ export async function soumettreNote(
   flashcardId: string,
   cardStateId: string | null,
   rating: 1 | 2 | 3 | 4
-): Promise<{ due: string; state: number; cardStateId: string | null }> {
+): Promise<{ error: string } | { due: string; state: number; cardStateId: string; avertissement?: string }> {
   const { supabase, userId } = await verifierEleve()
 
   // Garde-fou : élève bloqué → aucune mise à jour FSRS (la révision est gelée).
   if (await messageSiBloque(createAdminClient(), userId)) {
-    return { due: new Date().toISOString(), state: 0, cardStateId }
+    return { error: 'La révision est suspendue. Reviens au tableau de bord.' }
   }
+  if (![1, 2, 3, 4].includes(rating)) return { error: 'Note de révision invalide.' }
 
   // ⚠️ Pas de paliers courts (1 min / 10 min). Ils supposent un écran qui ressert
   // la carte dans la même séance, ce que Quazian ne fait pas : avec eux, toute
@@ -373,17 +374,19 @@ export async function soumettreNote(
   type EtatCarte = { id: string; difficulty: number; stability: number; state: number; due: string; reps: number; lapses: number; last_review: string | null }
   let etat: EtatCarte | null = null
   if (idValide) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('quazian_card_states')
       .select('id, difficulty, stability, state, due, reps, lapses, last_review')
-      .eq('id', idValide).eq('eleve_id', userId).maybeSingle()
+      .eq('id', idValide).eq('eleve_id', userId).eq('flashcard_id', flashcardId).maybeSingle()
+    if (error) return { error: 'Lecture de ta révision impossible. Réessaie.' }
     etat = (data as EtatCarte | null) ?? null
   }
   if (!etat) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('quazian_card_states')
       .select('id, difficulty, stability, state, due, reps, lapses, last_review')
       .eq('eleve_id', userId).eq('flashcard_id', flashcardId).maybeSingle()
+    if (error) return { error: 'Lecture de ta révision impossible. Réessaie.' }
     etat = (data as EtatCarte | null) ?? null
   }
 
@@ -414,10 +417,11 @@ export async function soumettreNote(
   // carte personnelle de l'élève — sans rien resserrer. Y ajouter `carteVisible`
   // serait une décision de conception (R7), notée en fin de session.
   if (!etat) {
-    const { data: fc } = await createAdminClient()
+    const { data: fc, error } = await createAdminClient()
       .from('quazian_flashcards').select('eleve_id, statut').eq('id', flashcardId).maybeSingle()
+    if (error) return { error: 'Lecture de la carte impossible. Réessaie.' }
     if (!fc || (fc.eleve_id === null ? fc.statut !== 'valide' : fc.eleve_id !== userId)) {
-      return { due: maintenant.toISOString(), state: 0, cardStateId: null }
+      return { error: 'Cette carte n’est plus disponible pour la révision.' }
     }
   }
 
@@ -470,19 +474,11 @@ export async function soumettreNote(
       .select('id')
       .single()
 
-    if (!error && nouvelEtat) {
-      etatId = nouvelEtat.id
-      await supabase.from('quazian_review_log').insert({
-        card_state_id: nouvelEtat.id,
-        rating,
-        reviewed_at: maintenant.toISOString(),
-        elapsed_days: log.elapsed_days,
-        scheduled_days: log.scheduled_days,
-      })
-    }
+    if (error || !nouvelEtat) return { error: 'Ta révision n’a pas été enregistrée. Réessaie.' }
+    etatId = nouvelEtat.id
   } else {
     // Mettre à jour l'état existant
-    await supabase
+    const { data: modifie, error } = await supabase
       .from('quazian_card_states')
       .update({
         difficulty: nouvelleCarteEtat.difficulty,
@@ -495,17 +491,25 @@ export async function soumettreNote(
       })
       .eq('id', etat.id)
       .eq('eleve_id', userId)
-
-    await supabase.from('quazian_review_log').insert({
-      card_state_id: etat.id,
-      rating,
-      reviewed_at: maintenant.toISOString(),
-      elapsed_days: log.elapsed_days,
-      scheduled_days: log.scheduled_days,
-    })
+      .select('id')
+      .maybeSingle()
+    if (error || !modifie) return { error: 'Ta révision n’a pas été enregistrée. Réessaie.' }
   }
 
-  return { due: nouveauDue, state: nouvelleCarteEtat.state, cardStateId: etatId }
+  // L'échéance est déjà enregistrée : un échec du journal ne doit pas inviter
+  // l'élève à renoter la carte et modifier une seconde fois son intervalle.
+  const { error: erreurJournal } = await supabase.from('quazian_review_log').insert({
+    card_state_id: etatId,
+    rating,
+    reviewed_at: maintenant.toISOString(),
+    elapsed_days: log.elapsed_days,
+    scheduled_days: log.scheduled_days,
+  })
+  if (erreurJournal) console.error('[quazian] journal de révision :', erreurJournal)
+  return {
+    due: nouveauDue, state: nouvelleCarteEtat.state, cardStateId: etatId!,
+    ...(erreurJournal ? { avertissement: 'Ta révision est enregistrée, mais son historique est incomplet. Tu peux continuer.' } : {}),
+  }
 }
 
 // Stats pour la page d'accueil
