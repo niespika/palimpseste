@@ -109,11 +109,13 @@ test('⭐ `controlerRetour` : sans `materiaux`, l\'élagage d\'hier ; avec, la c
     competencesAdmises: ['argumentation'], production: COPIE, texteSupport: null }
   const hier = controlerRetour(brut, attendu)
   assert.equal(hier.verdict.ok, true)
-  assert.deepEqual(hier.controle.alertes, [])
+  // ⭐ 08/09 — la garde de la règle 4 signale son propre non-exécution quand on ne
+  //    lui passe pas `recopie` ; ce test ne porte pas sur elle.
+  assert.deepEqual(hier.controle.alertes.filter((x) => !x.startsWith('règle 4 : contrôle NON EXÉCUTÉ')), [])
   assert.deepEqual(hier.verdict.ok && hier.verdict.valeur.points.map((p) => p.ancrage?.citation), [RECOPIEE.citation, DU_PASSAGE.citation])
   const lot = controlerRetour(brut, { ...attendu, materiaux: [DEVOIR], passagesACorriger: [PASSAGE] })
   assert.equal(lot.verdict.ok, true)
   assert.deepEqual(lot.controle.refus, [])
-  assert.equal(lot.controle.alertes.length, 1)
+  assert.equal(lot.controle.alertes.filter((x) => !x.startsWith('règle 4 : contrôle NON EXÉCUTÉ')).length, 1)
   assert.deepEqual(lot.verdict.ok && lot.verdict.valeur.points.map((p) => p.ancrage?.citation), [undefined, DU_PASSAGE.citation])
 })

@@ -5,11 +5,23 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+
+
   assemblerGabarit, assemblerRetour, citationsAttribueesDansLaProse, controlerRetour,
   controlerRR3, coucheContrat, identifiantStable,
-  plafondApplicable, refusDeFormeSeulement, segmenter, SECTION_LONGUEUR,
+  plafondApplicable, recopiesDeLaReponse, refusDeFormeSeulement, segmenter, SECTION_LONGUEUR,
   type EntreeRetour, type SectionCalame,
 } from './retour'
+
+/**
+ * ⭐ 08/09/2026 — LA GARDE DE LA RÈGLE 4 SIGNALE SON PROPRE NON-EXÉCUTION
+ *    (`CONTRAT-MODULES.md` §3 : l'absence se DIT, jamais un silence). Les tests
+ *    qui n'ont rien à voir avec elle ne lui passent pas `recopie` et reçoivent
+ *    donc son alerte : on l'écarte ici, plutôt que d'affaiblir leur assertion en
+ *    « au moins une alerte ». ⛔ Ne jamais élargir ce filtre à autre chose.
+ */
+const alertesHorsRegle4 = (a: readonly string[]) =>
+  a.filter((x) => !x.startsWith('règle 4 : contrôle NON EXÉCUTÉ'))
 
 const GABARIT = [
   'SYSTÈME — CALAME · RETOUR FORMATIF',
@@ -134,6 +146,77 @@ test('un retour conforme passe les deux contrôles', () => {
   const r = controlerRetour(OK, ATTENDU)
   assert.equal(r.verdict.ok, true)
   assert.deepEqual(r.controle.refus, [])
+})
+
+// ── ⭐⭐ 08/09/2026 — LA GARDE DE LA RÈGLE 4 : le retour ne dicte pas la réponse ──
+//
+// ⛔ CE QU'ELLE RÉPARE, MESURÉ EN PRODUCTION LE 08/09 : sur 151 retours servis,
+//    DIX portaient une suite de huit mots de la `reponse_attendue` absente à la
+//    fois du devoir et de la copie — donc venue de la seule réponse. Les dix
+//    étaient publiés, et LUS. Aux crans 3 et 5 la réponse attendue EST la
+//    version corrigée (75 cas sur 77) : l'élève recevait la phrase à écrire.
+//    L'interdiction existait — deux fois — mais seulement dans le prompt.
+
+/** La réponse de la banque : au cran 5, c'est la version corrigée. */
+const REPONSE = 'Les notes ne servent donc pas seulement à classer les élèves entre eux, '
+  + 'car elles disent aussi à chacun où il en est de son propre travail.'
+/** Le devoir servi. Il partage son début avec la réponse — et c'est le piège. */
+const DEVOIR = 'Les notes ne servent donc pas seulement à classer les élèves entre eux. '
+  + 'On les met partout, tout le temps.'
+
+test('règle 4 — le retour qui RECOPIE la réponse attendue est refusé, et le refus est BLOQUANT', () => {
+  const dicte = {
+    ...OK,
+    points: [OK.points[0], { ...OK.points[1],
+      // huit mots de la réponse que NI le devoir NI la copie ne portent
+      texte: 'il fallait dire qu’elles disent aussi à chacun où il en est de son propre travail' }],
+  }
+  const r = controlerRetour(dicte, { ...ATTENDU, recopie: { reponses: [REPONSE], devoirs: [DEVOIR] } })
+  assert.equal(r.verdict.ok, true, 'le schéma est bon : c’est le CONTENU qu’on refuse')
+  assert.equal(r.controle.refus.some((x) => x.startsWith('règle 4 : ')), true)
+  // ⛔ JAMAIS tolérable au troisième essai : servir la réponse serait le mal qu'on répare.
+  assert.equal(refusDeFormeSeulement(r.controle.refus), false)
+})
+
+test('règle 4 — ce que le DEVOIR porte déjà ne se reproche pas : le discriminant est « absent d’ailleurs »', () => {
+  const cite = {
+    ...OK,
+    points: [OK.points[0], { ...OK.points[1],
+      // huit mots communs à la réponse ET au devoir : le retour cite le devoir, c'est son travail
+      texte: 'tu écris « ne servent donc pas seulement à classer les élèves entre eux », et tu t’arrêtes là' }],
+  }
+  const r = controlerRetour(cite, { ...ATTENDU, recopie: { reponses: [REPONSE], devoirs: [DEVOIR] } })
+  // ⚠️ L'ASSERTION PORTE SUR LA RÈGLE 4 SEULE, et pas sur « aucun refus » : cette
+  //    fixture cite le DEVOIR sans que la copie le porte, donc RR3-citation
+  //    refuse — à raison, et pour une autre raison. Un test qui exigerait un
+  //    refus vide passerait pour une preuve de la règle 4 sans en être une.
+  assert.deepEqual(r.controle.refus.filter((x) => x.startsWith('règle 4 : ')), [])
+})
+
+test('règle 4 — ce que la COPIE de l’élève porte ne se reproche pas non plus', () => {
+  const propre = { ...OK, points: [OK.points[0], { ...OK.points[1],
+    texte: 'tu dis déjà qu’elles disent aussi à chacun où il en est de son propre travail' }] }
+  const r = controlerRetour(propre, { ...ATTENDU,
+    production: 'elles disent aussi à chacun où il en est de son propre travail',
+    recopie: { reponses: [REPONSE], devoirs: [DEVOIR] } })
+  assert.deepEqual(r.controle.refus, [])
+})
+
+test('⚠️ règle 4 — SANS `recopie`, le contrôle n’a pas eu lieu et il le DIT (jamais un silence)', () => {
+  const r = controlerRetour(OK, ATTENDU)
+  assert.equal(r.controle.alertes.some((x) => x.startsWith('règle 4 : contrôle NON EXÉCUTÉ')), true)
+  assert.deepEqual(r.controle.refus, [], 'et il ne refuse rien : ne pas savoir n’est pas accuser')
+})
+
+test('règle 4 — sept mots communs ne suffisent pas : le seuil est HUIT, et il est mesuré', () => {
+  assert.deepEqual(
+    recopiesDeLaReponse('a b c d e f g', ['a b c d e f g'], []), [],
+    'sept mots : sous le seuil')
+  assert.deepEqual(
+    recopiesDeLaReponse('a b c d e f g h', ['a b c d e f g h'], []), ['a b c d e f g h'])
+  assert.deepEqual(
+    recopiesDeLaReponse('a b c d e f g h', ['a b c d e f g h'], ['a b c d e f g h']), [],
+    'et ce qui vient d’ailleurs ne se reproche pas')
 })
 
 test('le plafond du grain est tenu PAR LE CODE, pas seulement demandé au modèle', () => {
@@ -262,7 +345,7 @@ test('RR3 — un retour dont chaque citation est DE SON CÔTÉ ne lève rien', (
   const r = controlerRetour(bon, RR3)
   assert.equal(r.verdict.ok, true)
   assert.deepEqual(r.controle.refus, [])
-  assert.deepEqual(r.controle.alertes, [])
+  assert.deepEqual(alertesHorsRegle4(r.controle.alertes), [])
 })
 
 test('⭐⭐ RR3 PAR L’ÉCHEC — une phrase de l’AUTEUR étiquetée « copie » est ÉCARTÉE', () => {
@@ -355,7 +438,7 @@ test('⭐⭐ UNE CITATION ÉLIDÉE N’EST PAS ÉCARTÉE — 7 refus à tort le 
   }
   const r = controlerRetour(elide, RR3)
   assert.deepEqual(r.controle.refus, [])
-  assert.deepEqual(r.controle.alertes, [], 'aucune alerte : la citation TIENT')
+  assert.deepEqual(alertesHorsRegle4(r.controle.alertes), [], 'aucune alerte : la citation TIENT')
   assert.equal(r.verdict.ok && r.verdict.valeur.points[0].ancrage?.citation,
     'Descartes commence par douter [...] il trouve un point fixe')
 })
@@ -532,7 +615,7 @@ test('RR3 — la prose du retour RÉEL ne lève rien', () => {
   ]
   const v = controlerRR3(points, { production: COPIE, texteSupport: TEXTE_SUPPORT })
   assert.deepEqual(v.refus, [])
-  assert.deepEqual(v.alertes, [])
+  assert.deepEqual(alertesHorsRegle4(v.alertes), [])
 })
 
 test('⛔⛔ LA PROSE EST CONTRÔLÉE MÊME SANS TEXTE SUPPORT — la porte est tombée', () => {

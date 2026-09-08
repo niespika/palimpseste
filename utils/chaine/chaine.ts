@@ -1604,6 +1604,17 @@ export async function engendrerLeRetour(
       } : {}),
       // ⭐ C7-L9 — § 4 bis, règle 2 : sur un verdict RATÉ, aucune réussite n'est inventée.
       ...(regime && a.verdictCran?.reussi === false ? { sansReussiteAdmise: true } : {}),
+      // ⭐⭐ 08/09 — LA GARDE DE LA RÈGLE 4, et elle n'est derrière AUCUNE porte.
+      //    Le bloc « la réponse attendue du cas N » part au prompt sans garde
+      //    (voir `messageDuRetour`), et aux crans 3 et 5 cette réponse EST la
+      //    version corrigée : 75 cas sur 77 en production. L'interdiction de la
+      //    recopier était une phrase de prompt, et le modèle passait outre une
+      //    fois sur quatre. ⛔ Les mêmes cas que le prompt reçoit, jamais un
+      //    sous-ensemble : servir moins ici rendrait la garde plus sévère.
+      recopie: {
+        reponses: ctx.casPourLeRetour.map((c) => c.reponseAttendue),
+        devoirs: ctx.casPourLeRetour.map((c) => c.materiau),
+      },
     })
     // ⚠️ LES ALERTES SE JOURNALISENT SANS ARRÊTER — c'est ce que leur nom dit,
     //    et elles ne remontaient nulle part avant C5-L2 : le champ existait,

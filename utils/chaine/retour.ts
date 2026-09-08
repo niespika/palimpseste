@@ -781,6 +781,78 @@ export interface ControleRetour {
 }
 
 /**
+ * ⭐⭐ 08/09/2026 — LA GARDE DE LA RÈGLE 4, ET POURQUOI ELLE EXISTE EN CODE.
+ *
+ * Le prompt de Calame reçoit « la réponse attendue du cas N » pour que son
+ * jugement porte sur l'écart réel, et il lui est INTERDIT de la recopier — deux
+ * fois : dans le bloc lui-même (« ⛔ NE RECOPIE PAS LA RÉPONSE ATTENDUE, ET NE
+ * LA PARAPHRASE PAS ») et dans la règle 4 du gabarit (« ne recopie ni ne
+ * paraphrase la version corrigée »). ⛔⛔ **C'ÉTAIT UNE PHRASE DE PROMPT, ET
+ * RIEN D'AUTRE** : aucune garde de code ne la tenait, là où le bloc du juge, lui,
+ * est derrière une porte.
+ *
+ * ⛔ CE QUE CELA COÛTAIT, MESURÉ EN PRODUCTION LE 08/09 : aux crans 3 et 5 la
+ *    `reponse_attendue` EST la version corrigée — **75 cas sur 77** (11
+ *    identiques, 64 dont l'une contient l'autre). Sur les 151 retours servis,
+ *    **10 portaient une suite de 8 mots de la réponse absente À LA FOIS du
+ *    devoir et de la copie de l'élève** — donc qui ne pouvait venir que de la
+ *    réponse : 8 au cran 5, 2 au cran 4. **Les dix étaient publiés, et LUS.**
+ *    Exemple : la version corrigée disait « si ce qui devait nous protéger est
+ *    devenu ce qui nous menace » ; le retour, servi à l'élève, aussi.
+ *
+ * ⭐ LE DISCRIMINANT, ET C'EST LUI QUI REND LA GARDE SÛRE : on ne refuse pas
+ *    parce qu'une suite se retrouve dans la réponse — le devoir et la copie en
+ *    partagent forcément —, mais parce qu'elle s'y retrouve **et nulle part
+ *    ailleurs**. Une suite de huit mots que ni le devoir, ni la copie, ni le
+ *    texte support ne portent, et que le retour porte, vient de la réponse.
+ *    ⭐ Calibré sur les 151 retours de production : 0 refus aux crans 2·6·7·8·9
+ *    à tous les seuils essayés (6, 7, 8 et 10 mots). La garde mord là où la
+ *    réponse EST la réponse, et nulle part ailleurs.
+ *
+ * ⛔ ELLE N'EST PAS UN REFUS DE FORME, ET C'EST DÉLIBÉRÉ. Servir au troisième
+ *    essai un retour qui dicte la réponse serait exactement le mal qu'on répare.
+ *    Le refus est donc bloquant ; si trois tentatives n'obtiennent pas un retour
+ *    propre, l'élève voit que son retour n'a pas pu être préparé — et c'est plus
+ *    honnête que de lui donner la réponse.
+ */
+const MOTS_DE_LA_RECOPIE = 8
+
+/** Les mots d'un texte, réduits à ce qui se compare : sans accent, sans ponctuation. */
+function motsComparables(texte: string | null | undefined): string[] {
+  return (texte ?? '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    .replace(/[\u2019']/g, "'").replace(/[^a-z0-9' ]+/g, ' ')
+    .split(/\s+/).filter(Boolean)
+}
+
+/** Les suites de `n` mots consécutifs d'un texte. */
+function suitesDeMots(texte: string | null | undefined, n: number): Set<string> {
+  const m = motsComparables(texte)
+  const out = new Set<string>()
+  for (let i = 0; i + n <= m.length; i++) out.add(m.slice(i, i + n).join(' '))
+  return out
+}
+
+/**
+ * Les suites de la RÉPONSE que le retour reprend et qu'il ne pouvait tenir de
+ * nulle part ailleurs. Rendue triée et dédoublonnée ; vide quand il n'y a rien
+ * à reprocher.
+ */
+export function recopiesDeLaReponse(
+  texteDuRetour: string,
+  reponses: readonly (string | null | undefined)[],
+  ailleurs: readonly (string | null | undefined)[],
+  n: number = MOTS_DE_LA_RECOPIE,
+): string[] {
+  const source = new Set<string>()
+  for (const r of reponses) for (const g of suitesDeMots(r, n)) source.add(g)
+  if (!source.size) return []
+  for (const a of ailleurs) for (const g of suitesDeMots(a, n)) source.delete(g)
+  if (!source.size) return []
+  const dansLeRetour = suitesDeMots(texteDuRetour, n)
+  return [...source].filter((g) => dansLeRetour.has(g)).sort()
+}
+
+/**
  * Les refus qui sont des contrats de RÉDACTION, et eux seuls. La liste est
  * fermée et se lit sur le PRÉFIXE du motif, que `controlerRetour` écrit.
  * ⛔ Tout ce qui n'y est pas est bloquant — le défaut est le refus.
@@ -1091,6 +1163,24 @@ export function controlerRetour(
      *    Vrai SEULEMENT sur un verdict raté, porte ouverte ; absent : le contrôle d'hier.
      */
     sansReussiteAdmise?: boolean
+    /**
+     * ⭐⭐ 08/09/2026 — LA GARDE DE LA RÈGLE 4 (voir `recopiesDeLaReponse`). Un
+     *    seul champ, qui porte tout ce dont la garde a besoin : les réponses de
+     *    la banque, et ce qui peut légitimement se retrouver dans le retour.
+     * ⛔ ELLE N'EST DERRIÈRE AUCUNE PORTE, et c'est le point. `materiaux`
+     *    ci-dessus est gaté par `chaine_cle_actif` — s'appuyer dessus aurait
+     *    rendu la garde plus SÉVÈRE porte fermée (moins d'exclusions, donc des
+     *    refus pour des suites que le devoir portait déjà). La garde se calcule
+     *    sur ses propres sources, toujours les mêmes.
+     * ⚠️ Absent : le contrôle n'a PAS EU LIEU, et il le dit (`CONTRAT-MODULES.md`
+     *    §3) — jamais un silence.
+     */
+    recopie?: {
+      /** `exercices_cas.reponse_attendue` de chaque cas servi. */
+      reponses: readonly (string | null | undefined)[]
+      /** Ce que le retour peut reprendre sans faute : le devoir servi, et rien de plus. */
+      devoirs: readonly (string | null | undefined)[]
+    }
   },
 ): { verdict: Verdict<RetourBrut>; controle: ControleRetour } {
   const verdict = valider<RetourBrut>(brut, FORME_RETOUR)
@@ -1147,6 +1237,27 @@ export function controlerRetour(
   }
   for (const [motif, quoi] of MOTIFS_NOTE) {
     if (motif.test(texteEntier)) controle.refus.push(`règle 6 : le texte porte ${quoi}`)
+  }
+
+  // ⭐⭐ LA RÈGLE 4 — « ne recopie ni ne paraphrase la version corrigée ». Voir
+  //    `recopiesDeLaReponse` pour le motif, la mesure et le discriminant.
+  // ⛔ BLOQUANT, jamais tolérable : le préfixe « règle 4 : » n'est pas dans
+  //    `REFUS_DE_FORME`, et il ne doit pas y entrer.
+  if (attendu.recopie) {
+    const reprises = recopiesDeLaReponse(texteEntier, attendu.recopie.reponses, [
+      ...attendu.recopie.devoirs,
+      attendu.production, attendu.texteSupport, attendu.coTexte,
+    ])
+    if (reprises.length) {
+      controle.refus.push(
+        `règle 4 : le retour recopie la réponse attendue — ${reprises.length} suite(s) de `
+        + `${MOTS_DE_LA_RECOPIE} mots absente(s) du devoir comme de la copie, dont `
+        + `« ${reprises[0]} »`)
+    }
+  } else {
+    controle.alertes.push(
+      'règle 4 : contrôle NON EXÉCUTÉ — la réponse attendue des cas ne m’a pas été passée, '
+      + 'donc rien ne dit si le retour la recopie.')
   }
 
   const contre = {
