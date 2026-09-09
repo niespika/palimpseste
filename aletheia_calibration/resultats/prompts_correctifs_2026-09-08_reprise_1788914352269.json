@@ -1,0 +1,347 @@
+{
+  "subset": [
+    "dialogue-juste",
+    "dialogue-inversion",
+    "aphoristique-fil",
+    "aphoristique-sans-fil",
+    "analytique-application-juste",
+    "analytique-application-incomplete"
+  ],
+  "date": "2026-09-09T00:39:12.268Z",
+  "modele": "claude-sonnet-4-6",
+  "temperature": 0,
+  "corpus": "entièrement synthétique ; attentes de contrôle, pas étalon professeur",
+  "calls": 12,
+  "usage": [
+    {
+      "input_tokens": 1060,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 399,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1039,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 487,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1083,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1178,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1110,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 251,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1055,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 34,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1261,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 375,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1185,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 861,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 289,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 963,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 847,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 419,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1101,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  ],
+  "results": [
+    {
+      "id": "dialogue-juste",
+      "attendu": "Attribution et mouvements solides.",
+      "inventaire": {
+        "these_eleve": "L'élève n'a pas fourni de réponse dans le champ THESE_AUTEUR ; aucune attribution de la thèse préférée de l'auteur ne peut être inventoriée.",
+        "note": "L'élève capte avec précision les quatre mouvements de l'échange (position de Lise, réponse de Noé, objection sur le vote, distinction action/vérité). Le champ THESE_AUTEUR est vide : impossible de vérifier s'il a identifié la prise de position de la narratrice en faveur de Noé.",
+        "these_mal_definie": true,
+        "arguments_captes": [
+          "Position de Lise : le consensus suffit à établir la vérité (« tous ne peuvent se tromper »).",
+          "Réponse de Noé : il faut des raisons vérifiées, pas le nombre (« demande des raisons vérifiées »).",
+          "Objection de Lise sur l'utilité du vote (« Lise attaque l'utilité du vote »).",
+          "Réfutation de Noé distinguant action commune et vérité (« Noé répond en distinguant action commune et vérité »)."
+        ],
+        "arguments_rates": [
+          "Thèse de l'auteur (narratrice) : aucun indice donné que Noé est la voix préférée ni que la narratrice tranche en sa faveur."
+        ],
+        "arguments_deformes": [],
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "62fcafba7f6f8ba86f1060a29fc5705e483d12adb198eed43cc1d2655470c073",
+          "reference_sha256": "8d21574dcbfd9d95bad45a1b149f0389d4dbf60efec5a9db72e04f00c8a3f01b"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 0,
+        "niveau_arguments": 3
+      }
+    },
+    {
+      "id": "dialogue-inversion",
+      "attendu": "Attributions inversées, niveaux faibles.",
+      "inventaire": {
+        "these_eleve": "L'élève n'a pas fourni de réponse à la question sur la thèse de l'auteur ; aucune attribution à la narratrice ou à un personnage préféré ne peut être dégagée.",
+        "note": "Les deux idées principales du texte sont présentes dans la réponse de l'élève, mais systématiquement inversées entre les deux personnages. Aucun indice n'est fourni sur la thèse de l'auteur (champ THESE_AUTEUR vide), ce qui rend cet axe non évaluable.",
+        "these_mal_definie": true,
+        "arguments_captes": [],
+        "arguments_rates": [
+          "Lise pose la thèse : la croyance collective suffit à établir la vérité",
+          "Noé réfute : la majorité peut répéter une erreur, il faut vérifier les raisons",
+          "Lise objecte : si le consensus ne prouve rien, le vote est inutile",
+          "Noé distingue : le vote décide de l'action commune, il ne tranche pas sur le vrai",
+          "La narratrice valide la position de Noé en qualifiant son intervention de dissipation d'une confusion"
+        ],
+        "arguments_deformes": [
+          "L'élève attribue à Noé la thèse que le vote prouve la vérité : c'est la position de Lise, mise dans la mauvaise bouche",
+          "L'élève attribue à Lise l'exigence de vérifier les raisons : c'est la position de Noé, mise dans la mauvaise bouche",
+          "L'élève attribue à Noé le refus de la distinction décider/prouver : c'est l'inverse, Noé est précisément celui qui établit cette distinction"
+        ],
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "62fcafba7f6f8ba86f1060a29fc5705e483d12adb198eed43cc1d2655470c073",
+          "reference_sha256": "8d21574dcbfd9d95bad45a1b149f0389d4dbf60efec5a9db72e04f00c8a3f01b"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 0,
+        "niveau_arguments": 0
+      }
+    },
+    {
+      "id": "aphoristique-sans-fil",
+      "attendu": "Fragment 18 mesuré ; axe fil null.",
+      "inventaire": {
+        "these_eleve": "La remise en question n'a de valeur que si elle est suivie d'un examen permettant de déterminer si elle est fondée.",
+        "note": "L'élève saisit correctement le cœur du fragment : douter sans vérifier ne suffit pas. La réponse tournante ('sinon on peut tout contester sans avancer') confirme la compréhension en ajoutant une conséquence pratique cohérente avec le fragment. Aucune déformation détectée.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "Le doute seul est insuffisant : il doit déboucher sur une vérification.",
+          "La remise en cause est une étape, pas une fin en soi."
+        ],
+        "arguments_rates": [],
+        "arguments_deformes": [],
+        "fragment_reference": "18 : Le doute doit déboucher sur une vérification.",
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "cb47cb79241a5de39a4cc7214392680c8b5cacfb60d5548fb19d99f8b8970fb9",
+          "reference_sha256": "a8ae5dda36dac7aa79d9981e254f7a045f029c1124a7bb3999a9a749c5890fe8"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 4,
+        "niveau_arguments": null
+      }
+    },
+    {
+      "id": "aphoristique-fil",
+      "attendu": "Fragment 17 et fil mesurés.",
+      "inventaire": {
+        "these_eleve": "Le nombre de partisans ne constitue pas une preuve ; des raisons sont nécessaires.",
+        "note": "L'élève restitue fidèlement le cœur du fragment 17 en une formule concise. La nuance sur l'erreur partagée par la foule n'est pas explicitée, mais la thèse centrale est saisie.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "Le nombre de voix ne suffit pas à établir la vérité.",
+          "Des raisons sont requises indépendamment du consensus."
+        ],
+        "arguments_rates": [
+          "La possibilité que la foule entière partage une même erreur (l'accent est mis sur l'insuffisance du nombre, mais pas sur la faillibilité collective comme telle)."
+        ],
+        "arguments_deformes": [],
+        "fragment_reference": "17 : Le nombre ne remplace pas les raisons.",
+        "fil": {
+          "captes": [
+            "Le lien entre 17 et 18 est identifié : les deux fragments exigent un examen actif plutôt qu'une acceptation passive (nombre ou doute non vérifiés).",
+            "L'idée commune d'un 'examen des raisons' comme fil entre les deux fragments est correctement dégagée."
+          ],
+          "rates": [],
+          "deformes": []
+        },
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "2314ccbf1b06f5a50211852733e93466f89b4cd5dcac8a8ec879ec546a9ef9a8",
+          "reference_sha256": "a8ae5dda36dac7aa79d9981e254f7a045f029c1124a7bb3999a9a749c5890fe8"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 3,
+        "niveau_arguments": 4
+      }
+    },
+    {
+      "id": "analytique-application-juste",
+      "attendu": "Notion et application solides.",
+      "inventaire": {
+        "these_eleve": "Un argument testable exige trois éléments : une affirmation précise, un moyen de la vérifier, et un résultat possible qui la réfuterait.",
+        "note": "Les trois critères du chapitre sont présents et correctement appliqués au cas choisi. L'élève a également saisi, dans sa définition, la logique sous-jacente : sans résultat réfutant possible, aucun arbitrage n'est possible.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "Affirmation précise : 'toutes les billes du sac sont rouges' est une affirmation délimitée et vérifiable.",
+          "Observation permettant de vérifier : sortir les billes une à une pour observer leur couleur constitue la procédure de vérification.",
+          "Résultat réfutant possible : une bille bleue suffirait à invalider l'affirmation, ce qui correspond exactement au troisième critère."
+        ],
+        "arguments_rates": [],
+        "arguments_deformes": [],
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "f77671d54423cf180a04f65a8d946aa887861d820f0ed0440308e8196d424c4b",
+          "reference_sha256": "d75cef0ecb9cac139ea04353d3bf6aa36bad712a592aaf99c630afa1630b2823"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 4,
+        "niveau_arguments": 4
+      }
+    },
+    {
+      "id": "analytique-application-incomplete",
+      "attendu": "Notion mieux comprise que l’application.",
+      "inventaire": {
+        "these_eleve": "Un argument testable comporte une affirmation précise, une procédure de vérification, et l'acceptation d'un résultat qui pourrait le réfuter.",
+        "note": "La définition est bien saisie dans l'idée principale. L'application, en revanche, construit un exemple qui viole le troisième critère au lieu de le satisfaire, et laisse le deuxième critère de côté.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "L'élève formule une affirmation (« ma théorie explique tout »), ce qui correspond au critère d'affirmation précise — même si le contenu est volontairement vague, le geste est présent.",
+          "L'élève mentionne explicitement un contre-exemple possible, ce qui montre qu'il a en tête la notion de résultat réfutant."
+        ],
+        "arguments_rates": [
+          "L'élève n'identifie pas d'observation concrète qui permettrait de vérifier l'affirmation : le deuxième critère (observation de vérification) est absent de l'application."
+        ],
+        "arguments_deformes": [
+          "Le résultat réfutant est cité mais immédiatement neutralisé : l'élève annonce qu'il réinterprèterait tout contre-exemple comme une confirmation. L'application illustre ainsi exactement le cas que le chapitre déclare non testable (aucun résultat ne peut départager défenseurs et opposants), à l'opposé de ce que le critère exige."
+        ],
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "f77671d54423cf180a04f65a8d946aa887861d820f0ed0440308e8196d424c4b",
+          "reference_sha256": "d75cef0ecb9cac139ea04353d3bf6aa36bad712a592aaf99c630afa1630b2823"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 3,
+        "niveau_arguments": 1
+      }
+    }
+  ]
+}

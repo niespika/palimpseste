@@ -91,19 +91,10 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
   // Scriptorium assigne les livres, `classe_modules` donne les modules) : la
   // tuile promettait alors un parcours de lecture que l'élève ne verrait jamais.
   const { data: moduleData } = await admin.from('modules').select('id').eq('slug', 'aletheia').maybeSingle()
-  const [classesList, { data: livreUnites }, { data: liens }] = await Promise.all([
-    moduleData ? classesAvecModule(admin, moduleData.id as string) : Promise.resolve([]),
-    admin.from('scriptorium_unites').select('id').eq('type', 'livre'),
-    admin.from('scriptorium_unite_classes').select('unite_id, classe_id'),
-  ])
-  const livreIds = new Set((livreUnites ?? []).map(u => u.id as string))
-
-  const nbLivresParClasse = new Map<string, number>()
-  for (const l of liens ?? []) {
-    if (!livreIds.has(l.unite_id as string)) continue
-    const k = l.classe_id as string
-    nbLivresParClasse.set(k, (nbLivresParClasse.get(k) ?? 0) + 1)
-  }
+  const classesList = moduleData ? await classesAvecModule(admin, moduleData.id as string) : []
+  const livresParClasse = new Map(await Promise.all(classesList.map(async c =>
+    [c.id, await livresDeClasse(admin, c.id)] as const,
+  )))
 
   // Détail de la classe sélectionnée : élèves + avancée + diagnostic.
   let nomClasse: string | undefined
@@ -112,7 +103,7 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
   let aFaireGlobal = false
   if (classeSel) {
     nomClasse = classesList.find(c => c.id === classeSel)?.nom
-    const livres = await livresDeClasse(admin, classeSel)
+    const livres = livresParClasse.get(classeSel) ?? []
     const inscrits = await inscriptionsClasse(admin, classeSel)
     const eleveIds = [...new Set(inscrits.map(i => i.eleve_id))]
     const classeSize = eleveIds.length
@@ -188,7 +179,7 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {classesList.map(c => {
-            const n = nbLivresParClasse.get(c.id) ?? 0
+            const n = livresParClasse.get(c.id)?.length ?? 0
             return (
               <Tuile
                 key={c.id}

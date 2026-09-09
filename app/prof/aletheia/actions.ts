@@ -1,5 +1,6 @@
 'use server'
 
+import { phasesDiagnostic } from '@/utils/aletheia/diagnostic'
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
@@ -9,7 +10,7 @@ import {
   PROMPT_FEEDBACK_V1_DEFAUT, PROMPT_FEEDBACK_VF_DEFAUT,
   PROMPT_DIAG_INVENTAIRE_DEFAUT, PROMPT_DIAG_NIVEAU_DEFAUT,
 } from '@/utils/aletheia-retours'
-import { diagnosticEnAttente } from './donnees'
+import { diagnosticEnAttente, livresDeClasse } from './donnees'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
 import { AIDES_V1_DEFAUT, type AidesV1 } from '@/app/eleve/modules/aletheia/aides-v1'
 
@@ -141,12 +142,8 @@ export async function lancerDiagnosticClasse(classeId: string): Promise<{ lances
   await verifierProf()
   const admin = createAdminClient()
 
-  // Livres (type='livre') assignés à la classe.
-  const { data: liens } = await admin.from('scriptorium_unite_classes').select('unite_id').eq('classe_id', classeId)
-  const uniteIds = [...new Set((liens ?? []).map(l => l.unite_id as string))]
-  if (uniteIds.length === 0) return { lances: 0, restants: 0 }
-  const { data: livres } = await admin.from('scriptorium_unites').select('id').eq('type', 'livre').in('id', uniteIds)
-  const livreIds = (livres ?? []).map(u => u.id as string)
+  const livres = await livresDeClasse(admin, classeId)
+  const livreIds = livres.map(l => l.id)
   if (livreIds.length === 0) return { lances: 0, restants: 0 }
 
   // Élèves de la classe.
@@ -156,14 +153,14 @@ export async function lancerDiagnosticClasse(classeId: string): Promise<{ lances
 
   // Travaux rendus (≠ DRAFT, projection étroite) + diagnostics existants.
   const [{ data: travaux }, { data: diags }] = await Promise.all([
-    admin.from('aletheia_travaux').select('id, these, these_vf, semaine_index, updated_at').in('eleve_id', eleveIds).in('scriptorium_livre_id', livreIds).neq('statut', 'DRAFT'),
+    admin.from('aletheia_travaux').select('id, these, these_vf, semaine_index, updated_at, statut').in('eleve_id', eleveIds).in('scriptorium_livre_id', livreIds).neq('statut', 'DRAFT'),
     admin.from('aletheia_diagnostic').select('travail_id, inventaire_v1, inventaire_vf, erreur_at').in('eleve_id', eleveIds).in('scriptorium_livre_id', livreIds),
   ])
   const diagParTravail = new Map<string, DiagnosticTravail>()
   for (const d of (diags ?? []) as unknown as DiagnosticTravail[]) diagParTravail.set(d.travail_id, d)
 
   const maintenant = Date.now()
-  type T = Pick<TravailAletheia, 'id' | 'these' | 'these_vf' | 'semaine_index' | 'updated_at'>
+  type T = Pick<TravailAletheia, 'id' | 'these' | 'these_vf' | 'semaine_index' | 'updated_at' | 'statut'>
   const enAttente = ((travaux ?? []) as T[]).filter(t => {
     if (!diagnosticEnAttente(t as TravailAletheia, diagParTravail.get(t.id))) return false
     // Semaine 1 = auto. On ne la prend dans le batch que si l'auto a échoué (erreur_at)
@@ -186,7 +183,8 @@ export async function lancerDiagnosticClasse(classeId: string): Promise<{ lances
   let cout = 0
   for (const t of enAttente) {
     const d = diagParTravail.get(t.id)
-    const phases = ((t.these ?? '').trim() && !d?.inventaire_v1 ? 1 : 0) + ((t.these_vf ?? '').trim() && !d?.inventaire_vf ? 1 : 0)
+    const disponibles = phasesDiagnostic(t.statut)
+    const phases = (disponibles.v1 && (t.these ?? '').trim() && !d?.inventaire_v1 ? 1 : 0) + (disponibles.vf && (t.these_vf ?? '').trim() && !d?.inventaire_vf ? 1 : 0)
     const appels = phases * 2
     if (lot.length > 0 && cout + appels > BUDGET_APPELS) break
     lot.push(t.id)

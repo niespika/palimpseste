@@ -208,7 +208,7 @@ Le texte fait parler plusieurs personnes. « Idée principale » de l'élève = 
 <<<THESE_AUTEUR
 {champ_fixe_eleve}
 THESE_AUTEUR>>>
-- these_eleve : la position que l'élève attribue à l'AUTEUR, en une phrase neutre.
+- these_eleve : la position que l'élève attribue à l'AUTEUR, en une phrase neutre, en lisant surtout sa réponse THESE_AUTEUR ci-dessus. Cite dans note l’indice qu’il y donne ; cet indice n’a pas à être répété dans son inventaire des voix ou des mouvements pour compter comme compris.
 - arguments_captes / rates / deformes : parmi les positions et mouvements RÉELS du texte, lesquels l'élève attribue juste / rate / attribue à la mauvaise voix (une position mise dans la mauvaise bouche = déformée).
 `,
   diag_niveau: `
@@ -240,12 +240,13 @@ IDEE = le fragment choisi (recopié) ; ARGUMENTS = la thèse implicite reconstru
 ## Gabarit APHORISTIQUE — ce que tu inventories
 « Idée principale » de l'élève = le FRAGMENT qu'il a choisi (recopié) ; « Arguments » = la THÈSE IMPLICITE qu'il en reconstruit. Localise le fragment dans le texte, puis :
 - these_eleve : la thèse implicite que l'élève attribue à CE fragment, en une phrase neutre.
-- arguments_captes / rates / deformes : parmi les idées RÉELLEMENT portées par ce fragment (et ses liens aux fragments voisins de la semaine), lesquelles l'élève capte / rate / déforme.
+- arguments_captes / rates / deformes : parmi les idées RÉELLEMENT portées par CE SEUL fragment, lesquelles l'élève capte / rate / déforme.
 `,
   diag_niveau: `
 ## Gabarit APHORISTIQUE — ce que mesurent les deux axes
 - niveau_these = la thèse implicite du fragment CHOISI est-elle saisie ? (La référence donne les thèses implicites par fragment ; juge sur celui de l'élève, pas sur les autres.)
-- niveau_arguments = le fil entre ce fragment et les autres de la semaine est-il vu ? Si l'inventaire ne dit rien d'un fil, ne pénalise pas : niveau_arguments = null.
+- niveau_arguments = le fil entre les fragments, UNIQUEMENT quand cette question a été posée. Les preuves figurent dans "fil", séparément des idées du fragment. Sinon cet axe est non applicable : niveau_arguments = null.
+- La thèse implicite est un axe applicable même si le chapitre ne porte pas de thèse argumentative globale : these_mal_definie=false.
 `,
   reference: `
 ## Gabarit APHORISTIQUE — ce que porte la fiche
@@ -275,7 +276,7 @@ IDEE = la notion saisie (définition, critères, mécanisme) ; ARGUMENTS = l'app
 `,
   diag_niveau: `
 ## Gabarit ANALYTIQUE — ce que mesurent les deux axes
-- niveau_these = la notion est-elle saisie (définition, critères, mécanisme) ?
+- niveau_these = la notion est-elle saisie (définition, critères, mécanisme) ? Cet axe est applicable même sans thèse argumentative : these_mal_definie=false.
 - niveau_arguments = l'APPLICATION respecte-t-elle les critères de l'auteur ? (C'est un axe d'application, pas de restitution.)
 `,
   reference: `
@@ -302,4 +303,12 @@ export function blocGabarit(gabarit: Gabarit, cle: PromptCle, overrides?: unknow
 /** Insère le bloc dans un tronc (placeholder `{bloc_gabarit}` ; absent ⇒ tronc inchangé). */
 export function assemblerPrompt(tronc: string, bloc: string): string {
   return tronc.split('{bloc_gabarit}').join(bloc)
+}
+
+/** Le tronc historique suppose un accord ; les autres tournantes le redéfinissent. */
+export function blocTournanteArgumentative(gabarit: Gabarit, cle: string): string {
+  if (gabarit !== 'argumentatif' || cle === 'accord') return ''
+  const q = DEFINITIONS.argumentatif.tournantes.find(t => t.cle === cle)
+  if (!q) return ''
+  return `\n## Question effectivement posée — prime sur le traitement de l'accord\nLe champ ACCORD (initial et final) répond à « ${q.question} ». Évalue cette opération : une objection et sa justification, un destinataire et l'effet recherché, ou la pertinence d'un exemple selon la question. Ne réclame pas un accord/désaccord personnel qui n'a pas été demandé. Le retour reste dans la clé JSON "accord" ; parle à l'élève de sa réponse à cette question.\n`
 }

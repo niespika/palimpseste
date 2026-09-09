@@ -189,11 +189,11 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   if (!sig) {
     after(async () => {
       const mod = await import('@/utils/aletheia-retours')
-      await mod.genererRetourV1(travailId)
+      const pret = await mod.genererRetourV1(travailId)
       // Diagnostic AUTOMATIQUE de la SEMAINE 1 (les suivantes = batch prof) — et, porte
       // `aletheia_etayage_actif` ouverte (E2), de CHAQUE séance : c'est lui qui décide la
       // forme d'étayage de la séance suivante. Froid, indépendant du retour.
-      if (semaine === 1 || etayage) await mod.diagnostiquerTravail(travailId)
+      if (pret && (semaine === 1 || etayage)) await mod.diagnostiquerTravail(travailId)
     })
   }
 
@@ -281,10 +281,10 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   if (!sig) {
     after(async () => {
       const mod = await import('@/utils/aletheia-retours')
-      await mod.genererRetourVf(travailId)
+      const pret = await mod.genererRetourVf(travailId)
       // Diagnostic AUTOMATIQUE de la SEMAINE 1 (phase VF → delta V1→VF) — et de CHAQUE
       // séance porte `aletheia_etayage_actif` ouverte (E2).
-      if (semaine === 1 || await lireLaPorteEtayage(admin)) await mod.diagnostiquerTravail(travailId)
+      if (pret && (semaine === 1 || await lireLaPorteEtayage(admin))) await mod.diagnostiquerTravail(travailId)
     })
   }
 
@@ -340,7 +340,7 @@ export async function validerLectureRetourVf(livreId: string, semaine: number) {
 // Relance d'un retour bloqué : si le job after() est mort (process interrompu, redeploy),
 // le travail reste en *_SUBMITTED indéfiniment et le polling tourne sans fin. On autorise
 // une relance après un délai de sécurité (> durée normale d'une génération). genererRetourV1/Vf
-// sont gardés par compare-and-set, donc relancer est sûr.
+// réservent la copie en base et publient uniquement avec le jeton de leur tentative.
 export async function relancerRetour(livreId: string, semaine: number) {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
@@ -372,8 +372,8 @@ export async function relancerRetour(livreId: string, semaine: number) {
   const phase = row.statut
   after(async () => {
     const mod = await import('@/utils/aletheia-retours')
-    if (phase === 'V1_SUBMITTED') await mod.genererRetourV1(travailId)
-    else await mod.genererRetourVf(travailId)
+    const pret = phase === 'V1_SUBMITTED' ? await mod.genererRetourV1(travailId) : await mod.genererRetourVf(travailId)
+    if (pret && (semaine === 1 || await lireLaPorteEtayage(admin))) await mod.diagnostiquerTravail(travailId)
   })
 
   revalider(livreId, semaine)
@@ -533,10 +533,13 @@ export async function comparerSyntheseAction(livreId: string, semaine: number, s
   const r = await travailPourRetourFinal(livreId, semaine)
   if ('error' in r) return { error: r.error }
   const { admin, userId, row } = r
-  const couverture = (row.retour_vf as { synthese_couverture?: { id: string; etat: 'present' | 'partiel' | 'absent' }[] } | null)?.synthese_couverture ?? []
-  if (!couverture.length) return { error: 'Cette synthèse n’a pas été jugée.' }
+  const retour = row.retour_vf as { synthese_modele?: string; synthese_couverture?: unknown } | null
+  const { phrasesSynthese, lireCouverture } = await import('@/utils/aletheia/retour-vf')
+  const attendues = phrasesSynthese(semaine, retour?.synthese_modele ?? '').map(p => p.id)
+  const couverture = lireCouverture(retour?.synthese_couverture, attendues)
+  if (!attendues.length || couverture.length !== attendues.length) return { error: 'Cette synthèse n’a pas été entièrement comparée à ta version.' }
   if (row.comparaison_synthese) return { error: 'Tu as déjà comparé cette synthèse.' }
-  const ids = (Array.isArray(selection) ? selection : []).filter((x): x is string => typeof x === 'string').slice(0, 60)
+  const ids = (Array.isArray(selection) ? selection : []).filter((x): x is string => typeof x === 'string' && attendues.includes(x)).slice(0, 60)
   const { comparerSynthese } = await import('@/utils/aletheia/retour-vf')
   const c = { ...comparerSynthese(couverture, ids), at: new Date().toISOString() }
   const { error } = await admin.from('aletheia_travaux').update({ comparaison_synthese: c, updated_at: new Date().toISOString() })

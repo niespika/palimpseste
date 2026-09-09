@@ -294,7 +294,7 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
   const doitRepondre = gab.etayage && statut === 'FEEDBACK1_READY' && relancesV1.length > 0 && reponsesRelances.length < relancesV1.length
   // (E6) Les fenêtres des relances qui désignent un passage, selon la forme servie à cette séance.
   const fenetres = doitRepondre && t
-    ? await (await import('@/utils/aletheia/fenetre-serveur')).preparerFenetres(admin, t.id, livreId, semaine, t.forme, t.retour_v1?.relances_detail)
+    ? await (await import('@/utils/aletheia/fenetre-serveur')).preparerFenetres(admin, t.id, livreId, semaine, t.forme, t.retour_v1?.relances_detail, t.reponses_relances ?? [])
     : []
   const surlignagesInitiaux = Object.fromEntries((t?.reponses_relances ?? []).map(r => [r.relance, { verdict_code: r.verdict_code, essais: r.essais, surlignage: r.surlignage }]))
   // (E7) Le retour final AGI : préparé côté serveur quand le retour VF porte les sorties E7.

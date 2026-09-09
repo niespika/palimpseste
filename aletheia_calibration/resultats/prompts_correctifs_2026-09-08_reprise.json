@@ -1,0 +1,22 @@
+{
+  "subset": [
+    "dialogue-juste",
+    "aphoristique-fil"
+  ],
+  "date": "2026-09-09T00:38:14.460Z",
+  "modele": "claude-sonnet-4-6",
+  "temperature": 0,
+  "corpus": "entièrement synthétique ; attentes de contrôle, pas étalon professeur",
+  "calls": 0,
+  "usage": [],
+  "results": [
+    {
+      "id": "aphoristique-fil",
+      "erreur": "Connection error."
+    },
+    {
+      "id": "dialogue-juste",
+      "erreur": "Connection error."
+    }
+  ]
+}

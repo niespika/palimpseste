@@ -1,41 +1,19 @@
 import 'server-only'
+import { phasesDiagnostic } from '@/utils/aletheia/diagnostic'
+import { livresPourClasse } from '@/app/eleve/modules/aletheia/data'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StatutAletheia, TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
 
 export interface SemaineProf { semaine: number; titre: string; chapitres: string | null }
 export interface LivreProf { id: string; titre: string; nb_semaines: number | null; date_debut: string | null; semaines: SemaineProf[] }
 
-// Livres (type='livre') assignés à une classe + leurs semaines (titre/chapitres).
-// Côté prof : tout passe par le client admin (Scriptorium est en RLS prof-only,
-// mais on garde admin pour cohérence avec le reste du module).
+// La même exposition que côté élève : liens directs OU parcours actifs,
+// livres non supprimés, séances effectivement exposées.
 export async function livresDeClasse(admin: SupabaseClient, classeId: string): Promise<LivreProf[]> {
-  const { data: liens } = await admin
-    .from('scriptorium_unite_classes').select('unite_id').eq('classe_id', classeId)
-  const bookIds = [...new Set((liens ?? []).map(l => l.unite_id as string))]
-  if (bookIds.length === 0) return []
-
-  const [{ data: unites }, { data: docs }] = await Promise.all([
-    admin.from('scriptorium_unites')
-      .select('id, label, nb_semaines, date_debut').eq('type', 'livre').in('id', bookIds).order('ordre', { ascending: true }),
-    admin.from('scriptorium_documents')
-      .select('unite_id, semaine, titre, chapitres').in('unite_id', bookIds)
-      .not('semaine', 'is', null).order('semaine', { ascending: true }),
-  ])
-
-  const semParLivre = new Map<string, SemaineProf[]>()
-  for (const d of docs ?? []) {
-    const uid = d.unite_id as string
-    const arr = semParLivre.get(uid) ?? []
-    arr.push({ semaine: d.semaine as number, titre: (d.titre as string) ?? `Séance ${d.semaine}`, chapitres: (d.chapitres as string | null) ?? null })
-    semParLivre.set(uid, arr)
-  }
-
-  return (unites ?? []).map(u => ({
-    id: u.id as string,
-    titre: u.label as string,
-    nb_semaines: (u.nb_semaines as number | null) ?? null,
-    date_debut: (u.date_debut as string | null) ?? null,
-    semaines: semParLivre.get(u.id as string) ?? [],
+  const livres = await livresPourClasse(admin, classeId)
+  return livres.map(l => ({
+    id: l.id, titre: l.titre, nb_semaines: l.nb_semaines, date_debut: l.date_debut,
+    semaines: l.semaines.map(s => ({ semaine: s.semaine, titre: s.titre, chapitres: s.chapitres })),
   }))
 }
 
@@ -98,8 +76,9 @@ export async function chargerDiagnostics(
 // Une phase de diagnostic est EN ATTENTE si le travail porte la donnée mais que
 // l'inventaire correspondant manque (V1 = idée présente ; VF = version finale).
 export function diagnosticEnAttente(t: TravailAletheia, d: DiagnosticTravail | undefined): boolean {
-  const needV1 = !!(t.these && t.these.trim()) && !d?.inventaire_v1
-  const needVf = !!(t.these_vf && t.these_vf.trim()) && !d?.inventaire_vf
+  const disponibles = phasesDiagnostic(t.statut)
+  const needV1 = disponibles.v1 && !!(t.these && t.these.trim()) && !d?.inventaire_v1
+  const needVf = disponibles.vf && !!(t.these_vf && t.these_vf.trim()) && !d?.inventaire_vf
   return needV1 || needVf
 }
 

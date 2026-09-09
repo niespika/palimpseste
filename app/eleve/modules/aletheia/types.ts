@@ -160,6 +160,12 @@ export interface LivreReferenceProf extends LivreReference {
 // ── Diagnostic de compréhension (PROF-ONLY, jamais montré à l'élève) ──────────
 // Phase 1 (anti-halo) : inventaire ancré au texte, sans juger.
 export interface InventaireDiagnostic {
+  /** Trace de la mesure ; ajout JSON, sans reprise des diagnostics historiques. */
+  provenance?: { version: string; modele: string; prompts_sha256: string; reference_sha256: string }
+  /** Référence canonique exacte du fragment choisi (gabarit aphoristique). */
+  fragment_reference?: string
+  /** Preuves du fil, seulement lorsque cette question a été posée. */
+  fil?: { captes: string[]; rates: string[]; deformes: string[] }
   these_eleve: string
   arguments_captes: string[]
   arguments_rates: string[]

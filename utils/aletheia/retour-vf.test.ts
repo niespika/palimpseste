@@ -32,12 +32,12 @@ test('nuances : passage inconnu → null, une seule priorité 1 qui désigne un 
     { extrait_eleve: '', passage: 'k3-1' },
     { extrait_eleve: 'x', verdict: 'bizarre' },
   ], ids)
-  assert.equal(n.length, 3)
+  assert.equal(n.length, 2)
   assert.equal(n[0].passage, 'k3-2')          // la première qui désigne un passage passe en tête
   assert.equal(n[0].priorite, 1)
   assert.equal(n[1].passage, null)
-  assert.deepEqual(n.map(x => x.priorite), [1, 2, 3])
-  assert.equal(n[2].verdict, 'confirme')
+  assert.deepEqual(n.map(x => x.priorite), [1, 2])
+
   assert.deepEqual(lireNuances('rien', ids), [])
 })
 
@@ -52,9 +52,9 @@ test('paires : identifiants connus des deux côtés, sans doublon, relation born
   assert.equal(p[0].relation.split(' ').length, 16)   // une phrase complète tient en 30 mots au plus
 })
 
-test('couverture : phrase non jugée = présente ; comparaison par surlignage', () => {
+test('couverture : seules les phrases mesurées sont retenues ; comparaison par surlignage', () => {
   const ids = ['y3-1', 'y3-2', 'y3-3']
-  const c = lireCouverture([{ id: 'y3-2', etat: 'absent' }, { id: 'y3-3', etat: 'absent' }, { id: 'y9-9', etat: 'absent' }], ids)
+  const c = lireCouverture([{ id: 'y3-1', etat: 'present' }, { id: 'y3-2', etat: 'absent' }, { id: 'y3-3', etat: 'absent' }, { id: 'y9-9', etat: 'absent' }], ids)
   assert.deepEqual(c.map(x => x.etat), ['present', 'absent', 'absent'])
   const r1 = comparerSynthese(c, ['y3-2'])
   assert.deepEqual([r1.reperes, r1.manques, r1.deja_la], [['y3-2'], ['y3-3'], []])
@@ -65,7 +65,9 @@ test('couverture : phrase non jugée = présente ; comparaison par surlignage', 
   const r3 = comparerSynthese(c, [])
   assert.ok(r3.message.includes('t’ont échappé'))
   const r4 = comparerSynthese(lireCouverture([], ids), [])
-  assert.ok(r4.message.includes('disait déjà tout'))
+  assert.ok(r4.message.includes('pas encore été comparée'))
+  assert.deepEqual(lireCouverture([{ id: 'y3-2', etat: 'inconnu' }], ids), [])
+  assert.ok(comparerSynthese([{ id: 'y3-1', etat: 'partiel' }], []).message.includes('à compléter ou à préciser'))
 })
 
 test('options amont : la bonne est dedans, au plus quatre, ordre du livre, déterministe', () => {

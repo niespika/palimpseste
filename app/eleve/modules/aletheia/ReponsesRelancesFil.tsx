@@ -54,7 +54,8 @@ export default function ReponsesRelancesFil({ livreId, semaine, numeroSeance, re
   const [reponses, setReponses] = useState<string[]>(relances.map(() => ''))
   const [etats, setEtats] = useState<Record<number, EtatRelance>>(() => Object.fromEntries(relances.map((_, i) => {
     const s = surlignagesInitiaux[i]
-    return [i, { selection: s?.surlignage ?? [], verdict: s?.verdict_code, essais: s?.essais ?? 0, busy: false, vue: 0 }]
+    const pivot = fenetres.find(f => f.relance === i)?.pivot
+    return [i, { selection: pivot ? [] : s?.surlignage ?? [], pivot, verdict: s?.verdict_code, essais: s?.essais ?? 0, busy: false, vue: 0 }]
   })))
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)

@@ -12,11 +12,11 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chargerDecoupeLivre, genererDecoupeLivre, chargerTextes } from './decoupage-serveur'
 import { parsePassages, type PassageCle } from './passages'
-import { fenetrePour, bareme, type FenetreRelance, type ResultatBareme } from './fenetre'
+import { fenetrePour, bareme, ESSAIS_MAX, type FenetreRelance, type ResultatBareme } from './fenetre'
 import type { Forme } from './forme'
 import type { RelanceDetail } from './retour-v1'
 
-export interface FenetreServie extends FenetreRelance { relance: number; passage: string; libelle: string | null }
+export interface FenetreServie extends FenetreRelance { relance: number; passage: string; libelle: string | null; pivot?: string[] }
 
 /** La découpe, le texte et les passages clés d'une séance (découpe régénérée si périmée). */
 export async function contexteSeance(admin: SupabaseClient, livreId: string, semaine: number) {
@@ -35,6 +35,7 @@ const formeValide = (f: unknown): Forme => (f === 'fenetre' || f === 'demi_secti
 /** Les fenêtres des relances d'un travail (celles qui désignent un passage connu). */
 export async function preparerFenetres(
   admin: SupabaseClient, travailId: string, livreId: string, semaine: number, forme: unknown, detail: readonly RelanceDetail[] | undefined,
+  reponses: readonly { relance: number; verdict_code?: string; essais?: number }[] = [],
 ): Promise<FenetreServie[]> {
   if (!detail?.length) return []
   const { d, texte, passages } = await contexteSeance(admin, livreId, semaine)
@@ -45,7 +46,11 @@ export async function preparerFenetres(
     const p = passages.find(x => x.id === r.passage)
     if (!p) return
     const f = fenetrePour(formeValide(forme), d, texte, p, `${travailId}:${i}`)
-    if (f) out.push({ ...f, relance: i, passage: p.id, libelle: r.libelle })
+    const etat = reponses.find(e => e.relance === i)
+    const revele = etat?.verdict_code === 'juste' || (etat?.essais ?? 0) >= ESSAIS_MAX
+    if (f) out.push({ ...f, relance: i, passage: p.id, libelle: r.libelle,
+      ...(revele ? { pivot: p.pivots[0] ?? [] } : {}),
+    })
   })
   return out
 }

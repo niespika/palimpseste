@@ -91,8 +91,9 @@ export function lireRelances(x: unknown, idsConnus?: ReadonlySet<string>): { rel
 export function lireRappel(x: unknown): RappelJuge | null {
   const o = x as { verdict?: unknown; phrase?: unknown } | null
   if (!o || typeof o.phrase !== 'string' || !o.phrase.trim()) return null
-  const v = typeof o.verdict === 'string' ? o.verdict.trim().toLowerCase().replace(/[\s-]/g, '_') : ''
-  const verdict: RappelJuge['verdict'] = v === 'juste' ? 'juste' : v === 'partiel' ? 'partiel' : 'a_cote'
+  const v = typeof o.verdict === 'string' ? o.verdict.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s-]/g, '_') : ''
+  if (v !== 'juste' && v !== 'partiel' && v !== 'a_cote') return null
+  const verdict: RappelJuge['verdict'] = v
   return { verdict, phrase: o.phrase.trim() }
 }
 

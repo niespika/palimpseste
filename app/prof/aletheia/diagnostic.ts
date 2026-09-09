@@ -7,6 +7,7 @@ import type { DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
 // « mal définie » → pas de niveau (gap dans la courbe, connectNulls=false).
 export function niveauThese(d: DiagnosticTravail | undefined): number | null {
   if (!d) return null
+  if (d.these_mal_definie_vf) return null
   if (d.niveau_these_vf != null) return d.these_mal_definie_vf ? null : d.niveau_these_vf
   if (d.niveau_these_v1 != null) return d.these_mal_definie_v1 ? null : d.niveau_these_v1
   return null

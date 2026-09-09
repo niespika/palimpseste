@@ -1,0 +1,125 @@
+{
+  "subset": [
+    "dialogue-juste",
+    "dialogue-inversion"
+  ],
+  "date": "2026-09-09T00:40:42.131Z",
+  "modele": "claude-sonnet-4-6",
+  "temperature": 0,
+  "corpus": "entièrement synthétique ; attentes de contrôle, pas étalon professeur",
+  "calls": 4,
+  "usage": [
+    {
+      "input_tokens": 1109,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 325,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 998,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1081,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 507,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1144,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  ],
+  "results": [
+    {
+      "id": "dialogue-juste",
+      "attendu": "Attribution et mouvements solides.",
+      "inventaire": {
+        "these_eleve": "L'auteur prend parti pour Noé : la narratrice signale qu'il dissipe la confusion de Lise.",
+        "note": "L'élève identifie correctement les deux positions, les attribue aux bonnes voix, capte la distinction vote/vérité et l'objection de Lise. Il donne l'indice textuel attendu ('dissipe la confusion de Lise'). Seul manque : l'argument de Noé sur la possibilité d'une erreur collective répétée n'est pas isolé explicitement.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "Lise : si tout le monde le croit, c'est vrai (consensus = vérité)",
+          "Noé : il faut vérifier les raisons, pas compter les croyants",
+          "Lise : objection sur l'utilité du vote",
+          "Noé : distinction action commune / vérité en réponse à cette objection"
+        ],
+        "arguments_rates": [
+          "Tous peuvent répéter la même erreur (argument explicite de Noé contre le consensus, non mentionné séparément)"
+        ],
+        "arguments_deformes": [],
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "62fcafba7f6f8ba86f1060a29fc5705e483d12adb198eed43cc1d2655470c073",
+          "reference_sha256": "8d21574dcbfd9d95bad45a1b149f0389d4dbf60efec5a9db72e04f00c8a3f01b"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 3,
+        "niveau_arguments": 3
+      }
+    },
+    {
+      "id": "dialogue-inversion",
+      "attendu": "Attributions inversées, niveaux faibles.",
+      "inventaire": {
+        "these_eleve": "L'élève attribue à la narratrice un soutien à Lise, en s'appuyant sur le fait que la narratrice a le dernier mot.",
+        "note": "L'élève donne comme indice de la thèse de l'auteur le fait que la narratrice 'a le dernier mot' ; cet indice est pertinent en tant que stratégie de lecture, mais il est appliqué à la mauvaise voix : la narratrice conclut explicitement que Noé dissipe la confusion de Lise, ce qui signale un soutien à Noé, non à Lise. Par ailleurs, les rôles de Lise et Noé sont systématiquement inversés dans les deux champs de réponse.",
+        "these_mal_definie": false,
+        "arguments_captes": [],
+        "arguments_rates": [
+          "Lise soutient que la croyance collective suffit à établir la vérité",
+          "Noé répond que la majorité peut répéter une erreur et qu'il faut vérifier les raisons",
+          "Lise objecte que le vote serait alors inutile",
+          "Noé distingue : le vote décide de l'action commune, il ne tranche pas sur le vrai",
+          "La narratrice conclut que Noé dissipe la confusion de Lise, signalant ainsi son soutien à Noé"
+        ],
+        "arguments_deformes": [
+          "L'élève inverse les positions des personnages : il attribue à Noé la thèse que le vote prouve la vérité (thèse réelle de Lise) et à Lise l'exigence de raisons (position réelle de Noé)",
+          "L'élève attribue à Noé une réfutation de la distinction décider/prouver, alors que c'est Noé qui établit cette distinction et Lise qui l'interroge implicitement"
+        ],
+        "provenance": {
+          "version": "2026-09-08",
+          "modele": "claude-sonnet-4-6",
+          "prompts_sha256": "62fcafba7f6f8ba86f1060a29fc5705e483d12adb198eed43cc1d2655470c073",
+          "reference_sha256": "8d21574dcbfd9d95bad45a1b149f0389d4dbf60efec5a9db72e04f00c8a3f01b"
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 0,
+        "niveau_arguments": 0
+      }
+    }
+  ]
+}

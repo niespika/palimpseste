@@ -112,7 +112,7 @@ export function blocPassagesVf(
 export function blocFormatVf(courants: boolean, amont: boolean, synthese: boolean): string {
   const l: string[] = []
   if (courants) l.push('  "nuances_detail": [ { "extrait_eleve": "phrase de la version finale, mot pour mot", "passage": "k…-… ou null", "verdict": "confirme | infirme | precise", "note": "≤ 40 mots", "priorite": 1 } ],')
-  if (courants && amont) l.push('  "architecture_amont_paires": [ { "passage_courant": "k…-…", "passage_amont": "k…-…", "relation": "≤ 12 mots" } ],')
+  if (courants && amont) l.push('  "architecture_amont_paires": [ { "passage_courant": "k…-…", "passage_amont": "k…-…", "relation": "Cette phrase … (≤ 25 mots)" } ],')
   if (synthese) l.push('  "synthese_couverture": [ { "id": "y…-…", "etat": "present | partiel | absent" } ],')
   return l.length ? '\n' + l.join('\n') : ''
 }
@@ -131,7 +131,8 @@ export function lireNuances(x: unknown, idsCourants: ReadonlySet<string>): Nuanc
     const extrait = txt(o.extrait_eleve) || txt(o.extrait) || txt(o.phrase_eleve) || txt(o.citation_eleve) || txt(o.texte_eleve)
     if (!extrait) continue
     const p = txt(o.passage)
-    const verdict = o.verdict === 'infirme' || o.verdict === 'precise' ? o.verdict : 'confirme'
+    if (o.verdict !== 'confirme' && o.verdict !== 'infirme' && o.verdict !== 'precise') continue
+    const verdict = o.verdict
     const prio = Number(o.priorite)
     out.push({ extrait_eleve: extrait, passage: p && idsCourants.has(p) ? p : null, verdict, note: txt(o.note), priorite: Number.isFinite(prio) && prio >= 1 ? Math.round(prio) : 99 })
   }
@@ -167,8 +168,8 @@ export function lireCouverture(x: unknown, idsSynthese: readonly string[]): Couv
     const etat = o.etat === 'partiel' || o.etat === 'absent' ? o.etat : o.etat === 'present' ? 'present' : null
     if (id && etat) parId.set(id, etat)
   }
-  // Une phrase non jugée compte comme présente : on ne reproche jamais à l'élève ce qu'on n'a pas mesuré.
-  return idsSynthese.map(id => ({ id, etat: parId.get(id) ?? 'present' }))
+  // Une mesure absente reste absente ; l'écran exige la couverture complète.
+  return idsSynthese.flatMap(id => { const etat = parId.get(id); return etat ? [{ id, etat }] : [] })
 }
 
 // ── La comparaison par surlignage (D8) ───────────────────────────────────────
@@ -176,12 +177,19 @@ export function lireCouverture(x: unknown, idsSynthese: readonly string[]): Couv
 /** Le surlignage de l'élève (phrases de la synthèse) contre la couverture jugée. */
 export function comparerSynthese(couverture: readonly CouvertureSynthese[], selection: readonly string[]): Omit<ComparaisonSynthese, 'at'> {
   const sel = new Set(selection)
-  const absentes = couverture.filter(c => c.etat === 'absent').map(c => c.id)
+  const partielles = couverture.filter(c => c.etat === 'partiel')
+  const absentes = couverture.filter(c => c.etat === 'absent' || c.etat === 'partiel').map(c => c.id)
   const reperes = absentes.filter(id => sel.has(id))
   const manques = absentes.filter(id => !sel.has(id))
   const deja_la = couverture.filter(c => c.etat === 'present' && sel.has(c.id)).map(c => c.id)
   let message: string
-  if (absentes.length === 0) message = sel.size === 0 ? 'Ta version disait déjà tout ce que dit cette synthèse.' : 'Ta version disait déjà tout cela — rien ne te manquait.'
+  if (couverture.length === 0) message = 'Cette synthèse n’a pas encore été comparée à ta version.'
+  else if (partielles.length) {
+    message = manques.length === 0
+      ? 'Tu as repéré tous les points à compléter ou à préciser dans ta version.'
+      : `Il reste ${manques.length} point${manques.length > 1 ? 's' : ''} à compléter ou à préciser : regarde les phrases mises en évidence.`
+  }
+  else if (absentes.length === 0) message = sel.size === 0 ? 'Ta version disait déjà tout ce que dit cette synthèse.' : 'Ta version disait déjà tout cela — rien ne te manquait.'
   else if (manques.length === 0) message = reperes.length === 1 ? 'Tu as repéré ce qui manquait à ta version.' : `Tu as repéré les ${reperes.length} manques de ta version.`
   else if (reperes.length === 0) message = absentes.length === 1 ? 'Ce qui manquait à ta version t’a échappé : c’est la phrase mise en évidence.' : `Les ${absentes.length} manques de ta version t’ont échappé : ce sont les phrases mises en évidence.`
   else message = `Tu as repéré ${reperes.length} des ${absentes.length} manques ; ${manques.length === 1 ? 'celui-ci t’a échappé' : 'ceux-ci t’ont échappé'}.`

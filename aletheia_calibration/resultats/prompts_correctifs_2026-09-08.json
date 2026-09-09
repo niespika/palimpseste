@@ -1,0 +1,338 @@
+{
+  "date": "2026-09-09T00:34:41.367Z",
+  "modele": "claude-sonnet-4-6",
+  "temperature": 0,
+  "corpus": "entièrement synthétique ; attentes de contrôle, pas étalon professeur",
+  "calls": 14,
+  "usage": [
+    {
+      "input_tokens": 710,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 297,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 866,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 991,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 322,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1001,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 970,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 399,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1101,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1118,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 347,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1190,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 457,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1234,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 1073,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 859,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 221,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 845,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 308,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 915,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    {
+      "input_tokens": 960,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 35,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  ],
+  "results": [
+    {
+      "id": "argumentatif-contresens-fluide",
+      "erreur": "Connection error."
+    },
+    {
+      "id": "argumentatif-juste-langue-fragile",
+      "attendu": "Compréhension solide malgré la langue.",
+      "inventaire": {
+        "these_eleve": "Le vote permet de décider collectivement, mais la majorité peut se tromper ; établir une vérité exige des raisons vérifiables, indépendamment du nombre.",
+        "note": "L'élève saisit les trois piliers du raisonnement du chapitre. La distinction légitimité/vérité est présente en creux ('décider c'est pas prouver') mais n'est pas articulée comme une opposition conceptuelle nommée.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "La majorité peut partager une même erreur (la foule n'est pas garante de vérité).",
+          "Le vote sert à décider ensemble, non à établir la vérité d'une proposition.",
+          "La vérité requiert des raisons contrôlables (vérifiables)."
+        ],
+        "arguments_rates": [
+          "La distinction explicite entre légitimité d'une décision et vérité d'une affirmation, formulée comme deux concepts séparés et nommés."
+        ],
+        "arguments_deformes": []
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 4,
+        "niveau_arguments": 3
+      }
+    },
+    {
+      "id": "dialogue-juste",
+      "attendu": "Attribution et mouvements solides.",
+      "inventaire": {
+        "these_eleve": "L'élève attribue à Noé la position selon laquelle le consensus ne suffit pas et qu'il faut vérifier les raisons, sans se prononcer explicitement sur la préférence de la narratrice.",
+        "note": "L'élève restitue fidèlement les quatre mouvements de l'échange (position de Lise, réfutation de Noé, objection de Lise, distinction de Noé) ; il ne capte pas la prise de position finale de la narratrice en faveur de Noé.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "Lise : le consensus universel établit la vérité",
+          "Noé : tous peuvent répéter la même erreur, il faut vérifier les raisons",
+          "Lise : objection sur l'utilité du vote",
+          "Noé : distinction entre décision d'action commune et établissement du vrai"
+        ],
+        "arguments_rates": [
+          "La conclusion de la narratrice : Noé dissipe la confusion qui guidait Lise (thèse de l'auteur non identifiée par l'élève)"
+        ],
+        "arguments_deformes": []
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 2,
+        "niveau_arguments": 4
+      }
+    },
+    {
+      "id": "dialogue-inversion",
+      "attendu": "Attributions inversées, niveaux faibles.",
+      "inventaire": {
+        "these_eleve": "L'élève attribue à Noé la thèse que le vote prouve la vérité, et à Lise l'exigence de vérifier les raisons.",
+        "note": "Les deux voix sont systématiquement inversées : chaque position est mise dans la mauvaise bouche, et le mouvement central du texte (la distinction de Noé) est compris comme son contraire.",
+        "these_mal_definie": false,
+        "arguments_captes": [],
+        "arguments_rates": [
+          "Lise soutient que la croyance collective établit la vérité",
+          "Noé répond qu'une erreur peut être partagée par tous et qu'il faut vérifier les raisons",
+          "Lise objecte que le vote serait alors inutile",
+          "Noé distingue le vote (qui règle l'action commune) de la preuve du vrai",
+          "La narratrice conclut que Noé dissipe la confusion de Lise, signalant ainsi sa préférence pour la position de Noé"
+        ],
+        "arguments_deformes": [
+          "L'élève attribue à Noé la thèse de Lise (le vote/consensus prouve la vérité) et à Lise la position de Noé (exiger des raisons)",
+          "L'élève présente Noé comme réfutant la distinction décider/prouver, alors que c'est précisément la distinction que Noé établit et défend"
+        ]
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 0,
+        "niveau_arguments": 0
+      }
+    },
+    {
+      "id": "aphoristique-fil",
+      "attendu": "Fragment 17 et fil mesurés.",
+      "inventaire": {
+        "these_eleve": "La quantité de partisans ne constitue pas une preuve : seules des raisons valides peuvent justifier une position.",
+        "note": "L'élève restitue fidèlement le noyau du fragment 17 ; sa formulation est elliptique mais juste.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "Le nombre de voix ne remplace pas la fourniture de raisons.",
+          "Une majorité peut se tromper collectivement."
+        ],
+        "arguments_rates": [
+          "L'aphorisme implique une exigence active : non seulement réclamer des raisons, mais en produire soi-même."
+        ],
+        "arguments_deformes": [],
+        "fragment_reference": "17 : Le nombre ne remplace pas les raisons.",
+        "fil": {
+          "captes": [
+            "Le lien entre 17 et 18 est correctement identifié : les deux refusent un substitut à l'examen des raisons (le nombre pour 17, le doute non vérifié pour 18).",
+            "L'élève perçoit une logique commune : exiger un examen effectif plutôt qu'un raccourci (masse ou doute stérile)."
+          ],
+          "rates": [
+            "Le fragment 19 est absent de la réponse : la certitude qui refuse l'épreuve forme pourtant le troisième terme de la même chaîne — nombre, doute, certitude, trois formes d'esquive de la vérification.",
+            "L'élève ne nomme pas la notion unificatrice explicite : l'exigence de vérification comme fil conducteur des trois aphorismes."
+          ],
+          "deformes": []
+        }
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 3,
+        "niveau_arguments": 2
+      }
+    },
+    {
+      "id": "aphoristique-sans-fil",
+      "erreur": "Niveau fourni pour un axe non demandé."
+    },
+    {
+      "id": "analytique-application-juste",
+      "attendu": "Notion et application solides.",
+      "inventaire": {
+        "these_eleve": "Un argument testable exige une affirmation précise, un moyen de la vérifier et un résultat possible qui la réfuterait.",
+        "note": "Les trois critères du chapitre sont présents et correctement appliqués au cas choisi.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "Critère 1 : une affirmation précise (toutes les billes sont rouges).",
+          "Critère 2 : une observation permettant de la vérifier (sortir les billes une à une et observer leur couleur).",
+          "Critère 3 : un résultat possible qui la réfuterait (trouver une bille bleue)."
+        ],
+        "arguments_rates": [],
+        "arguments_deformes": []
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 4,
+        "niveau_arguments": 4
+      }
+    },
+    {
+      "id": "analytique-application-incomplete",
+      "attendu": "Notion mieux comprise que l’application.",
+      "inventaire": {
+        "these_eleve": "Un argument testable requiert une affirmation précise, une procédure de vérification, et l'acceptation d'un résultat qui pourrait la réfuter.",
+        "note": "La définition est fidèle aux trois critères du chapitre ; l'exemple choisi illustre involontairement le cas contraire (théorie non réfutable), révélant un écart entre la compréhension déclarative et la compréhension appliquée.",
+        "these_mal_definie": false,
+        "arguments_captes": [
+          "L'affirmation doit être précise",
+          "Une observation de vérification est nécessaire",
+          "Un résultat réfutant doit être accepté en principe"
+        ],
+        "arguments_rates": [],
+        "arguments_deformes": [
+          "L'élève illustre une théorie qui réinterprète tout contre-exemple comme une confirmation, ce qui est exactement le cas que le chapitre désigne comme non testable (absence de résultat réfutant réel) — l'application contredit donc la définition correctement énoncée, sans que l'élève semble le percevoir"
+        ]
+      },
+      "niveaux": {
+        "these_mal_definie": false,
+        "niveau_these": 4,
+        "niveau_arguments": 2
+      }
+    }
+  ]
+}

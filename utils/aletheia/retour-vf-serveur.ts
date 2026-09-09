@@ -16,7 +16,7 @@ import { contexteSeance } from './fenetre-serveur'
 import { fenetrePour, hasard, type FenetreRelance } from './fenetre'
 import { textePivot, type PassageCle } from './passages'
 import type { Forme } from './forme'
-import { phrasesSynthese, optionsAmont, type NuanceDetail, type PaireAmont, type PhraseSynthese, type GestesRetourFinal, type ComparaisonSynthese, type PassageAmontRef } from './retour-vf'
+import { phrasesSynthese, lireCouverture, optionsAmont, type NuanceDetail, type PaireAmont, type PhraseSynthese, type GestesRetourFinal, type ComparaisonSynthese, type PassageAmontRef } from './retour-vf'
 import { ESSAIS_MAX } from './fenetre'
 
 export interface ExtraitPassage { id: string; semaine: number; libelle: string; texte: string }
@@ -53,7 +53,7 @@ const semaineDe = (id: string) => Number(/^k(\d+)-/.exec(id)?.[1] ?? NaN)
 
 /** Tous les passages clés des semaines < N, avec leur semaine (depuis la fiche READY). */
 export async function passagesAmont(admin: SupabaseClient, livreId: string, semaine: number, exposees?: readonly number[] | null): Promise<PassageAmontRef[]> {
-  const visibles = exposees && exposees.length ? new Set(exposees) : null
+  const visibles = exposees == null ? null : new Set(exposees)
   const { data: ref } = await admin.from('aletheia_livre_reference').select('contenu, statut').eq('scriptorium_livre_id', livreId).maybeSingle()
   if (ref?.statut !== 'READY' || !Array.isArray(ref.contenu)) return []
   const { parsePassages } = await import('./passages')
@@ -79,7 +79,7 @@ async function extrait(admin: SupabaseClient, livreId: string, id: string, cache
 
 export async function preparerRetourFinal(
   admin: SupabaseClient,
-  t: { id: string; forme?: unknown; retour_vf: { nuances_detail?: NuanceDetail[]; amont_paires?: PaireAmont[] } | null; retour_vf_agi?: GestesRetourFinal | null; comparaison_synthese?: ComparaisonSynthese | null },
+  t: { id: string; forme?: unknown; retour_vf: { nuances_detail?: NuanceDetail[]; amont_paires?: PaireAmont[]; synthese_couverture?: { id: string; etat?: string }[] } | null; retour_vf_agi?: GestesRetourFinal | null; comparaison_synthese?: ComparaisonSynthese | null },
   livreId: string, semaine: number, syntheseModele: string, exposees?: readonly number[] | null,
 ): Promise<RetourFinalPrepare> {
   const forme = formeValide(t.forme)
@@ -125,7 +125,10 @@ export async function preparerRetourFinal(
 
   // ── La synthèse numérotée ──
   const phrases = phrasesSynthese(semaine, syntheseModele)
-  const synthese = phrases.length ? { phrases, comparaison: t.comparaison_synthese ?? null } : null
+  // Sans mesure sur CHACUNE des phrases affichées, garder la lecture simple.
+  const couverture = new Set(lireCouverture(t.retour_vf?.synthese_couverture, phrases.map(p => p.id)).map(c => c.id))
+  const jugee = phrases.length > 0 && couverture.size === phrases.length && phrases.every(p => couverture.has(p.id))
+  const synthese = jugee ? { phrases, comparaison: t.comparaison_synthese ?? null } : null
 
   return { forme, nuance, paires, synthese }
 }
