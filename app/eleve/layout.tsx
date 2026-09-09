@@ -1,43 +1,45 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+import { lireIdentite } from '@/utils/supabase/identite'
 import { deconnexion } from './actions'
 import EnTeteSite from '@/components/nav/EnTeteSite'
 import BarreOngletsMobile from '@/components/nav/BarreOngletsMobile'
 import SousNavModuleMobile from '@/components/nav/SousNavModuleMobile'
 import { FournisseurEtatFragmentsEleve } from '@/components/nav/EtatFragmentsEleve'
 import { navEleveFiltree } from '@/components/nav/configNavigation'
-import { slugsModulesAccessibles } from '@/utils/acces'
+import { slugsModulesDesClasses } from '@/utils/acces'
 import { materialiserSemestreActif } from '@/utils/semestre-actif'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
 import { contexteClasseEleve, VALEUR_TOUTES } from './contexte-classe'
 
 export default async function EleveLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await lireIdentite()
 
   if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, display_name')
-    .eq('id', user.id)
-    .single()
 
   if (profile?.role !== 'eleve') redirect('/prof')
 
   // Second (et dernier) point d'appel de la matérialisation du semestre actif : la
   // bascule doit avoir lieu même si c'est un ÉLÈVE qui ouvre l'app le premier ce
   // matin-là — d'où l'écriture par client admin (la policy `semesters` est prof-only).
-  await materialiserSemestreActif()
+  const [, { contexte, slugs }] = await Promise.all([
+    materialiserSemestreActif(),
+    (async () => {
+      const contexte = await contexteClasseEleve(supabase, user.id)
+      // La navigation garde l'union de TOUTES les inscriptions actives, même
+      // quand le contenu de la page porte sur une seule classe sélectionnée.
+      const slugs = await slugsModulesDesClasses(supabase, contexte.inscriptions.map((i) => i.classe_id))
+      return { contexte, slugs }
+    })(),
+  ])
 
   // Commutateur de classe global (Lot 9) — remonté dans l'en-tête (F3).
   // C7·L2 — trois états : en « Toutes », `active` est null sans que l'élève soit
   // pour autant sans classe ; le commutateur se pilote donc sur `valeurActive`.
-  const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user.id)
+  const { inscriptions, active, toutes } = contexte
   const valeurActive = toutes ? VALEUR_TOUTES : active?.id ?? null
 
   // Nav filtrée : on ne propose que les modules réellement accessibles à l'élève.
-  const tabsEleve = navEleveFiltree(await slugsModulesAccessibles(supabase, user.id))
+  const tabsEleve = navEleveFiltree(slugs)
 
   return (
     // Les deux barres d'onglets de Fragments (Barre 2 desktop et sous-nav mobile) sont

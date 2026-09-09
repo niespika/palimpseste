@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+import { lireIdentite } from '@/utils/supabase/identite'
 import { materialiserSemestreActif } from '@/utils/semestre-actif'
 import { deconnexion } from './actions'
 import EnTeteSite from '@/components/nav/EnTeteSite'
@@ -8,16 +8,9 @@ import BarreOngletsMobileProf from '@/components/nav/BarreOngletsMobileProf'
 import { NAV_PROF } from '@/components/nav/configNavigation'
 
 export default async function ProfLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { user, profile } = await lireIdentite()
 
   if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, display_name')
-    .eq('id', user.id)
-    .single()
 
   if (profile?.role !== 'prof') redirect('/eleve')
 

@@ -1,0 +1,232 @@
+{
+  "date": "2026-09-09T18:09:46.832Z",
+  "base": "production",
+  "revisionAvant": "fbf4c63",
+  "semaine": "2026-09-07",
+  "flagDejaLuParLaGarde": true,
+  "donneesAfficheesIdentiques": true,
+  "mesures": [
+    {
+      "paire": 0,
+      "nom": "avant",
+      "dureeMs": 1106,
+      "depots": 234,
+      "requetes": 5,
+      "lectures": [
+        {
+          "table": "calendrier_params",
+          "methode": "GET",
+          "ms": 255,
+          "octets": 30,
+          "statut": 200
+        },
+        {
+          "table": "scriptorium_params",
+          "methode": "GET",
+          "ms": 129,
+          "octets": 154,
+          "statut": 200
+        },
+        {
+          "table": "exercices_depots",
+          "methode": "GET",
+          "ms": 255,
+          "octets": 76825,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 253,
+          "octets": 5083,
+          "statut": 200
+        },
+        {
+          "table": "routeur_decisions",
+          "methode": "GET",
+          "ms": 211,
+          "octets": 46549,
+          "statut": 200
+        }
+      ]
+    },
+    {
+      "paire": 0,
+      "nom": "apres",
+      "dureeMs": 400,
+      "depots": 234,
+      "requetes": 3,
+      "lectures": [
+        {
+          "table": "exercices_depots",
+          "methode": "GET",
+          "ms": 210,
+          "octets": 76825,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 173,
+          "octets": 5083,
+          "statut": 200
+        },
+        {
+          "table": "routeur_decisions",
+          "methode": "GET",
+          "ms": 188,
+          "octets": 46549,
+          "statut": 200
+        }
+      ]
+    },
+    {
+      "paire": 1,
+      "nom": "apres",
+      "dureeMs": 571,
+      "depots": 234,
+      "requetes": 3,
+      "lectures": [
+        {
+          "table": "exercices_depots",
+          "methode": "GET",
+          "ms": 395,
+          "octets": 76825,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 132,
+          "octets": 5083,
+          "statut": 200
+        },
+        {
+          "table": "routeur_decisions",
+          "methode": "GET",
+          "ms": 174,
+          "octets": 46549,
+          "statut": 200
+        }
+      ]
+    },
+    {
+      "paire": 1,
+      "nom": "avant",
+      "dureeMs": 823,
+      "depots": 234,
+      "requetes": 5,
+      "lectures": [
+        {
+          "table": "calendrier_params",
+          "methode": "GET",
+          "ms": 130,
+          "octets": 30,
+          "statut": 200
+        },
+        {
+          "table": "scriptorium_params",
+          "methode": "GET",
+          "ms": 142,
+          "octets": 154,
+          "statut": 200
+        },
+        {
+          "table": "exercices_depots",
+          "methode": "GET",
+          "ms": 251,
+          "octets": 76825,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 5083,
+          "statut": 200
+        },
+        {
+          "table": "routeur_decisions",
+          "methode": "GET",
+          "ms": 158,
+          "octets": 46549,
+          "statut": 200
+        }
+      ]
+    },
+    {
+      "paire": 2,
+      "nom": "avant",
+      "dureeMs": 934,
+      "depots": 234,
+      "requetes": 5,
+      "lectures": [
+        {
+          "table": "calendrier_params",
+          "methode": "GET",
+          "ms": 124,
+          "octets": 30,
+          "statut": 200
+        },
+        {
+          "table": "scriptorium_params",
+          "methode": "GET",
+          "ms": 125,
+          "octets": 154,
+          "statut": 200
+        },
+        {
+          "table": "exercices_depots",
+          "methode": "GET",
+          "ms": 332,
+          "octets": 76825,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 158,
+          "octets": 5083,
+          "statut": 200
+        },
+        {
+          "table": "routeur_decisions",
+          "methode": "GET",
+          "ms": 191,
+          "octets": 46549,
+          "statut": 200
+        }
+      ]
+    },
+    {
+      "paire": 2,
+      "nom": "apres",
+      "dureeMs": 389,
+      "depots": 234,
+      "requetes": 3,
+      "lectures": [
+        {
+          "table": "exercices_depots",
+          "methode": "GET",
+          "ms": 203,
+          "octets": 76825,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 5083,
+          "statut": 200
+        },
+        {
+          "table": "routeur_decisions",
+          "methode": "GET",
+          "ms": 183,
+          "octets": 46549,
+          "statut": 200
+        }
+      ]
+    }
+  ]
+}

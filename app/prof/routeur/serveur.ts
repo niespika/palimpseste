@@ -148,12 +148,15 @@ export interface ChargeAssignation {
  * ou imposer —, et « TOUT OVERRIDE SE JOURNALISE dans `routeur_decisions` ».
  */
 export async function chargerAssignation(
-  admin: Admin, cycleLundi?: string,
+  admin: Admin, cycleLundi?: string, routeurActifConnu?: boolean,
 ): Promise<ChargeAssignation> {
   const incidents: string[] = []
-  const tz = await lireFuseau()
-  const lundi = cycleLundi ?? lundiDe(jourDansFuseau(new Date(), tz))
-  const { routeur_actif: routeurActif } = await lireLesInterrupteurs(admin)
+  // Le fuseau ne sert qu'à trouver la semaine courante. Les liens de semaine
+  // fournissent déjà le lundi ; la page fournit aussi le flag lu par sa garde.
+  const [lundi, routeurActif] = await Promise.all([
+    cycleLundi ?? lireFuseau().then((tz) => lundiDe(jourDansFuseau(new Date(), tz))),
+    routeurActifConnu ?? lireLesInterrupteurs(admin).then((p) => !!p.routeur_actif),
+  ])
 
   const { data, error } = await admin
     .from('exercices_depots')
@@ -167,28 +170,30 @@ export async function chargerAssignation(
     assigne_at: string; echeance: string | null; routeur_decision_id: string | null }>
 
   const eleveIds = [...new Set(lignes.map((l) => l.eleve_id))]
+  const decisionIds = [...new Set(lignes.map((l) => l.routeur_decision_id).filter((x): x is string => !!x))]
+  const [profils, decisionsLues] = await Promise.all([
+    eleveIds.length
+      ? admin.from('profiles').select('id, display_name').in('id', eleveIds)
+      : { data: null, error: null },
+    decisionIds.length
+      ? admin.from('routeur_decisions')
+        .select('id, cible_retenue, regle_declenchee, sondes_retenues, degrade')
+        .in('id', decisionIds)
+      : { data: null, error: null },
+  ])
+  if (profils.error) incidents.push(`profils : ${profils.error.message}`)
+  if (decisionsLues.error) incidents.push(`décisions : ${decisionsLues.error.message}`)
   const noms = new Map<string, string>()
-  if (eleveIds.length) {
-    const { data: p } = await admin.from('profiles').select('id, display_name').in('id', eleveIds)
-    for (const x of (p ?? []) as Array<{ id: string; display_name: string }>) {
-      noms.set(x.id, x.display_name)
-    }
+  for (const x of (profils.data ?? []) as Array<{ id: string; display_name: string }>) {
+    noms.set(x.id, x.display_name)
   }
 
-  const decisionIds = lignes.map((l) => l.routeur_decision_id).filter((x): x is string => !!x)
   const decisions = new Map<string, { cible_retenue: string | null; regle_declenchee: string | null
     sondes_retenues: unknown; degrade: boolean }>()
-  if (decisionIds.length) {
-    const { data: d, error: eD } = await admin
-      .from('routeur_decisions')
-      .select('id, cible_retenue, regle_declenchee, sondes_retenues, degrade')
-      .in('id', decisionIds)
-    if (eD) incidents.push(`décisions : ${eD.message}`)
-    type LigneDecision = { id: string; cible_retenue: string | null
-      regle_declenchee: string | null; sondes_retenues: unknown; degrade: boolean }
-    for (const x of (d ?? []) as unknown as LigneDecision[]) {
-      decisions.set(x.id, x)
-    }
+  type LigneDecision = { id: string; cible_retenue: string | null
+    regle_declenchee: string | null; sondes_retenues: unknown; degrade: boolean }
+  for (const x of (decisionsLues.data ?? []) as unknown as LigneDecision[]) {
+    decisions.set(x.id, x)
   }
 
   return {

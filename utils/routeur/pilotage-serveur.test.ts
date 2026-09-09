@@ -7,6 +7,7 @@ import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 import * as budgets from './budget'
 import * as assiduite from './assiduite'
+import * as fuseau from '../fuseau'
 
 type Ligne = Record<string, unknown>
 type Requete = { table: string; head: boolean; range?: [number, number]; filtres: [string, unknown][] }
@@ -17,11 +18,14 @@ function base(tables: Record<string, Ligne[]>, panne?: (q: Requete) => boolean) 
     from(table: string) {
       const q: Requete = { table, head: false, filtres: [] }
       const ordre: string[] = []
+      const bornes: Array<(r: Ligne) => boolean> = []
       let seul = false
       const chaine = {
         select(_c: string, o?: { head?: boolean }) { q.head = !!o?.head; return chaine },
         eq(c: string, v: unknown) { q.filtres.push([c, v]); return chaine },
         in(c: string, v: unknown[]) { q.filtres.push([c, v]); return chaine },
+        gte(c: string, v: string) { bornes.push((r) => String(r[c]) >= v); return chaine },
+        lt(c: string, v: string) { bornes.push((r) => String(r[c]) < v); return chaine },
         order(c: string) { ordre.push(c); return chaine },
         range(a: number, b: number) { q.range = [a, b]; return chaine },
         limit(n: number) { q.range = [0, n - 1]; return chaine },
@@ -29,7 +33,7 @@ function base(tables: Record<string, Ligne[]>, panne?: (q: Requete) => boolean) 
         then(ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) {
           requetes.push(q)
           if (panne?.(q)) return Promise.resolve({ data: null, count: null, error: { message: 'panne simulée' } }).then(ok, ko)
-          let lignes = (tables[table] ?? []).filter((r) => q.filtres.every(([c, v]) => Array.isArray(v) ? v.includes(r[c]) : r[c] === v))
+          let lignes = (tables[table] ?? []).filter((r) => bornes.every((b) => b(r)) && q.filtres.every(([c, v]) => Array.isArray(v) ? v.includes(r[c]) : r[c] === v))
           lignes = [...lignes].sort((a, b) => {
             for (const c of ordre) {
               const d = String(a[c]).localeCompare(String(b[c]))
@@ -64,7 +68,8 @@ const lecteurs = charger<typeof import('./donnees')>('utils/routeur/donnees.ts',
   './assiduite': assiduite,
 })
 const serveur = charger<typeof import('../../app/prof/routeur/serveur')>('app/prof/routeur/serveur.ts', {
-  'server-only': {}, '@/utils/supabase/admin': {}, '@/utils/fuseau-serveur': {}, '@/utils/fuseau': {},
+  'server-only': {}, '@/utils/supabase/admin': {},
+  '@/utils/fuseau-serveur': { lireFuseau: async () => 'America/Toronto' }, '@/utils/fuseau': fuseau,
   '@/utils/routeur/donnees': lecteurs, '@/utils/routeur/budget': budgets,
   '@/utils/routeur/assiduite': assiduite, '@/utils/moteur/calendrier-serveur': {}, '@/utils/signalements/serveur': {},
 })
@@ -138,4 +143,68 @@ test('pilotage : échec de deuxième page, aucune liste partielle affichée comm
   const r = await serveur.chargerBudgets(admin(base(decor(1001), (q) => q.table === 'profiles' && q.range?.[0] === 1000)))
   assert.equal(r.eleves.length, 0)
   assert.ok(r.incidents.length > 0)
+})
+
+function decorAssignation(): Record<string, Ligne[]> {
+  return {
+    profiles: [{ id: 'e1', display_name: 'Élève de recette' }],
+    scriptorium_params: [{ routeur_actif: true }],
+    exercices_depots: ['assigne', 'clos', 'retire'].map((statut, n) => ({
+      id: `d${n}`, eleve_id: 'e1', exercice_id: `x${n}`, origine: 'routeur', statut,
+      assigne_at: '2026-09-07T12:00:00Z', echeance: null, routeur_decision_id: 'decision',
+    })).concat([{
+      id: 'hors-semaine', eleve_id: 'e1', exercice_id: 'x4', origine: 'prof', statut: 'assigne',
+      assigne_at: '2026-09-14T00:00:00Z', echeance: null, routeur_decision_id: 'decision',
+    }]),
+    routeur_decisions: [{ id: 'decision', cible_retenue: 'expression', regle_declenchee: 'R0',
+      sondes_retenues: [{ competence: 'problematique', sonde_montee: false }], degrade: true }],
+  }
+}
+
+test('assignation : trois lectures avec semaine et flag connus, flag OFF conservé', async () => {
+  const b = base(decorAssignation())
+  const r = await serveur.chargerAssignation(admin(b), '2026-09-07', false)
+  assert.equal(r.routeurActif, false)
+  assert.equal(r.depots.length, 3)
+  assert.equal(b.requetes.length, 3)
+  assert.ok(!b.requetes.some((q) => q.table === 'scriptorium_params'))
+  assert.deepEqual(normaliser(r.depots.map((d) => d.retirable)), [true, false, false])
+  assert.equal(r.depots[0].eleveNom, 'Élève de recette')
+  assert.equal(r.depots[0].cibleRetenue, 'expression')
+  assert.equal(r.depots[0].degrade, true)
+  assert.deepEqual(normaliser(r.depots[0].sondes), [{ competence: 'problematique', sonde_montee: false }])
+  const q = b.requetes.find((q) => q.table === 'routeur_decisions')!
+  assert.deepEqual(normaliser(q.filtres), [['id', ['decision']]])
+})
+
+test('assignation : profils et décisions démarrent avant la fin de la lecture des profils', async () => {
+  const b = base(decorAssignation())
+  const from = b.from.bind(b)
+  b.from = (table) => {
+    const q = from(table)
+    if (table === 'profiles') {
+      const then = q.then.bind(q)
+      q.then = (ok, ko) => then((v) => {
+        assert.ok(b.requetes.some((q) => q.table === 'routeur_decisions'), 'Les décisions ne doivent pas attendre les profils')
+        return ok(v)
+      }, ko)
+    }
+    return q
+  }
+  await serveur.chargerAssignation(admin(b), '2026-09-07', true)
+})
+
+test('assignation : appel autonome, semaine vide et incidents de lecture explicites', async () => {
+  const d = decorAssignation()
+  const autonome = await serveur.chargerAssignation(admin(base(d)), '2026-09-07')
+  assert.equal(autonome.routeurActif, true)
+  const vide = base(d)
+  assert.equal((await serveur.chargerAssignation(admin(vide), '2026-09-21', true)).depots.length, 0)
+  assert.equal(vide.requetes.length, 1)
+  for (const table of ['exercices_depots', 'profiles', 'routeur_decisions']) {
+    const r = await serveur.chargerAssignation(admin(base(d, (q) => q.table === table)), '2026-09-07', true)
+    assert.equal(r.incidents.length, 1)
+    if (table === 'profiles') assert.equal(r.depots[0].eleveNom, '(élève inconnu)')
+    if (table === 'routeur_decisions') assert.equal(r.depots[0].cibleRetenue, null)
+  }
 })

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { definirClasseEleve } from './actions'
 import { VALEUR_TOUTES, type InscriptionEleve } from './contexte-classe-valeurs'
 
@@ -25,7 +24,6 @@ export default function SelecteurClasseEleve({
   activeId: string
   variant?: 'pills' | 'chip'
 }) {
-  const router = useRouter()
   const [chargement, setChargement] = useState<string | null>(null)
   const [enCours, demarrer] = useTransition()
   if (inscriptions.length < 2) return null
@@ -33,8 +31,10 @@ export default function SelecteurClasseEleve({
   async function choisir(id: string) {
     if (id === activeId) return
     setChargement(id)
+    // L'action pose le cookie et revalide /eleve (layout) : sa réponse contient
+    // déjà le nouveau contexte et la page. Un router.refresh ici relançait toute
+    // la collecte une seconde fois après chaque changement de classe.
     await definirClasseEleve(id)
-    router.refresh()
     setChargement(null)
   }
 

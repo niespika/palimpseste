@@ -18,7 +18,7 @@
 // ============================================================================
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+import { lireIdentite } from '@/utils/supabase/identite'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 export type Admin = ReturnType<typeof createAdminClient>
@@ -36,14 +36,11 @@ export interface AccesRouteur {
  * *Patron repris de `utils/fabrique/acces.ts` — un seul geste, un seul domicile.*
  */
 export async function garderProf(redirection = true): Promise<AccesRouteur> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { user, profile: moi } = await lireIdentite()
   if (!user) {
     if (redirection) redirect('/login')
     throw new Error('Non authentifié')
   }
-  const { data: moi } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single()
   if (moi?.role !== 'prof') {
     if (redirection) redirect('/eleve')
     throw new Error('Accès refusé')

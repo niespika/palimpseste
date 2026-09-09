@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
+import { lireIdentite } from '@/utils/supabase/identite'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { moduleIdsDesClasses, slugsModulesParClasse } from '@/utils/acces'
-import { lireReglagesRag } from '@/utils/scriptorium-rag'
+import { slugsModulesParClasse } from '@/utils/acces'
 import { contexteClasseEleve } from './contexte-classe'
 import { estSemaineComptee } from '@/utils/fragments-semaines'
 import { nomDuModule } from '@/utils/nom-module'
@@ -11,18 +11,12 @@ import { jourDansFuseau, formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { chargerStatsRevision } from './modules/quazian/actions'
 import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
-import { retoursDExamenALire } from '@/utils/codex-onglets/liste'
-import { signalDeLaSemaine } from '@/utils/eleve/semaine-serveur'
-import { signalDuPush } from '@/utils/eleve/bonus-serveur'
-import { fichesDejaServies } from '@/utils/eleve/fiche-serveur'
+import { chargerSignauxTableau } from '@/utils/eleve/signaux-tableau'
 import { statutDuTheme } from '@/utils/fragments-theme'
-import { lundiOnOrBefore, toISODate } from '@/utils/calendrier-grille'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
 
 // Dates PURES (bornes de semaine) → UTC, agnostique au fuseau.
 const fmtJourCourt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
-
-type ModuleInfo = { id: string; slug: string; nom: string; description: string | null; actif: boolean }
 
 // slug en base → clé de monde (les vars charte / sceaux utilisent « fragments »).
 const SCEAU: Record<string, ModuleSceau> = {
@@ -68,15 +62,15 @@ function Badge({ texte, ton, pulse }: { texte: string; ton: Ton; pulse?: boolean
 }
 
 export default async function TableauDeBordEleve() {
-  const supabase = await createClient()
+  const { supabase, user, profile } = await lireIdentite()
+  if (!user) redirect('/login')
+  if (profile?.role !== 'eleve') redirect('/prof')
   const admin = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user!.id).single()
 
   // C7·L2 — le tableau de bord AGRÈGE en état « Toutes » : la collecte ci-dessous
   // ne tourne plus sur une inscription mais sur toutes celles en contexte (une
   // seule dans l'état classe, d'où l'absence de changement pour un mono-classe).
-  const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user!.id)
+  const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user.id)
   const enContexte = toutes ? inscriptions : active ? [active] : []
 
   // Modules réellement accessibles : on ne dérive AUCUNE tâche/échéance d'un
@@ -183,7 +177,7 @@ export default async function TableauDeBordEleve() {
         const livres = (await livresPourClasse(admin, insc.classe_id)).filter((l) => l.semaines.length > 0)
         // (perf #2) livresPourClasse a déjà les séances exposées → on les passe pour éviter un
         // modeExposition redondant par livre.
-        const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id, insc.classe_id, l.semaines.map((s) => s.semaine))))
+        const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user.id, l.id, insc.classe_id, l.semaines.map((s) => s.semaine))))
         if (done.some((d) => !d)) aletheiaAFaire.push({ classe: insc.classe_nom })
       }
     }
@@ -232,104 +226,10 @@ export default async function TableauDeBordEleve() {
     }
   }
 
-  // ── ⭐⭐ LE « À FAIRE » DE LA SEMAINE — LA TUILE QUI NAÎT DE L'ASSIGNATION ───
-  // C6-L2. « Sur son tableau de bord, l'élève voit un "à faire" DÈS QU'IL A DES
-  // EXERCICES ASSIGNÉS. Il clique, et arrive sur l'écran de sa semaine. » (`07-` §2)
-  //
-  // ⛔⛔ LE TROU QUE CETTE LECTURE BOUCHE, ET IL SE CONSTATAIT EN UNE LECTURE :
-  //    AUCUNE des six tuiles de ce tableau ne naissait d'un exercice assigné.
-  //    Ce fichier n'importait ni `exercices_depots`, ni `exercicesMaisonDeLEleve`.
-  //    L'élève découvrait donc son travail exercice par exercice, sans jamais
-  //    voir le volume de sa semaine.
-  //
-  // ⚠️ CE N'EST PAS LE SIGNAL DE LANCEMENT (`utils/examens/signal.ts`, C4-L9) :
-  //    celui-là naît du LANCEMENT par le professeur, celui-ci de l'ASSIGNATION.
-  //    Deux événements, deux signaux — on n'en fabrique pas un seul pour les deux.
-  //
-  // ⚠️ LA PORTE EST LUE DANS `exercicesMaisonDeLEleve`, pas ici : la tuile porte
-  //    un lien, et un lien vers un écran fermé est une promesse cassée.
-  // `lireFuseau` est mémoïsé (`cache`) : l'appeler ici ne coûte pas une lecture de plus.
-  const fuseauEcole = await lireFuseau()
-  const cycleLundi = toISODate(lundiOnOrBefore(jourDansFuseau(new Date(), fuseauEcole)))
-  const semaines = enContexte.length > 0
-    ? await Promise.all(enContexte.map(async (i) => ({
-      classe: i.classe_nom,
-      signal: await signalDeLaSemaine(admin, user!.id, i.classe_id, cycleLundi, fuseauEcole, new Date()),
-    })))
-    : []
-
-  // ── ⭐⭐ C6 · L3 — LE PUSH : « une SUGGESTION, JAMAIS une assignation » ──────
-  // `01-` §5 : « une compétence SANS MESURE DEPUIS LA PÉRIODE DU PLANCHER DE
-  // MESURE (§9), chez un élève À C OU MOINS, apparaît en SUGGESTION sur son
-  // tableau de bord. C'est une suggestion, jamais une assignation — L'ÉLÈVE LA
-  // PREND PAR LE MÊME PULL, ou l'ignore. »
-  //
-  // ⛔⛔ ELLE N'ÉCRIT RIEN. `signalDuPush` est une LECTURE : aucune ligne
-  //    n'apparaît dans `exercices_depots` tant que l'élève n'a pas cliqué, et le
-  //    clic passe par l'offre de `/eleve/semaine` — le même pull, jamais un
-  //    second chemin.
-  //
-  // ⛔ LE PROFIL EST UNIFIÉ PAR ÉLÈVE : un seul appel, même en état « Toutes »,
-  //    quand la tuile de la semaine, elle, naît PAR INSCRIPTION. Les classes ne
-  //    servent qu'à l'opt-out.
-  //
-  // ⚠️ LA PORTE EST LUE DANS `signalDuPush`, pas ici — « une garde qu'on peut
-  //    oublier en écrivant un second écran n'est pas une garde », et la tuile
-  //    porte un lien.
-  const push = enContexte.length > 0
-    ? await signalDuPush(admin, user!.id, enContexte.map((i) => i.classe_id),
-      cycleLundi, fuseauEcole)
-    : null
-
-  // ── ⭐ LA FICHE « SERVIE UNE FOIS — À LA RENTRÉE » (`06-` §5) ───────────────
-  // *Consultable* est une page ; *servie une fois* est une POUSSÉE, au premier
-  // passage. Le tableau de bord est la seule surface de poussée de l'élève.
-  // ⚠️ La marque vit sur `profiles` (`c6_l2_marques_eleve.sql`) ; NULL = jamais
-  //    servie. La tuile s'éteint dès qu'il a ouvert ses fiches.
-  const fichesVues = enContexte.length > 0 ? await fichesDejaServies(admin, user!.id) : true
-
-  // ⛔⛔ ARBITRAGE ④ DE LOUIS, 28/08 — LES LETTRES DE FRAGMENTS ONT QUITTÉ CE
-  //    TABLEAU DE BORD, ET ELLES RESTENT DANS LEUR MODULE.
-  //    « C'est normal, c'est voulu, mais dans le module Fragments seulement —
-  //      si on les met au tableau de bord, on risque de les faire se mélanger. »
-  //    Le bloc « Ta progression » affichait ici trois lettres A→E (Découvertes ·
-  //    Sources · Réflexions), converties par `utils/notation.ts`, SANS OPT-IN —
-  //    quand le `06-` §5 dit « côté élève, par défaut : PAS DE LETTRE », et que
-  //    « une lettre affichée par défaut serait lue comme une note ».
-  //    ⚠️ LE MOTIF EXACT EST LE MÉLANGE : le profil de compétences porte lui
-  //       aussi des lettres, sous trois conditions (C6-L2). Deux systèmes de
-  //       lettres côte à côte sur le même écran se seraient confondus.
-  //    ⭐ Elles vivent toujours à « Ton parcours »
-  //       (`app/eleve/modules/fragments-erudition/page.tsx`) : rien n'y a été
-  //       touché — ce lot RETIRE d'ici, il ne déplace rien.
-
-  // ── Retours d'examen à lire (passation en classe) ───────────────────────────
-  // ⭐⭐ CE QUE CETTE LECTURE RÉPARE, ET IL A ÉTÉ MESURÉ EN PROD LE 27/08 :
-  //    quatorze retours d'examen diagnostique PUBLIÉS, `lu_at` NULL sur les
-  //    quatorze. « Le retour devient visible quand il coche la case de
-  //    publication, AVEC OBLIGATION POUR L'ÉLÈVE DE VALIDER SA LECTURE »
-  //    (`02-` §6.D, étape 17) — et RIEN ne rappelait cette obligation à l'élève :
-  //    `utils/retours-lus.ts` ne lit que `codex_travaux` (la synthèse en classe),
-  //    jamais `exercices_retours`. La tuile « à faire » ne s'allumait donc jamais.
-  //
-  // ⚠️ LA PORTE EST LUE DANS `retoursDExamenALire`, pas ici : la tuile porte un
-  //    lien, et un lien vers un écran fermé est une promesse cassée.
-  const examensALire = enContexte.length > 0
-    ? await retoursDExamenALire(admin, user!.id)
-    : []
-
-  // ── Modules accessibles (pour « Mes mondes ») ───────────────────────────────
-  // Accès & classes · L1 — les modules DES CLASSES EN CONTEXTE : en état classe,
-  // seuls ceux de CETTE classe ; en état « Toutes », `enContexte` porte toutes
-  // les inscriptions, donc l'union — qui y reste juste, chaque module demandant
-  // ensuite sa classe via `ChoixClasseModule`.
-  const idsAccessibles = await moduleIdsDesClasses(supabase, enContexte.map((i) => i.classe_id))
-  const { data: mods } = idsAccessibles.size > 0
-    ? await supabase.from('modules').select('id, slug, nom, description, actif').in('id', [...idsAccessibles])
-    : { data: [] as ModuleInfo[] }
-  // Scriptorium élève est GATÉ (RAG L5) : dévoilé seulement si rag_actif.
-  const masquesEleve = (await lireReglagesRag(createAdminClient())).actif ? [] : ['scriptorium']
-  const modulesActifs = (mods ?? []).filter((m): m is ModuleInfo => !!m && m.actif === true && !masquesEleve.includes(m.slug))
+  // Les signaux de semaine, suggestions, fiches, examens et modules sont des
+  // lectures indépendantes. Leurs gardes et périmètres vivent dans leurs lecteurs.
+  const { semaines, push, fichesVues, examensALire, modulesActifs } =
+    await chargerSignauxTableau(admin, supabase, user.id, enContexte)
 
   // ── Construction des tâches priorisées ──────────────────────────────────────
   // En état « Toutes », chaque tâche porte sa classe (`classe`) et une clé qui la

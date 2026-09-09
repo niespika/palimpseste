@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 
-export async function createClient() {
+// Une instance par rendu serveur, jamais partagée entre deux requêtes/utilisateurs.
+// Les lecteurs mémoïsés qui la reçoivent retrouvent ainsi la même clé de cache.
+export const createClient = cache(async function createClient() {
   const cookieStore = await cookies()
 
   return createServerClient(
@@ -24,4 +27,4 @@ export async function createClient() {
       },
     }
   )
-}
+})

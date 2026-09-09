@@ -43,7 +43,7 @@ export default async function RouteurPage({
 
   const [budgets, assignation, assiduite] = await Promise.all([
     vue === 'budgets' ? chargerBudgets(admin) : null,
-    vue === 'assignation' ? chargerAssignation(admin, sp.semaine) : null,
+    vue === 'assignation' ? chargerAssignation(admin, sp.semaine, routeurActif) : null,
     vue === 'assiduite' ? chargerAssiduite(admin, sp.semaine) : null,
   ])
 

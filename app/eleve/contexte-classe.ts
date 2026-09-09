@@ -1,5 +1,6 @@
 import 'server-only'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { COOKIE_CLASSE_ELEVE, VALEUR_TOUTES, type InscriptionEleve } from './contexte-classe-valeurs'
 
@@ -32,10 +33,10 @@ export interface ContexteClasseEleve {
   toutes: boolean
 }
 
-export async function contexteClasseEleve(
+const lireInscriptions = cache(async function lireInscriptions(
   supabase: SupabaseClient,
   userId: string
-): Promise<ContexteClasseEleve> {
+) {
   const { data } = await supabase
     .from('inscriptions')
     .select('id, classe_id, classe:classes(nom)')
@@ -48,9 +49,18 @@ export async function contexteClasseEleve(
     return { id: r.id as string, classe_id: r.classe_id as string, classe_nom: nom ?? '—' }
   })
   inscriptions.sort((a, b) => a.classe_nom.localeCompare(b.classe_nom))
+  return inscriptions
+})
+
+export async function contexteClasseEleve(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<ContexteClasseEleve> {
+  const inscriptions = await lireInscriptions(supabase, userId)
 
   if (inscriptions.length === 0) return { inscriptions, active: null, toutes: false }
 
+  // Le cookie reste lu à chaque appel, notamment après un changement de classe.
   const cookieStore = await cookies()
   const voulu = cookieStore.get(COOKIE_CLASSE_ELEVE)?.value
 
