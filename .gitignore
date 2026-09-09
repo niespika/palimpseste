@@ -97,3 +97,12 @@ scripts/recette/.couture-c7l9.json
 scripts/recette/.couture-c10l1.json
 scripts/recette/.couture-c10l2.json
 scripts/recette/.smoke-c10l2.lock
+
+# Registres locaux du rattrapage du 07/09 (scripts/recette/rattrapage-routeur-prod.ts
+# et assigner-a-la-main-prod.ts). ⛔ Ils portent l'état AVANT en PRODUCTION et des
+# identifiants d'élèves réels — un registre n'est pas une source.
+scripts/recette/.rattrapage-routeur-prod.registre.json
+scripts/recette/.assigner-a-la-main-prod.registre.json
+
+# Cibles privées des assignations manuelles (identifiants élèves).
+scripts/recette/.assigner-a-la-main-prod.plan.json

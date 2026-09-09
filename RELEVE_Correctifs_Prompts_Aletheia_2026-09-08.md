@@ -1,5 +1,6 @@
 # Correctifs des prompts Aletheia — 8 septembre 2026
 
+> **Mise à jour de déploiement — 08/09, soirée (Toronto).** Corrections poussées sur `main` (`de0c0d6`) et déploiement Vercel réussi. Migration appliquée à la sandbox ; application en production en attente d’autorisation explicite. Les mentions « aucun push » ci-dessous décrivent l’état au moment de la recette initiale.
 Les correctifs AP1–AP5 et AP7 sont implémentés localement. **AP6 est retiré comme défaut**, conformément à l'arbitrage de Louis : la connaissance de l'aval peut éclairer la lecture d'un classique. **Aucun push, aucune migration ou modification de production.**
 
 ## Ce qui change
