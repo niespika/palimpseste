@@ -1,6 +1,6 @@
 # Correctifs Aletheia — 8 septembre 2026
 
-> **Mise à jour de déploiement — 08/09, soirée (Toronto).** Corrections poussées sur `main` (`de0c0d6`) et déploiement Vercel réussi. Migration appliquée à la sandbox ; application en production en attente d’autorisation explicite. Les mentions « aucun push » ci-dessous décrivent l’état au moment de la recette initiale.
+> **Mise à jour de déploiement — 08/09, soirée (Toronto).** Corrections poussées sur `main` (`de0c0d6`) et déploiement Vercel réussi. Migration appliquée à la sandbox puis en production après autorisation explicite. Smoke élève réussi. Les mentions « aucun push » ci-dessous décrivent l’état au moment de la recette initiale.
 Les six défauts de `AUDIT_ALETHEIA_2026-09-08.md` sont corrigés dans le code local et les tests de non-régression. **Le code n’a pas été poussé ni déployé et la migration n’a pas été appliquée aux bases Supabase.** Aucun contenu d’élève réel n’a été modifié.
 
 ## Comportements corrigés
@@ -68,5 +68,5 @@ Le script crée une base de test distincte à chaque exécution, la supprime à 
 - Code `de0c0d6` poussé via la connexion GitHub (authentification du Git local indisponible) ; arbre comparé au commit local, strictement identique. Déploiement Vercel réussi.
 - Sandbox : migration appliquée, quatre colonnes vérifiées et accès RPC confirmé pour `service_role`, refusé pour `authenticated`. Les 45 travaux existants sont conservés.
 - Smoke par HTTP avec le compte élève de recette : connexion réelle, appel de l’action serveur de soumission, copie fictive sur une séance disponible, retour `FEEDBACK1_READY` et diagnostic V1 enregistrés. La copie et son diagnostic ont ensuite été retirés ; 45 travaux de nouveau présents.
-- Production : la vérification automatique des autorisations a refusé la migration, car l’accord explicite portait sur le push. Demande d’autorisation supplémentaire présentée à Louis. La base reste inchangée (46 travaux) ; la génération des nouveaux retours nécessite encore cette migration.
+- Production : migration appliquée après autorisation explicite de Louis. Connexion, soumission, retour et diagnostic validés avec le compte de recette. Données temporaires retirées.
 - Confidentialité : les six identifiants du script local d’assignation ne figurent dans aucun fichier suivi ni dans l’historique Git disponible. Le script demeure non versionné ; les cibles sont maintenant dans un plan local ignoré, les noms remplacés par des libellés neutres. Les règles d’exclusion des registres sont également conservées. Aucun identifiant de cette liste ne subsiste parmi les fichiers publiables.
