@@ -1,4 +1,6 @@
 'use client'
+
+import Link from 'next/link'
 // ============================================================================
 // C4 · L2 — L'ÉCRAN D'ASSIDUITÉ (`06-` §5).
 // ----------------------------------------------------------------------------
@@ -49,7 +51,7 @@ export default function VueAssiduite({
             {charge.signalementsEnAttente} exercice(s) signalé(s) par des élèves, sans arbitrage.
           </strong>{' '}
           Tant que vous n’avez pas tranché, ils restent au dénominateur.{' '}
-          <a href="/prof/signalements" className="underline">Voir les signalements</a> — le
+          <Link href="/prof/signalements" className="underline">Voir les signalements</Link> — le
           comptage tombe le lundi à 18:00 UTC.
         </p>
       )}
@@ -80,14 +82,14 @@ export default function VueAssiduite({
       {classes.length > 1 && (
         <nav className="flex flex-wrap gap-2" aria-label="Classes">
           {classes.map((c) => (
-            <a key={c.id} href={`/prof/routeur?vue=assiduite&classe=${c.id}`}
+            <Link key={c.id} href={`/prof/routeur?vue=assiduite&classe=${c.id}`}
               aria-current={c.id === active?.id ? 'page' : undefined}
               className={`rounded border px-3 py-1.5 font-ui text-xs ${
                 c.id === active?.id
                   ? 'border-liseret bg-parchemin-fonce text-encre'
                   : 'border-bordure-bouton bg-parchemin text-encre-douce hover:bg-parchemin-fonce'}`}>
               {c.nom}
-            </a>
+            </Link>
           ))}
         </nav>
       )}
@@ -109,7 +111,7 @@ export default function VueAssiduite({
               <div className="overflow-x-auto">
                 <div className="flex gap-1 min-w-max pb-2">
                   {active.semaines.map((s) => (
-                    <a key={s.cycleLundi}
+                    <Link key={s.cycleLundi}
                       href={`/prof/routeur?vue=assiduite&classe=${active.id}&semaine=${s.cycleLundi}`}
                       title={`${s.cycleLundi} — ${s.vert} vert · ${s.orange} orange · ${s.rouge} rouge`}
                       className={`w-10 shrink-0 rounded border ${
@@ -124,7 +126,7 @@ export default function VueAssiduite({
                                        text-[9px] text-muet">
                         {s.cycleLundi.slice(5)}
                       </span>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>

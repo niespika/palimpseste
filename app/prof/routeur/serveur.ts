@@ -13,7 +13,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { jourDansFuseau } from '@/utils/fuseau'
 import {
-  lireLesInscriptions, lireLeProfil, lireLAssiduite, lireLesSeuils, lireLesInterrupteurs,
+  lireLesInscriptionsDesEleves, lireLesProfilsDuPilotage, lireLAssiduite, lireLesSeuils, lireLesInterrupteurs,
   type LigneAssiduite,
 } from '@/utils/routeur/donnees'
 import { budgetDeLEleve, type BudgetDeLEleve } from '@/utils/routeur/budget'
@@ -54,47 +54,53 @@ export function lundiDe(jour: string): string {
   return d.toISOString().slice(0, 10)
 }
 
-async function elevesEtClasses(admin: Admin) {
-  const { data, error } = await admin
-    .from('profiles').select('id, display_name').eq('role', 'eleve').order('display_name')
-  return { eleves: (data ?? []) as Array<{ id: string; display_name: string }>,
-    incident: error ? `élèves : ${error.message}` : null }
-}
-
 /** L'écran 1 — LES BUDGETS PAR ÉLÈVE (§4, couche 0). */
 export async function chargerBudgets(admin: Admin): Promise<ChargeBudgets> {
   const incidents: string[] = []
-  const { eleves, incident } = await elevesEtClasses(admin)
-  if (incident) incidents.push(incident)
-  const [{ routeur_actif: routeurActif, ...reste }, seuils] = await Promise.all([
-    lireLesInterrupteurs(admin).then((i) => ({ ...i })),
+  // 65 élèves coûtaient 130 lectures individuelles successives (~24 s).
+  // Profils et inscriptions sont désormais lus par lot, sans changer les règles.
+  const [eleves, { routeur_actif: routeurActif, ...reste }, seuils] = await Promise.all([
+    lireLesProfilsDuPilotage(admin).catch((e) => {
+      incidents.push(`élèves : ${(e as Error).message}`); return []
+    }),
+    lireLesInterrupteurs(admin),
     lireLesSeuils(admin),
   ])
 
-  const lignes = await lireLAssiduite(admin, eleves.map((e) => e.id)).catch((e) => {
-    incidents.push(`assiduité : ${(e as Error).message}`); return [] as LigneAssiduite[]
-  })
+  const ids = eleves.map((e) => e.id)
+  const [inscriptionsParEleve, lignes] = await Promise.all([
+    lireLesInscriptionsDesEleves(admin, ids).catch((e) => {
+      incidents.push(`inscriptions : ${(e as Error).message}`); return null
+    }),
+    lireLAssiduite(admin, ids).catch((e) => {
+      incidents.push(`assiduité : ${(e as Error).message}`); return [] as LigneAssiduite[]
+    }),
+  ])
   const parEleve = new Map<string, LigneAssiduite[]>()
-  for (const l of lignes) parEleve.set(l.eleveId, [...(parEleve.get(l.eleveId) ?? []), l])
+  for (const l of lignes) {
+    const semaines = parEleve.get(l.eleveId) ?? []
+    semaines.push(l)
+    parEleve.set(l.eleveId, semaines)
+  }
 
   const out: EleveDuPilotage[] = []
-  for (const e of eleves) {
+  // Une collecte d'inscriptions ratée n'est pas une population « sans classe ».
+  for (const e of inscriptionsParEleve ? eleves : []) {
     try {
-      const inscriptions = await lireLesInscriptions(admin, e.id)
-      const profil = await lireLeProfil(admin, e.id)
-      const budget = budgetDeLEleve(inscriptions, profil.reglage)
+      const inscriptions = inscriptionsParEleve!.get(e.id) ?? []
+      const budget = budgetDeLEleve(inscriptions, e.profil.reglage)
       const semaines: SemaineEleve[] = (parEleve.get(e.id) ?? []).map((l) => ({
         cycleLundi: l.cycleLundi, exercicesAssignes: l.exercicesAssignes,
         exercicesTermines: l.exercicesTermines, enVacances: false }))
       out.push({
-        id: e.id, nom: e.display_name,
+        id: e.id, nom: e.nom,
         classes: inscriptions.map((i) => i.classeNom),
         budget,
-        preferenceRecueillieAt: profil.preferenceRecueillieAt,
+        preferenceRecueillieAt: e.profil.preferenceRecueillieAt,
         assiduite: semaines.length ? assiduiteDeLEleve(semaines, seuils.seuils) : null,
       })
     } catch (err) {
-      incidents.push(`${e.display_name} : ${(err as Error).message}`)
+      incidents.push(`${e.nom} : ${(err as Error).message}`)
     }
   }
 

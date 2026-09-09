@@ -1,4 +1,6 @@
 'use client'
+
+import Link from 'next/link'
 // ============================================================================
 // C4 · L2 — L'ÉCRAN D'ASSIGNATION. IL EST EN LECTURE SEULE.
 // ----------------------------------------------------------------------------
@@ -202,12 +204,12 @@ function SemaineVoisine({ lundi }: { lundi: string }) {
   }
   return (
     <span className="flex items-center gap-2 font-ui text-xs">
-      <a href={`/prof/routeur?vue=assignation&semaine=${decale(-1)}`}
+      <Link href={`/prof/routeur?vue=assignation&semaine=${decale(-1)}`}
         className="rounded border border-bordure-bouton bg-parchemin px-2 py-1 text-encre-douce
-                   hover:bg-parchemin-fonce">← semaine précédente</a>
-      <a href={`/prof/routeur?vue=assignation&semaine=${decale(1)}`}
+                   hover:bg-parchemin-fonce">← semaine précédente</Link>
+      <Link href={`/prof/routeur?vue=assignation&semaine=${decale(1)}`}
         className="rounded border border-bordure-bouton bg-parchemin px-2 py-1 text-encre-douce
-                   hover:bg-parchemin-fonce">semaine suivante →</a>
+                   hover:bg-parchemin-fonce">semaine suivante →</Link>
     </span>
   )
 }

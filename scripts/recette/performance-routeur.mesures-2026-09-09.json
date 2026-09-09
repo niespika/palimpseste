@@ -1,0 +1,1025 @@
+{
+  "date": "2026-09-09T17:13:36.902Z",
+  "base": "production",
+  "revisionAvant": "b00bf4f",
+  "donneesAfficheesIdentiques": true,
+  "mesures": [
+    {
+      "nom": "avant",
+      "dureeMs": 21139,
+      "eleves": 65,
+      "requetes": 135,
+      "lectures": [
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 512,
+          "octets": 5162,
+          "statut": 200
+        },
+        {
+          "table": "scriptorium_params",
+          "methode": "GET",
+          "ms": 156,
+          "octets": 154,
+          "statut": 200
+        },
+        {
+          "table": "scriptorium_params",
+          "methode": "GET",
+          "ms": 364,
+          "octets": 107,
+          "statut": 200
+        },
+        {
+          "table": "assiduite_hebdo",
+          "methode": "HEAD",
+          "ms": 226,
+          "octets": 0,
+          "statut": 200
+        },
+        {
+          "table": "assiduite_hebdo",
+          "methode": "GET",
+          "ms": 228,
+          "octets": 29090,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 199,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 152,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 146,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 141,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 220,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 141,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 134,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 153,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 151,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 169,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 162,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 134,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 123,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 273,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 163,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 275,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 144,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 141,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 168,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 180,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 137,
+          "octets": 263,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 196,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 134,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 154,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 142,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 157,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 133,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 168,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 161,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 133,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 137,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 143,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 141,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 151,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 135,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 138,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 296,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 159,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 135,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 156,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 133,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 153,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 653,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 144,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 140,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 122,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 123,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 138,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 143,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 170,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 158,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 123,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 132,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 141,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 127,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 154,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 160,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 184,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 161,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 138,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 186,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 132,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 145,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 138,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 143,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 130,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 128,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 132,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 123,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 169,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 192,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 157,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 138,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 157,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 133,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 132,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 125,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 134,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 137,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 140,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 162,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 161,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 137,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 129,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 135,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 151,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 122,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 183,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 197,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 123,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 156,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 161,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 133,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 139,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 153,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 126,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 148,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 173,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 135,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 122,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 136,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 173,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 134,
+          "octets": 253,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 188,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 131,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 128,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 120,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 156,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 197,
+          "octets": 124,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 124,
+          "octets": 145,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 152,
+          "octets": 127,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 205,
+          "octets": 145,
+          "statut": 200
+        }
+      ]
+    },
+    {
+      "nom": "apres",
+      "dureeMs": 519,
+      "eleves": 65,
+      "requetes": 8,
+      "lectures": [
+        {
+          "table": "profiles",
+          "methode": "HEAD",
+          "ms": 122,
+          "octets": 0,
+          "statut": 200
+        },
+        {
+          "table": "profiles",
+          "methode": "GET",
+          "ms": 176,
+          "octets": 14392,
+          "statut": 200
+        },
+        {
+          "table": "scriptorium_params",
+          "methode": "GET",
+          "ms": 175,
+          "octets": 107,
+          "statut": 200
+        },
+        {
+          "table": "scriptorium_params",
+          "methode": "GET",
+          "ms": 299,
+          "octets": 154,
+          "statut": 200
+        },
+        {
+          "table": "assiduite_hebdo",
+          "methode": "GET",
+          "ms": 183,
+          "octets": 29090,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "GET",
+          "ms": 202,
+          "octets": 11933,
+          "statut": 200
+        },
+        {
+          "table": "assiduite_hebdo",
+          "methode": "HEAD",
+          "ms": 206,
+          "octets": 0,
+          "statut": 200
+        },
+        {
+          "table": "inscriptions",
+          "methode": "HEAD",
+          "ms": 215,
+          "octets": 0,
+          "statut": 200
+        }
+      ]
+    }
+  ]
+}

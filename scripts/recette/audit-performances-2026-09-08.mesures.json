@@ -1,0 +1,177 @@
+{
+  "dateLocale": "2026-09-08",
+  "revision": "afd70d3",
+  "methodologie": "Code du checkout local, lectures Supabase production depuis le poste local, un essai par variante, sans rendu React ni garde de page. Le prototype compare les budgets, pas toute la page. Mesure HTTP incluant lecture intégrale d’une copie de réponse.",
+  "benchmark": [
+    {
+      "name": "chargerBudgets actuel — production lue depuis le poste local",
+      "elapsedMs": 23565,
+      "requests": 135,
+      "peakConcurrency": 2,
+      "requestMedianMs": 169,
+      "errors": 0,
+      "byTable": {
+        "profiles": {
+          "calls": 66,
+          "ms": 11862,
+          "bytes": 14587
+        },
+        "scriptorium_params": {
+          "calls": 2,
+          "ms": 485,
+          "bytes": 261
+        },
+        "assiduite_hebdo": {
+          "calls": 2,
+          "ms": 435,
+          "bytes": 29090
+        },
+        "inscriptions": {
+          "calls": 65,
+          "ms": 11163,
+          "bytes": 8455
+        }
+      },
+      "eleves": 65,
+      "incidents": 0
+    },
+    {
+      "name": "Prototype de collecte groupée — hors application",
+      "elapsedMs": 483,
+      "requests": 7,
+      "peakConcurrency": 6,
+      "requestMedianMs": 235,
+      "errors": 0,
+      "byTable": {
+        "profiles": {
+          "calls": 1,
+          "ms": 153,
+          "bytes": 12507
+        },
+        "inscriptions": {
+          "calls": 2,
+          "ms": 516,
+          "bytes": 11933
+        },
+        "assiduite_hebdo": {
+          "calls": 2,
+          "ms": 459,
+          "bytes": 29090
+        },
+        "scriptorium_params": {
+          "calls": 2,
+          "ms": 579,
+          "bytes": 261
+        }
+      },
+      "eleves": 65,
+      "budgetsIdentiques": true,
+      "assiduiteLignes": 125
+    },
+    {
+      "name": "scriptorium_documents — taille des données",
+      "elapsedMs": 488,
+      "requests": 1,
+      "peakConcurrency": 1,
+      "requestMedianMs": 479,
+      "errors": 0,
+      "byTable": {
+        "scriptorium_documents": {
+          "calls": 1,
+          "ms": 479,
+          "bytes": 440606
+        }
+      },
+      "rows": 37,
+      "totalRows": 37,
+      "jsonBytes": 440498,
+      "jsonWithoutTextBytes": 8038
+    },
+    {
+      "name": "scriptorium_contenus — taille des données",
+      "elapsedMs": 300,
+      "requests": 1,
+      "peakConcurrency": 1,
+      "requestMedianMs": 297,
+      "errors": 0,
+      "byTable": {
+        "scriptorium_contenus": {
+          "calls": 1,
+          "ms": 297,
+          "bytes": 123375
+        }
+      },
+      "rows": 11,
+      "totalRows": 11,
+      "jsonBytes": 123345,
+      "jsonWithoutTextBytes": 2323
+    }
+  ],
+  "buildLocal": {
+    "dateLocale": "2026-09-08 19:23",
+    "methodologie": "Union des entryJSFiles et rootMainFiles par route ; gzip local, sans CSS, polices, HTML/RSC ni dépendances différées. Ce ne sont pas des octets transférés observés dans le navigateur.",
+    "routes": [
+      {
+        "route": "prof/routeur",
+        "files": 11,
+        "jsBytes": 585855,
+        "gzipBytes": 169231
+      },
+      {
+        "route": "prof/scriptorium",
+        "files": 14,
+        "jsBytes": 1078891,
+        "gzipBytes": 296023
+      },
+      {
+        "route": "prof",
+        "files": 11,
+        "jsBytes": 574790,
+        "gzipBytes": 166924
+      },
+      {
+        "route": "eleve",
+        "files": 10,
+        "jsBytes": 562068,
+        "gzipBytes": 162739
+      },
+      {
+        "route": "eleve/modules/aletheia/[livreId]/[semaine]",
+        "files": 13,
+        "jsBytes": 622830,
+        "gzipBytes": 180238
+      }
+    ]
+  },
+  "vercel": {
+    "periode": "Last 12 hours, production, lecture vers 20:35–20:38 America/Toronto",
+    "functions": {
+      "invocationsAffichees": "6K",
+      "activeCpuP75Ms": 47,
+      "memoryAverageMB": 245,
+      "memoryAllocationGB": 2.05,
+      "cpuThrottleP75Percent": 7.6,
+      "ttfbP75Ms": 828,
+      "coldStartPercent": 1.9,
+      "errorRateAffiche": "0%",
+      "timeoutRateAffiche": "0%"
+    },
+    "externalApis": {
+      "supabaseCallsAffiches": "28K",
+      "supabaseLatencyAfficheeMs": 210,
+      "anthropicCalls": 9,
+      "anthropicLatencyAfficheeSeconds": 23
+    },
+    "middleware": {
+      "durationAverageMs": 223,
+      "durationP75Ms": 246,
+      "durationP95Ms": 465
+    },
+    "routeurTable": {
+      "invocations": 5,
+      "activeCpuAfficheMs": 673,
+      "p75DurationAfficheMs": 39,
+      "limite": "Agrégat non corrélé au clic testé ; mélange potentiel de types de requêtes. Ne mesure pas le délai complet de la page."
+    }
+  }
+}

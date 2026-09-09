@@ -394,13 +394,7 @@ export interface ProfilEleve {
   preferenceRecueillieAt: string | null
 }
 
-export async function lireLeProfil(admin: Admin, eleveId: string): Promise<ProfilEleve> {
-  const { data, error } = await admin
-    .from('profiles')
-    .select('budget_plancher_min, budget_plafond_min, budget_optionnel_min, exception_expression, preference_recueillie_at')
-    .eq('id', eleveId).maybeSingle()
-  if (error) throw new LectureTronquee(`lecture du profil : ${error.message}`)
-  const l = (data ?? {}) as Partial<LigneProfil>
+function versProfil(l: Partial<LigneProfil>): ProfilEleve {
   return {
     reglage: {
       plancher: l.budget_plancher_min ?? null,
@@ -410,6 +404,27 @@ export async function lireLeProfil(admin: Admin, eleveId: string): Promise<Profi
     exceptionExpression: !!l.exception_expression,
     preferenceRecueillieAt: l.preference_recueillie_at ?? null,
   }
+}
+
+/** Les mêmes profils que lireLeProfil, en une collecte paginée pour le pilotage. */
+export async function lireLesProfilsDuPilotage(admin: Admin): Promise<{
+  id: string; nom: string; profil: ProfilEleve
+}[]> {
+  const lignes = await lirePagine<LigneProfil & { id: string; display_name: string }>(
+    admin, 'profiles',
+    'id, display_name, budget_plancher_min, budget_plafond_min, budget_optionnel_min, exception_expression, preference_recueillie_at',
+    ['display_name', 'id'], (q) => q.eq('role', 'eleve'),
+  )
+  return lignes.map((l) => ({ id: l.id, nom: l.display_name, profil: versProfil(l) }))
+}
+
+export async function lireLeProfil(admin: Admin, eleveId: string): Promise<ProfilEleve> {
+  const { data, error } = await admin
+    .from('profiles')
+    .select('budget_plancher_min, budget_plafond_min, budget_optionnel_min, exception_expression, preference_recueillie_at')
+    .eq('id', eleveId).maybeSingle()
+  if (error) throw new LectureTronquee(`lecture du profil : ${error.message}`)
+  return versProfil((data ?? {}) as Partial<LigneProfil>)
 }
 
 // ════════════════════════════════════════════════════════════════════════════

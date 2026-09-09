@@ -13,6 +13,8 @@
 //    commande LE MOTEUR, pas le professeur qui pilote. Il se LIT pour être MONTRÉ.
 // ============================================================================
 
+import Link from 'next/link'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 import { garderProf } from '@/utils/routeur/acces'
 import { chargerBudgets, chargerAssignation, chargerAssiduite } from './serveur'
 import VueBudgets from './VueBudgets'
@@ -72,17 +74,17 @@ export default async function RouteurPage({
 
       <nav className="flex flex-wrap gap-1 border-b border-bordure" aria-label="Vues du routeur">
         {ONGLETS.map((o) => (
-          <a
+          <Link
             key={o.vue}
             href={`/prof/routeur?vue=${o.vue}`}
             aria-current={vue === o.vue ? 'page' : undefined}
-            className={`px-4 py-2 font-ui text-sm border-b-2 -mb-px transition-colors ${
+            className={`relative px-4 py-2 font-ui text-sm border-b-2 -mb-px transition-colors ${
               vue === o.vue
                 ? 'border-liseret text-encre'
                 : 'border-transparent text-muet hover:text-encre-douce'}`}
           >
-            {o.label}
-          </a>
+            <LibelleSuivi>{o.label}</LibelleSuivi>
+          </Link>
         ))}
       </nav>
 
