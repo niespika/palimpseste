@@ -1,0 +1,180 @@
+{
+  "version": "diagnostic-1",
+  "statut": "attentes_proposees_non_validees_par_le_professeur",
+  "provenance": "Copies synthétiques écrites avant les appels. Attentes tirées du contrat argument 0.2 ; cas inspirés de la revue adversariale du 10 septembre 2026. Aucun texte d'élève réel.",
+  "repetitions": 5,
+  "cas": [
+    {
+      "id": "TC01",
+      "lot": "diagnostic",
+      "parcours": "TC",
+      "cran": 6,
+      "principale": "expression",
+      "secondaire": "argumentation",
+      "sujet": "La science nous fait-elle connaître la nature telle qu’elle est ?",
+      "contexte": "Pour cet exercice, on admet qu'une balance correctement réglée permet de mesurer la masse d'un objet.",
+      "v1": "La science elle donne la nature vraie parce que ça mesure. Une balance mesure la masse. Donc tout est comme ça en vrai.",
+      "vf": "La science nous fait connaître la nature telle qu’elle est, parce qu’elle mesure les phénomènes. Une balance correctement réglée permet de mesurer la masse d’un objet. Cette mesure nous donne donc accès à toute la nature, exactement telle qu’elle est.",
+      "enjeu": "L'appui est explicitement admis par le contexte ; il ne justifie pas la conclusion totale. La langue devient plus précise sans réparer cette inférence. Ce cas reprend le texte des premiers essais techniques avec un contexte explicite.",
+      "attentes": [
+        {"id":"argument.appui.recevabilite","v1":["tenu"],"vf":["tenu"],"raison":"Le fait invoqué est fourni comme admis ; sa portée probante relève des attentes du lien et de la portée."},
+        {"id":"argument.lien.pertinence","v1":["a_reprendre"],"vf":["a_reprendre"],"raison":"Mesurer une masse ne donne pas une raison d'affirmer l'accès exact à toute la nature."},
+        {"id":"argument.portee.justifiee","v1":["a_reprendre"],"vf":["a_reprendre"],"raison":"Le passage de cette mesure à toute la nature est injustifié."},
+        {"id":"argument.expression.precision","v1":["a_reprendre"],"vf":["tenu"],"raison":"Les formulations ça, tout, comme ça et en vrai disparaissent ; la thèse VF reste faussement étayée mais déterminée."}
+      ]
+    },
+    {
+      "id": "TC02",
+      "lot": "diagnostic",
+      "parcours": "TC",
+      "cran": 8,
+      "principale": "argumentation",
+      "secondaire": "expression",
+      "sujet": "La science nous fait-elle connaître la nature telle qu’elle est ?",
+      "contexte": "On admet qu'une balance correctement réglée mesure la masse d'un objet indépendamment des préférences de l'observateur.",
+      "v1": "La science peut nous faire connaître certaines propriétés réelles de la nature. Une balance correctement réglée mesure la masse d’un objet indépendamment des préférences de l’observateur. Or connaître une propriété réelle, c’est pouvoir déterminer ce qui appartient à l’objet plutôt que ce que nous souhaitons lui attribuer. La mesure donne donc accès à une propriété de l’objet lui-même, sans suffire à connaître toutes ses propriétés.",
+      "vf": "La science peut nous faire connaître certaines propriétés réelles de la nature. Une balance correctement réglée mesure la masse d’un objet indépendamment des préférences de l’observateur. Or connaître une propriété réelle, c’est pouvoir déterminer ce qui appartient à l’objet plutôt que ce que nous souhaitons lui attribuer. La mesure donne donc accès à une propriété de l’objet lui-même, sans suffire à connaître toutes ses propriétés.",
+      "enjeu": "Argument limité et explicite sans objection obligatoire. V1 et VF identiques : aucune correction ne doit être inférée d'un changement de jugement.",
+      "attentes": [
+        {"id":"argument.idee.presence","v1":["tenu"],"vf":["tenu"],"raison":"Une réponse possible est formulée dès la première phrase."},
+        {"id":"argument.idee.unite","v1":["tenu"],"vf":["tenu"],"raison":"La limitation finale précise la même idée."},
+        {"id":"argument.appui.recevabilite","v1":["tenu"],"vf":["tenu"],"raison":"Le fait est admis et le principe est explicité."},
+        {"id":"argument.lien.explication","v1":["tenu"],"vf":["tenu"],"raison":"La définition de propriété réelle explique le lien entre mesure et connaissance."},
+        {"id":"argument.lien.pertinence","v1":["tenu"],"vf":["tenu"],"raison":"Le fait est pertinent pour la seule conclusion limitée à certaines propriétés."},
+        {"id":"argument.portee.justifiee","v1":["tenu"],"vf":["tenu"],"raison":"La conclusion ne dépasse pas l'accès à une propriété, et exclut la connaissance totale."}
+      ]
+    },
+    {
+      "id": "HLP101",
+      "lot": "diagnostic",
+      "parcours": "1HLP",
+      "cran": 6,
+      "principale": "structure",
+      "secondaire": "expression",
+      "sujet": "Une parole qui cherche à séduire peut-elle être sincère ?",
+      "contexte": "Les situations introduites par imaginons sont des cas hypothétiques, non des faits historiques à vérifier.",
+      "v1": "Une parole qui cherche à séduire peut être sincère. Imaginons une chanteuse qui choisit de belles images pour dire une émotion qu’elle éprouve réellement. Puisque la sincérité consiste à exprimer ce que l’on pense ou ressent, le soin apporté à la forme ne supprime pas ici la sincérité du sentiment exprimé. Il faut aussi rendre les transports publics gratuits. Leur prix empêche certains habitants de se déplacer, alors que chacun devrait pouvoir rejoindre son travail.",
+      "vf": "Une parole qui cherche à séduire peut être sincère. Imaginons une chanteuse qui choisit de belles images pour dire une émotion qu’elle éprouve réellement. Puisque la sincérité consiste à exprimer ce que l’on pense ou ressent, le soin apporté à la forme ne supprime pas ici la sincérité du sentiment exprimé.",
+      "enjeu": "Deux idées indépendantes en V1, dont une étrangère au sujet. La VF retire le deuxième argument sans modifier le premier.",
+      "attentes": [
+        {"id":"argument.idee.presence","v1":["tenu"],"vf":["tenu"],"raison":"L'idée répondant au sujet reste identifiable malgré le second argument."},
+        {"id":"argument.idee.unite","v1":["a_reprendre"],"vf":["tenu"],"raison":"La gratuité des transports constitue une deuxième idée autonome, supprimée en VF."},
+        {"id":"argument.appui.recevabilite","v1":["tenu","indeterminable"],"vf":["tenu"],"incertitude":true,"raison":"Le cas hypothétique de la chanteuse est recevable ; en V1 le périmètre des appuis peut être ambigu à cause du deuxième argument."},
+        {"id":"argument.expression.intelligibilite","v1":["tenu"],"raison":"Les phrases sont compréhensibles ; l'écart de sujet n'est pas une faute de langue."}
+      ]
+    },
+    {
+      "id": "HLP102",
+      "lot": "diagnostic",
+      "parcours": "1HLP",
+      "cran": 8,
+      "principale": "expression",
+      "secondaire": "structure",
+      "sujet": "Faut-il maîtriser la parole pour avoir le droit de parler ?",
+      "contexte": "On admet qu'une personne peut subir une injustice même si elle manque d'aisance à l'oral.",
+      "v1": "Il faut maîtriser la parole pour avoir le droit de parler. Une personne éloquente sait construire des phrases claires et capter l’attention d’un public. Puisqu’elle sait se faire écouter, elle doit être la seule à pouvoir exprimer son avis. Les personnes moins habiles doivent donc perdre ce droit.",
+      "vf": "Il ne faut pas maîtriser la parole pour avoir le droit de parler. Une personne peut subir une injustice même si elle manque d’aisance à l’oral. Le droit de dénoncer cette injustice repose sur le tort subi et non sur le talent de celui qui le raconte. La difficulté à bien s’exprimer ne justifie donc pas de lui retirer ce droit.",
+      "enjeu": "Les deux versions sont formulées clairement. La VF corrige le raisonnement et change la thèse, sans qu'il faille inventer un progrès de langue.",
+      "attentes": [
+        {"id":"argument.idee.unite","v1":["tenu"],"raison":"La V1 développe une seule idée, même si l'inférence est mauvaise."},
+        {"id":"argument.lien.pertinence","v1":["a_reprendre"],"vf":["tenu"],"raison":"L'habileté ne justifie pas l'exclusivité d'un droit ; en VF le principe explicite porte sur le fondement de ce droit."},
+        {"id":"argument.portee.justifiee","v1":["a_reprendre"],"vf":["tenu"],"raison":"La suppression générale du droit des moins habiles ne découle pas de la qualité oratoire."},
+        {"id":"argument.expression.intelligibilite","v1":["tenu"],"vf":["tenu"],"raison":"La syntaxe permet de comprendre les deux arguments."},
+        {"id":"argument.expression.precision","v1":["tenu"],"vf":["tenu"],"raison":"Habileté, attention, droit et tort subi sont déterminés ; leur articulation se juge séparément."},
+        {"id":"argument.expression.attaches","v1":["tenu"],"vf":["tenu"],"raison":"Les reprises pronominales ont un antécédent identifiable."}
+      ]
+    },
+    {
+      "id": "THLP01",
+      "lot": "diagnostic",
+      "parcours": "THLP",
+      "cran": 6,
+      "principale": "argumentation",
+      "secondaire": "structure",
+      "sujet": "Lire permet-il d'accéder à une meilleure connaissance de soi ?",
+      "contexte": "Les situations imaginées sont des cas hypothétiques destinés à examiner une possibilité.",
+      "v1": "Lire permet toujours de mieux se connaître. Imaginons une lectrice qui termine un roman le lundi et découvre le mardi qu’elle a peur de décevoir ses amis. Puisque cette découverte arrive après la lecture, c’est nécessairement le roman qui l’a produite. Chaque livre révèle donc au lecteur ce qu’il ignorait de lui-même.",
+      "vf": "Lire peut permettre de mieux se connaître. Imaginons une lectrice qui se reconnaît dans un personnage renonçant à ses choix par peur de décevoir ses amis. En comparant les motifs de ce personnage à ses propres hésitations, elle peut nommer une peur qu’elle n’avait pas encore identifiée. Le roman lui offre ainsi un moyen d’examiner ses propres raisons d’agir ; cette possibilité ne garantit pas que chaque lecture produise cette découverte.",
+      "enjeu": "Chronologie prise pour une cause et généralisation en V1. La VF explique un mécanisme possible et limite sa portée.",
+      "attentes": [
+        {"id":"argument.appui.recevabilite","v1":["tenu"],"vf":["tenu"],"raison":"Un scénario explicitement hypothétique peut servir d'appui ; l'erreur est ce qu'on prétend en conclure."},
+        {"id":"argument.lien.explication","v1":["tenu"],"vf":["tenu"],"raison":"Les deux versions donnent une raison distincte d'un simple connecteur ; la première est invalide."},
+        {"id":"argument.lien.pertinence","v1":["a_reprendre"],"vf":["tenu"],"raison":"La succession ne démontre pas une cause ; la comparaison des motifs explique en VF la connaissance possible."},
+        {"id":"argument.portee.justifiee","v1":["a_reprendre"],"vf":["tenu"],"raison":"Un cas hypothétique ne justifie pas toujours et chaque livre ; la VF conclut à une possibilité expliquée."},
+        {"id":"argument.idee.unite","v1":["tenu"],"raison":"Le défaut d'inférence ne fait pas de ce texte plusieurs arguments indépendants."}
+      ]
+    },
+    {
+      "id": "THLP02",
+      "lot": "diagnostic",
+      "parcours": "THLP",
+      "cran": 8,
+      "principale": "structure",
+      "secondaire": null,
+      "sujet": "Lire permet-il d'accéder à une meilleure connaissance de soi ?",
+      "contexte": "Le personnage évoqué est un exemple hypothétique ; aucune œuvre particulière n'est présupposée.",
+      "v1": "Lire peut nous aider à mieux nous connaître, car se reconnaître dans un personnage qui sacrifie ses choix à la peur de déplaire permet de comparer ses motifs aux nôtres et ainsi d'identifier une peur qui guidait nos décisions sans avoir été nommée.",
+      "vf": "Lire peut nous aider à mieux nous connaître, car se reconnaître dans un personnage qui sacrifie ses choix à la peur de déplaire permet de comparer ses motifs aux nôtres et ainsi d'identifier une peur qui guidait nos décisions sans avoir été nommée.",
+      "enjeu": "Plusieurs fonctions dans une seule phrase, aucune objection exigée. V1 et VF identiques, compétence Structure seule.",
+      "attentes": [
+        {"id":"argument.idee.presence","v1":["tenu"],"vf":["tenu"],"raison":"La réponse est identifiable au début de la phrase."},
+        {"id":"argument.idee.unite","v1":["tenu"],"vf":["tenu"],"raison":"Chaque proposition développe la même idée."},
+        {"id":"argument.appui.independant","v1":["tenu"],"vf":["tenu"],"raison":"Le cas de la peur de déplaire apporte une information distincte de la conclusion."},
+        {"id":"argument.lien.explication","v1":["tenu"],"vf":["tenu"],"raison":"La comparaison des motifs et la nomination de la peur expliquent le lien dans la même phrase."},
+        {"id":"argument.lien.pertinence","v1":["tenu"],"vf":["tenu"],"raison":"Identifier un motif de ses propres choix est pertinent pour mieux se connaître."},
+        {"id":"argument.portee.justifiee","v1":["tenu"],"vf":["tenu"],"raison":"Le texte conclut à une possibilité, étayée par un mécanisme hypothétique."}
+      ]
+    },
+    {
+      "id": "R-TC",
+      "lot": "reserve",
+      "parcours": "TC",
+      "cran": 8,
+      "principale": "argumentation",
+      "secondaire": "expression",
+      "sujet": "Les vérités scientifiques sont-elles des vérités définitives ?",
+      "contexte": "Un modèle scientifique est ici une représentation dont les prévisions peuvent être comparées à des observations nouvelles.",
+      "v1": "Les vérités scientifiques sont définitives parce que les scientifiques les considèrent comme vraies. Si elles n’étaient pas vraies, ils ne les appelleraient pas des vérités. Elles ne pourront donc jamais être corrigées.",
+      "vf": "Les vérités scientifiques peuvent être révisées. Un modèle produit des prévisions que l’on compare à des observations nouvelles. Si une observation contrôlée contredit une prévision, tenir compte de ce désaccord peut imposer de corriger le modèle. Sa validation actuelle ne garantit donc pas que toute observation future le confirmera.",
+      "enjeu": "Circularité puis justification distincte et explicite ; réserve non soumise au modèle dans cette campagne.",
+      "attentes": [
+        {"id":"argument.appui.independant","v1":["a_reprendre"],"vf":["tenu"],"raison":"La V1 réaffirme la vérité au lieu de donner un appui distinct."},
+        {"id":"argument.portee.justifiee","v1":["a_reprendre"],"vf":["tenu"],"raison":"La reconnaissance présente ne prouve pas une vérité définitive ; la VF décrit la possibilité de révision."}
+      ]
+    },
+    {
+      "id": "R-1HLP",
+      "lot": "reserve",
+      "parcours": "1HLP",
+      "cran": 6,
+      "principale": "expression",
+      "secondaire": "argumentation",
+      "sujet": "Une parole qui cherche à séduire peut-elle être sincère ?",
+      "contexte": "On distingue ici être sincère, dire ce que l'on croit, et être dans le vrai, dire ce qui est conforme aux faits.",
+      "v1": "Une parole séduisante peut être sincère sans être vraie. Imaginons une personne qui raconte avec émotion un souvenir qu’elle croit exact, alors qu’elle se trompe sur sa date. Elle exprime bien sa croyance malgré son erreur. La sincérité de sa parole ne dépend donc ni de son manque d’attrait ni de son exactitude factuelle.",
+      "vf": "Une parole séduisante peut être sincère sans être vraie. Imaginons une personne qui raconte avec émotion un souvenir qu’elle croit exact, alors qu’elle se trompe sur sa date. Elle exprime bien sa croyance malgré son erreur. La sincérité de sa parole ne dépend donc ni de son manque d’attrait ni de son exactitude factuelle.",
+      "enjeu": "Distinction conceptuelle définie, termes abstraits nécessaires ; texte identique entre versions.",
+      "attentes": [
+        {"id":"argument.expression.precision","v1":["tenu"],"vf":["tenu"],"raison":"La distinction sincérité/vérité est fournie et utilisée sans confusion."},
+        {"id":"argument.lien.sens","v1":["tenu"],"vf":["tenu"],"raison":"La distinction maintient le sens des deux notions."}
+      ]
+    },
+    {
+      "id": "R-THLP",
+      "lot": "reserve",
+      "parcours": "THLP",
+      "cran": 8,
+      "principale": "structure",
+      "secondaire": "expression",
+      "sujet": "Lire permet-il d'accéder à une meilleure connaissance de soi ?",
+      "contexte": "Le lecteur et le personnage évoqués sont hypothétiques.",
+      "v1": "Un lecteur découvre un personnage qui craint de déplaire. Il compare leurs hésitations. Il donne un nom à sa propre peur.",
+      "vf": "Lire peut aider à mieux se connaître. Imaginons un lecteur qui découvre un personnage craignant de déplaire : comparer leurs hésitations lui permet de donner un nom à sa propre peur. Cette comparaison rend ainsi explicite un motif de ses choix qui lui échappait.",
+      "enjeu": "Cas isolé puis idée répondant au sujet et lien explicite ; réserve non soumise au modèle dans cette campagne.",
+      "attentes": [
+        {"id":"argument.idee.presence","v1":["a_reprendre"],"vf":["tenu"],"raison":"Le cas seul ne remplace pas une idée répondant au sujet selon le contrat accepté."},
+        {"id":"argument.idee.unite","v1":["tenu","indeterminable"],"vf":["tenu"],"incertitude":true,"raison":"La V1 est unifiée mais son idée reste implicite ; ce point appelle un arbitrage humain."}
+      ]
+    }
+  ]
+}

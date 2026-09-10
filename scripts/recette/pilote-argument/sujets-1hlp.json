@@ -1,0 +1,208 @@
+{
+  "format": "palimpseste/import-exercices",
+  "version": "1.5",
+  "genere_le": "2026-09-10",
+  "genere_par": "Extraction du document fourni par Louis",
+  "sujets": [
+    {
+      "id": "1hlp-national-G1SHLEH02662",
+      "enonce": "Pourquoi la censure est-elle nécessaire à la parole ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02663",
+      "enonce": "Toute démonstration requiert-elle de l’éloquence ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02664",
+      "enonce": "Ne pas tout dévoiler, est-ce nécessairement dissimuler ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02666",
+      "enonce": "Bavarder, est-ce renoncer à toute raison ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02667",
+      "enonce": "Un discours doit-il toujours être utile ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02668",
+      "enonce": "Séduire autrui par la parole, est-ce nécessairement le tromper ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02669",
+      "enonce": "Quel rôle la parole joue-t-elle dans l’amour ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02966",
+      "enonce": "La parole peut-elle être violente ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02974",
+      "enonce": "Pour convaincre, ne s’adresse-t-on qu’à la raison ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02981",
+      "enonce": "Tenter de convaincre le passionné par des arguments peut-il réussir ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02984",
+      "enonce": "Face à deux personnes qui argumentent de manière opposée sur un même sujet, sommes-nous en mesure de savoir qui a raison ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02987",
+      "enonce": "Que risque-t-on à défendre une cause en s’appuyant sur des sentiments ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02988",
+      "enonce": "Un discours peut-il n’avoir aucun sens ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02989",
+      "enonce": "Quel sens donner au silence ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02992",
+      "enonce": "L’éloquence peut-elle être naturelle ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH02996",
+      "enonce": "Faut-il maîtriser la parole pour avoir le droit de parler ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH03670",
+      "enonce": "Faut-il opposer la parole et l’action ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH03671",
+      "enonce": "La puissance symbolique de la parole permet-elle une juste représentation de la réalité ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH03673",
+      "enonce": "Une parole qui cherche à séduire peut-elle être sincère ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    },
+    {
+      "id": "1hlp-national-G1SHLEH03678",
+      "enonce": "Parler habilement, est-ce toujours mentir ?",
+      "forme": "essai_hlp",
+      "notions": [
+        "Les pouvoirs de la parole"
+      ],
+      "texte": null,
+      "cours": "notions"
+    }
+  ]
+}

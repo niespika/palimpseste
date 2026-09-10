@@ -1,0 +1,233 @@
+{
+  "document": "sujets_HLP_premiere_reflexions_philosophiques_banque_nationale.docx",
+  "sha256": "8c5f70408b665d21a30db05bb2362a2a03f685d4bb2405fc3fbe1f56d72ab9da",
+  "source": "https://pedagogie.ac-toulouse.fr/philosophie/sujets-hlp-premiere",
+  "classement": "Rattachement thématique effectué pour le pilote ; le DOCX ne porte pas de rubriques par thème.",
+  "sujets": [
+    {
+      "id_national": "G1SHLEH02662",
+      "reference": "B.Castiglione, Le Courtisan",
+      "enonce_source": "Pourquoi la censure est-elle nécessaire à la parole?",
+      "enonce": "Pourquoi la censure est-elle nécessaire à la parole ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02663",
+      "reference": "Cicéron, De l’invention",
+      "enonce_source": "Toute démonstration requiert-elle de l’éloquence? Humanités, Littérature, Philosophie – Banque des sujets indexés 3 sur ??",
+      "enonce": "Toute démonstration requiert-elle de l’éloquence ?",
+      "residu_retire": "Humanités, Littérature, Philosophie – Banque des sujets indexés 3 sur ??",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02664",
+      "reference": "J.du Bellay, Les Regrets",
+      "enonce_source": "Ne pas tout dévoiler, est-ce nécessairement dissimuler?",
+      "enonce": "Ne pas tout dévoiler, est-ce nécessairement dissimuler ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02666",
+      "reference": "J.de La Bruyère , Les Caractères",
+      "enonce_source": "Bavarder, est-ce renoncer à toute raison?",
+      "enonce": "Bavarder, est-ce renoncer à toute raison ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02667",
+      "reference": "J.de La Fontaine, Fables",
+      "enonce_source": "Un discours doit-il toujours être utile? 1. En jouant. 2. Il s’agit d’un maître d’école qui enseigne aux jeunes paysans. 3. Réprimander, gronder. 4. Garnement, enfant qui mérite des réprimandes. 5. Celui qui critique, reprend avec sévérité et malveillance.",
+      "enonce": "Un discours doit-il toujours être utile ?",
+      "residu_retire": "1. En jouant. 2. Il s’agit d’un maître d’école qui enseigne aux jeunes paysans. 3. Réprimander, gronder. 4. Garnement, enfant qui mérite des réprimandes. 5. Celui qui critique, reprend avec sévérité et malveillance.",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02668",
+      "reference": "J.de La Fontaine, Fables",
+      "enonce_source": "Séduire autrui par la parole, est-ce nécessairement le tromper?",
+      "enonce": "Séduire autrui par la parole, est-ce nécessairement le tromper ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02669",
+      "reference": "G.de Lorris, Le roman de la rose",
+      "enonce_source": "Quel rôle la parole joue-t-elle dans l’amour?",
+      "enonce": "Quel rôle la parole joue-t-elle dans l’amour ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02966",
+      "reference": "J.de La Fontaine, Fables",
+      "enonce_source": "La parole peut-elle être violente?",
+      "enonce": "La parole peut-elle être violente ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02974",
+      "reference": "Homère, Iliade",
+      "enonce_source": "Pour convaincre, ne s’adresse-t-on qu’à la raison?",
+      "enonce": "Pour convaincre, ne s’adresse-t-on qu’à la raison ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02981",
+      "reference": "Sophocle, Antigone",
+      "enonce_source": "Tenter de convaincre le passionné par des arguments peut-il réussir?",
+      "enonce": "Tenter de convaincre le passionné par des arguments peut-il réussir ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02984",
+      "reference": "C.de Troyes, Lancelot ou le chevalier de la charette",
+      "enonce_source": "Face à deux personnes qui argumentent de manière opposée sur un même sujet, sommes-nous en mesure de savoir qui a raison?",
+      "enonce": "Face à deux personnes qui argumentent de manière opposée sur un même sujet, sommes-nous en mesure de savoir qui a raison ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02987",
+      "reference": "G.de Stäel, De la littérature",
+      "enonce_source": "Que risque-t-on à défendre une cause en s’appuyant sur des sentiments?",
+      "enonce": "Que risque-t-on à défendre une cause en s’appuyant sur des sentiments ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02988",
+      "reference": "G.de Staël, De la littérature",
+      "enonce_source": "Un discours peut-il n’avoir aucun sens?",
+      "enonce": "Un discours peut-il n’avoir aucun sens ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02989",
+      "reference": "F.de La Rochefoucauld, Maximes",
+      "enonce_source": "Quel sens donner au silence?",
+      "enonce": "Quel sens donner au silence ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02992",
+      "reference": "M.de Scudéry, Les Femmes illustres",
+      "enonce_source": "L’éloquence peut-elle être naturelle?",
+      "enonce": "L’éloquence peut-elle être naturelle ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH02996",
+      "reference": "P.Modiano, Discours de réception du Prix Nobel de Littérature",
+      "enonce_source": "Faut-il maîtriser la parole pour avoir le droit de parler?",
+      "enonce": "Faut-il maîtriser la parole pour avoir le droit de parler ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH03009",
+      "reference": "L.-A.de Bougainville, Voyage autour du monde",
+      "enonce_source": "Les échanges entre les peuples induisent-ils nécessairement des rapports de force?",
+      "enonce": "Les échanges entre les peuples induisent-ils nécessairement des rapports de force ?",
+      "residu_retire": "",
+      "retenu_pilote": false,
+      "theme_attribue": "Les représentations du monde"
+    },
+    {
+      "id_national": "G1SHLEH03014",
+      "reference": "C.Perrault, Le petit Poucet",
+      "enonce_source": "Devons-nous maîtriser la nature pour dominer nos peurs?",
+      "enonce": "Devons-nous maîtriser la nature pour dominer nos peurs ?",
+      "residu_retire": "",
+      "retenu_pilote": false,
+      "theme_attribue": "Les représentations du monde"
+    },
+    {
+      "id_national": "G1SHLEH03016",
+      "reference": "T.de Viau, Œuvres poétiques – Ode",
+      "enonce_source": "En quoi le monde rêvé se distingue-t-il du monde réel?",
+      "enonce": "En quoi le monde rêvé se distingue-t-il du monde réel ?",
+      "residu_retire": "",
+      "retenu_pilote": false,
+      "theme_attribue": "Les représentations du monde"
+    },
+    {
+      "id_national": "G1SHLEH03670",
+      "reference": "Démosthène, Première Olynthienne",
+      "enonce_source": "Faut-il opposer la parole et l’action?",
+      "enonce": "Faut-il opposer la parole et l’action ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH03671",
+      "reference": "Eschyle, Les Perses",
+      "enonce_source": "La puissance symbolique de la parole permet-elle une juste représentation de la réalité?",
+      "enonce": "La puissance symbolique de la parole permet-elle une juste représentation de la réalité ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH03673",
+      "reference": "Ovide, Les Métamorphoses",
+      "enonce_source": "Une parole qui cherche à séduire peut-elle être sincère?",
+      "enonce": "Une parole qui cherche à séduire peut-elle être sincère ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH03678",
+      "reference": "R.de Beaujeu, Le Bel Inconnu",
+      "enonce_source": "Parler habilement, est-ce toujours mentir?",
+      "enonce": "Parler habilement, est-ce toujours mentir ?",
+      "residu_retire": "",
+      "retenu_pilote": true,
+      "theme_attribue": "Les pouvoirs de la parole"
+    },
+    {
+      "id_national": "G1SHLEH03695",
+      "reference": "Voltaire, Dictionnaire philosophique – art. « Bêtes »",
+      "enonce_source": "L’animal peut-il être réduit à une machine? 1. Petit oiseau dont le plumage est vert ou jaune. 2. Ce sont des veines qui recueillent le sang de l’intestin.",
+      "enonce": "L’animal peut-il être réduit à une machine ?",
+      "residu_retire": "1. Petit oiseau dont le plumage est vert ou jaune. 2. Ce sont des veines qui recueillent le sang de l’intestin.",
+      "retenu_pilote": false,
+      "theme_attribue": "Les représentations du monde"
+    },
+    {
+      "id_national": "G1SHLEH03696",
+      "reference": "E.Zola, Contes et nouvelles – « Le vieux cheval »",
+      "enonce_source": "Est-il légitime d’instrumentaliser les animaux?",
+      "enonce": "Est-il légitime d’instrumentaliser les animaux ?",
+      "residu_retire": "",
+      "retenu_pilote": false,
+      "theme_attribue": "Les représentations du monde"
+    }
+  ]
+}
