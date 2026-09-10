@@ -548,18 +548,21 @@ function PlanDeTravail({
   //    Crédence — « quand ces trois-là coexistent » : on écrit, et une crédence
   //    est à déclarer. Sinon deux, et la seconde suit la page (« Rendre » pour
   //    les gestes et la remise, « La correction » entre les deux cas).
-  const troisEntrees = credenceASaisir && (etape === 'ecrire' || etape === 'credence')
   type Entree = 'lire' | 'ecrire' | 'credence'
   // ⭐ 07/09 — le cas MONTRÉ décide du mot, jamais l'exercice : sur une paire
   //    4(a)/4(b), le cas 1 écrit et le cas 2 surligne.
   const casMuet = vue.cas.find((c) => pages.casAffiche === null || c.ordre === pages.casAffiche)?.sansEcriture
+  // Sans rédaction, la deuxième entrée porte déjà la crédence : une troisième
+  // ferait apparaître « Surligner » et « Crédence » pour le même volet.
+  const troisEntrees = !casMuet && credenceASaisir && (etape === 'ecrire' || etape === 'credence')
   const entrees: Array<[Entree, string]> = [
     ['lire', forme === 'surligner' ? 'Lire · surligner' : 'Lire'],
     // ⛔ « Écrire » sur un 4(b) nommait une tâche que la consigne ne demande pas.
     ['ecrire', troisEntrees ? (casMuet ? 'Surligner' : 'Écrire') : libelleDuVoletDeTravail(etape)],
     ...(troisEntrees ? [['credence', 'Crédence'] as [Entree, string]] : []),
   ]
-  const active: Entree = volet === 'lire' ? 'lire' : (etape === 'credence' ? 'credence' : 'ecrire')
+  const active: Entree = volet === 'lire' ? 'lire'
+    : (troisEntrees && etape === 'credence' ? 'credence' : 'ecrire')
 
   async function basculer(v: Entree) {
     if (v === 'lire') { setVolet('lire'); return }
@@ -619,16 +622,17 @@ function PlanDeTravail({
              qu'aux cas muets — aux crans 7 et 9, l'élève a encore à écrire. */
           apresPose={() => tournerLaPage(true)}
         >
-          {/* ⭐ Sur un exercice à surligner, le pont vers la réponse est DANS la
-              vue `Lire` : le passage désigné vient d'être posé, et l'élève passe
-              à ce qu'il en dit sans chercher la bascule du haut. */}
-          {forme === 'surligner' && etape === 'ecrire' && (
+          {/* Après le surlignage, la suite reste accessible sous le texte :
+              réponse écrite, ou crédence si le cas ne demande que de désigner.
+              Tourner la page de travail ne suffit pas : sur téléphone, ce
+              volet est encore caché tant que l'élève reste dans `Lire`. */}
+          {forme === 'surligner' && (etape === 'ecrire' || etape === 'credence') && (
             <button
               type="button" onClick={() => setVolet('ecrire')}
               className="min-h-12 rounded-[10px] bg-bouton px-4 py-3.5 font-ui text-[15px]
                          font-semibold text-bouton-texte lg:hidden"
             >
-              Passer à ma réponse →
+              {etape === 'credence' ? 'Continuer vers la validation →' : 'Passer à ma réponse →'}
             </button>
           )}
         </ColonneMatiere>
