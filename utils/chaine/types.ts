@@ -54,6 +54,8 @@ export type Palier = (typeof PALIERS)[number]
  * devrait découper ».
  */
 export interface PointRetour {
+  /** Le pilote conserve les défauts d’objet séparément des mesures de compétence. */
+  portee?: 'objet' | 'competence'
   /** Stable : c'est sur lui que la contestation s'accroche (§1.2). */
   id: string
   /**

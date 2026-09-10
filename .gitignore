@@ -106,3 +106,17 @@ scripts/recette/.assigner-a-la-main-prod.registre.json
 
 # Cibles privées des assignations manuelles (identifiants élèves).
 scripts/recette/.assigner-a-la-main-prod.plan.json
+
+# Notes de travail et rapports opérationnels conservés uniquement en local.
+/IDEES_post_rentree.md
+/PROMPT_six_chantiers.md
+/RELEVE_PERFORMANCES_*.md
+/INTEGRATION_Pilote_Argument_Crans_6_8.md
+/REPRISE_Pilote_Argument_Crans_6_8.md
+/REPRISE_Creation_Exercices_Crans_1_5_7_9.md
+
+# Sorties des recettes et du banc IA : traces, mesures, coûts et relectures.
+# La banque de cas synthétiques est une entrée du banc, pas un résultat.
+/scripts/recette/pilote-argument/recette-*.json
+/scripts/recette/pilote-argument/banc/*
+!/scripts/recette/pilote-argument/banc/cas.json

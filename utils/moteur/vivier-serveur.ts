@@ -174,6 +174,7 @@ export async function lireLesInstances(
 
   const instances: InstanceDuVivier[] = []
   for (const l of lignes) {
+    if (l.id_import?.startsWith('pilote-argument-')) continue
     const type = l.exercices_types
     if (!type) { incidents.push(`exercice ${l.id.slice(0, 8)} : type illisible.`); continue }
     // Les deux examens diagnostiques (`nature` `complet`) n'ont ni objet ni cran,

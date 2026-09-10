@@ -1,3 +1,7 @@
+import { lireJugementArgument } from '@/utils/pilote-argument/chaine'
+import { prioriteRevision } from '@/utils/pilote-argument/jugement'
+import { affichagePilote, type AffichagePilote, type ReponseRelecture } from '@/utils/pilote-argument/contrat'
+import { lireTrace, traceUtilisable } from '@/utils/pilote-argument/serveur'
 import 'server-only'
 // ============================================================================
 // C4 · L3 — CE QUE L'ÉCRAN VOIT : l'assemblage des six temps.
@@ -172,6 +176,7 @@ function lireLaDesignation(
 }
 
 export interface VueDuDeroule {
+  piloteArgument?: (AffichagePilote & { trace: ReponseRelecture[]; vfRemise: boolean }) | null
   depotId: string
   /** Ouvert = `exercices_actif`. Faux, l'écran se ferme poliment. */
   ouvert: boolean
@@ -1018,7 +1023,7 @@ export async function chargerLeDeroule(
     competencesVisees(ctx, depot, mesurees), ctx.statutsRecette)
 
   // ── Temps 3 : « se juger » ──
-  const seJuger = await construireSeJuger(admin, depot, ctx, geste, mesurees)
+  const seJuger = ctx.piloteArgument ? { servie: false, motif: null, offre: null } : await construireSeJuger(admin, depot, ctx, geste, mesurees)
 
   // ── Temps 4 : le retour, l'attente, la langue ──
   const [attente, retours, langue] = await Promise.all([
@@ -1058,7 +1063,7 @@ export async function chargerLeDeroule(
   const echeanceVf = await construireLEcheance(depot, a.delaiVfJours, regime)
   const sujet = await sujetDeLExercice(admin, depot)
 
-  const temps = tempsServis(regime)
+  const temps = tempsServis(regime).filter(t => !ctx.piloteArgument || t !== 'preparer')
 
   // ── C10 · L1 : la semaine de cet exercice a-t-elle été comptée ? ──────────
   // ⭐ UNE SEULE REQUÊTE, ICI, POUR TOUT L'ÉCRAN — et en `admin`, parce que
@@ -1074,10 +1079,16 @@ export async function chargerLeDeroule(
     cyclesComptes: cycles,
   })
 
-  const tempsCourant = tempsCourantDe(depot, regime, retours,
+  const tempsLu = tempsCourantDe(depot, regime, retours,
     seJuger.servie && (seJuger.offre?.questions.length ?? 0) > 0)
+  const pilote = ctx.piloteArgument
+  const tempsCourant = pilote ? (depot.vf_remis_at ? 'retour_final' : tempsLu === 'preparer' ? 'ecrire' : tempsLu) : tempsLu
+  const jugementV1Pilote = pilote && depot.v1_remis_at ? await lireJugementArgument(admin,ctx,'v1') : null
+  const attenteRevision = pilote && jugementV1Pilote ? prioriteRevision(pilote,jugementV1Pilote.jugement) : null
+  const tracePilote = pilote && !depot.v1_remis_at ? traceUtilisable(pilote, depot.texte_v1 ?? '', await lireTrace(admin, depotId)) : null
   const vue: VueDuDeroule = {
     depotId, ouvert: a.ouvert, fermee,
+    piloteArgument: pilote ? { ...affichagePilote(pilote, depot.v1_remis_at ? 'vf' : 'v1', attenteRevision), trace: tracePilote?.reponses ?? [], vfRemise: !!depot.vf_remis_at } : null,
     // ⚠️ La MÊME fonction que la liste de l'accueil (`utils/codex-onglets/regles`) :
     //    deux titres calculés autrement seraient deux titres qui divergent.
     titre: titreDeLaConsigne(depot.exercice.consigne_instanciee),
@@ -1109,44 +1120,44 @@ export async function chargerLeDeroule(
     passageParCas: passagesAttendus,
 
     // ⭐ C7-L3 — au gabarit, la consigne de l'exercice est celle du premier cas, dérivée.
-    consigne: baliser(gabarit.actif && consignesGabarit[0] ? consignesGabarit[0] : ctx.consigne),
-    rappel,
-    demonstration,
+    consigne: baliser(pilote ? pilote.consigne : gabarit.actif && consignesGabarit[0] ? consignesGabarit[0] : ctx.consigne),
+    rappel: pilote ? { observables: [], motif: null, formulationsManquantes: [] } : rappel,
+    demonstration: pilote ? { demonstration: null, avertissement: null, ecartees: [] } : demonstration,
     demonstrationAvantLaTentative: momentDeLaDemonstration(foisCiblee) === 'avant',
-    contenuDemonstration: demonstration.demonstration
+    contenuDemonstration: !pilote && demonstration.demonstration
       ? lireLeContenu(demonstration.demonstration.forme, demonstration.demonstration.contenu)
       : null,
     // ⭐ 06/09 — au cran 2 du gabarit, LE GUIDE NE SE SERT PAS : les pièces le
     //    remplacent (`08-` §5 : « `guide` disparaît au cran 2 »).
-    guide: cran2 ? null : guideServi,
-    etalon: etalonServiIci,
+    guide: pilote || cran2 ? null : guideServi,
+    etalon: pilote ? null : etalonServiIci,
     // ⭐ C5-L2 — SERVI PAR `lireContexte`, DONC SANS UNE LECTURE DE PLUS. La
     //    tranche et sa découpe se calculent une fois, au même endroit, et la
     //    chaîne et l'écran lisent le même objet : deux lectures auraient fini
     //    par servir au modèle un texte que l'élève n'avait pas eu sous les yeux.
     texteSupport: ctx.texteSupport,
-    sujet,
+    sujet: pilote?.sujet.enonce ?? sujet,
     coTexte: ctx.coTexte,
-    cas, corrections,
-    fiche,
+    cas: pilote ? [] : cas, corrections: pilote ? [] : corrections,
+    fiche: pilote ? null : fiche,
     gabarit: { actif: gabarit.actif, exercice15: gabarit.exercice15, variante: gabarit.variante,
       sansDocuments: gabarit.actif && ctx.cran != null && sansDocuments(ctx.cran, gabarit.variante) },
 
     dureeIndicativeMin: dureeMin,
-    microQuestionDue: dureeMin !== null && ecouleMs !== null
+    microQuestionDue: !pilote && dureeMin !== null && ecouleMs !== null
       && depot.v1_remis_at === null && microQuestionDue(dureeMin, ecouleMs),
     motifDepassement: depot.motif_depassement,
     texteV1: depot.texte_v1, texteVf: depot.texte_vf,
     telemetrie: lireTelemetrie(depot.saisie_telemetrie),
     collages: collagesDuDepot(depot),
 
-    competencesDeLaConfiance,
+    competencesDeLaConfiance: pilote ? [] : competencesDeLaConfiance,
     gestesRestants: gestesRestants(depot, competencesDeLaConfiance.length > 0,
       // ⚠️ Sans geste lisible (doctrine absente), on exige comme hier.
-      geste ? restitutionDemandee(geste as never) : true),
+      geste ? restitutionDemandee(geste as never) : true).filter(g => !pilote || g === 'conditions'),
     confianceDeclaree: depot.confiance_declaree,
     conditionsDeclarees: depot.conditions_declarees,
-    restitutionAChaud: depot.restitution_a_chaud,
+    restitutionAChaud: pilote ? null : depot.restitution_a_chaud,
 
     seJuger,
 

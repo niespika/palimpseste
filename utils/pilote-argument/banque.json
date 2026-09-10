@@ -1,0 +1,714 @@
+{
+  "version": "0.2",
+  "empreinte_pedagogique": "a12996f1fa94344791a0741f4a326a93de69058e14e56afe49dcc59cb75a123c",
+  "sources_sha256": {
+    "02-exercices.md": "91d1e3bbff4c45188c6da1b5cc6b3a47233224ce8a0383aad01402c6447061e9",
+    "06-Palimpseste.md": "cc4a4606e9420f79812894e35e1e21c631c337b06f0855e90111c0418ffc4d9c",
+    "09-Objets.md": "ea519db5ccf1ee04429ab53ff155eb33bf69b63245f67e098ebd2c9524f31116",
+    "10-Gabarit.md": "8c2f362a4eeba5a40974d38154329492d72ab544fee55429b2f40dc48f86f958",
+    "04-Instances_Exercices.md": "9b4f12c042daa2dfefa6a317713f35d78e70f4ebf27447c24ad6e10f95b9aea8",
+    "generateur/noyau/doctrine.py": "39c9b5961689b948579a0b72033d5a4eef03601c075089e5d2e1e7f5bca98dfa",
+    "generateur/noyau/grille.py": "33a27f422c464fa07590677df16b0c50a3684f45a2307644e591f2baf506514c",
+    "competences/argumentation.md": "e333870566274864a9ff99def3f3cdfad150720d702756488c2def05258f8127",
+    "competences/connaissance.md": "bb0854bea4c2152f65dbb536d2790a95960fd3b02a1e722ed571bdc1c897bad1",
+    "competences/expression.md": "d7c017bb93e5aad2994c367e887d3f006372359cab8e650b04183bdc0f6c456e",
+    "competences/monitoring.md": "b344f320f60905768b94f7b7cc4f006771eb2c33bd6c7d6d3a5fc2a3052b7500",
+    "competences/questionnement.md": "6e5d0134fd6fa5dcd1aa9ecd452055dd777ecc8185fac284fa9c5d362d7488b2",
+    "competences/structure.md": "6ec4057feef7d1ab91aafb0867bc7bfbada2f86d84a755a913431124f3e3eb9b",
+    "competences/synthese.md": "3b3beeadf8f19e9501ef10613ad0f69ab18c8f7542bedffbc5252d9a0cb97441",
+    "production-crans-6-8/construire-banque-production.py": "d6bac8c81e77e08caa8cdd36f5efbf3cee5ede9014bcfb4fc5a0c5a9a4b79676",
+    "production-crans-6-8/contrat_argument.py": "e2fc3428e7c2483759cb746ae40e1f5c17834b5b74390dbb5e7f74973d9aa6f0",
+    "production-crans-6-8/contrat-production.md": "64f4964071871bfd82594fde5367e7e8e9ea9ec8f01d0b5a1f3f30e679b1e6cf"
+  },
+  "contrat_argument": {
+    "version": "0.2",
+    "objet": "argument",
+    "mode": "composer",
+    "crans": [
+      6,
+      8
+    ],
+    "parcours": [
+      "1HLP",
+      "THLP",
+      "TC"
+    ],
+    "attentes": [
+      {
+        "id": "argument.idee.presence",
+        "fonction": "Dire ce que l’on défend",
+        "propriete": "Idée explicitement affirmée",
+        "critere": "Le texte affirme une réponse identifiable au sujet ; un cas seul ne tient pas lieu d’idée.",
+        "realisations_admises": [
+          "Idée au début ou à la fin.",
+          "Idée réunie à une autre fonction dans la même phrase.",
+          "Autre position défendable que le modèle."
+        ],
+        "realisations_insuffisantes": [
+          "Suite de faits sans idée affirmée.",
+          "Thème nommé sans réponse défendue."
+        ],
+        "competence": "structure",
+        "observables": [
+          "bloc_unite"
+        ],
+        "problemes_09": [
+          "argument.conclusion.absente"
+        ],
+        "questions": [
+          "argument.production.idee"
+        ],
+        "preuve_recherchee": "Passage(s) qui affirment l’idée ; à défaut, absence constatée dans le texte entier.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.idee.unite",
+        "fonction": "Garder une idée directrice",
+        "propriete": "Unité de l’argument",
+        "critere": "Les phrases travaillent à établir la même idée ; une précision ou une réserve qui la délimite peut en faire partie.",
+        "realisations_admises": [
+          "Exemple, distinction ou réserve au service de l’idée.",
+          "Plusieurs phrases pour un seul argument."
+        ],
+        "realisations_insuffisantes": [
+          "Deux arguments indépendants juxtaposés alors qu’un seul est demandé.",
+          "Détour sans fonction pour l’idée."
+        ],
+        "competence": "structure",
+        "observables": [
+          "bloc_unite"
+        ],
+        "problemes_09": [],
+        "questions": [
+          "argument.production.unite"
+        ],
+        "preuve_recherchee": "Idée directrice et passage éventuel qui ouvre une autre direction.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09 §3 ; Structure, bloc_unite",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.appui.independant",
+        "fonction": "Donner un appui",
+        "propriete": "Apport distinct de l’idée",
+        "critere": "L’appui apporte une information ou une raison distincte de la conclusion.",
+        "realisations_admises": [
+          "Fait, cas, définition ou raisonnement pertinent.",
+          "Principe explicité sans exemple décoratif obligatoire."
+        ],
+        "realisations_insuffisantes": [
+          "Conclusion répétée sous d’autres mots en guise de preuve."
+        ],
+        "competence": "argumentation",
+        "observables": [
+          "preuve_circulaire"
+        ],
+        "problemes_09": [
+          "argument.preuve.circulaire"
+        ],
+        "questions": [
+          "argument.production.appui"
+        ],
+        "preuve_recherchee": "Appui et conclusion, cités séparément même s’ils sont dans une seule phrase.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.appui.recevabilite",
+        "fonction": "Donner un appui",
+        "propriete": "Appui suffisamment établi pour cette tâche",
+        "critere": "L’appui offre une raison recevable dans le contexte ; une nouvelle affirmation contestable ne devient pas une preuve par sa seule présence.",
+        "realisations_admises": [
+          "Principe justifié ou dont l’usage est explicité.",
+          "Cas hypothétique annoncé comme tel.",
+          "Ressource fournie utilisée fidèlement."
+        ],
+        "realisations_insuffisantes": [
+          "Affirmation gratuite substituée à l’appui.",
+          "Prémisse contredite par le support fourni."
+        ],
+        "competence": "argumentation",
+        "observables": [],
+        "problemes_09": [
+          "argument.preuve.affirmation"
+        ],
+        "questions": [
+          "argument.production.appui"
+        ],
+        "preuve_recherchee": "Appui écrit et, si disponible, passage du support permettant de le vérifier. Si une vérification externe nécessaire manque : indéterminable, sans inventer.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "constat_objet_sans_indicateur"
+      },
+      {
+        "id": "argument.lien.explication",
+        "fonction": "Expliquer le lien",
+        "propriete": "Explication effectivement écrite",
+        "critere": "Le texte dit pourquoi cet appui soutient cette idée ; un connecteur seul n’accomplit pas cette fonction.",
+        "realisations_admises": [
+          "Lien réparti sur plusieurs passages proches.",
+          "Explication et conclusion dans la même phrase.",
+          "Présence de « donc » accompagnée d’une explication."
+        ],
+        "realisations_insuffisantes": [
+          "Connecteur seul.",
+          "Lien laissé à reconstruire à partir du cours ou du modèle."
+        ],
+        "competence": "argumentation",
+        "observables": [
+          "garant_present",
+          "lien_explicite"
+        ],
+        "problemes_09": [
+          "argument.garant.connecteur",
+          "argument.garant.absent"
+        ],
+        "questions": [
+          "argument.production.lien"
+        ],
+        "preuve_recherchee": "Passage(s) expliquant le pourquoi dans le seul texte de l’élève.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.lien.distinction",
+        "fonction": "Expliquer le lien",
+        "propriete": "Explication non circulaire",
+        "critere": "L’explication apporte autre chose qu’une répétition de l’idée ou de l’appui.",
+        "realisations_admises": [
+          "Reprise des mêmes termes avec une relation nouvelle explicitée."
+        ],
+        "realisations_insuffisantes": [
+          "Conclusion paraphrasée après « car » ou « donc »."
+        ],
+        "competence": "argumentation",
+        "observables": [
+          "garant_circulaire"
+        ],
+        "problemes_09": [
+          "argument.garant.circulaire"
+        ],
+        "questions": [
+          "argument.production.lien"
+        ],
+        "preuve_recherchee": "Comparaison entre les mots de l’appui, de la conclusion et de leur explication.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.lien.sens",
+        "fonction": "Expliquer le lien",
+        "propriete": "Sens des termes maintenu",
+        "critere": "Le raisonnement ne dépend pas d’un changement non expliqué du sens d’un terme.",
+        "realisations_admises": [
+          "Distinction explicite de deux sens.",
+          "Répétition précise d’un concept."
+        ],
+        "realisations_insuffisantes": [
+          "Même mot pris dans deux sens sans que le passage soit justifié."
+        ],
+        "competence": "argumentation",
+        "observables": [
+          "garant_ambigu"
+        ],
+        "problemes_09": [
+          "argument.garant.glissant"
+        ],
+        "questions": [
+          "argument.production.lien"
+        ],
+        "preuve_recherchee": "Les deux emplois du terme et le changement de sens qui ferait fonctionner artificiellement le lien.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.lien.precision",
+        "fonction": "Expliquer le lien",
+        "propriete": "Raison suffisamment précise",
+        "critere": "L’explication indique une relation déterminée, pas un mot flou qui tient lieu du raisonnement.",
+        "realisations_admises": [
+          "Terme conceptuel expliqué par le contexte."
+        ],
+        "realisations_insuffisantes": [
+          "Mot comme « ouvre » ou « important » sans relation précise permettant de conclure."
+        ],
+        "competence": "argumentation",
+        "observables": [
+          "garant_vague"
+        ],
+        "problemes_09": [
+          "argument.garant.vague"
+        ],
+        "questions": [
+          "argument.production.lien"
+        ],
+        "preuve_recherchee": "Mot ou formule dont le flou est nécessaire à l’inférence.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.lien.pertinence",
+        "fonction": "Expliquer le lien",
+        "propriete": "Relation effectivement défendable",
+        "critere": "L’appui donne une raison de soutenir la conclusion selon le raisonnement annoncé ; expliciter une inférence défaillante ne suffit pas.",
+        "realisations_admises": [
+          "Argument non déductif dont la conclusion reste proportionnée à l’appui.",
+          "Désaccord philosophique possible sans erreur de raisonnement imposée."
+        ],
+        "realisations_insuffisantes": [
+          "Concomitance traitée sans justification comme une causalité.",
+          "Appui vrai compatible avec une conclusion contraire sans que l’inférence soit défendue."
+        ],
+        "competence": "argumentation",
+        "observables": [],
+        "problemes_09": [],
+        "questions": [
+          "argument.production.lien"
+        ],
+        "preuve_recherchee": "Appui, conclusion et relation écrite ; décrire le saut précis, pas un simple désaccord.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "Argumentation §1, validité logique ; attente locale sans nouveau code chiffré",
+        "mesure": "constat_objet_sans_indicateur"
+      },
+      {
+        "id": "argument.portee.justifiee",
+        "fonction": "Délimiter ce que l’on conclut",
+        "propriete": "Conclusion proportionnée à l’appui",
+        "critere": "Le texte justifie le passage du cas à la portée annoncée, indépendamment de l’emploi de « tous » ou « toujours ».",
+        "realisations_admises": [
+          "Conclusion portant sur une possibilité soutenue par un cas.",
+          "Règle générale soutenue par un raisonnement qui autorise cette généralité."
+        ],
+        "realisations_insuffisantes": [
+          "Règle générale tirée d’un seul cas sans justification suffisante."
+        ],
+        "competence": "argumentation",
+        "observables": [],
+        "problemes_09": [
+          "argument.garant.trop_large"
+        ],
+        "questions": [
+          "argument.production.portee"
+        ],
+        "preuve_recherchee": "Étendue de l’appui comparée à celle de la conclusion ; ne pas limiter le contrôle à des mots déclencheurs.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": true,
+        "condition": "toujours",
+        "source": "09-Objets.md §3",
+        "mesure": "constat_objet_sans_indicateur"
+      },
+      {
+        "id": "argument.expression.intelligibilite",
+        "fonction": "Faire comprendre les phrases",
+        "propriete": "Sens accessible et construction lisible",
+        "critere": "Le lecteur peut identifier ce qui est affirmé sans devoir réparer la construction de la phrase.",
+        "realisations_admises": [
+          "Phrase complexe mais compréhensible.",
+          "Plusieurs fonctions dans une phrase lisible."
+        ],
+        "realisations_insuffisantes": [
+          "Construction qui oblige à reconstruire qui fait quoi ou ce qui est affirmé."
+        ],
+        "competence": "expression",
+        "observables": [
+          "taux_sens_passe",
+          "densite_friction"
+        ],
+        "problemes_09": [],
+        "questions": [
+          "production.expression.sens"
+        ],
+        "preuve_recherchee": "Passages réellement difficiles à comprendre ; ne pas inventer un défaut si le texte est clair.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": false,
+        "condition": "toujours",
+        "source": "Expression §3–§5",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.expression.precision",
+        "fonction": "Choisir les mots",
+        "propriete": "Mots exacts et suffisamment déterminés",
+        "critere": "Les mots permettent de comprendre l’idée avec la précision nécessaire à cette tâche.",
+        "realisations_admises": [
+          "Vocabulaire conceptuel défini ou compris par le contexte.",
+          "Répétition utile d’une notion."
+        ],
+        "realisations_insuffisantes": [
+          "Mot inexact.",
+          "Vocabulaire savant plaqué.",
+          "Formule vague empêchant de comprendre l’idée."
+        ],
+        "competence": "expression",
+        "observables": [
+          "densite_generique",
+          "mot_impropre",
+          "savant_plaque"
+        ],
+        "problemes_09": [],
+        "questions": [
+          "production.expression.precision"
+        ],
+        "preuve_recherchee": "Mots concernés et effet précis sur le sens, distinct de la validité logique de l’argument.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": false,
+        "condition": "toujours",
+        "source": "Expression §3–§5",
+        "mesure": "raccord_instrument_requis"
+      },
+      {
+        "id": "argument.expression.attaches",
+        "fonction": "Relier les phrases",
+        "propriete": "Reprises et relations lisibles",
+        "critere": "Le lecteur comprend ce que les phrases ou propositions reprennent et ajoutent.",
+        "realisations_admises": [
+          "Lien clair sans connecteur ajouté.",
+          "Reprise qui sert également l’explication de l’argument."
+        ],
+        "realisations_insuffisantes": [
+          "Pronom sans référent identifiable.",
+          "Rapport laissé à deviner entre deux phrases."
+        ],
+        "competence": "expression",
+        "observables": [
+          "attache_presente"
+        ],
+        "problemes_09": [],
+        "questions": [
+          "production.expression.liens"
+        ],
+        "preuve_recherchee": "Passages liés et ce qui rend leur rapport lisible ou indécidable.",
+        "unite": "argument rédigé par l’élève",
+        "attente_objet": false,
+        "condition": "relations_entre_phrases_ou_propositions",
+        "source": "Expression, attache_presente",
+        "mesure": "raccord_instrument_requis"
+      }
+    ],
+    "etats_constat": [
+      "tenu",
+      "a_reprendre",
+      "indeterminable",
+      "non_applicable"
+    ],
+    "regles_communes": [
+      "Juger uniquement le texte attribuable à l’élève ; garder le support et l’exemplaire identifiés séparément.",
+      "Constater les fonctions, sans imposer une phrase ni un ordre distinct à chacune.",
+      "Accepter une position différente du modèle si elle est défendable sur ce sujet.",
+      "Une objection rédigée n’est pas exigée pour réussir cet objet.",
+      "Une absence peut être constatée dans le périmètre lu sans fabriquer une citation de ce qui manque.",
+      "La relecture de l’élève ne constitue jamais une preuve pour le jugement indépendant.",
+      "Ne pas déduire d’un seul argument un palier global de compétence.",
+      "Même propriété et même passage : un seul point de retour ; conserver les propriétés distinctes sans compter des preuves indépendantes fictives."
+    ],
+    "bilan": {
+      "principal": "constats relatifs aux attentes mesurables de la principale ; pas de lettre globale dérivée ici",
+      "secondaire": "constats relatifs à la secondaire, en V1 seulement",
+      "objet": "constats sur les fonctions de l’argument, même sans observable ou hors compétence choisie",
+      "revision": "changements de la principale et changements de l’objet conservés séparément",
+      "progression_routeur": "non tranchée par ce contrat ; aucun nouveau seuil ni score agrégé",
+      "indetermination": "ne pas convertir indéterminable ou non applicable en échec"
+    },
+    "modele": {
+      "source": "09-Objets.md §3, exemplaire validé le 06/09/2026",
+      "texte": "Mentir à quelqu’un, c’est décider à sa place. Le menteur choisit ce que l’autre croira, sans que l’autre ait son mot à dire. Or décider pour autrui de ce qu’il tiendra pour vrai, c’est exactement lui retirer le jugement par lequel il décide de sa vie.",
+      "annotations": [
+        {
+          "libelle": "Ce que l’on défend",
+          "passage": "Mentir à quelqu’un, c’est décider à sa place."
+        },
+        {
+          "libelle": "Ce sur quoi on s’appuie",
+          "passage": "Le menteur choisit ce que l’autre croira, sans que l’autre ait son mot à dire."
+        },
+        {
+          "libelle": "Pourquoi cet appui soutient cette idée",
+          "passage": "Or décider pour autrui de ce qu’il tiendra pour vrai, c’est exactement lui retirer le jugement par lequel il décide de sa vie."
+        }
+      ],
+      "construction": "Je veux défendre l’idée que mentir à quelqu’un, c’est décider à sa place. Mon appui est que le menteur choisit ce que l’autre croira. Il me reste à expliquer pourquoi choisir ce qu’il croira atteint sa capacité de décider. Un « donc » ne l’expliquerait pas. J’écris ce lien : décider pour lui de ce qu’il tiendra pour vrai lui retire le jugement à partir duquel il conduit sa vie.",
+      "usage": "Exemple de fonctions, jamais réponse unique attendue au sujet."
+    },
+    "contraintes_raccord": [
+      "Activation serveur OFF à la naissance ; ce module local n’active rien dans l’application.",
+      "Attribution après lecture serveur de Scriptorium : vu ou en_cours, bon parcours et bonne classe.",
+      "Cran 6 : modèle et préparation ; relecture de la V1. Cran 8 : sujet et consigne seulement avant V1.",
+      "Pas d’appel IA pendant la rédaction.",
+      "P1 reçoit le texte, le sujet, le contrat fonctionnel et le contexte ; aucune autoévaluation ni réponse modèle.",
+      "P2 peut recevoir le modèle séparé ; son utilité n’est pas présumée démontrée.",
+      "Retour après jugement indépendant ; une VF aidée ne devient pas une nouvelle réussite autonome."
+    ]
+  },
+  "relecture_reponses": [
+    {
+      "code": "fonctionne",
+      "libelle": "Cela fonctionne dans mon texte"
+    },
+    {
+      "code": "a_reprendre",
+      "libelle": "Ce point est à reprendre"
+    },
+    {
+      "code": "incertain",
+      "libelle": "Je ne sais pas encore"
+    }
+  ],
+  "relecture_invitation": "Après cette vérification, où en es-tu pour ce point ?",
+  "prescriptions": {
+    "Argumentation": [
+      "argument.production.appui",
+      "argument.production.lien",
+      "argument.production.portee"
+    ],
+    "Expression": [
+      "production.expression.sens",
+      "production.expression.precision",
+      "production.expression.liens"
+    ],
+    "Structure": [
+      "argument.production.idee",
+      "argument.production.unite"
+    ],
+    "Argumentation+Expression": [
+      "argument.production.appui",
+      "argument.production.lien",
+      "production.expression.sens"
+    ],
+    "Argumentation+Structure": [
+      "argument.production.appui",
+      "argument.production.lien",
+      "argument.production.idee"
+    ],
+    "Expression+Argumentation": [
+      "production.expression.sens",
+      "production.expression.precision",
+      "argument.production.lien"
+    ],
+    "Expression+Structure": [
+      "production.expression.sens",
+      "production.expression.precision",
+      "argument.production.idee"
+    ],
+    "Structure+Argumentation": [
+      "argument.production.idee",
+      "argument.production.appui",
+      "argument.production.lien"
+    ],
+    "Structure+Expression": [
+      "argument.production.idee",
+      "argument.production.unite",
+      "production.expression.sens"
+    ]
+  },
+  "questions": [
+    {
+      "id": "argument.production.idee",
+      "fonction": "Dire ce que l’on défend",
+      "competences_de_travail": [
+        "Structure"
+      ],
+      "preparation": "Quelle idée précise vas-tu défendre en réponse au sujet ?",
+      "relecture": "Où ton texte dit-il précisément ce que tu défends ?",
+      "condition": null,
+      "rattachements_supplementaires": [],
+      "liens_09": [
+        {
+          "probleme": "argument.conclusion.absente",
+          "constituant": "conclusion",
+          "competence": "structure",
+          "observable": "bloc_unite",
+          "etat": "correspondance_composer_existante",
+          "correspondance_source": "`bloc_unite` (Structure)"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "argument.production.unite",
+      "fonction": "Garder une idée directrice",
+      "competences_de_travail": [
+        "Structure"
+      ],
+      "preparation": "Quelle idée unique cet argument doit-il établir ?",
+      "relecture": "Tout ce que tu écris contribue-t-il à cette idée, sans ouvrir un autre argument ?",
+      "condition": null,
+      "rattachements_supplementaires": [
+        {
+          "competence": "structure",
+          "observable": "bloc_unite",
+          "source": "competences/Structure.md ; unité de l’argument",
+          "propriete": "unite"
+        }
+      ],
+      "liens_09": [],
+      "note": ""
+    },
+    {
+      "id": "argument.production.appui",
+      "fonction": "Donner un appui distinct de l’idée",
+      "competences_de_travail": [
+        "Argumentation"
+      ],
+      "preparation": "Sur quel fait, exemple, définition ou raisonnement vas-tu t’appuyer pour défendre cette idée ?",
+      "relecture": "Ton appui apporte-t-il une raison de te croire, au-delà de ta réponse répétée avec d’autres mots ?",
+      "condition": null,
+      "rattachements_supplementaires": [],
+      "liens_09": [
+        {
+          "probleme": "argument.preuve.affirmation",
+          "constituant": "preuve",
+          "competence": null,
+          "observable": null,
+          "etat": "sans_observable_dans_09",
+          "correspondance_source": "⚠️ aucun observable en `composer` — le plus proche : `statuts_distingues` (Argumentation, `expliquer`)"
+        },
+        {
+          "probleme": "argument.preuve.circulaire",
+          "constituant": "preuve",
+          "competence": "argumentation",
+          "observable": "preuve_circulaire",
+          "etat": "correspondance_composer_existante",
+          "correspondance_source": "`preuve_circulaire` (Argumentation)"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "argument.production.lien",
+      "fonction": "Expliquer pourquoi l’appui soutient l’idée",
+      "competences_de_travail": [
+        "Argumentation"
+      ],
+      "preparation": "Pourquoi cet appui soutient-il ton idée ? Prépare l’explication qu’il faudra écrire.",
+      "relecture": "Où ton texte explique-t-il pourquoi cet appui soutient ton idée ? Vérifie que tu expliques le lien, au-delà de le signaler ou de répéter l’idée.",
+      "condition": null,
+      "rattachements_supplementaires": [],
+      "liens_09": [
+        {
+          "probleme": "argument.garant.absent",
+          "constituant": "garant",
+          "competence": "argumentation",
+          "observable": "lien_explicite",
+          "etat": "correspondance_composer_existante",
+          "correspondance_source": "`lien_explicite` (Argumentation)"
+        },
+        {
+          "probleme": "argument.garant.circulaire",
+          "constituant": "garant",
+          "competence": "argumentation",
+          "observable": "garant_circulaire",
+          "etat": "correspondance_composer_existante",
+          "correspondance_source": "`garant_circulaire` (Argumentation)"
+        },
+        {
+          "probleme": "argument.garant.connecteur",
+          "constituant": "garant",
+          "competence": "argumentation",
+          "observable": "garant_present",
+          "etat": "correspondance_composer_existante",
+          "correspondance_source": "`garant_present` (Argumentation)"
+        },
+        {
+          "probleme": "argument.garant.glissant",
+          "constituant": "garant",
+          "competence": "argumentation",
+          "observable": "garant_ambigu",
+          "etat": "correspondance_composer_existante",
+          "correspondance_source": "`garant_ambigu` (Argumentation)"
+        },
+        {
+          "probleme": "argument.garant.vague",
+          "constituant": "garant",
+          "competence": "argumentation",
+          "observable": "garant_vague",
+          "etat": "correspondance_composer_existante",
+          "correspondance_source": "`garant_vague` (Argumentation)"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "argument.production.portee",
+      "fonction": "Ne pas faire dire trop à l’appui",
+      "competences_de_travail": [
+        "Argumentation"
+      ],
+      "preparation": "Jusqu’où ton appui permet-il d’aller : ce cas, certains cas, ou une règle générale ?",
+      "relecture": "Ta conclusion va-t-elle plus loin que ce que ton appui permet d’établir, même sans les mots « tous » ou « toujours » ?",
+      "condition": null,
+      "rattachements_supplementaires": [],
+      "liens_09": [
+        {
+          "probleme": "argument.garant.trop_large",
+          "constituant": "garant",
+          "competence": null,
+          "observable": null,
+          "etat": "sans_observable_dans_09",
+          "correspondance_source": "⚠️ aucun observable — **à créer dans la fiche Argumentation** (le `10-` §1 le dit)"
+        }
+      ],
+      "note": "Attente de l’objet à garder dans le retour ; aucun nouvel observable chiffré n’est créé."
+    },
+    {
+      "id": "production.expression.sens",
+      "fonction": "Faire comprendre les phrases",
+      "competence": "Expression",
+      "preparation": "Comment formuler ton idée pour que le lecteur comprenne exactement ce que tu veux dire ?",
+      "relecture": "Relis ton texte : y a-t-il une phrase que tu pourrais rendre plus claire ? Si oui, laquelle et comment ?",
+      "observables": [
+        "taux_sens_passe",
+        "densite_friction"
+      ],
+      "note": "Les taux restent ceux du texte effectivement rédigé ; une seule phrase ne permet pas d’inférer une compétence entière."
+    },
+    {
+      "id": "production.expression.precision",
+      "fonction": "Choisir des mots précis",
+      "competence": "Expression",
+      "preparation": "Quels mots faut-il choisir ou préciser pour exprimer exactement ton idée ?",
+      "relecture": "Un mot reste-t-il trop vague, inexact ou difficile à expliquer avec tes propres mots ?",
+      "observables": [
+        "densite_generique",
+        "mot_impropre",
+        "savant_plaque"
+      ],
+      "note": "Ne pas exiger des synonymes pour les notions dont la répétition précise est utile."
+    },
+    {
+      "id": "production.expression.liens",
+      "fonction": "Rendre les liens compréhensibles",
+      "competence": "Expression",
+      "preparation": "Comment vas-tu faire comprendre ce que chaque phrase reprend ou ajoute à la précédente ?",
+      "relecture": "Comprend-on ce que chaque phrase reprend ou ajoute ? Un « cela », un « donc » ou un « mais » laisse-t-il un lien à deviner ?",
+      "observables": [
+        "attache_presente"
+      ],
+      "note": "Priorité au repère propre à l’objet lorsqu’il vise déjà ce lien : ne pas afficher les deux pour la même fonction."
+    }
+  ]
+}

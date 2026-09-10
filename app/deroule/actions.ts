@@ -1,4 +1,8 @@
 'use server'
+
+import { creerTrace, lireContratPilote } from '@/utils/pilote-argument/serveur'
+import type { ReponseRelecture } from '@/utils/pilote-argument/contrat'
+import { PREFIXE_PILOTE } from '@/utils/pilote-argument/contrat'
 // ============================================================================
 // C4 · L3 — LES ACTIONS DU DÉROULÉ, CÔTÉ ÉLÈVE, À LA MAISON.
 // ----------------------------------------------------------------------------
@@ -85,6 +89,15 @@ async function portier(depotId: string, ecriture = true): Promise<
 
   const depot = await lireDepotMaison(admin, depotId, userId)
   if (!depot) return { erreur: echec('Exercice introuvable.') }
+  try {
+    const pilote = await lireContratPilote(admin,depot.exercice_id,depot.exercice.id_import ?? null)
+    if (pilote) {
+      const { data, error } = await admin.from('inscriptions').select('id').eq('eleve_id',userId)
+        .eq('classe_id',pilote.classe_id).eq('statut','active').maybeSingle()
+      if (error || !data) return { erreur: echec('Inscription inactive pour cet exercice.') }
+    }
+  } catch (e) { return { erreur: echec(e instanceof Error ? e.message : 'Pilote indisponible.') } }
+
 
   if (ecriture) {
     const blocage = await messageSiBloque(admin, userId)
@@ -146,7 +159,8 @@ export async function actionEtatDeLAttente(depotId: string): Promise<{
     enCours: attente.enCours,
     echecDefinitif: attente.echecDefinitif,
     message: attente.message,
-    retourPret: (data ?? []).length > 0,
+    retourPret: (data ?? []).some(r => !p.depot.exercice.id_import?.startsWith(PREFIXE_PILOTE)
+      || !p.depot.vf_remis_at || r.moment === 'final'),
   }
 }
 
@@ -632,8 +646,8 @@ export async function actionRemettre(
       ratissage: ratissage !== null, zoneHorsCible: horsCible !== null,
       // ⭐ 05/09 — « Ta thèse en une phrase ? » ne se demande qu'où l'élève
       //    produit une thèse : la garde suit ce que la vue a servi.
-      restitutionDemandee: vue.gestesRestants.includes('restitution')
-        || vue.restitutionAChaud !== null || vue.geste === 'produire' },
+      restitutionDemandee: !vue.piloteArgument && (vue.gestesRestants.includes('restitution')
+        || vue.restitutionAChaud !== null || vue.geste === 'produire') },
     maintenant.toISOString())
   if (!r.ok) return echec(r.message)
 
@@ -778,3 +792,21 @@ export async function actionPointsContestes(depotId: string): Promise<string[]> 
 //    Et rien ne le voyait : `tsc --noEmit` passe, `npm test` passe, la page se
 //    RENVOIE normalement ; seule une action, à l'écran, échoue.
 //    Le type se lit à sa source : `@/utils/deroule/types`.
+
+/** La trace est validée côté serveur sur le contrat figé et le brouillon relu. */
+export async function actionRelectureArgument(depotId: string, texte: string, reponses: ReponseRelecture[]): Promise<Reponse> {
+  const p = await portier(depotId)
+  if ('erreur' in p) return p.erreur
+  try {
+    const { data, error } = await p.admin.from('exercices').select('id_import').eq('id', p.depot.exercice_id).single()
+    if (error) return echec('Exercice introuvable')
+    const c = await lireContratPilote(p.admin, p.depot.exercice_id, data.id_import)
+    if (!c) return echec('Cet exercice ne propose pas cette relecture.')
+    const trace = creerTrace(c, texte, reponses)
+    const { error: err } = await p.admin.rpc('enregistrer_relecture_argument', {
+      p_depot: depotId, p_eleve: p.userId, p_texte: texte, p_trace: trace,
+    })
+    if (err) return echec('Le texte a changé ou la sauvegarde a échoué. Reviens à ton texte puis relis-le.')
+    return succes('Relecture enregistrée.')
+  } catch (e) { return echec(e instanceof Error ? e.message : 'Relecture refusée.') }
+}

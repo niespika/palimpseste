@@ -72,6 +72,8 @@ export async function lireLesDepotsPourLeRegistre(
   const depots: DepotPourLeRegistre[] = []
   for (const l of lignes) {
     const ex = un<{ cran: unknown; variante?: unknown; id_import: string | null; exercices_types: unknown; exercices_cas: unknown }>(l.exercices)
+    // Aucun seuil de progression n’a été décidé pour le contrat local du pilote.
+    if (typeof ex?.id_import === 'string' && ex.id_import.startsWith('pilote-argument-')) continue
     const cran = cranNumero(ex?.cran)
     const objet = un<{ code: string }>(ex?.exercices_types)?.code ?? null
     if (cran == null || !objet) continue

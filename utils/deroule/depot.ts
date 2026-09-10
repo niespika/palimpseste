@@ -92,6 +92,7 @@ export interface DepotMaison {
    */
   verdicts_cran: Record<string, unknown> | null
   exercice: {
+    id_import?: string | null
     id: string
     lieu: string
     classe_id: string | null
@@ -126,7 +127,7 @@ const CHAMPS =
   + 'confiance_declaree, conditions_declarees, restitution_a_chaud, motif_depassement, '
   + 'ouvert_at, v1_remis_at, vf_remis_at, juger_debut_at, juger_fin_at, duree_taguee, '
   + 'collages_bloques, saisie_telemetrie, aide_consommee, routeur_decision_id, verdicts_cran, '
-  + 'exercice:exercices!inner(id, lieu, classe_id, type_id, consigne_instanciee, cran, genre, '
+  + 'exercice:exercices!inner(id, id_import, lieu, classe_id, type_id, consigne_instanciee, cran, genre, '
   // ⭐⭐ **`cible_primaire` EST DANS CE SELECT DEPUIS C4-L11, ET C'EST LE POINT.**
   //    Le `07-` §1.1 la nomme sur l'instance — « la compétence qui commande le
   //    retour » —, et elle existe désormais en base (nullable : « sur la voie du

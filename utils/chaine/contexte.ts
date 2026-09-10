@@ -1,3 +1,5 @@
+import { lireContratPilote } from '@/utils/pilote-argument/serveur'
+import type { ContratServi } from '@/utils/pilote-argument/contrat'
 import 'server-only'
 // ============================================================================
 // C4 · L5 — CE QUE LA CHAÎNE LIT AVANT DE PARTIR.
@@ -116,6 +118,8 @@ export interface CasServiAuRetour {
 }
 
 export interface ContexteDepot {
+  piloteArgument?: ContratServi | null
+  sujetExact?: string | null
   depotId: string
   eleveId: string
   exerciceId: string
@@ -448,13 +452,20 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     //    MONDE, sur tous les exercices, y compris ceux qui n'ont pas de
     //    co-texte. C'est l'avertissement de C5-L2 juste au-dessus, et il vaut
     //    exactement de la même façon ici.
-    .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, variante, '
+    .select('id, id_import, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, variante, '
       + 'cible_primaire, modes_par_competence, exercice_planifie_id, reference_id, '
       + 'materiau_source_texte_id, materiau_source_englobant, materiau_source_localisation, '
       + 'cotexte_materiau_id, observable_isole_code')
     .eq('id', depot.exercice_id).maybeSingle()
   if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
   const exercice = exerciceBrut as unknown as LigneExercice
+  const piloteArgument = await lireContratPilote(admin, exercice.id, (exerciceBrut as unknown as { id_import: string | null }).id_import)
+    .catch(e => { throw new DepotIllisible(e instanceof Error ? e.message : 'Pilote indisponible') })
+  if (piloteArgument) {
+    const { data: inscription, error } = await admin.from('inscriptions').select('id')
+      .eq('eleve_id', depot.eleve_id).eq('classe_id', piloteArgument.classe_id).eq('statut', 'active').maybeSingle()
+    if (error || !inscription) throw new DepotIllisible('Inscription du pilote inactive')
+  }
 
   const { data: typeBrut } = await admin
     .from('exercices_types').select('code, grain').eq('id', exercice.type_id).maybeSingle()
@@ -484,7 +495,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   // ⭐ Et la lecture RÉSOUT un cran écrit au code, une fois, par sa table : la
   //    forme unique est le NUMÉRO (`utils/cran.ts`), mais une instance d'avant
   //    la conversion doit continuer de traverser la chaîne, pas rendre du vide.
-  let cran = cranNumero(exercice.cran)
+  let cran = piloteArgument?.cran ?? cranNumero(exercice.cran)
   let cranCode: string | null = null
   let regimeV1vf: string | null = null
   if (cran != null || cranEstUnCode(exercice.cran)) {
@@ -775,6 +786,16 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     materiau,
     texteSupport,
     coTexte,
+    ...(piloteArgument ? {
+      piloteArgument, sujetExact: piloteArgument.sujet.enonce,
+      classeId: piloteArgument.classe_id, consigne: piloteArgument.consigne,
+      ciblePrimaire: piloteArgument.principale,
+      modesParCompetence: Object.fromEntries([piloteArgument.principale, piloteArgument.secondaire].filter(Boolean).map(c => [c, ['composer']])),
+      decision: null, reference: null, materiau: null, texteSupport: null,
+      coTexte: piloteArgument.contexte_fourni || null,
+      etalonProduction: null, patronProduction: null, casPourLeRetour: [],
+      jugeDocumentsActif: false, chaineCleActif: false, jugeMesureActif: false, cle: null,
+    } : {}),
   }
 }
 

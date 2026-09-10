@@ -56,6 +56,7 @@ import { ChampDeRedaction, type PoigneeDuChamp } from './ChampDeRedaction'
 import { CredenceSaisie } from './CredenceSaisie'
 import { DesignationDansLeMateriau } from './DesignationDansLeMateriau'
 import { GestesDeLaRemise } from './GestesDeLaRemise'
+import { PreparationArgument, RelectureArgument } from './PiloteArgument'
 import { SeJuger } from './SeJuger'
 import { RetourSegmente } from './RetourSegmente'
 import { TexteATrou } from './TexteATrou'
@@ -312,6 +313,7 @@ export function EcranDeroule(
           vue={vue} forme={forme} volet={volet} setVolet={setVolet}
           enregistrer={enregistrer} remettre={remettre} surEtatDuChamp={surEtatDuChamp}
           champ={champ}
+          textePourRelecture={() => etatDuChamp.current[cleCourante]?.texte ?? vue.texteV1 ?? ''}
           moment={moment} casAffiche={casAffiche} texteSauve={texteSauve}
           passerAuSecond={() => setPasseAuSecond(true)}
           etape={etape} rang={rang} credenceASaisir={credenceASaisir}
@@ -479,7 +481,8 @@ function FilDesTemps({
     >
       <ol className="flex shrink-0 gap-1.5">
         {vue.temps.map((t) => <PastilleDeTemps
-          key={t} temps={t} etat={etatDuTemps(t, courant, vue.temps)} forme={forme} aucuneRemise={vue.aucuneRemise} />)}
+          key={t} temps={t} etat={etatDuTemps(t, courant, vue.temps)} forme={forme} aucuneRemise={vue.aucuneRemise}
+          libelle={vue.piloteArgument && t === 'se_juger' ? (vue.piloteArgument.cran === 6 ? 'Relire et rendre' : 'Rendre') : undefined} />)}
       </ol>
       {vue.echeanceVf.quand && (
         <span className="ml-auto hidden shrink-0 whitespace-nowrap rounded-full
@@ -493,10 +496,10 @@ function FilDesTemps({
 }
 
 function PastilleDeTemps(
-  { temps, etat, forme, aucuneRemise = false }:
+  { temps, etat, forme, aucuneRemise = false, libelle }:
   { temps: Temps; etat: 'fait' | 'courant' | 'a_venir'; forme: FormeDuTravail
     /** ⭐ 07/09 — sur un exercice qui ne se remet pas, le temps 2 ne « répond » pas. */
-    aucuneRemise?: boolean },
+    aucuneRemise?: boolean; libelle?: string },
 ) {
   const cls = etat === 'courant'
     ? 'bg-pigment text-[color:var(--fond-module)] font-semibold'
@@ -510,7 +513,7 @@ function PastilleDeTemps(
     >
       {etat === 'fait' && <span aria-hidden>✓ </span>}
       <span className="sr-only">{etat === 'fait' ? 'fait : ' : etat === 'courant' ? 'en cours : ' : 'à venir : '}</span>
-      {libelleDuTemps(temps, forme, aucuneRemise)}
+      {libelle ?? libelleDuTemps(temps, forme, aucuneRemise)}
     </li>
   )
 }
@@ -519,6 +522,7 @@ function PastilleDeTemps(
 
 /** Ce que les pages de la colonne de travail reçoivent de l'écran. */
 type PagesDuTravail = {
+  textePourRelecture: () => string
   enregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
   remettre: () => Promise<void>
   surEtatDuChamp: (texte: string, t: TelemetrieSaisie) => void
@@ -879,14 +883,14 @@ function ColonneMatiere({
       {/* ⚠️ LA DÉMONSTRATION N'EST PAS LE GUIDE (`02-` §2.3.4) : deux objets,
           deux mécanismes. Le guide porte sur la matière MÊME de l'exercice ;
           la démonstration porte sur un AUTRE cours et d'autres notions. */}
-      {vue.demonstration.demonstration && vue.demonstrationAvantLaTentative && (
+      {!vue.piloteArgument && vue.demonstration.demonstration && vue.demonstrationAvantLaTentative && (
         <Depliable titre="Un exemple, sur un autre sujet" depotId={vue.depotId} aide="demonstration">
           <ContenuDemonstration contenu={vue.contenuDemonstration} />
         </Depliable>
       )}
       {/* Le rappel des observables les plus faibles — EN LANGUE ÉLÈVE, jamais
           par leur code, et dosé par le palier (`06-` §2). */}
-      {vue.rappel.observables.length > 0 && (
+      {!vue.piloteArgument && vue.rappel.observables.length > 0 && (
         <Depliable
           titre="Ce sur quoi tu butais"
           depotId={vue.depotId} aide={null}
@@ -908,6 +912,7 @@ function ColonneMatiere({
         </Depliable>
       )}
 
+      {vue.piloteArgument && <PreparationArgument offre={vue.piloteArgument} />}
       {children}
     </div>
   )
@@ -933,12 +938,13 @@ function ColonneMatiere({
  */
 function ColonneTravail({
   vue, forme, cache, enregistrer, remettre, surEtatDuChamp, champ, casAffiche, texteSauve,
-  passerAuSecond, etape, rang, credenceASaisir, tournerLaPage,
+  passerAuSecond, etape, rang, credenceASaisir, tournerLaPage, textePourRelecture,
 }: {
   vue: VueDuDeroule
   forme: FormeDuTravail
   cache: boolean
 } & PagesDuTravail) {
+  const [texteRelu, setTexteRelu] = useState<string | null>(null)
   const enRedactionV1 = vue.tempsCourant === 'ecrire' || vue.tempsCourant === 'preparer'
   const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
   const casCourant = casMontres[0] ?? null
@@ -1122,7 +1128,9 @@ function ColonneTravail({
   //    4(b)/4(b) il n'y a AUCUN bouton « Rendre » : l'exercice se clôt à la
   //    dernière crédence. La phrase disait « puis tu pourras rendre » sur les
   //    18 dépôts que ce lot vient précisément de rendre inrendables.
-  const phraseDeSuite = credenceASaisir
+  const phraseDeSuite = vue.piloteArgument
+    ? (vue.piloteArgument.cran === 6 ? 'Ensuite : relis ton argument, puis rends-le.' : 'Ensuite : tu pourras rendre ton argument.')
+    : credenceASaisir
     ? (vue.estUnePaire && casAffiche === 1
       ? 'Ensuite : ta crédence, puis la correction de ce premier cas.'
       : vue.aucuneRemise
@@ -1235,7 +1243,10 @@ function ColonneTravail({
       )}
 
       {/* ── PAGE « RENDRE » — le bouton, et rien d'autre à faire ───────────── */}
-      {etape === 'rendre' && (
+      {etape === 'rendre' && vue.piloteArgument?.cran === 6 && texteRelu !== textePourRelecture() ? (
+        <RelectureArgument depotId={vue.depotId} offre={vue.piloteArgument}
+          texte={textePourRelecture()} initiale={vue.piloteArgument.trace} apres={() => setTexteRelu(textePourRelecture())} />
+      ) : etape === 'rendre' && (
         <PageDeRemise
           key="rendre"
           libelle={vue.estUnePaire ? 'Rendre mes deux réponses'
@@ -1488,7 +1499,8 @@ function RetourDUnTexte({
   const enRevision = vue.tempsCourant === 'reviser'
   // ⚠️ Le retour qui se lit est LE PLUS RÉCENT ; l'autre, s'il existe, se replie
   //    sur la dernière page — deux retours empilés feraient deux fois la pile.
-  const recent = vue.retourFinal ?? vue.retourChaud
+  const attendFinal = vue.piloteArgument?.vfRemise && !vue.retourFinal
+  const recent = attendFinal ? null : vue.retourFinal ?? vue.retourChaud
   const ancien = vue.retourFinal ? vue.retourChaud : null
   const nbPoints = recent?.points.length ?? 0
   const enVersionFinale = reprise && enRevision
@@ -1617,6 +1629,7 @@ function RetourDUnTexte({
             <>
               <EnTeteDePage titre="Ta version finale" rang={rangDeLEtape(suiteVf, etapeVf, null)} />
               <div className={etapeVf === 'ecrire' ? 'page-tourne flex flex-col gap-3' : 'hidden'}>
+                {vue.piloteArgument?.aideRevision.map((aide, i) => <p key={i} className="rounded-xl border border-bordure bg-surface p-4 font-corps text-base text-encre">{aide}</p>)}
                 {vue.retourChaud?.actionRevision && (
                   <EncartDeRevision vue={vue}>{vue.retourChaud.actionRevision}</EncartDeRevision>
                 )}
@@ -1665,7 +1678,7 @@ function RetourDUnTexte({
                 />
               )}
             </>
-          ) : recent ? (
+          ) : attendFinal ? <Attente vue={vue} /> : recent ? (
             <RetourSegmente
               key={recent.moment}
               depotId={vue.depotId} retour={recent} vue={vue} nu parPages

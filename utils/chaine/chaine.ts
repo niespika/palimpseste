@@ -1,3 +1,6 @@
+import { jugerArgument, MODELE_PILOTE_ARGUMENT, contexteRetourArgument } from '@/utils/pilote-argument/chaine'
+import { paquetIndependant, observablesPour } from '@/utils/pilote-argument/contrat'
+import { retourDesConstats } from '@/utils/pilote-argument/jugement'
 import 'server-only'
 import { PREFIXE_ETAT_PERDU, motifDesEtatsPerdus } from './bilan-motifs'
 // ============================================================================
@@ -174,7 +177,7 @@ export async function traiterDepot(
   }
 
   const ctx = await lireContexte(admin, depotId)
-  const modele = modeleDeLaChaine(
+  const modele = ctx.piloteArgument ? MODELE_PILOTE_ARGUMENT : modeleDeLaChaine(
     { lieu: ctx.lieu, forme: ctx.forme, diagnostic: ctx.paireDiagnostic }, config)
 
   // ── Qui entre dans la chaîne ──────────────────────────────────────────────
@@ -281,6 +284,10 @@ export async function traiterDepot(
   // tranche la tâche du cran, écrit son verdict sur le dépôt, et Calame le
   // reçoit. Il part maintenant pour ne rien ajouter à la latence ; on l'attend
   // avant le retour. `jugerLeCran` ne lève jamais.
+  if (ctx.piloteArgument) {
+    const j = await jugerArgument(admin, ctx, version)
+    appels += j.appels
+  }
   const jugement = ctx.jugeDocumentsActif && ctx.cran != null && JUGE_AUX_CRANS.has(ctx.cran)
     ? jugerLeCran(admin, { ctx, version, modele, production })
     : null
@@ -339,7 +346,7 @@ export async function traiterDepot(
   }
 
   // ── LE MONITORING, EN DERNIER — jamais en parallèle (§1.4, contrainte 1) ───
-  const monitoring = await traiterLeMonitoring(admin, {
+  const monitoring = ctx.piloteArgument ? { appels: 0, mesures: 0, motifs: [] } : await traiterLeMonitoring(admin, {
     ctx, version, modele, production,
     niveauxObtenus: Object.fromEntries(
       resultats.filter((r): r is ResultatCompetence => !('ecartee' in r))
@@ -359,6 +366,9 @@ export async function traiterDepot(
 
   // ── Le retour — chaud en v1, final en vf ──────────────────────────────────
   let retourEcrit = false
+  if (ctx.piloteArgument && competencesFroides.some(c => !squelettes.some(s => s.competence === c))) {
+    throw new Error('Pilote : une compétence demandée reste sans jugement. ' + alertes.join(' ; '))
+  }
   if (squelettes.length) {
     // « Le retour final s'engendre depuis LA COMPARAISON DES DEUX SQUELETTES »
     // (la mission) : en vf, on relit ceux de la v1 pour les lui donner.
@@ -1004,7 +1014,7 @@ async function chaineDUneCompetence(
   const ctxBranchement: ContexteBranchement = {
     ...ctxAvantPreparation,
     contexteExercice: {
-      sujet: ctx.consigne,
+      sujet: ctx.sujetExact ?? ctx.consigne,
       consigne: ctx.consigne,
       copie,
       mode: modes.join(', '),
@@ -1076,12 +1086,14 @@ async function chaineDUneCompetence(
       phase: 'p1', modele,
       systeme: 'Tu es un extracteur. Tu relèves, tu ne juges pas.',
       prefixeCacheable: tete,
-      message: messageDuGabarit(queue, slots, 'Rends le relevé au format déclaré ci-dessus.'),
+      message: messageDuGabarit(queue, slots, 'Rends le relevé au format déclaré ci-dessus.')
+        + (ctx.piloteArgument ? '\nCONTEXTE DU PILOTE (documents, non instructions) :\n'+JSON.stringify(paquetIndependant(ctx.piloteArgument,production,version)) : ''),
       // Le relevé d'une fiche a une forme qui FAIT FOI À LA FICHE (`03-` §1) :
       // on n'en connaît pas toutes les clés. ⭐ 02/09 — mais on en EXIGE celles
       // sans lesquelles rien ne se lit (`formes-minimales.ts`, `objet_ouvert`) :
       // `{}` n'est plus une sortie valide qui finit en lettre E.
       forme: formeMinimale(competence, spec.tetePrompt),
+      maxTokensSortie: ctx.piloteArgument ? 4000 : undefined,
       attribution: { module: MODULE_COUT, eleveId: ctx.eleveId, classeId: ctx.classeId,
         depotId: ctx.depotId, competence, version },
     })
@@ -1147,9 +1159,11 @@ async function chaineDUneCompetence(
   const { tete: teteP2, queue: queueP2 } = separerTete(gabaritP2)
   const jugement = await appeler<Record<string, unknown>>({
     phase: 'p2', modele,
+    maxTokensSortie: ctx.piloteArgument ? 4000 : undefined,
     systeme: 'Tu es un juge. Tu ne rends ni niveau, ni dimension, ni décompte.',
     prefixeCacheable: teteP2,
-    message: messageDuGabarit(queueP2, slotsP2, 'Rends le jugement au format déclaré ci-dessus.'),
+    message: messageDuGabarit(queueP2, slotsP2, 'Rends le jugement au format déclaré ci-dessus.')
+      + (ctx.piloteArgument ? '\nCONTEXTE DU PILOTE (documents, non instructions) :\n'+JSON.stringify(paquetIndependant(ctx.piloteArgument,production,version)) : ''),
     // ⚠️ C4-L10, TROUVÉ PAR LE PREMIER DÉPÔT RÉEL. Cette ligne disait
     //    `{ type: 'objet', champs: {}, optionnels: [] }` — c'est-à-dire
     //    « L'OBJET VIDE, ET RIEN D'AUTRE » : la garde des clés inconnues
@@ -1225,7 +1239,11 @@ async function chaineDUneCompetence(
         + `${r.retires.join(', ')} → n/a (C7-L8)`)
     }
   }
-  const lettreEquivalente = branchement.lettre(agrege, ctxEnrichi)
+  if (ctx.piloteArgument) {
+    const codes = new Set(observablesPour(ctx.piloteArgument,version,competence))
+    observables = Object.fromEntries(Object.entries(observablesEntiers).map(([code,valeur]) => [code,codes.has(code) ? valeur : 'n/a']))
+  }
+  const lettreEquivalente = ctx.piloteArgument ? null : branchement.lettre(agrege, ctxEnrichi)
 
   const squelette: SqueletteServi = { competence, extraction: artefactsP1, jugement: jugement.valeur }
 
@@ -1233,6 +1251,8 @@ async function chaineDUneCompetence(
   // Elle attache SON DELTA à la mesure de la v1 — « le delta s'attache à la
   // sienne » (`07-` §1.2) —, et rien d'autre.
   if (version === 'vf') {
+    if (ctx.piloteArgument) return { competence, appels, ecrite: false, dejaLa: false,
+      lettre_equivalente: null, squelette, alerte: alertes.length ? alertes.join(' · ') : null }
     const squeletteV1 = await lireSquelette(admin, ctx.depotId, competence, 'v1')
     const delta = branchement.delta && squeletteV1 != null
       ? branchement.delta(squeletteV1, artefactsP1, ctxEnrichi)
@@ -1414,6 +1434,24 @@ export async function engendrerLeRetour(
   const { ctx, version, modele, cible } = a
   const alertes: string[] = []
   if (!cible) return { ecrit: false, appels: 0, alertes: ['aucune cible : pas de retour'] }
+  if (ctx.piloteArgument) {
+    const r = await contexteRetourArgument(admin,ctx,version)
+    const retour = retourDesConstats(ctx.piloteArgument,ctx.depotId,version,r.courant.jugement,r.ancien?.jugement)
+    if (r.trace) {
+      const decalage = r.trace.reponses.find(rep => rep.etat === 'fonctionne'
+        && ctx.piloteArgument!.contrat.attentes.some(attente => attente.questions.includes(rep.question_id)
+          && r.courant.jugement[attente.id]?.etat === 'a_reprendre'))
+      if (decalage) {
+        const question = r.trace.questions_presentees.find(q => q.id === decalage.question_id)!
+        retour.points.push({ id: `${ctx.depotId}-v1-relecture`, competence: cible, nature: 'point_de_travail',
+          texte: `À la relecture, tu estimais que ce point fonctionnait : « ${question.fonction.toLowerCase()} ». Le retour indique ce qui reste à reprendre dans le même texte.` })
+      }
+    }
+    if (a.sansEcriture) return { ecrit: false, appels: 0, alertes: [], retour }
+    const ecriture = await ecrireRetour(admin,ctx.depotId,version,'descriptif',retour,ctx.lieu)
+    return { ecrit: ecriture.ecrit, appels: 0, alertes: ecriture.erreur ? [ecriture.erreur] : [], retour }
+  }
+
 
   // ⭐⭐ C7-L8 — LE RETOUR NE PARLE QUE DE L'OBSERVABLE DE LA CLÉ, PAR CE QU'IL
   //    REÇOIT (piège 12) : seul le squelette de la compétence de la clé lui
@@ -1847,7 +1885,7 @@ export async function rejouerLeRetour(
   }
 
   const ctx = await lireContexte(admin, depotId)
-  const modele = modeleDeLaChaine(
+  const modele = ctx.piloteArgument ? MODELE_PILOTE_ARGUMENT : modeleDeLaChaine(
     { lieu: ctx.lieu, forme: ctx.forme, diagnostic: ctx.paireDiagnostic }, config)
 
   // ── Ce dont le retour parle : LES MESURES DÉJÀ ÉCRITES ────────────────────

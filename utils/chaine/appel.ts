@@ -58,6 +58,8 @@ export interface DemandeAppel {
    */
   images?: { base64: string; mime: 'image/jpeg' | 'image/png' | 'image/webp' }[]
   forme: Forme
+  /** Contrôle déterministe supplémentaire ; son refus utilise la même relance bornée. */
+  controle?: (valeur: unknown) => string | null
   maxTokensSortie?: number
   /** L'attribution du coût. Tout est facultatif : un coût non attribuable reste valide. */
   attribution: {
@@ -176,8 +178,11 @@ export async function appeler<T>(d: DemandeAppel): Promise<ResultatAppel<T>> {
     await journaliser(d, usage)
 
     const verdict = validerSortie<T>(texte, d.forme)
-    if (verdict.ok) return { valeur: verdict.valeur, appels, usage: cumul, modele: d.modele }
-    motifs.push(direRefus(verdict.refus))
+    if (verdict.ok) {
+      const refus = d.controle?.(verdict.valeur)
+      if (!refus) return { valeur: verdict.valeur, appels, usage: cumul, modele: d.modele }
+      motifs.push(refus)
+    } else motifs.push(direRefus(verdict.refus))
 
     // ⭐ La troncature se DIT dans le motif — sans quoi l'alerte du bilan
     //    annoncerait « sortie non conforme » sur un modèle qui n'avait rien fait

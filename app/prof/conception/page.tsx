@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { garderProf } from '@/utils/fabrique/acces'
 import { formatJour } from '@/utils/fuseau'
 import { cranNumero } from '@/utils/cran'
+import { portePilote } from '@/utils/pilote-argument/serveur'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +32,7 @@ const TON: Record<string, string> = {
 
 export default async function Conception() {
   const { admin, actif } = await garderProf()
-  const [{ data: instances }, { data: refs }] = await Promise.all([
+  const [{ data: instances }, { data: refs }, piloteActif] = await Promise.all([
     admin.from('exercices')
       .select('id, cran, genre, lieu, statut, bloque, id_import, classe_id, created_at,'
         + ' exercices_types(code, libelle), classes(nom)')
@@ -41,6 +42,7 @@ export default async function Conception() {
     admin.from('exercices_references')
       .select('id, localisation, validee_at, exercices_textes(id_import, auteur, titre)')
       .order('created_at', { ascending: false }).limit(50),
+    actif ? portePilote(admin) : Promise.resolve(false),
   ])
 
   const aValider = ((refs ?? []) as unknown as Ligne[]).filter((r) => !r.validee_at)
@@ -74,6 +76,7 @@ export default async function Conception() {
       )}
 
       <section className="rounded-xl border border-bordure bg-surface p-4 space-y-3">
+        {piloteActif && <Link href="/prof/conception/pilote-argument" className="font-ui text-sm underline">Pilote argument · crans 6 et 8</Link>}
         <h2 className="font-titre text-lg text-encre">Les deux portes</h2>
         <div className="flex flex-wrap gap-3">
           <Link href="/prof/conception/nouvelle?porte=aletheia"
