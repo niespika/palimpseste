@@ -80,8 +80,15 @@ const controles = cas.map(c => {
 
 for (const [id, contrat] of contrats) {
   const fichier = join(prive, id + '-contrat.json')
-  if (existsSync(fichier)) assert.deepEqual(JSON.parse(readFileSync(fichier, 'utf8')), contrat, 'Contrat gelé différent')
-  else writeFileSync(fichier, json(contrat), { mode: 0o600, flag: 'wx' })
+  if (existsSync(fichier)) {
+    const gele = JSON.parse(readFileSync(fichier, 'utf8'))
+    // La nouvelle lecture confirme l'admissibilité ; son heure ne redéfinit
+    // pas le contrat déjà figé pour cette campagne.
+    const verification = structuredClone(contrat)
+    verification.admissibilite.verifie_le = gele.admissibilite.verifie_le
+    assert.deepEqual(gele, verification, 'Contrat gelé différent')
+    contrats.set(id, gele)
+  } else writeFileSync(fichier, json(contrat), { mode: 0o600, flag: 'wx' })
 }
 const manifestPath = join(racine, 'manifeste.json')
 const empreinteCas = sha(texteCas)
