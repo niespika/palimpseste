@@ -8,9 +8,9 @@ import { sujetsAdmissibles } from '../../utils/pilote-argument/serveur'
 
 const registre=process.argv.find(a=>a.startsWith('--registre='))?.slice(11) ?? '/tmp/pilote-argument-decor.json'
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL!
-if (!url?.includes('aoakpxxlyvthzueaywna')) throw new Error('Sandbox uniquement')
+if (!url || new URL(url).hostname !== 'aoakpxxlyvthzueaywna.supabase.co') throw new Error('Sandbox uniquement')
 const db=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}})
-type Registre={ eleve:string; email:string; motDePasse:string; professeur?:string; emailProf?:string; motDePasseProf?:string; lignes:Array<{table:string;id:string}>; depots:Array<{id:string;cran:number;parcours:string}>; params:Record<string,unknown>; termine?:boolean }
+type Registre={ eleve:string; email:string; motDePasse:string; professeur?:string; emailProf?:string; motDePasseProf?:string; lignes:Array<{table:string;id:string}>; depots:Array<{id:string;cran:number;parcours:string}>; params:Record<string,unknown>; sujetsAvant?:Array<Record<string,unknown>>; termine?:boolean }
 const r:Registre=existsSync(registre)?JSON.parse(readFileSync(registre,'utf8')):{eleve:'',email:'',motDePasse:randomUUID(),lignes:[],depots:[],params:{}}
 const sauver=()=>writeFileSync(registre,JSON.stringify(r,null,2),{mode:0o600})
 async function creer(table:string,valeur:Record<string,unknown>) {
@@ -18,34 +18,59 @@ async function creer(table:string,valeur:Record<string,unknown>) {
   if(error)throw Error(table+': '+error.message)
   r.lignes.push({table,id:data.id});sauver();return data.id as string
 }
-if(process.argv.includes('--retirer')) {
+async function retirer() {
+  const erreurs:string[]=[]
+  try {
   // Une recette peut s'être arrêtée après l'attribution mais avant son inscription
   // au registre. Ces classes appartiennent exclusivement à ce décor synthétique.
   const classes=r.lignes.filter(l=>l.table==='classes').map(l=>l.id)
   if(classes.length) {
-    const {data,error}=await db.from('exercices').select('id').in('classe_id',classes).like('id_import','pilote-argument-%')
+    const {data,error,count}=await db.from('exercices').select('id', {count:'exact'}).in('classe_id',classes).like('id_import','pilote-argument-%')
     if(error)throw error
+    if(data.length!==count)throw Error('Nettoyage tronqué : exercices incomplets')
     for(const {id} of data) {
       const {error}=await db.from('exercices').delete().eq('id',id);if(error)throw error
     }
   }
   for(const {table,id} of [...r.lignes].reverse()) {
-    const {error}=await db.from(table).delete().eq('id',id);if(error)throw Error(table+': '+error.message)
+    const {error}=await db.from(table).delete().eq('id',id);if(error)erreurs.push(table+': '+error.message)
   }
   for(const id of [r.eleve,r.professeur].filter(Boolean) as string[]) {
-    const {error}=await db.auth.admin.deleteUser(id);if(error)throw error
+    const {error}=await db.auth.admin.deleteUser(id);if(error && error.status!==404)erreurs.push(error.message)
   }
-  const {error}=await db.from('scriptorium_params').update(r.params).eq('id',1);if(error)throw error
+  } catch(e) { erreurs.push(e instanceof Error?e.message:String(e)) }
+  finally {
+    if(Object.keys(r.params).length) {
+      const {error}=await db.from('scriptorium_params').update(r.params).eq('id',1)
+      if(error)erreurs.push('Restauration : '+error.message)
+    }
+  }
+  if(erreurs.length)throw Error('Nettoyage incomplet : '+erreurs.join('; '))
   r.termine=true;sauver();console.log('Décor retiré ; paramètres restaurés.');
+}
+if(process.argv.includes('--retirer')) {
+  await retirer()
 } else if(process.argv.includes('--creer')) {
+  if(existsSync(registre))throw Error('Registre déjà utilisé : choisir un nouveau chemin')
+  try {
   if(r.eleve)throw Error('Décor déjà présent : retirer avant de recréer')
   const {data:params,error:ep}=await db.from('scriptorium_params').select('pilote_argument_actif,exercices_actif,chaine_actif').eq('id',1).single()
-  if(ep)throw ep;r.params=params;sauver()
+  if(ep)throw ep;r.params=params
+  r.sujetsAvant=[]
+  for(let debut=0;;debut+=500) {
+    const {data,count,error}=await db.from('exercices_sujets').select('*',{count:'exact'}).order('id').range(debut,debut+499)
+    if(error)throw error
+    r.sujetsAvant.push(...data)
+    if(r.sujetsAvant.length===(count??-1))break
+    if(!data.length || r.sujetsAvant.length>(count??0))throw Error('Inventaire des sujets incomplet')
+  }
+  sauver()
   const {error:ea}=await db.from('scriptorium_params').update({pilote_argument_actif:true,exercices_actif:true,chaine_actif:true}).eq('id',1);if(ea)throw ea
   r.email=`recette-argument-${randomUUID()}@example.test`
   const {data:u,error:eu}=await db.auth.admin.createUser({email:r.email,password:r.motDePasse,email_confirm:true})
   if(eu||!u.user)throw eu;r.eleve=u.user.id;sauver()
   await creer('profiles',{id:r.eleve,role:'eleve',display_name:'Élève recette argument'})
+  if(process.argv.includes('--simuler-echec'))throw Error('Échec de recette injecté après création du compte synthétique')
   const {data:module,error:em}=await db.from('modules').select('id').eq('slug','codex').single();if(em)throw em
   // Les sujets TC/THLP viennent de la banque réelle ; 1HLP est un sujet de démonstration de conception.
   for(const [parcours,niveau,notions] of [
@@ -79,4 +104,8 @@ if(process.argv.includes('--retirer')) {
     console.log(`${parcours} : ${offre.sujets.length} sujets admissibles, crans 6 et 8 attribués dans le décor.`)
   }
   console.log('Décor créé. Registre privé enregistré hors du dépôt.')
+  } catch(e) {
+    await retirer()
+    throw e
+  }
 } else throw Error('--creer ou --retirer requis')

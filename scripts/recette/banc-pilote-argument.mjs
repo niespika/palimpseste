@@ -1,11 +1,13 @@
 // Banc diagnostique synthétique. Sandbox uniquement, décor retiré séparément.
 // node --env-file=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
-//   --import ./scripts/register-calibration-resolver.mjs scripts/recette/banc-pilote-argument.mjs [--executer]
+//   --import ./scripts/register-calibration-resolver.mjs scripts/recette/banc-pilote-argument.mjs --campagne=chemin --prive=/tmp/chemin --registre=/tmp/registre.json [--executer]
 // Sans --executer : résolution des sujets, gel des références et contrôles déterministes ; aucun appel IA.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs'
 import { createHash, randomUUID } from 'node:crypto'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { join } from 'node:path'
+import { cheminsCampagne } from './chemins-banc-pilote-argument.mjs'
+import { execFileSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 import { createClient } from '@supabase/supabase-js'
 import { creerContrat, attentesPour, observablesPour } from '../../utils/pilote-argument/contrat.ts'
@@ -13,13 +15,12 @@ import { sujetsAdmissibles } from '../../utils/pilote-argument/serveur.ts'
 import { comparerConstats, verifierPreuves } from '../../utils/pilote-argument/jugement.ts'
 import { traiterDepot } from '../../utils/chaine/chaine.ts'
 
-const racine = 'scripts/recette/pilote-argument/banc'
-const prive = '/tmp/pilote-argument-banc'
+const { racine, prive, registre } = cheminsCampagne()
 const sha = v => createHash('sha256').update(v).digest('hex')
 const texteCas = readFileSync(join(racine, 'cas.json'), 'utf8')
 const banque = JSON.parse(texteCas)
 const cas = banque.cas.filter(c => c.lot === 'diagnostic')
-const r = JSON.parse(readFileSync('/tmp/pilote-argument-banc-decor.json', 'utf8'))
+const r = JSON.parse(readFileSync(registre, 'utf8'))
 assert.ok(!r.termine, 'Décor actif requis')
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 assert.equal(new URL(url).hostname, 'aoakpxxlyvthzueaywna.supabase.co', 'Sandbox uniquement')
@@ -31,9 +32,10 @@ const json = x => JSON.stringify(x, null, 2) + '\n'
 const neutraliser = x => JSON.parse(json(x).replace(/[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}/gi, '[identifiant-retire]').replace(/recette-argument-[^\s"\\]+@example\.test/g, '[compte-synthetique]'))
 const sauverPublic = (f, x) => writeFileSync(join(racine, f), json(neutraliser(x)))
 const normaliser = s => s.normalize('NFC').replace(/[’‘]/g, "'")
-const fichiersCode = ['utils/ia-fournisseur.ts', 'utils/cout-api.ts', ...['utils/chaine','utils/pilote-argument'].flatMap(d => readdirSync(d).filter(f => /\.(ts|json)$/.test(f) && !f.endsWith('.test.ts')).sort().map(f => join(d, f)))]
+const fichiersCode = [...new Set([...execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(f => /^(utils|app|components|scripts)\//.test(f) && /\.(ts|tsx|mjs|json|py)$/.test(f)), 'scripts/recette/chemins-banc-pilote-argument.mjs', 'package.json', 'package-lock.json'])].sort()
 const empreintesCode = () => Object.fromEntries(fichiersCode.map(f => [f, sha(readFileSync(f))]))
 const codeDebut = empreintesCode()
+const criteresDebut = Object.fromEntries(['cas.json', 'protocole-avant-appels.json', 'attentes-exploratoires.json', 'retour-professeur-conserve.json'].filter(f => existsSync(join(racine, f))).map(f => [f, sha(readFileSync(join(racine, f)))]))
 const contrats = new Map()
 for (const parcours of ['TC', '1HLP', 'THLP']) {
   const origine = r.depots.find(d => d.parcours === parcours && d.cran === 6)
@@ -42,7 +44,7 @@ for (const parcours of ['TC', '1HLP', 'THLP']) {
   const { data: s, error: e2 } = await db.from('exercices_pilote_argument').select('contrat').eq('exercice_id', d.exercice_id).single()
   if (e2) throw e2
   const offre = await sujetsAdmissibles(db, s.contrat.classe_id)
-  for (const c of banque.cas.filter(c => c.parcours === parcours)) {
+  for (const c of cas.filter(c => c.parcours === parcours)) {
     const candidats = offre.sujets.filter(x => normaliser(x.sujet.enonce) === normaliser(c.sujet))
     assert.equal(candidats.length, 1, 'Sujet admissible unique pour ' + c.id)
     const choix = candidats[0]
@@ -76,11 +78,29 @@ const controles = cas.map(c => {
   return { cas: c.id, principale_corrigee: corriges, objet_corrige: objetCorrige, reussite_autonome: false, delta: null }
 })
 
+for (const [id, contrat] of contrats) {
+  const fichier = join(prive, id + '-contrat.json')
+  if (existsSync(fichier)) assert.deepEqual(JSON.parse(readFileSync(fichier, 'utf8')), contrat, 'Contrat gelé différent')
+  else writeFileSync(fichier, json(contrat), { mode: 0o600, flag: 'wx' })
+}
 const manifestPath = join(racine, 'manifeste.json')
 const empreinteCas = sha(texteCas)
-if (existsSync(manifestPath)) assert.equal(JSON.parse(readFileSync(manifestPath, 'utf8')).references_sha256, empreinteCas, 'Références gelées modifiées')
-else sauverPublic('manifeste.json', {
-  version: banque.version, gele_le: new Date().toISOString(), references_sha256: empreinteCas,
+if (existsSync(manifestPath)) {
+  const gele = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  assert.equal(gele.references_sha256, empreinteCas, 'Références gelées modifiées')
+  assert.deepEqual(gele.code_sha256, codeDebut, 'Code modifié depuis le gel')
+  assert.deepEqual(gele.criteres_sha256, criteresDebut, 'Critères modifiés depuis le gel')
+} else {
+  mkdirSync(join(racine, 'code-gele'), { recursive: true })
+  for (const f of fichiersCode) {
+    const cible = join(racine, 'code-gele', f + '.txt')
+    mkdirSync(cible.slice(0, cible.lastIndexOf('/')), { recursive: true })
+    writeFileSync(cible, readFileSync(f), { flag: 'wx' })
+  }
+}
+if (!existsSync(manifestPath))
+sauverPublic('manifeste.json', {
+  version: banque.version, commit_local: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), gele_le: new Date().toISOString(), references_sha256: empreinteCas,
   statut_references: banque.statut, copies_reelles: false, modele_demande: 'gpt-5.6-luna',
   temperature_envoyee: null, temperature_note: "Champ omis par l'adaptateur applicatif ; valeur effective du fournisseur inconnue.",
   repetitions_par_couple: banque.repetitions, copies_diagnostic: cas.map(c => c.id), reserve_non_executee: banque.cas.filter(c => c.lot === 'reserve').map(c => c.id),
@@ -88,17 +108,19 @@ else sauverPublic('manifeste.json', {
     decisions: 'Ne pas modifier les prompts ou les critères pendant la campagne. Les autres attentes sont exploratoires, sans vérité de référence inventée.',
     comparaisons: 'Accord conditionnel aux attentes proposées ; variabilité des états pour chaque couple copie/attente/version ; faux changements sur textes identiques.',
     limites: 'Pas de golds validés ni de plafond intracorrecteur humain ; pas de seuil permettant de déclarer une calibration réussie.' },
-  code_sha256: codeDebut, sujets_servis: banque.cas.map(c => ({ cas: c.id, enonce: contrats.get(c.id).sujet.enonce })), controles_oracle: controles,
+  code_sha256: codeDebut, criteres_sha256: criteresDebut, contrats_sha256: Object.fromEntries([...contrats].map(([id, c]) => [id, sha(JSON.stringify(neutraliser(c)))])), sujets_servis: cas.map(c => ({ cas: c.id, enonce: contrats.get(c.id).sujet.enonce })), controles_oracle: controles,
 })
-const md = ['# Banc diagnostique du pilote argument', '', 'Références proposées, **non validées par le professeur**. Textes synthétiques ; aucun élève réel. Les états ciblés sont fixés avant les appels et ne seront pas corrigés pour rejoindre le modèle.', '',
-  'Six couples V1/VF sont soumis cinq fois à la chaîne complète, avec un dépôt neuf à chaque fois. Trois couples restent en réserve. Toutes les autres attentes sont observées sans leur attribuer une vérité de référence.', '',
-  ...banque.cas.flatMap(c => [`## ${c.id} — ${c.parcours}, cran ${c.cran}${c.lot === 'reserve' ? ' — réserve' : ''}`, '', `${c.principale} principale${c.secondaire ? ', ' + c.secondaire + ' secondaire' : ', seule'}.`, '', `**Sujet :** ${contrats.get(c.id).sujet.enonce}`, '', `**Contexte fourni :** ${c.contexte}`, '', `**V1 :** ${c.v1}`, '', `**VF :** ${c.vf}`, '', c.enjeu, '', '| Attente | V1 | VF | Motif proposé |','|---|---|---|---|',...c.attentes.map(a => `| ${a.id} | ${(a.v1 ?? []).join(' / ') || 'hors mesure'} | ${(a.vf ?? []).join(' / ') || 'hors mesure'} | ${a.raison}${a.incertitude ? ' **Incertitude déclarée.**' : ''} |`), '']),
+const md = ['# Banc diagnostique du pilote argument', '', banque.statut + '. ' + banque.provenance, '',
+  `${cas.length} couples V1/VF sont soumis ${banque.repetitions} fois à la chaîne complète, avec un dépôt neuf à chaque fois. Trois couples historiques restent en réserve. Les attentes sont des hypothèses diagnostiques issues des clarifications acceptées, jamais des cases humaines complétées. Les autres attentes sont exploratoires.`, '',
+  ...cas.flatMap(c => [`## ${c.id} — ${c.parcours}, cran ${c.cran}${c.lot === 'reserve' ? ' — réserve' : ''}`, '', `${c.principale} principale${c.secondaire ? ', ' + c.secondaire + ' secondaire' : ', seule'}.`, '', `**Sujet :** ${contrats.get(c.id).sujet.enonce}`, '', `**Contexte fourni :** ${c.contexte}`, '', `**V1 :** ${c.v1}`, '', `**VF :** ${c.vf}`, '', c.enjeu, '', '| Attente | V1 | VF | Motif proposé |','|---|---|---|---|',...c.attentes.map(a => `| ${a.id} | ${(a.v1 ?? []).join(' / ') || 'hors mesure'} | ${(a.vf ?? []).join(' / ') || 'hors mesure'} | ${a.raison}${a.incertitude ? ' **Incertitude déclarée.**' : ''} |`), '']),
   '## Limites', '', 'Les attentes ci-dessus ne sont pas des golds humains. Cette campagne mesure la variabilité et examine des désaccords. Elle ne permet ni un taux de justesse certifié ni une ouverture du pilote. Les contrôles oracle portent sur la comparaison déterministe des constats, pas sur un étalonnage des scores natifs.', '']
-writeFileSync(join(racine, 'REFERENCES.md'), md.join('\n'))
-console.log('Préparation vérifiée : 9 sujets admissibles, références gelées, 6 contrôles oracle réussis.')
+if (!existsSync(join(racine, 'REFERENCES.md'))) writeFileSync(join(racine, 'REFERENCES.md'), md.join('\n'), { flag: 'wx' })
+console.log(`Préparation vérifiée : ${cas.length} cas admissibles, références gelées, ${controles.length} contrôles oracle réussis.`)
 if (!process.argv.includes('--executer')) process.exit(0)
 assert.deepEqual(JSON.parse(readFileSync(manifestPath, 'utf8')).code_sha256, codeDebut, 'Code inchangé depuis le gel')
-assert.ok(cas.every(c => !existsSync(join(racine, 'resultats', c.id + '-1.json'))), 'Cette campagne existe déjà : aucun remplacement silencieux')
+writeFileSync(join(racine, 'EXECUTION_COMMENCEE.json'), json({ debut: new Date().toISOString(), cas: cas.map(c => c.id), repetitions: banque.repetitions }), { flag: 'wx' })
+assert.equal(readdirSync(join(racine, 'resultats')).length, 0, 'Résultats existants : aucun remplacement silencieux')
+assert.equal(readdirSync(prive).filter(f => /-appel-|depot\.json$/.test(f)).length, 0, 'Registre privé déjà utilisé')
 
 // Capture passive des requêtes IA, sans changer le payload et sans stocker les en-têtes.
 // Les messages exacts restent dans /tmp ; leurs empreintes et paramètres sont partageables.
@@ -113,6 +135,9 @@ globalThis.fetch = async function(input, init) {
     systeme_sha256: sha(JSON.stringify(body.messages.filter(m => m.role === 'system'))), modele_demande: body.model,
     temperature: body.temperature ?? null, max_completion_tokens: body.max_completion_tokens }
   ctx.appels.push(appel)
+  const fichierAppel = join(prive, `${ctx.id}-appel-${appel.numero}.json`)
+  // Écriture durable du corps exact AVANT tout envoi ; aucun en-tête ni secret.
+  writeFileSync(fichierAppel, json({ ...appel, requete: body, statut: 'avant_envoi' }), { mode: 0o600, flag: 'wx' })
   let reponse
   try {
     const response = await fetchOriginal(input, init)
@@ -207,7 +232,8 @@ try { await Promise.all(Array.from({ length: 3 }, travailleur)) }
 finally { globalThis.fetch = fetchOriginal }
 assert.deepEqual(empreintesCode(), codeDebut, 'Code modifié pendant la campagne')
 assert.equal(sha(readFileSync(join(racine, 'cas.json'))), empreinteCas, 'Références modifiées pendant la campagne')
-sauverPublic('execution.json', { termine_le: new Date().toISOString(), repetitions: resultats.length,
+for (const [f, hash] of Object.entries(criteresDebut)) assert.equal(sha(readFileSync(join(racine, f))), hash, 'Critère modifié pendant la campagne : ' + f)
+sauverPublic('execution.json', { debut_le: JSON.parse(readFileSync(join(racine, 'EXECUTION_COMMENCEE.json'), 'utf8')).debut, termine_le: new Date().toISOString(), repetitions: resultats.length,
   completes: resultats.filter(r => r.controles_techniques === 'reussis').length, cout_usd: resultats.reduce((s,r) => s + (r.cout_usd ?? 0), 0),
   code_et_references_inchanges: true, reserve_executee: false, erreurs: resultats.filter(r => r.erreurs.length).map(r => ({ cas: r.cas, repetition: r.repetition, erreurs: r.erreurs })) })
 console.log('Campagne terminée ; résultats conservés. Le décor doit maintenant être retiré.')

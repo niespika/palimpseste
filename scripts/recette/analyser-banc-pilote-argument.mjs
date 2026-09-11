@@ -2,7 +2,8 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
-const racine = 'scripts/recette/pilote-argument/banc'
+import { cheminsCampagne } from './chemins-banc-pilote-argument.mjs'
+const { racine, prive } = cheminsCampagne()
 const banque = JSON.parse(readFileSync(join(racine, 'cas.json'), 'utf8'))
 const cas = banque.cas.filter(c => c.lot === 'diagnostic')
 const runs = readdirSync(join(racine, 'resultats')).filter(f => f.endsWith('.json')).map(f => JSON.parse(readFileSync(join(racine, 'resultats', f), 'utf8')))
@@ -21,7 +22,7 @@ const details = cas.map(c => {
       const comptes = compter(observations.map(o => o.etat))
       const ref = c.attentes.find(a => a.id === id && a[version])
       cellules.push({ version, attente: id, etats: comptes, observations, variable: Object.keys(comptes).length > 1,
-        attendu: ref?.[version] ?? null, reference_incertaine: ref?.incertitude ?? false,
+        attendu: ref?.[version] ?? null, reference_incertaine: ref?.incertitude ?? false, statut_attente: ref?.statut ?? 'exploratoire',
         accord: ref ? observations.filter(o => ref[version].includes(o.etat)).length : null,
         desaccords: ref ? observations.filter(o => !ref[version].includes(o.etat)) : [],
         releves_distincts: new Set(jj.map(j => JSON.stringify(j.extraction[id]))).size })
@@ -52,7 +53,6 @@ const details = cas.map(c => {
 
 // Lorsque des requêtes P2 sont rigoureusement identiques, une différence d'état
 // ne peut pas être attribuée à une variation de P1 ou des prompts entre ces appels.
-const prive = '/tmp/pilote-argument-banc'
 const groupes = new Map(), inventaire = [], paquets = []
 if (existsSync(prive)) for (const f of readdirSync(prive).filter(f => /-appel-\d+\.json$/.test(f))) {
   const a = JSON.parse(readFileSync(join(prive,f), 'utf8'))

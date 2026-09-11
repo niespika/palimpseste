@@ -120,3 +120,6 @@ scripts/recette/.assigner-a-la-main-prod.plan.json
 /scripts/recette/pilote-argument/recette-*.json
 /scripts/recette/pilote-argument/banc/*
 !/scripts/recette/pilote-argument/banc/cas.json
+
+# Campagnes diagnostiques distinctes : gel, résultats et bilan Word locaux.
+/scripts/recette/pilote-argument/campagnes/
