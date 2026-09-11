@@ -68,6 +68,29 @@ test('le contrat refuse deux fois la même compétence et les réponses forgées
   assert.throws(()=>validerReponses(c,'Mon texte',[{question_id:id,etat:'incertain'},{question_id:id,etat:'incertain'}]))
   assert.throws(()=>validerReponses(contratTest({cran:8}),'Mon texte',[]))
 })
+test('une nouvelle banque ne remplace pas les critères ni les aides d’un contrat déjà attribué', () => {
+  const courant=contratTest(), attribue=structuredClone(courant)
+  attribue.version='0.2'
+  attribue.empreinte_pedagogique='a12996f1fa94344791a0741f4a326a93de69058e14e56afe49dcc59cb75a123c'
+  attribue.contrat.version='0.2'
+  attribue.contrat.regles_communes=['Règle conservée lors de l’attribution.']
+  attribue.contrat.attentes[0].critere='Critère conservé lors de l’attribution.'
+  attribue.questions[0].preparation='Question conservée lors de l’attribution.'
+  attribue.contrat.modele.annotations[0].libelle='Annotation conservée lors de l’attribution.'
+  // Le passage par JSON reproduit la lecture du contrat stocké en base.
+  const relu=JSON.parse(JSON.stringify(attribue)) as ContratServi
+  for(const phase of ['v1','vf'] as const) {
+    const paquet=paquetIndependant(relu,'Copie enregistrée',phase)
+    assert.equal(paquet.empreinte_pedagogique,attribue.empreinte_pedagogique)
+    assert.deepEqual(paquet.regles,attribue.contrat.regles_communes)
+    assert.equal(paquet.attentes[0].critere,attribue.contrat.attentes[0].critere)
+    assert.notEqual(paquet.attentes[0].critere,courant.contrat.attentes[0].critere)
+  }
+  const ecran=affichagePilote(relu,'v1')
+  assert.equal(ecran.preparation[0].preparation,attribue.questions[0].preparation)
+  assert.equal(ecran.modele?.annotations[0].libelle,attribue.contrat.modele.annotations[0].libelle)
+  assert.notEqual(courant.empreinte_pedagogique,attribue.empreinte_pedagogique)
+})
 function jugement(c: ContratServi): JugementArgument {
   return Object.fromEntries(attentesPour(c,'v1').map(a => [a.id,{etat:'tenu',passages:['Mon texte'],motif:'Tu donnes une idée lisible.',revision:null}]))
 }

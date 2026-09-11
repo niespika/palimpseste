@@ -1,6 +1,6 @@
 {
-  "version": "0.2",
-  "empreinte_pedagogique": "a12996f1fa94344791a0741f4a326a93de69058e14e56afe49dcc59cb75a123c",
+  "version": "0.3",
+  "empreinte_pedagogique": "0ea06797130876c836c2402ee31ecba39b47fb0c3f5687074e70a067b5110b5f",
   "sources_sha256": {
     "02-exercices.md": "91d1e3bbff4c45188c6da1b5cc6b3a47233224ce8a0383aad01402c6447061e9",
     "06-Palimpseste.md": "cc4a4606e9420f79812894e35e1e21c631c337b06f0855e90111c0418ffc4d9c",
@@ -16,12 +16,12 @@
     "competences/questionnement.md": "6e5d0134fd6fa5dcd1aa9ecd452055dd777ecc8185fac284fa9c5d362d7488b2",
     "competences/structure.md": "6ec4057feef7d1ab91aafb0867bc7bfbada2f86d84a755a913431124f3e3eb9b",
     "competences/synthese.md": "3b3beeadf8f19e9501ef10613ad0f69ab18c8f7542bedffbc5252d9a0cb97441",
-    "production-crans-6-8/construire-banque-production.py": "d6bac8c81e77e08caa8cdd36f5efbf3cee5ede9014bcfb4fc5a0c5a9a4b79676",
-    "production-crans-6-8/contrat_argument.py": "e2fc3428e7c2483759cb746ae40e1f5c17834b5b74390dbb5e7f74973d9aa6f0",
+    "production-crans-6-8/construire-banque-production.py": "841a973325ad4e7013f68bd24b0f488ab2688d03b7a0dad86767cb0f2518b6e7",
+    "production-crans-6-8/contrat_argument.py": "ab98d01d7f4ece546de98566171c816194dc209723a48b20f942a66e37019ae3",
     "production-crans-6-8/contrat-production.md": "64f4964071871bfd82594fde5367e7e8e9ea9ec8f01d0b5a1f3f30e679b1e6cf"
   },
   "contrat_argument": {
-    "version": "0.2",
+    "version": "0.3",
     "objet": "argument",
     "mode": "composer",
     "crans": [
@@ -36,7 +36,7 @@
     "attentes": [
       {
         "id": "argument.idee.presence",
-        "fonction": "Dire ce que l’on défend",
+        "fonction": "Que défend le texte ?",
         "propriete": "Idée explicitement affirmée",
         "critere": "Le texte affirme une réponse identifiable au sujet ; un cas seul ne tient pas lieu d’idée.",
         "realisations_admises": [
@@ -95,11 +95,11 @@
       },
       {
         "id": "argument.appui.independant",
-        "fonction": "Donner un appui",
-        "propriete": "Apport distinct de l’idée",
-        "critere": "L’appui apporte une information ou une raison distincte de la conclusion.",
+        "fonction": "Que présente-t-il pour la défendre ?",
+        "propriete": "Apport distinct de la conclusion",
+        "critere": "Ce que le texte avance pour défendre sa conclusion apporte autre chose que cette conclusion répétée. Sa présence et son caractère distinct ne suffisent pas à en établir la valeur.",
         "realisations_admises": [
-          "Fait, cas, définition ou raisonnement pertinent.",
+          "Fait, cas, définition, principe ou raisonnement distinct de la conclusion.",
           "Principe explicité sans exemple décoratif obligatoire."
         ],
         "realisations_insuffisantes": [
@@ -115,7 +115,7 @@
         "questions": [
           "argument.production.appui"
         ],
-        "preuve_recherchee": "Appui et conclusion, cités séparément même s’ils sont dans une seule phrase.",
+        "preuve_recherchee": "Conclusion et élément invoqué, identifiés séparément même s’ils sont dans une seule phrase. Préciser ce qui est ajouté à la conclusion.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": true,
         "condition": "toujours",
@@ -124,12 +124,12 @@
       },
       {
         "id": "argument.appui.recevabilite",
-        "fonction": "Donner un appui",
-        "propriete": "Appui suffisamment établi pour cette tâche",
-        "critere": "L’appui offre une raison recevable dans le contexte ; une nouvelle affirmation contestable ne devient pas une preuve par sa seule présence.",
+        "fonction": "Que présente-t-il pour la défendre ?",
+        "propriete": "Élément suffisamment établi dans le contexte",
+        "critere": "Le fait, le cas ou le principe invoqué est suffisamment établi ou admissible dans ce contexte. Une affirmation gratuite ne devient pas une preuve par sa seule présence. Juger cet élément séparément de ce que le texte prétend en conclure.",
         "realisations_admises": [
           "Principe justifié ou dont l’usage est explicité.",
-          "Cas hypothétique annoncé comme tel.",
+          "Cas hypothétique annoncé comme tel, examiné comme une possibilité et non comme un fait attesté.",
           "Ressource fournie utilisée fidèlement."
         ],
         "realisations_insuffisantes": [
@@ -144,7 +144,7 @@
         "questions": [
           "argument.production.appui"
         ],
-        "preuve_recherchee": "Appui écrit et, si disponible, passage du support permettant de le vérifier. Si une vérification externe nécessaire manque : indéterminable, sans inventer.",
+        "preuve_recherchee": "Élément précis invoqué dans la copie et, si disponible, passage du support permettant de le vérifier. Ne pas prendre toute l’inférence pour cet élément. Si une vérification externe nécessaire manque : indéterminable, sans inventer.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": true,
         "condition": "toujours",
@@ -153,13 +153,14 @@
       },
       {
         "id": "argument.lien.explication",
-        "fonction": "Expliquer le lien",
+        "fonction": "Comment passe-t-il de là à sa conclusion ?",
         "propriete": "Explication effectivement écrite",
-        "critere": "Le texte dit pourquoi cet appui soutient cette idée ; un connecteur seul n’accomplit pas cette fonction.",
+        "critere": "Le texte écrit pourquoi ce qu’il invoque permettrait de soutenir sa conclusion. Repérer cette explication indépendamment de sa solidité ; un connecteur seul ne suffit pas.",
         "realisations_admises": [
           "Lien réparti sur plusieurs passages proches.",
           "Explication et conclusion dans la même phrase.",
-          "Présence de « donc » accompagnée d’une explication."
+          "Présence de « donc » accompagnée d’une explication.",
+          "Explication identifiable mais défaillante : sa présence est distincte du jugement sur sa solidité."
         ],
         "realisations_insuffisantes": [
           "Connecteur seul.",
@@ -177,7 +178,7 @@
         "questions": [
           "argument.production.lien"
         ],
-        "preuve_recherchee": "Passage(s) expliquant le pourquoi dans le seul texte de l’élève.",
+        "preuve_recherchee": "Passage(s) où le texte explique comment il passe de l’élément invoqué à sa conclusion. Ne pas fournir l’explication à sa place.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": true,
         "condition": "toujours",
@@ -271,9 +272,9 @@
       },
       {
         "id": "argument.lien.pertinence",
-        "fonction": "Expliquer le lien",
-        "propriete": "Relation effectivement défendable",
-        "critere": "L’appui donne une raison de soutenir la conclusion selon le raisonnement annoncé ; expliciter une inférence défaillante ne suffit pas.",
+        "fonction": "Comment passe-t-il de là à sa conclusion ?",
+        "propriete": "Passage à la conclusion effectivement défendable",
+        "critere": "Le passage de l’élément invoqué à la conclusion écrite est défendable. Traiter du même sujet ou écrire une explication ne suffit pas à rendre ce passage solide.",
         "realisations_admises": [
           "Argument non déductif dont la conclusion reste proportionnée à l’appui.",
           "Désaccord philosophique possible sans erreur de raisonnement imposée."
@@ -288,7 +289,7 @@
         "questions": [
           "argument.production.lien"
         ],
-        "preuve_recherchee": "Appui, conclusion et relation écrite ; décrire le saut précis, pas un simple désaccord.",
+        "preuve_recherchee": "Élément invoqué, conclusion exacte et relation écrite ; décrire le saut précis. Distinguer l’admissibilité de la prémisse, la présence de l’explication et sa solidité.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": true,
         "condition": "toujours",
@@ -298,8 +299,8 @@
       {
         "id": "argument.portee.justifiee",
         "fonction": "Délimiter ce que l’on conclut",
-        "propriete": "Conclusion proportionnée à l’appui",
-        "critere": "Le texte justifie le passage du cas à la portée annoncée, indépendamment de l’emploi de « tous » ou « toujours ».",
+        "propriete": "Conclusion proportionnée à ce qui est établi",
+        "critere": "La conclusion ne va pas au-delà de ce que le texte a établi. Le passage d’un cas à certains cas ou à une règle générale doit être justifié, indépendamment de l’emploi de « tous » ou « toujours ».",
         "realisations_admises": [
           "Conclusion portant sur une possibilité soutenue par un cas.",
           "Règle générale soutenue par un raisonnement qui autorise cette généralité."
@@ -326,7 +327,7 @@
         "id": "argument.expression.intelligibilite",
         "fonction": "Faire comprendre les phrases",
         "propriete": "Sens accessible et construction lisible",
-        "critere": "Le lecteur peut identifier ce qui est affirmé sans devoir réparer la construction de la phrase.",
+        "critere": "Les formulations permettent de comprendre ce qui est affirmé au niveau attendu pour cette tâche au lycée, sans devoir réparer la construction de la phrase.",
         "realisations_admises": [
           "Phrase complexe mais compréhensible.",
           "Plusieurs fonctions dans une phrase lisible."
@@ -343,7 +344,7 @@
         "questions": [
           "production.expression.sens"
         ],
-        "preuve_recherchee": "Passages réellement difficiles à comprendre ; ne pas inventer un défaut si le texte est clair.",
+        "preuve_recherchee": "Passages réellement difficiles à comprendre et difficulté précise pour le lecteur. Une phrase longue ou unique ne suffit pas à constater un défaut ; la difficulté de lecture ne démontre pas à elle seule un défaut logique.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": false,
         "condition": "toujours",
@@ -354,10 +355,11 @@
         "id": "argument.expression.precision",
         "fonction": "Choisir les mots",
         "propriete": "Mots exacts et suffisamment déterminés",
-        "critere": "Les mots permettent de comprendre l’idée avec la précision nécessaire à cette tâche.",
+        "critere": "Les mots permettent de comprendre l’idée avec la précision nécessaire à cette tâche au lycée. Un perfectionnement possible ne suffit pas à exiger une correction si le sens est suffisamment déterminé dans ce contexte.",
         "realisations_admises": [
           "Vocabulaire conceptuel défini ou compris par le contexte.",
-          "Répétition utile d’une notion."
+          "Répétition utile d’une notion.",
+          "Formulation suffisamment précise pour la tâche, même si un approfondissement serait possible."
         ],
         "realisations_insuffisantes": [
           "Mot inexact.",
@@ -374,7 +376,7 @@
         "questions": [
           "production.expression.precision"
         ],
-        "preuve_recherchee": "Mots concernés et effet précis sur le sens, distinct de la validité logique de l’argument.",
+        "preuve_recherchee": "Mots concernés et effet précis sur le sens. Distinguer correction nécessaire et enrichissement possible, ainsi que précision de langue et validité logique.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": false,
         "condition": "toujours",
@@ -424,7 +426,12 @@
       "Une absence peut être constatée dans le périmètre lu sans fabriquer une citation de ce qui manque.",
       "La relecture de l’élève ne constitue jamais une preuve pour le jugement indépendant.",
       "Ne pas déduire d’un seul argument un palier global de compétence.",
-      "Même propriété et même passage : un seul point de retour ; conserver les propriétés distinctes sans compter des preuves indépendantes fictives."
+      "Même propriété et même passage : un seul point de retour ; conserver les propriétés distinctes sans compter des preuves indépendantes fictives.",
+      "Le terme technique appui désigne ce que le texte avance pour défendre sa conclusion : fait, cas, principe ou raisonnement. Il ne signifie pas que cet élément constitue déjà une bonne raison.",
+      "Identifier séparément ce que le texte défend, ce qu’il invoque et comment il passe de là à sa conclusion. Pour chaque constat, préciser quel élément ou quelle relation est jugé.",
+      "Distinguer présence, admissibilité dans le contexte, explication écrite, solidité du passage à la conclusion et portée justifiée. Un défaut sur un point ne suffit pas à déclarer les autres défaillants.",
+      "Pour le niveau scolaire et la tâche donnés, distinguer une correction nécessaire à la compréhension ou au raisonnement d’un enrichissement possible. Ne pas imposer ce dernier comme condition de réussite.",
+      "La lisibilité se juge par la difficulté effective à comprendre. Une phrase unique n’est pas interdite ; sa difficulté de lecture ne prouve pas à elle seule que le raisonnement est invalide."
     ],
     "bilan": {
       "principal": "constats relatifs aux attentes mesurables de la principale ; pas de lettre globale dérivée ici",
@@ -439,19 +446,19 @@
       "texte": "Mentir à quelqu’un, c’est décider à sa place. Le menteur choisit ce que l’autre croira, sans que l’autre ait son mot à dire. Or décider pour autrui de ce qu’il tiendra pour vrai, c’est exactement lui retirer le jugement par lequel il décide de sa vie.",
       "annotations": [
         {
-          "libelle": "Ce que l’on défend",
+          "libelle": "Que défend le texte ?",
           "passage": "Mentir à quelqu’un, c’est décider à sa place."
         },
         {
-          "libelle": "Ce sur quoi on s’appuie",
+          "libelle": "Que présente-t-il pour la défendre ?",
           "passage": "Le menteur choisit ce que l’autre croira, sans que l’autre ait son mot à dire."
         },
         {
-          "libelle": "Pourquoi cet appui soutient cette idée",
+          "libelle": "Comment passe-t-il de là à sa conclusion ?",
           "passage": "Or décider pour autrui de ce qu’il tiendra pour vrai, c’est exactement lui retirer le jugement par lequel il décide de sa vie."
         }
       ],
-      "construction": "Je veux défendre l’idée que mentir à quelqu’un, c’est décider à sa place. Mon appui est que le menteur choisit ce que l’autre croira. Il me reste à expliquer pourquoi choisir ce qu’il croira atteint sa capacité de décider. Un « donc » ne l’expliquerait pas. J’écris ce lien : décider pour lui de ce qu’il tiendra pour vrai lui retire le jugement à partir duquel il conduit sa vie.",
+      "construction": "Je veux défendre l’idée que mentir à quelqu’un, c’est décider à sa place. Pour la défendre, j’avance que le menteur choisit ce que l’autre croira. Il me reste à expliquer pourquoi choisir ce qu’il croira atteint sa capacité de décider. Un « donc » ne l’expliquerait pas. J’écris ce lien : décider pour lui de ce qu’il tiendra pour vrai lui retire le jugement à partir duquel il conduit sa vie.",
       "usage": "Exemple de fonctions, jamais réponse unique attendue au sujet."
     },
     "contraintes_raccord": [
@@ -528,7 +535,7 @@
   "questions": [
     {
       "id": "argument.production.idee",
-      "fonction": "Dire ce que l’on défend",
+      "fonction": "Que défend le texte ?",
       "competences_de_travail": [
         "Structure"
       ],
@@ -570,12 +577,12 @@
     },
     {
       "id": "argument.production.appui",
-      "fonction": "Donner un appui distinct de l’idée",
+      "fonction": "Que présente-t-il pour la défendre ?",
       "competences_de_travail": [
         "Argumentation"
       ],
-      "preparation": "Sur quel fait, exemple, définition ou raisonnement vas-tu t’appuyer pour défendre cette idée ?",
-      "relecture": "Ton appui apporte-t-il une raison de te croire, au-delà de ta réponse répétée avec d’autres mots ?",
+      "preparation": "Quel fait, cas, principe ou raisonnement vas-tu avancer pour défendre ta conclusion ?",
+      "relecture": "Ce que tu avances pour défendre ta conclusion apporte-t-il autre chose que cette conclusion répétée ?",
       "condition": null,
       "rattachements_supplementaires": [],
       "liens_09": [
@@ -600,12 +607,12 @@
     },
     {
       "id": "argument.production.lien",
-      "fonction": "Expliquer pourquoi l’appui soutient l’idée",
+      "fonction": "Comment passe-t-il de là à sa conclusion ?",
       "competences_de_travail": [
         "Argumentation"
       ],
-      "preparation": "Pourquoi cet appui soutient-il ton idée ? Prépare l’explication qu’il faudra écrire.",
-      "relecture": "Où ton texte explique-t-il pourquoi cet appui soutient ton idée ? Vérifie que tu expliques le lien, au-delà de le signaler ou de répéter l’idée.",
+      "preparation": "Comment passeras-tu de ce que tu avances à ta conclusion ? Prépare l’explication à écrire.",
+      "relecture": "Où expliques-tu le passage à ta conclusion, au-delà d’un connecteur ou d’une répétition ?",
       "condition": null,
       "rattachements_supplementaires": [],
       "liens_09": [
@@ -654,12 +661,12 @@
     },
     {
       "id": "argument.production.portee",
-      "fonction": "Ne pas faire dire trop à l’appui",
+      "fonction": "Délimiter ce que l’on conclut",
       "competences_de_travail": [
         "Argumentation"
       ],
-      "preparation": "Jusqu’où ton appui permet-il d’aller : ce cas, certains cas, ou une règle générale ?",
-      "relecture": "Ta conclusion va-t-elle plus loin que ce que ton appui permet d’établir, même sans les mots « tous » ou « toujours » ?",
+      "preparation": "Que pourras-tu établir : ce cas, certains cas ou une règle générale ? Pourquoi ?",
+      "relecture": "Ta conclusion reste-t-elle dans les limites de ce que tu as établi, même sans les mots « tous » ou « toujours » ?",
       "condition": null,
       "rattachements_supplementaires": [],
       "liens_09": [
