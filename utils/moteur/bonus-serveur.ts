@@ -59,8 +59,9 @@ import type { Competence } from '@/utils/routeur/types'
 import { lireLesSegments, segmentDuCycle } from './calendrier-serveur'
 import { candidatsPour, type InstanceDuVivier } from './vivier'
 import {
-  lireLesCoursVus, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
+  lireLesCoursVus, lireLesNotionsDesCours, notionsVuesDe, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
+import { lireLaPorteNotions } from './porte-notions'
 import { lignesDeDecision } from './decision'
 import { composerPourUnEleve, dureesDesExercices, retenusPourLaPose, type ContextePose } from './cycle-serveur'
 
@@ -309,6 +310,13 @@ export async function servirUnExerciceDePlus(
     }),
   ])
   incidents.push(...positions.incidents, ...dejaDeposees.incidents, ...coursVus.incidents)
+  // ⭐ 10/09 — la troisième voie : le pull lit la même porte et les mêmes notions que la semaine.
+  const coursVusDeLEleve = unionDesCoursVus(coursVus.parClasse, inscriptions.map((i) => i.classeId))
+  const notionsActif = await lireLaPorteNotions(admin)
+  const notionsDesCours = notionsActif
+    ? await lireLesNotionsDesCours(admin, [...coursVusDeLEleve])
+    : { parCours: new Map<string, unknown[]>(), incidents: [] as string[] }
+  incidents.push(...notionsDesCours.incidents)
 
   const maintenant = new Date().toISOString()
   const echeance = toISODate(addDaysUTC(new Date(`${cycleLundi}T00:00:00Z`),
@@ -321,7 +329,9 @@ export async function servirUnExerciceDePlus(
     // ⭐ C7-L6 — le pull lit la même quarantaine que la semaine.
     devoirsServis: (await lireLesDevoirsServis(admin, [eleveId])).parEleve.get(eleveId) ?? new Map(),
     inscriptions,
-    coursVus: unionDesCoursVus(coursVus.parClasse, inscriptions.map((i) => i.classeId)),
+    coursVus: coursVusDeLEleve,
+    notionsActif,
+    notionsVues: notionsVuesDe(coursVusDeLEleve, notionsDesCours.parCours),
     fiches,
   }
 

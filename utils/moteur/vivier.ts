@@ -32,6 +32,7 @@
 // ============================================================================
 
 import { ciblesPossibles, type Candidat, type ExercicePose } from '../routeur/semaine'
+import { ensembleDeNotions } from '../fabrique/notions'
 import { motifDeFermeture, statutDeService, type PorteDUnObjet, type StatutDeService }
   from '../registre/porte'
 import { cyclesEcoules as cyclesEcoulesDepuis } from '../routeur/cycles'
@@ -72,6 +73,13 @@ export interface MateriauRattache {
   /** `a_valider` · `valide` · `retire`. */
   statut: string
   bloque: boolean
+  /**
+   * ⭐ 10/09/2026 — LA TROISIÈME VOIE (C4-L12, premier geste) : les notions que le
+   *    sujet ou le texte DÉCLARE (`exercices_sujets.notions`, format 1.3). Elles
+   *    ne comptent qu'en `coursEtat = 'notions'`, et seulement derrière
+   *    `notions_actif` — voir `filtreDuCoursVu`.
+   */
+  notions?: readonly unknown[]
 }
 
 /** Une instance telle que la couche 4 la regarde. */
@@ -158,6 +166,14 @@ export interface ContexteDuVivier {
    */
   coursVus: ReadonlySet<string>
   /**
+   * ⭐ 10/09/2026 — les NOTIONS que les cours vus déclarent (`scriptorium_contenus.
+   *    notions`), sous leur clé d'appariement (`cleDAppariement`) — l'UNION sur
+   *    les classes de l'élève, comme `coursVus`. Absent ⇒ vide.
+   */
+  notionsVues?: ReadonlySet<string>
+  /** `scriptorium_params.notions_actif` — la porte de la troisième voie. Absent ⇒ OFF. */
+  notionsActif?: boolean
+  /**
    * Sa position de lecture, par `aletheia_livre_reference.id` — l'ordinal de la
    * dernière séance TERMINÉE. `null`/absent = position inconnue.
    */
@@ -223,6 +239,9 @@ export type MotifDEcart =
   // ⭐ C4-L16 — le quatrième état existe en base et RIEN ICI NE LE LIT ENCORE.
   //   Ce motif dit exactement cela, et rien de plus : voir `filtreDuCoursVu`.
   | 'cours_par_notions_non_lu'
+  // ⭐ 10/09/2026 — la troisième voie est LUE (porte `notions_actif` ouverte) : aucune
+  //   des notions du matériau n'est déclarée par un cours vu d'une classe de l'élève.
+  | 'notion_pas_encore_vue'
   | 'non_spoiler'
   | 'materiau_non_valide'
   // ⭐ C7-L5 — la porte du registre (`10-` §7) : le cran n'est pas ouvert sur cet
@@ -375,6 +394,12 @@ export function filtreDeParcours(
 export function filtreDuCoursVu(
   materiaux: readonly MateriauRattache[],
   coursVus: ReadonlySet<string>,
+  /**
+   * ⭐ 10/09/2026 — la troisième voie : `actif` est `scriptorium_params.notions_actif`,
+   * `vues` l'union des notions déclarées par les cours vus (clés d'appariement).
+   * Absent ou fermé : l'état `notions` reste écarté comme avant, motif inchangé.
+   */
+  notions?: { actif: boolean; vues: ReadonlySet<string> },
 ): { retenue: boolean; motif: MotifDEcart | null; detail: string } {
   if (materiaux.length === 0) {
     return { retenue: false, motif: 'aucun_materiau',
@@ -408,6 +433,27 @@ export function filtreDuCoursVu(
     //   `utils/fabrique/notions.ts` en est la brique, déjà écrite et éprouvée —
     //   confrontée aux notions des cours VUS.
     if (m.coursEtat === 'notions') {
+      // ⭐⭐ 10/09/2026 — LA TROISIÈME VOIE, ÉCRITE (décision de Louis, 10/09 : « si la
+      //   notion est vue dans Scriptorium, les élèves devraient pouvoir se faire
+      //   assigner les exercices ayant une notion qu'ils ont vue »). `01-` §4 couche 4 :
+      //   « servable dès qu'un cours vu DÉCLARE L'UNE de ses notions » — une
+      //   INTERSECTION, jamais une inclusion (`notionsPartagees`). Derrière
+      //   `notions_actif` : porte fermée, le motif d'hier, à l'octet.
+      if (notions?.actif) {
+        const declarees = ensembleDeNotions(m.notions)
+        if (declarees.size === 0) {
+          return { retenue: false, motif: 'notion_pas_encore_vue',
+            detail: `${quoi} : rattaché par notions, mais n'en déclare AUCUNE — rien à apparier.` }
+        }
+        let partagee = false
+        for (const n of declarees) if (notions.vues.has(n)) { partagee = true; break }
+        if (!partagee) {
+          return { retenue: false, motif: 'notion_pas_encore_vue',
+            detail: `${quoi} : aucune de ses ${declarees.size} notion(s) n'est déclarée par un cours `
+              + 'vu d\'une classe de cet élève.' }
+        }
+        continue
+      }
       return { retenue: false, motif: 'cours_par_notions_non_lu',
         detail: `${quoi} : rattachement par notions (format 1.3) — la couche 4 ne le lit pas `
           + 'encore. Le matériau ne déclare AUCUN cours : ce sont les cours qui déclarent leurs '
@@ -727,7 +773,8 @@ export function constituerLeVivier(
       continue
     }
 
-    const c = filtreDuCoursVu(inst.materiaux, ctx.coursVus)
+    const c = filtreDuCoursVu(inst.materiaux, ctx.coursVus,
+      { actif: !!ctx.notionsActif, vues: ctx.notionsVues ?? new Set() })
     if (!c.retenue) { ecarter(inst.exerciceId, c.motif as MotifDEcart, c.detail); continue }
 
     const s = filtreDuNonSpoiler(inst.materiaux, ctx.positionsDeLecture)

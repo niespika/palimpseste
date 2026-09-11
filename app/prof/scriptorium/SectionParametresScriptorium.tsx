@@ -10,6 +10,7 @@ import PorteEtayage from './PorteEtayage'
 import PorteJugeDocuments from './PorteJugeDocuments'
 import PorteGabarit from './PorteGabarit'
 import PorteChaineCle from './PorteChaineCle'
+import PorteNotions from './PorteNotions'
 import PorteJugeMesure from './PorteJugeMesure'
 import PorteRetoursARelire from './PorteRetoursARelire'
 
@@ -46,6 +47,8 @@ export default async function SectionParametresScriptorium() {
       <PorteChaineCle actif={!!p.chaine_cle_actif} />
       {/* C7-L9 (07/09) — sur un cran qui isole, le juge est la mesure. Même domicile, même tolérance, à OFF ; n'a d'effet que le juge ouvert. */}
       <PorteJugeMesure actif={!!p.juge_mesure_actif} jugeOuvert={!!p.juge_documents_actif} />
+      {/* 10/09 — la troisième voie du rattachement : les sujets par notions, servis aux classes qui ont vu la notion. Même domicile, même tolérance, à OFF. */}
+      <PorteNotions actif={!!p.notions_actif} />
       <PorteRetoursARelire depuis={texte('retours_a_relire_depuis')}
         disponible={Object.hasOwn(p, 'retours_a_relire_depuis')} />
       <FormulaireReglagesRag

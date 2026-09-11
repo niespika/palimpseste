@@ -12,6 +12,7 @@
 // ============================================================================
 
 import { describe, it } from 'node:test'
+import { ensembleDeNotions } from '../fabrique/notions'
 import assert from 'node:assert/strict'
 import {
   bornerLaMethode, candidatsPour, constituerLeVivier, couvertureDeLInstance, cyclesEcoules,
@@ -123,6 +124,38 @@ describe('`01-` §4 — le cours vu, et le sens fort de l\'absence', () => {
     const pasVue = materiau({ id: 'm2', role: 'cible', coursEtat: 'liste',
       coursApparies: ['c9'], coursDeclares: 1 })
     assert.equal(filtreDuCoursVu([vue, pasVue], new Set(['c1'])).retenue, false)
+  })
+
+  // ⭐ 10/09/2026 — LA TROISIÈME VOIE (C4-L12, premier geste), derrière `notions_actif`.
+  it('notions, porte fermée : écarté comme hier, motif inchangé', () => {
+    const m = materiau({ coursEtat: 'notions', notions: ['Les métamorphoses du moi'] })
+    assert.equal(filtreDuCoursVu([m], new Set(['c1'])).motif, 'cours_par_notions_non_lu')
+    assert.equal(filtreDuCoursVu([m], new Set(['c1']),
+      { actif: false, vues: new Set(['metamorphoses du moi']) }).motif, 'cours_par_notions_non_lu')
+  })
+  it('notions, porte ouverte : servable dès qu\'UNE notion est déclarée par un cours vu', () => {
+    const m = materiau({ coursEtat: 'notions', notions: ['Les métamorphoses du moi', 'la vérité'] })
+    const vues = new Set([...ensembleDeNotions(['Les métamorphoses du moi', 'Histoire et violence'])])
+    assert.equal(filtreDuCoursVu([m], new Set(), { actif: true, vues }).retenue, true)
+    // l'appariement se fait sur la forme normalisée, pas la chaîne écrite
+    const autreCasse = new Set([...ensembleDeNotions(['les métamorphoses du Moi'])])
+    assert.equal(filtreDuCoursVu([m], new Set(), { actif: true, vues: autreCasse }).retenue, true)
+  })
+  it('notions, porte ouverte : aucune notion vue ⇒ `notion_pas_encore_vue`', () => {
+    const m = materiau({ coursEtat: 'notions', notions: ['Les métamorphoses du moi'] })
+    const r = filtreDuCoursVu([m], new Set(['c1']),
+      { actif: true, vues: new Set([...ensembleDeNotions(['Les pouvoirs de la parole'])]) })
+    assert.equal(r.retenue, false)
+    assert.equal(r.motif, 'notion_pas_encore_vue')
+    const sans = materiau({ coursEtat: 'notions', notions: [] })
+    assert.equal(filtreDuCoursVu([sans], new Set(), { actif: true, vues: new Set(['x']) }).motif,
+      'notion_pas_encore_vue')
+  })
+  it('notions, porte ouverte : un générique reste servable, un `liste` garde sa règle', () => {
+    const opts = { actif: true, vues: new Set<string>() }
+    assert.equal(filtreDuCoursVu([materiau({ coursEtat: 'generique' })], new Set(), opts).retenue, true)
+    const l = materiau({ coursEtat: 'liste', coursApparies: ['c2'], coursDeclares: 1 })
+    assert.equal(filtreDuCoursVu([l], new Set(['c9']), opts).motif, 'cours_pas_encore_vu')
   })
 
   // ── ⭐⭐ C4-L16 — LE QUATRIÈME ÉTAT, ET UN MOTIF QUI CESSE DE MENTIR ───────

@@ -63,8 +63,9 @@ import {
   observablesParCompetence, type ContexteObjets,
 } from './objets'
 import {
-  lireLesCoursVus, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
+  lireLesCoursVus, lireLesNotionsDesCours, notionsVuesDe, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
+import { lireLaPorteNotions } from './porte-notions'
 import {
   journalDuTirage, journaliserLEscalade, lignesDeDecision, poserLesSondesDeTrajectoire, signalDeTrajectoire,
   type LigneDeDecision, type SignalDeTrajectoire,
@@ -281,6 +282,12 @@ export async function poserLesSemainesDuRouteur(
   const toutesLesClasses = [...new Set([...classesDesEleves.values()].flat())]
   const coursVus = await lireLesCoursVus(admin, toutesLesClasses, aujourdHui)
   bilan.erreurs.push(...coursVus.incidents)
+  // ⭐ 10/09 — la troisième voie : la porte, puis les notions des cours vus, UNE fois.
+  const notionsActif = await lireLaPorteNotions(admin)
+  const notionsDesCours = notionsActif
+    ? await lireLesNotionsDesCours(admin, [...coursVus.parClasse.values()].flatMap((s) => [...s]))
+    : { parCours: new Map<string, unknown[]>(), incidents: [] as string[] }
+  bilan.erreurs.push(...notionsDesCours.incidents)
 
   // ── LE COLD START — AVANT LA POSE, ET C'EST TOUT L'ENJEU ─────────────────
   // ⛔⛔ `poserLeColdStart` était écrit, testé, et N'AVAIT AUCUN APPELANT : la
@@ -388,6 +395,10 @@ export async function poserLesSemainesDuRouteur(
           devoirsServis: devoirsServis.parEleve.get(eleveId) ?? new Map(),
           inscriptions: inscriptionsParEleve.get(eleveId) ?? [],
           coursVus: unionDesCoursVus(coursVus.parClasse, classesDesEleves.get(eleveId) ?? []),
+          notionsActif,
+          notionsVues: notionsVuesDe(
+            unionDesCoursVus(coursVus.parClasse, classesDesEleves.get(eleveId) ?? []),
+            notionsDesCours.parCours),
           fiches,
         })
       } catch (e) {
@@ -500,6 +511,9 @@ export interface ContextePose {
   devoirsServis?: Map<string, string>
   inscriptions: Awaited<ReturnType<typeof lireLesInscriptions>>
   coursVus: Set<string>
+  /** ⭐ 10/09 — la troisième voie : la porte `notions_actif` et les notions des cours vus. Absents ⇒ OFF. */
+  notionsActif?: boolean
+  notionsVues?: Set<string>
   /** ⭐ C7-L7 — les fiches des compétences (`competences_fiches.contenu`), lues UNE FOIS pour tous. */
   fiches?: Map<Competence, string>
 }
@@ -680,6 +694,8 @@ export async function composerPourUnEleve(
   const vivier = constituerLeVivier(c.instances, {
     parcours: budget.parcours,
     coursVus: c.coursVus,
+    notionsActif: c.notionsActif ?? false,
+    notionsVues: c.notionsVues ?? new Set(),
     positionsDeLecture: c.positions,
     instancesDejaDeposees: c.dejaDeposees,
     // ⭐⭐ C7-L9 — la porte connaît les compétences dont la trajectoire s'est levée.

@@ -27,6 +27,7 @@ import { chargerMatiereClasse, statutDe } from '@/utils/scriptorium-corpus'
 import { chargerDoctrineDepuisBase, dureeExercice, type Doctrine } from '@/utils/fabrique/doctrine'
 import { cranNumero } from '@/utils/cran'
 import type { Geste, Grain } from '@/utils/routeur/types'
+import { ensembleDeNotions } from '../fabrique/notions'
 import {
   couvertureDeLInstance, positionDeLecture,
   type InstanceDuVivier, type MateriauRattache, type TravailDeLecture,
@@ -40,10 +41,10 @@ type Admin = ReturnType<typeof createAdminClient>
 
 interface LigneTexte {
   id: string; cours_etat: string; plan_livre_id: string | null; plan_semaine: number | null
-  statut: string; bloque: boolean
+  statut: string; bloque: boolean; notions: unknown[] | null
 }
 interface LigneSujet {
-  id: string; cours_etat: string; statut: string; bloque: boolean
+  id: string; cours_etat: string; statut: string; bloque: boolean; notions: unknown[] | null
 }
 /**
  * ⭐⭐ Le matériau FABRIQUÉ — il ne porte NI cours NI notions (`08-` §4).
@@ -69,10 +70,11 @@ async function lireLesMateriaux(admin: Admin): Promise<{
   fabriquesParImport: Map<string, string>
 }> {
   const [textes, sujets, texteCours, sujetCours, fabriques] = await Promise.all([
+    // ⭐ 10/09 — `notions` (format 1.3, `c4_l16_notions.sql`) : lue pour la troisième voie.
     lirePagine<LigneTexte>(admin, 'exercices_textes',
-      'id, cours_etat, plan_livre_id, plan_semaine, statut, bloque', ['id'], (q) => q),
+      'id, cours_etat, plan_livre_id, plan_semaine, statut, bloque, notions', ['id'], (q) => q),
     lirePagine<LigneSujet>(admin, 'exercices_sujets',
-      'id, cours_etat, statut, bloque', ['id'], (q) => q),
+      'id, cours_etat, statut, bloque, notions', ['id'], (q) => q),
     lirePagine<{ texte_id: string; cours_declare: string; cours_id: string | null }>(
       admin, 'exercices_textes_cours', 'texte_id, cours_declare, cours_id',
       ['texte_id', 'cours_declare'], (q) => q),
@@ -104,7 +106,7 @@ async function lireLesMateriaux(admin: Admin): Promise<{
       // ⚠️ Le `CHECK` `textes_plan_couple_chk` garantit que la semaine et le
       //    livre déclaré vont ENSEMBLE, jamais l'un sans l'autre.
       planLivreReferenceId: t.plan_livre_id, planSemaine: t.plan_semaine,
-      statut: t.statut, bloque: t.bloque,
+      statut: t.statut, bloque: t.bloque, notions: t.notions ?? [],
     })
   }
   const mSujets = new Map<string, Omit<MateriauRattache, 'role'>>()
@@ -114,7 +116,7 @@ async function lireLesMateriaux(admin: Admin): Promise<{
       coursEtat: s.cours_etat as MateriauRattache['coursEtat'],
       ...rattachements(parSujet.get(s.id) ?? []),
       planLivreReferenceId: null, planSemaine: null,
-      statut: s.statut, bloque: s.bloque,
+      statut: s.statut, bloque: s.bloque, notions: s.notions ?? [],
     })
   }
   const mFabriques = new Map<string, { id: string; statut: string }>()
@@ -355,6 +357,43 @@ export async function lireLesCoursVus(
     parClasse.set(classeId, vus)
   }
   return { parClasse, incidents }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐ 10/09/2026 — LES NOTIONS DES COURS VUS (la troisième voie, C4-L12 premier geste)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Les notions que chaque cours DÉCLARE (`scriptorium_contenus.notions`, C4-L16),
+ * lues UNE FOIS pour tous les cours vus de la population. Une lecture ratée
+ * rend une carte vide et un incident : « une lecture ratée n'est pas une base
+ * vide », et porte ouverte, elle fermerait tout sujet par notions — l'incident le dit.
+ */
+export async function lireLesNotionsDesCours(
+  admin: Admin, coursIds: readonly string[],
+): Promise<{ parCours: Map<string, unknown[]>; incidents: string[] }> {
+  const parCours = new Map<string, unknown[]>()
+  const incidents: string[] = []
+  const ids = [...new Set(coursIds)]
+  if (ids.length === 0) return { parCours, incidents }
+  try {
+    const lignes = await lirePagine<{ id: string; notions: unknown[] | null }>(
+      admin, 'scriptorium_contenus', 'id, notions', ['id'],
+      (q) => (q as never as { in: (a: string, b: string[]) => unknown }).in('id', ids as string[]))
+    for (const l of lignes) parCours.set(l.id, Array.isArray(l.notions) ? l.notions : [])
+  } catch (e) {
+    incidents.push(`notions des cours vus : ${(e as Error).message} — la troisième voie ne servira rien ce cycle.`)
+  }
+  return { parCours, incidents }
+}
+
+/** L'union des notions (clés d'appariement) des cours vus d'un élève. */
+export function notionsVuesDe(
+  coursVus: ReadonlySet<string>, parCours: ReadonlyMap<string, unknown[]>,
+): Set<string> {
+  const out = new Set<string>()
+  for (const c of coursVus) for (const n of ensembleDeNotions(parCours.get(c))) out.add(n)
+  return out
 }
 
 // ════════════════════════════════════════════════════════════════════════════
