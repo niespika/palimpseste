@@ -15,10 +15,11 @@ const details = cas.map(c => {
   const rr = runs.filter(r => r.cas === c.id).sort((a,b) => a.repetition - b.repetition)
   const cellules = []
   for (const version of ['v1','vf']) {
-    const jj = rr.flatMap(r => r.jugements?.filter(j => j.version === version).map(j => ({ ...j, repetition: r.repetition })) ?? [])
+    const jj = rr.flatMap(r => r.jugements?.filter(j => j.version === version).map(j => ({ ...j, repetition: r.repetition,
+      origine: r.origines_jugements?.[version] ?? 'observation_independante' })) ?? [])
     const ids = [...new Set(jj.flatMap(j => Object.keys(j.jugement)))]
     for (const id of ids) {
-      const observations = jj.filter(j => j.jugement[id]).map(j => ({ repetition: j.repetition, ...j.jugement[id] }))
+      const observations = jj.filter(j => j.jugement[id]).map(j => ({ repetition: j.repetition, origine: j.origine, ...j.jugement[id] }))
       const comptes = compter(observations.map(o => o.etat))
       const ref = c.attentes.find(a => a.id === id && a[version])
       cellules.push({ version, attente: id, etats: comptes, observations, variable: Object.keys(comptes).length > 1,
@@ -93,7 +94,10 @@ const identiques = [...groupes.entries()].filter(([,g]) => g.length > 1).map(([r
 const stats = {
   analyse_le: new Date().toISOString(), statut: 'diagnostic sur références proposées, non calibration validée',
   repetitions: runs.length, completes: runs.filter(r => r.controles_techniques === 'reussis').length,
-  etats_juges: details.reduce((s,d) => s+d.cellules.reduce((s,c) => s+c.observations.length, 0), 0),
+  etats_conserves: details.reduce((s,d) => s+d.cellules.reduce((s,c) => s+c.observations.length, 0), 0),
+  etats_juges_independamment: details.reduce((s,d) => s+d.cellules.reduce((s,c) => s+c.observations.filter(o => o.origine === 'observation_independante').length, 0), 0),
+  etats_repris_de_v1: details.reduce((s,d) => s+d.cellules.reduce((s,c) => s+c.observations.filter(o => o.origine === 'repris_de_v1').length, 0), 0),
+  limite_reprises: 'Les états repris de V1 sont une conservation déterministe, pas une mesure supplémentaire de stabilité du modèle.',
   cellules_copie_attente_version: details.reduce((s,d) => s+d.cellules_observees, 0), cellules_variables: details.reduce((s,d) => s+d.cellules_variables, 0),
   accord_propose: details.reduce((s,d) => s+d.accord_propose, 0), jugements_cibles: details.reduce((s,d) => s+d.jugements_cibles, 0),
   cout_usd: runs.reduce((s,r) => s+(r.cout_usd ?? 0), 0), appels_http: inventaire.length,

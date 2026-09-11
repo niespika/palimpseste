@@ -71,9 +71,8 @@ const controles = cas.map(c => {
   const objetCorrige = comparaison.objet.filter(x => x.changement === 'corrige').map(x => x.attente)
   assert.equal(comparaison.delta_progression, null)
   assert.equal(comparaison.reussite_autonome, false)
-  if (c.id === 'TC01') { assert.deepEqual(corriges, ['argument.expression.precision']); assert.equal(objetCorrige.length, 0) }
-  if (c.id === 'HLP102') { assert.equal(corriges.length, 0); assert.ok(objetCorrige.includes('argument.lien.pertinence')) }
-  if (c.id === 'HLP101') assert.deepEqual(corriges, ['argument.idee.unite'])
+  // Les scénarios de comparaison sont testés unitairement ; aucun nom de copie
+  // ne doit imposer un jugement pédagogique lors du gel d'une nouvelle campagne.
   if (c.v1 === c.vf) assert.equal(corriges.length, 0)
   return { cas: c.id, principale_corrigee: corriges, objet_corrige: objetCorrige, reussite_autonome: false, delta: null }
 })
@@ -138,7 +137,9 @@ globalThis.fetch = async function(input, init) {
   const cible = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   if (!ctx || cible !== 'https://api.openai.com/v1/chat/completions') return fetchOriginal(input, init)
   const body = JSON.parse(init.body)
+  const systeme = body.messages.filter(m => m.role === 'system').map(m => m.content).join('\n')
   const appel = { numero: ctx.appels.length + 1, version: ctx.phase, debut: new Date().toISOString(), requete_sha256: sha(init.body),
+    etage: systeme.includes('Tu juges les attentes déclarées') ? 'p2_independant' : systeme.includes('Tu relèves uniquement des passages verbatim') ? 'p1_independant' : 'instrument_natif',
     systeme_sha256: sha(JSON.stringify(body.messages.filter(m => m.role === 'system'))), modele_demande: body.model,
     temperature: body.temperature ?? null, max_completion_tokens: body.max_completion_tokens }
   ctx.appels.push(appel)
@@ -205,6 +206,13 @@ async function executer(c, repetition) {
         }
         const v1 = sortie.jugements.find(j => j.version === 'v1'), vf = sortie.jugements.find(j => j.version === 'vf')
         if (v1 && vf) sortie.comparaison = comparerConstats(contrat, v1.jugement, vf.jugement)
+        sortie.origines_jugements = Object.fromEntries(sortie.jugements.map(j => [j.version,
+          j.version === 'vf' && c.v1 === c.vf ? 'repris_de_v1' : 'observation_independante']))
+        if (v1 && vf && c.v1 === c.vf) {
+          assert.deepEqual(vf.jugement, Object.fromEntries(attentesPour(contrat, 'vf').map(a => [a.id, v1.jugement[a.id]])))
+          assert.deepEqual(vf.extraction, Object.fromEntries(attentesPour(contrat, 'vf').map(a => [a.id, v1.extraction[a.id]])))
+          assert.equal(ctx.appels.filter(a => a.version === 'vf' && a.etage !== 'instrument_natif').length, 0, 'Reprise sans nouveau P1/P2 indépendant')
+        }
         if (!sortie.erreurs.length) {
           assert.equal(sortie.jugements.length, 2)
           assert.deepEqual(sortie.mesures.map(m => m.competence).sort(), [c.principale, c.secondaire].filter(Boolean).sort())

@@ -103,12 +103,22 @@ export function retourDesConstats(c: ContratServi, depotId: string, phase: 'v1' 
   }
   if (phase === 'vf' && v1) {
     const comparaison = comparerConstats(c,v1,j)
-    const corriges = comparaison.principale.filter(a => a.changement === 'corrige')
+    const principaleCorrigee = comparaison.principale.filter(a => a.changement === 'corrige')
+    const corriges = [...new Map([...principaleCorrigee, ...comparaison.objet.filter(a => a.changement === 'corrige')]
+      .map(a => [a.attente, a])).values()]
     const resteObjet = comparaison.objet.some(a => a.apres === 'a_reprendre')
-    points.push({ id: `${depotId}-vf-comparaison`, competence: c.principale, nature: corriges.length ? 'reussite' : 'point_de_travail',
-      texte: corriges.length
-        ? `Ta révision a corrigé ce point : ${corriges.map(a => a.fonction.toLowerCase()).join(', ')}.${resteObjet ? ' Une difficulté reste dans la construction de l’argument.' : ''}`
-        : 'La comparaison des deux versions ne permet pas de constater un point corrigé dans la compétence travaillée.' })
+    const restePrincipale = comparaison.principale.some(a => a.apres === 'a_reprendre')
+    const incertain = [...comparaison.principale, ...comparaison.objet].some(a => a.changement === 'indeterminable')
+    const tousTenus = attentes.every(a => j[a.id]?.etat === 'tenu' && v1[a.id]?.etat === 'tenu')
+    const proprietes = corriges.map(a => attentes.find(x => x.id === a.attente)!.propriete.toLowerCase())
+    const texte = corriges.length
+      ? `Ta révision a corrigé ces aspects de ton argument : ${proprietes.join(' ; ')}.${resteObjet ? ' Une difficulté reste dans la construction de l’argument.' : restePrincipale ? ' Un point travaillé reste à reprendre.' : ''}${incertain ? ' Certains autres points restent incertains.' : ''}`
+      : tousTenus ? 'Les points examinés sont tenus dans les deux versions.'
+        : resteObjet || restePrincipale ? 'La comparaison ne montre pas de correction sur les points examinés ; une difficulté reste à travailler.'
+          : 'Certains points restent incertains ; la comparaison ne permet pas de conclure à une correction.'
+    points.push({ id: `${depotId}-vf-comparaison`, competence: c.principale,
+      portee: principaleCorrigee.length ? 'competence' : 'objet',
+      nature: corriges.length || tousTenus ? 'reussite' : 'point_de_travail', texte })
   }
   return { points, action_revision: phase === 'v1' && priorite ? j[priorite].revision : null, feed_forward: null }
 }

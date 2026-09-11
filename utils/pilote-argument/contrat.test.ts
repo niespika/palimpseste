@@ -124,4 +124,33 @@ test('VF inverse : raisonnement corrigé, expression inchangée et indéterminab
   assert.equal(cmp.principale.filter(a=>a.changement==='corrige').length,0)
   assert.ok(cmp.objet.some(a=>a.changement==='corrige'))
   assert.equal(cmp.principale.find(a=>a.attente==='argument.expression.precision')?.changement,'indeterminable')
+  const bilan=retourDesConstats(c,'depot-test','vf',vf,v1).points.at(-1)!
+  assert.equal(bilan.nature,'reussite')
+  assert.equal(bilan.portee,'objet')
+  assert.match(bilan.texte,/a corrigé/)
+  assert.match(bilan.texte,/incertains/)
+  assert.doesNotMatch(bilan.texte,/ne permet pas de constater un point corrigé/)
+})
+test('un argument inchangé déjà tenu ne reçoit pas un reproche de révision absente', () => {
+  const c=contratTest(), j=jugement(c)
+  const bilan=retourDesConstats(c,'depot-test','vf',j,j).points.at(-1)!
+  assert.equal(bilan.nature,'reussite')
+  assert.equal(bilan.texte,'Les points examinés sont tenus dans les deux versions.')
+  assert.doesNotMatch(bilan.texte,/corrigé|progressé/)
+})
+test('une incertitude devenue tenue ne devient pas une correction démontrée', () => {
+  const c=contratTest(), avant=jugement(c), apres=jugement(c)
+  avant['argument.lien.pertinence']={etat:'indeterminable',passages:[],motif:'Le lien reste incertain.',revision:null}
+  const bilan=retourDesConstats(c,'depot-test','vf',apres,avant).points.at(-1)!
+  assert.doesNotMatch(bilan.texte,/a corrigé|sont tenus dans les deux/)
+  assert.match(bilan.texte,/ne permet pas de conclure/)
+})
+test('le bilan de correction conserve aussi la difficulté qui reste dans la principale', () => {
+  const c=contratTest(), avant=jugement(c), apres=jugement(c)
+  avant['argument.lien.pertinence']={etat:'a_reprendre',passages:['Mon texte'],motif:'Le lien manque.',revision:'Explique le lien.'}
+  avant['argument.expression.precision']=apres['argument.expression.precision']={etat:'a_reprendre',passages:['Mon texte'],motif:'Un mot reste vague.',revision:'Précise ce mot.'}
+  const bilan=retourDesConstats(c,'depot-test','vf',apres,avant).points.at(-1)!
+  assert.match(bilan.texte,/a corrigé/)
+  assert.match(bilan.texte,/reste à reprendre/)
+  assert.equal(bilan.portee,'objet')
 })

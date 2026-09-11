@@ -2,7 +2,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { appeler } from '@/utils/chaine/appel'
 import type { ContexteDepot } from '@/utils/chaine/contexte'
-import { paquetIndependant } from './contrat'
+import { attentesPour, paquetIndependant, type ContratServi } from './contrat'
 import { empreinteTexte, lireTrace, traceUtilisable } from './serveur'
 import { formeExtraction, formeJugement, verifierPreuves, comparerConstats, passagesCitables, formeAvecReferences, retablirPassages, type ConstatReference, type ExtractionArgument, type JugementArgument } from './jugement'
 
@@ -10,6 +10,38 @@ import { formeExtraction, formeJugement, verifierPreuves, comparerConstats, pass
 // https://developers.openai.com/api/docs/models/gpt-5.6-luna
 export const MODELE_PILOTE_ARGUMENT = 'gpt-5.6-luna'
 export interface ResultatArgument { extraction: ExtractionArgument; jugement: JugementArgument; empreinte_texte: string; empreinte_pedagogique: string; modele: string }
+
+/** Le contrat de l'attribution (sujet et contexte compris) est immuable.
+ * Une copie inchangée conserve ses constats ; la secondaire n'est pas rejugée en VF.
+ * Cette reprise ne constitue pas une nouvelle observation indépendante du modèle.
+ */
+export function reprendreConstatsV1(c: ContratServi, texteV1: string, texteVf: string, v1: ResultatArgument): ResultatArgument | null {
+  if (texteV1 !== texteVf) return null
+  if (v1.empreinte_texte !== empreinteTexte(texteV1) || v1.empreinte_pedagogique !== c.empreinte_pedagogique) {
+    throw new Error('La copie ou le contrat du jugement V1 ne correspond pas à la VF')
+  }
+  verifierPreuves(c, 'v1', texteV1, v1.extraction)
+  verifierPreuves(c, 'v1', texteV1, v1.jugement)
+  const ids = attentesPour(c, 'vf').map(a => a.id)
+  const resultat = structuredClone({ ...v1,
+    extraction: Object.fromEntries(ids.map(id => [id, v1.extraction[id]])),
+    jugement: Object.fromEntries(ids.map(id => [id, v1.jugement[id]])),
+  })
+  verifierPreuves(c, 'vf', texteVf, resultat.extraction)
+  verifierPreuves(c, 'vf', texteVf, resultat.jugement)
+  return resultat
+}
+
+async function conserverJugement(admin: SupabaseClient, ctx: ContexteDepot, phase: 'v1' | 'vf', resultat: ResultatArgument, appels: number) {
+  const { error } = await admin.from('exercices_pilote_argument_jugements').insert({ depot_id: ctx.depotId, version: phase, ...resultat })
+  if (error) {
+    if (error.code !== '23505') throw new Error(`Jugement non conservé : ${error.message}`)
+    const concurrent = await lireJugementArgument(admin, ctx, phase)
+    if (!concurrent) throw new Error('Jugement concurrent introuvable')
+    return { ...concurrent, appels }
+  }
+  return { ...resultat, appels }
+}
 
 export async function lireJugementArgument(admin: SupabaseClient, ctx: ContexteDepot, phase: 'v1' | 'vf'): Promise<ResultatArgument | null> {
   const { data, error } = await admin.from('exercices_pilote_argument_jugements').select('extraction,jugement,empreinte_texte,empreinte_pedagogique,modele')
@@ -27,6 +59,12 @@ export async function jugerArgument(admin: SupabaseClient, ctx: ContexteDepot, p
   const deja = await lireJugementArgument(admin, ctx, phase)
   if (deja) return { ...deja, appels: 0 }
   const texte = (phase === 'v1' ? ctx.productionV1 : ctx.productionVf) ?? ''
+  if (phase === 'vf' && ctx.productionV1 === texte) {
+    const ancien = await lireJugementArgument(admin, ctx, 'v1')
+    if (!ancien) throw new Error('Le jugement V1 est nécessaire pour reprendre une copie inchangée')
+    const reprise = reprendreConstatsV1(c, ctx.productionV1, texte, ancien)
+    if (reprise) return conserverJugement(admin, ctx, phase, reprise, 0)
+  }
   const paquet = paquetIndependant(c,texte,phase)
   const passages = passagesCitables(texte)
   const documents = {...paquet, passages_citables: passages.map((texte,id)=>({id,texte}))}
@@ -49,14 +87,7 @@ export async function jugerArgument(admin: SupabaseClient, ctx: ContexteDepot, p
   verifierPreuves(c,phase,texte,jugement.valeur)
   const resultat: ResultatArgument = { extraction: extraction.valeur, jugement: jugement.valeur,
     empreinte_texte: empreinteTexte(texte), empreinte_pedagogique: c.empreinte_pedagogique, modele: MODELE_PILOTE_ARGUMENT }
-  const { error } = await admin.from('exercices_pilote_argument_jugements').insert({ depot_id: ctx.depotId, version: phase, ...resultat })
-  if (error) {
-    if (error.code !== '23505') throw new Error(`Jugement non conservé : ${error.message}`)
-    const concurrent = await lireJugementArgument(admin,ctx,phase)
-    if (!concurrent) throw new Error('Jugement concurrent introuvable')
-    return { ...concurrent, appels: extraction.appels+jugement.appels }
-  }
-  return { ...resultat, appels: extraction.appels+jugement.appels }
+  return conserverJugement(admin, ctx, phase, resultat, extraction.appels+jugement.appels)
 }
 
 export async function contexteRetourArgument(admin: SupabaseClient, ctx: ContexteDepot, phase: 'v1' | 'vf') {
