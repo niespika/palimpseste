@@ -62,7 +62,7 @@ if (existsSync(prive)) for (const f of readdirSync(prive).filter(f => /-appel-\d
   if (etage !== 'instrument_natif') {
     try {
       const document = JSON.parse(a.requete.messages.find(m => m.role === 'user').content)
-      const c = cas.find(c => id.startsWith(c.id + '-'))
+      const c = cas.find(c => id.startsWith(c.id + '-') && /^\d+$/.test(id.slice(c.id.length + 1)))
       const autorisees = ['sujet_exact','contexte_fourni','consigne','texte_eleve','phase','objet','parcours','empreinte_pedagogique','competences_mesurees','attentes','regles','passages_citables', ...(etage === 'p2_independant' ? ['releve'] : [])]
       paquets.push({ execution: id, numero: a.numero, etage,
         cles_conformes: Object.keys(document).every(k => autorisees.includes(k)),
