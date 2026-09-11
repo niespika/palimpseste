@@ -1,6 +1,6 @@
 {
-  "version": "0.3",
-  "empreinte_pedagogique": "0ea06797130876c836c2402ee31ecba39b47fb0c3f5687074e70a067b5110b5f",
+  "version": "0.4",
+  "empreinte_pedagogique": "2b609e5026ecf755198551265bd58b096afd64c68e9ca568a0c5f3f6c9415399",
   "sources_sha256": {
     "02-exercices.md": "91d1e3bbff4c45188c6da1b5cc6b3a47233224ce8a0383aad01402c6447061e9",
     "06-Palimpseste.md": "cc4a4606e9420f79812894e35e1e21c631c337b06f0855e90111c0418ffc4d9c",
@@ -16,12 +16,12 @@
     "competences/questionnement.md": "6e5d0134fd6fa5dcd1aa9ecd452055dd777ecc8185fac284fa9c5d362d7488b2",
     "competences/structure.md": "6ec4057feef7d1ab91aafb0867bc7bfbada2f86d84a755a913431124f3e3eb9b",
     "competences/synthese.md": "3b3beeadf8f19e9501ef10613ad0f69ab18c8f7542bedffbc5252d9a0cb97441",
-    "production-crans-6-8/construire-banque-production.py": "841a973325ad4e7013f68bd24b0f488ab2688d03b7a0dad86767cb0f2518b6e7",
-    "production-crans-6-8/contrat_argument.py": "ab98d01d7f4ece546de98566171c816194dc209723a48b20f942a66e37019ae3",
+    "production-crans-6-8/construire-banque-production.py": "062e60d75be8f388c56cc4200866a3461b3a90f2d637faab236b4b3174a84e1e",
+    "production-crans-6-8/contrat_argument.py": "5adb878264d968717fa383876cba52f7635ebc319b45e1336f76879e810a0d69",
     "production-crans-6-8/contrat-production.md": "64f4964071871bfd82594fde5367e7e8e9ea9ec8f01d0b5a1f3f30e679b1e6cf"
   },
   "contrat_argument": {
-    "version": "0.3",
+    "version": "0.4",
     "objet": "argument",
     "mode": "composer",
     "crans": [
@@ -155,16 +155,16 @@
         "id": "argument.lien.explication",
         "fonction": "Comment passe-t-il de là à sa conclusion ?",
         "propriete": "Explication effectivement écrite",
-        "critere": "Le texte écrit pourquoi ce qu’il invoque permettrait de soutenir sa conclusion. Repérer cette explication indépendamment de sa solidité ; un connecteur seul ne suffit pas.",
+        "critere": "Le texte écrit une explication identifiable du passage de ce qu’il invoque vers sa conclusion. Une explication partielle est présente même si une dernière étape reste implicite : reconnaître cette présence, puis examiner séparément la justification complète sous argument.lien.pertinence. Un connecteur seul ne suffit pas.",
         "realisations_admises": [
           "Lien réparti sur plusieurs passages proches.",
           "Explication et conclusion dans la même phrase.",
           "Présence de « donc » accompagnée d’une explication.",
-          "Explication identifiable mais défaillante : sa présence est distincte du jugement sur sa solidité."
+          "Explication identifiable mais défaillante ou incomplète : sa présence est distincte de sa solidité et de sa continuité jusqu’à la conclusion."
         ],
         "realisations_insuffisantes": [
           "Connecteur seul.",
-          "Lien laissé à reconstruire à partir du cours ou du modèle."
+          "Aucune explication écrite : le lien entier reste à reconstruire à partir du cours ou du modèle."
         ],
         "competence": "argumentation",
         "observables": [
@@ -178,7 +178,7 @@
         "questions": [
           "argument.production.lien"
         ],
-        "preuve_recherchee": "Passage(s) où le texte explique comment il passe de l’élément invoqué à sa conclusion. Ne pas fournir l’explication à sa place.",
+        "preuve_recherchee": "Passage(s) expliquant une étape réelle du raisonnement. Reconnaître les étapes écrites sans fournir celle qui manque ; ne pas transformer une explication partielle en absence totale.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": true,
         "condition": "toujours",
@@ -274,14 +274,15 @@
         "id": "argument.lien.pertinence",
         "fonction": "Comment passe-t-il de là à sa conclusion ?",
         "propriete": "Passage à la conclusion effectivement défendable",
-        "critere": "Le passage de l’élément invoqué à la conclusion écrite est défendable. Traiter du même sujet ou écrire une explication ne suffit pas à rendre ce passage solide.",
+        "critere": "Le raisonnement écrit justifie la réponse exacte annoncée au sujet, jusqu’à sa conclusion. Vérifier aussi le dernier passage entre l’analyse du cas et cette réponse. Une explication intermédiaire, même juste, ne suffit pas si le lecteur doit encore établir lui-même un lien nécessaire pour justifier la conclusion ; cette justification reste alors à reprendre.",
         "realisations_admises": [
           "Argument non déductif dont la conclusion reste proportionnée à l’appui.",
           "Désaccord philosophique possible sans erreur de raisonnement imposée."
         ],
         "realisations_insuffisantes": [
           "Concomitance traitée sans justification comme une causalité.",
-          "Appui vrai compatible avec une conclusion contraire sans que l’inférence soit défendue."
+          "Appui vrai compatible avec une conclusion contraire sans que l’inférence soit défendue.",
+          "Étapes intermédiaires expliquées, mais dernier lien nécessaire vers la réponse au sujet laissé implicite."
         ],
         "competence": "argumentation",
         "observables": [],
@@ -289,7 +290,7 @@
         "questions": [
           "argument.production.lien"
         ],
-        "preuve_recherchee": "Élément invoqué, conclusion exacte et relation écrite ; décrire le saut précis. Distinguer l’admissibilité de la prémisse, la présence de l’explication et sa solidité.",
+        "preuve_recherchee": "Comparer la réponse annoncée, ce que l’analyse du cas établit et le lien effectivement écrit entre les deux. Nommer les étapes déjà expliquées puis l’étape précise encore nécessaire, sans la fournir à la place de l’élève. Distinguer explication partielle présente et justification complète.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": true,
         "condition": "toujours",
@@ -316,7 +317,7 @@
         "questions": [
           "argument.production.portee"
         ],
-        "preuve_recherchee": "Étendue de l’appui comparée à celle de la conclusion ; ne pas limiter le contrôle à des mots déclencheurs.",
+        "preuve_recherchee": "Comparer l’étendue de ce que le cas établit à celle de la réponse annoncée, même si la dernière phrase revient au cas particulier. Décrire leur liaison manquante plutôt que qualifier automatiquement la dernière phrase de généralisation abusive. Ne pas limiter le contrôle à des mots déclencheurs ni demander de traiter toutes les situations possibles.",
         "unite": "argument rédigé par l’élève",
         "attente_objet": true,
         "condition": "toujours",
@@ -431,7 +432,10 @@
       "Identifier séparément ce que le texte défend, ce qu’il invoque et comment il passe de là à sa conclusion. Pour chaque constat, préciser quel élément ou quelle relation est jugé.",
       "Distinguer présence, admissibilité dans le contexte, explication écrite, solidité du passage à la conclusion et portée justifiée. Un défaut sur un point ne suffit pas à déclarer les autres défaillants.",
       "Pour le niveau scolaire et la tâche donnés, distinguer une correction nécessaire à la compréhension ou au raisonnement d’un enrichissement possible. Ne pas imposer ce dernier comme condition de réussite.",
-      "La lisibilité se juge par la difficulté effective à comprendre. Une phrase unique n’est pas interdite ; sa difficulté de lecture ne prouve pas à elle seule que le raisonnement est invalide."
+      "La lisibilité se juge par la difficulté effective à comprendre. Une phrase unique n’est pas interdite ; sa difficulté de lecture ne prouve pas à elle seule que le raisonnement est invalide.",
+      "Reconnaître une explication partielle lorsqu’elle est écrite. Si une liaison nécessaire avec la conclusion reste implicite, la situer dans le jugement sur la justification, sans déclarer toute explication absente. Un changement de nombre de phrases ou un connecteur ajouté ne fournit pas à lui seul cette liaison.",
+      "Le motif d’un point à reprendre doit être compréhensible seul par l’élève : commencer par ce qui fonctionne précisément dans le passage s’il existe une réussite, relier explicitement cette réussite au défaut constaté, expliquer pourquoi ce défaut gêne la justification ou la compréhension, puis indiquer le geste de révision qui en découle. Le champ revision reprend ce geste concret. Ne pas inventer une réussite pour respecter cette présentation.",
+      "Quand un cas particulier soutient une idée plus générale, le retour nomme ce que le cas établit et ce que la réponse annonce, explique pourquoi leur liaison reste nécessaire pour le lecteur, puis demande de l’écrire. Ne pas juxtaposer un compliment, un défaut et une consigne sans expliquer leur relation ; ne pas rédiger la réponse de l’élève."
     ],
     "bilan": {
       "principal": "constats relatifs aux attentes mesurables de la principale ; pas de lettre globale dérivée ici",
