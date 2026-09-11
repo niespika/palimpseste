@@ -95,11 +95,15 @@ export function retourDesConstats(c: ContratServi, depotId: string, phase: 'v1' 
     if (vus.has(cle)) continue
     vus.add(a.id); vus.add(cle)
     const porteObjet = !a.mesure_demandee
+    // La décision 0.4 demande un geste concret dans chaque point à reprendre,
+    // y compris en VF où l’action de révision séparée n’est pas affichée.
+    const revision = c.contrat.version === '0.4' && r.etat === 'a_reprendre' ? r.revision?.trim() : null
+    const texte = revision && !r.motif.includes(revision) ? `${r.motif} ${revision}` : r.motif
     points.push({ id: `${depotId}-${phase}-${a.id}`, competence: a.competence as PointRetour['competence'],
       portee: porteObjet ? 'objet' : 'competence',
       nature: r.etat === 'tenu' ? 'reussite' : 'point_de_travail',
       ...(r.passages[0] ? { ancrage: { source: 'copie' as const, citation: r.passages[0] } } : {}),
-      texte: `${porteObjet ? 'Dans ton argument : ' : ''}${r.motif}` })
+      texte: `${porteObjet ? 'Dans ton argument : ' : ''}${texte}` })
   }
   if (phase === 'vf' && v1) {
     const comparaison = comparerConstats(c,v1,j)

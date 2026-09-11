@@ -154,3 +154,26 @@ test('le bilan de correction conserve aussi la difficulté qui reste dans la pri
   assert.match(bilan.texte,/reste à reprendre/)
   assert.equal(bilan.portee,'objet')
 })
+
+test('le retour 0.4 conserve le geste de chaque défaut affiché, même hors priorité et en VF', () => {
+  const c=contratTest(), j=jugement(c)
+  j['argument.expression.precision']={etat:'a_reprendre',passages:['Mon texte'],motif:'Ce mot reste vague.',revision:'Nomme précisément ce que tu désignes.'}
+  j['argument.lien.pertinence']={etat:'a_reprendre',passages:['Mon texte'],motif:'Tu expliques le cas, mais son lien avec la conclusion reste implicite.',revision:'Explique comment ce cas soutient ta conclusion.'}
+  const avant=structuredClone(j)
+  for(const phase of ['v1','vf'] as const) {
+    const r=retourDesConstats(c,'depot-test',phase,j,j)
+    for(const id of ['argument.expression.precision','argument.lien.pertinence']) {
+      const point=r.points.find(p=>p.id.endsWith(id))!
+      assert.ok(point.texte.includes(j[id].motif))
+      assert.ok(point.texte.endsWith(j[id].revision!))
+    }
+    assert.equal(r.action_revision,phase==='v1' ? j['argument.expression.precision'].revision : null)
+  }
+  assert.deepEqual(j,avant)
+  const ancien=structuredClone(c);ancien.version='0.3';ancien.contrat.version='0.3'
+  const retourAncien=retourDesConstats(ancien,'depot-test','vf',j,j)
+  assert.equal(retourAncien.points.find(p=>p.id.endsWith('argument.lien.pertinence'))!.texte,'Dans ton argument : '+j['argument.lien.pertinence'].motif)
+  j['argument.lien.pertinence'].motif+=' '+j['argument.lien.pertinence'].revision
+  const sansDoublon=retourDesConstats(c,'depot-test','vf',j,j)
+  assert.equal(sansDoublon.points.find(p=>p.id.endsWith('argument.lien.pertinence'))!.texte.split(j['argument.lien.pertinence'].revision!).length,2)
+})
