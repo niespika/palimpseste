@@ -1,5 +1,20 @@
 # Pilote argument — distribution automatique, 11 septembre 2026 au soir
 
+## État courant — publié, déployé et ouvert le 11 septembre au soir (12/09 UTC)
+
+À la demande explicite de Louis, le raccordement automatique des crans 6/8 pour TC, 1HLP et THLP et ses commandes Scriptorium sont **publiés et déployés en production**, commit `7e29494`. Vercel `success` ; le domaine palimpseste.ink sert les ressources marquées `dpl_BFv1MCWLos4pbsJeQmbYFQz5nGDd`. La page de connexion répond 200 ; l’accès anonyme aux paramètres redirige vers la connexion. Pas de recette visuelle ni de manipulation du navigateur.
+
+**Porte effective ON**, relue en SQL et par `porteBanqueArgument` : `pilote_argument_banque_actif`, `pilote_argument_actif`, `routeur_actif` et `exercices_actif` sont vrais. Dans **Scriptorium → Paramètres → « Le pilote argument — crans 6 et 8 »**, une commande ouvre/ferme la distribution automatique ; la fermer laisse accessibles les exercices attribués si le pilote reste ouvert. La commande générale du pilote et l’attribution manuelle sont conservées. L’ouverture ne supprime ni les prérequis ni les règles de sélection.
+
+Migration `pilote_argument_banque.sql` appliquée en production après sauvegarde, restauration locale isolée du schéma public et de ses données (122 tables, comptages identiques ; dépendances Auth minimales substituées, pas un test du service Auth), puis répétition transactionnelle annulée. Porte initialement OFF, RLS et droits RPC serveur vérifiés, puis seule la nouvelle porte ouverte. **Huit tables contrôlées identiques avant/après**, dont 1 252 exercices, 127 sujets, 789 dépôts et 154 retours ; tous les autres paramètres conservés. Aucun compte synthétique, import, attribution forcée ni appel IA en production. Rollback conservateur prêt, éprouvé en sandbox, non exécuté en production.
+
+Validation : 2 633 tests de raccordement déjà réussis ; pour la commande, 16 contrôles isolés, TypeScript, ESLint ciblé et build de production réussis. L’action de distribution est aussi éprouvée sur la vraie sandbox (ON puis OFF, autres paramètres conservés ; garde professeur et revalidation simulées). Contrats 0.4 et décisions pédagogiques inchangés ; calibration toujours différée.
+
+Publication via la connexion GitHub, faute d’identifiants HTTPS locaux : arbre distant strictement identique à `30f785b`, incluant `fab8e12` et `7325b31`. Commits locaux conservés sur `codex/argument-local-avant-publication`, main alignée sans perte. Les journaux déjà publics ont été vérifiés et leurs seuls ajouts relus avant publication ; les sauvegardes et preuves détaillées restent ignorées. Preuves : campagne locale `v04-2026-09-11/deploiement-banque/`, sauvegarde `backups/argument-banque-20260912-predeploy.dump`. Les mentions antérieures « non publié », « porte OFF » et « autorisation à obtenir » sont désormais historiques.
+
+---
+
+
 **Publication demandée par Louis — 11/09 au soir (12/09 UTC).** Autorisation explicite de publier, déployer et ouvrir la distribution automatique. Commande dédiée ajoutée dans Scriptorium → Paramètres → « Le pilote argument — crans 6 et 8 » : ouvrir/fermer la distribution sans fermer l’accès aux exercices déjà attribués. La commande générale du pilote reste distincte. Seize contrôles isolés des deux actions serveur réussis ; TypeScript, ESLint ciblé et build de production réussis (polices téléchargées avec accès réseau). Déploiement et migration production en cours ; l’état OFF et « non autorisé » ci-dessous devient historique dès leur vérification finale. Aucune calibration relancée, aucune manipulation de l’écran ou de Chrome.
 
 
