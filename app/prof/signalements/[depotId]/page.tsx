@@ -28,14 +28,22 @@ import { chargerLaFileDesSignalements } from '@/utils/signalements/serveur'
 import { EcranDeroule } from '@/components/deroule/EcranDeroule'
 import Edition from '@/app/prof/conception/[id]/Edition'
 import { chargerLEditionDeLInstance } from '@/app/prof/conception/[id]/charger-edition'
+import { vueAvantReponse } from '@/utils/deroule/avant-reponse'
 import { Commentaire } from '../PanneauExercice'
+import CorrectionServie from './CorrectionServie'
+import { deriverCeQuiEstServi } from './servi'
 
 export const dynamic = 'force-dynamic'
 
 export default async function EcranDeLEleve(
-  { params }: { params: Promise<{ depotId: string }> },
+  { params, searchParams }:
+  { params: Promise<{ depotId: string }>; searchParams: Promise<{ moment?: string }> },
 ) {
   const { depotId } = await params
+  // ⭐⭐ 11/09 soir — DEUX MOMENTS : « avant sa réponse » (défaut — « la seule
+  //    chose qui m'importe vraiment ») et « aujourd'hui » (la page où il en est).
+  const { moment } = await searchParams
+  const avant = moment !== 'maintenant'
   const { admin } = await garderProf()
   const fuseau = await lireFuseau()
 
@@ -50,9 +58,14 @@ export default async function EcranDeLEleve(
   const porte = await lireLaPorte(admin)
   // ⚠️ `ouvert: true` À DESSEIN : la porte `exercices_actif` commande les ÉLÈVES ;
   //    le professeur doit voir l'écran même quand le module est éteint.
-  const vue = await chargerLeDeroule(admin, depotId, sig.eleveId,
+  const vueDuJour = await chargerLeDeroule(admin, depotId, sig.eleveId,
     { ouvert: true, delaiVfJours: porte.delaiVfJours })
+  const vue = vueDuJour && avant ? vueAvantReponse(vueDuJour) : vueDuJour
   const edition = await chargerLEditionDeLInstance(admin, ligne.identite.exerciceId)
+  // ⭐ Le formulaire se dérive de ce qui est SERVI (la vue d'avant la réponse),
+  //    jamais de la fiche seule.
+  const servi = vueDuJour && edition ? deriverCeQuiEstServi(vueAvantReponse(vueDuJour), edition) : null
+  const ici = `/prof/signalements/${depotId}`
 
   return (
     <div className="space-y-6 pb-12">
@@ -85,27 +98,51 @@ export default async function EcranDeLEleve(
       </section>
 
       <section className="space-y-2">
-        <h2 className="font-titre text-lg text-encre">Son écran <span className="font-ui text-sm font-normal text-muet">— lecture seule</span></h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="font-titre text-lg text-encre">Son écran <span className="font-ui text-sm font-normal text-muet">— lecture seule</span></h2>
+          <nav className="flex gap-2 font-ui text-sm" aria-label="Moment">
+            <Link href={ici} aria-current={avant ? 'page' : undefined}
+              className={`rounded-full border px-3 py-1 ${avant ? 'border-liseret bg-surface text-encre' : 'border-bordure bg-parchemin text-encre-douce hover:bg-parchemin-fonce'}`}>
+              Avant sa réponse
+            </Link>
+            <Link href={`${ici}?moment=maintenant`} aria-current={!avant ? 'page' : undefined}
+              className={`rounded-full border px-3 py-1 ${!avant ? 'border-liseret bg-surface text-encre' : 'border-bordure bg-parchemin text-encre-douce hover:bg-parchemin-fonce'}`}>
+              Où il en est aujourd’hui
+            </Link>
+          </nav>
+        </div>
         {vue ? (
           // ⚠️ Le déroulé porte des marges négatives pensées pour la colonne
           //    élève (`-mx-4`) ; on l'enferme dans un cadre qui les absorbe.
           <div className="rounded-2xl border-2 border-dashed border-bordure-bouton bg-parchemin p-4 sm:p-5">
-            <EcranDeroule vue={vue} atelier="codex" lectureSeule />
+            {/* ⚠️ La clé force un remontage entre les deux moments : l'écran garde
+                de l'état local (page tournée, volet) qui ne doit pas survivre. */}
+            <EcranDeroule key={avant ? 'avant' : 'maintenant'} vue={vue} atelier="codex" lectureSeule />
           </div>
         ) : (
+          // ⚠️ Le chargeur refuse pour QUATRE raisons et dit laquelle au journal
+          //    serveur : dépôt `retire`, passation en CLASSE (lieu « classe », flux
+          //    C4-L4), contexte illisible, ou pas de cet atelier. On ne devine pas.
           <p className="rounded-xl border border-bordure bg-parchemin px-4 py-6 font-corps text-encre-douce">
-            Ce dépôt ne se rend plus : il est <strong>retiré</strong> (par votre arbitrage, ou par
-            le retrait du pool). L’élève ne le voit plus non plus. Vous pouvez tout de même
-            corriger l’instance ci-dessous.
+            Ce dépôt n’a pas d’écran de maison à rendre : il est <strong>retiré</strong> (arbitrage
+            ou retrait du pool), ou c’est une <strong>passation en classe</strong>, qui a son propre
+            flux. Le journal serveur dit lequel. La fiche de l’instance reste corrigeable ci-dessous.
           </p>
         )}
       </section>
 
       <section className="space-y-2">
-        <h2 className="font-titre text-lg text-encre">Corriger ce que l’élève lit</h2>
-        {edition ? <Edition {...edition} /> : (
-          <p className="font-ui text-sm text-retard">Instance introuvable.</p>
-        )}
+        <h2 className="font-titre text-lg text-encre">Corriger ce que l’élève a lu</h2>
+        <p className="font-ui text-xs text-muet">
+          Chaque bloc est une chose que l’élève a eue sous les yeux, dans l’ordre. Ce qui vit sur
+          cette instance se corrige ici ; ce qui vient d’ailleurs dit d’où.
+        </p>
+        {servi
+          ? <CorrectionServie servi={servi} />
+          : edition
+            // Sans écran à dériver, le formulaire de la fiche — moins lisible, mais complet.
+            ? <Edition {...edition} />
+            : <p className="font-ui text-sm text-retard">Instance introuvable.</p>}
         <p className="font-ui text-xs text-muet">
           Une correction se voit chez <strong>tous</strong> les élèves de cette instance à leur
           prochaine visite. Ce qui est déjà rendu et jugé ne se rejuge pas.

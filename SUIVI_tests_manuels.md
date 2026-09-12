@@ -1,6 +1,18 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
-## État courant — signalements : DÉPLOYÉ le 11/09 au soir (Claude), et déjà trois reprises demandées
+## État courant — signalements, les trois reprises de Louis : CODÉES, commits locaux (11/09 tard)
+
+Trois commits après `c340ce2`, à pousser par GitHub Desktop. **⚠️ Une migration attend la prod : `signalements_traites.sql`** (jouée en bac à sable ; ligne au `SUIVI_SQL.md`). Tant qu'elle n'est pas jouée en prod, la page des signalements montrera tout comme « à traiter » et signalera l'incident en tête — le code lit la table sans planter.
+
+- **(1) « Cas traité »** — un bouton par exercice, seule mécanique de sortie de la file ; un signalement postérieur ramène l'exercice. Cause mesurée en prod du blocage : 6 des 8 exercices en attente portaient un dépôt `clos`, que l'arbitrage « a un problème » refuse de retirer du comptage. Règle pure `estATraiter` + 5 tests. Éprouvé : 4 → clic → « À traiter · 3 / Traités · 1 » ; tableau de bord « 3 exercices ».
+- **(2) « Avant sa réponse »** — bascule sur l'écran de l'élève (défaut) : la même vue, remise à zéro par `vueAvantReponse` (module pur, 3 tests) ; « Où il en est aujourd'hui » garde l'état réel. Éprouvé sur un cran 3 (« en cours : Préparer », 0 jeton posé) et un cran 2.
+- **(4) Corriger ce que l'élève a lu** — formulaire dérivé de la VUE (`servi.ts` → `CorrectionServie.tsx`) : chaque bloc dit sa source. Instance → champ (consigne, banque de distracteurs, réponse attendue, guide) ; gabarit / pilote argument → lecture seule avec la clé ; matériau → lecture seule (**mesuré : 159/183 matériaux du bac à sable et 174/243 en prod servent ≥ 2 exercices**) ; défaut et pourquoi_juste renvoyés cachés (sinon `lireCas` les efface). Écrit par `editerInstance`, seul chemin. Éprouvé sur cran 3 (quatre lectures servies, la bonne marquée) et cran 2 ; 375 px OK.
+- Repli : passation en classe ou dépôt retiré → le chargeur refuse (motif au journal serveur), l'écran le dit et sert la fiche classique.
+- 2 641 tests verts, `tsc` propre ; décor retiré, porte bac à sable remise à OFF.
+- [ ] Non éprouvé à l'écran : un exercice au gabarit ACTIF (aucun dépôt de ce type en bac à sable) ; un exercice du pilote argument (crans 6·8).
+- [ ] (3) Voir exercices et réponses depuis Pilotage › Classe : pas commencé, à la demande de Louis (« plus tard »).
+
+## Déployé — signalements : DÉPLOYÉ le 11/09 au soir (Claude), et déjà trois reprises demandées
 
 `4f2e4e1` et `178a93d` poussés par Louis depuis GitHub Desktop (aucun identifiant github.com dans le trousseau, `brew` absent du Mac ; `git push` refusé à la séance Claude). `origin/main` = `178a93d`, Vercel suit. **`signalement_exercice_actif` mesuré ON en production** (22 signalements, 8 en attente) — l'ancienne mention « OFF en prod » est historique.
 
