@@ -277,6 +277,8 @@ export function propositionsIsoDuree(
 
   const consommes = new Set([...dejaPoses.map((e) => e.candidat.exerciceId), c.exerciceId])
   const alternatives = vivier
+    // Une offre non attribuée n'a pas encore de page d'exercice.
+    .filter((r) => !r.instance.piloteArgument)
     .filter((r) => !consommes.has(r.instance.exerciceId))
     // « toutes au service de la MÊME CIBLE »…
     .filter((r) => r.ciblables.includes(c.competence))

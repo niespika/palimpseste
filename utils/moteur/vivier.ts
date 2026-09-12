@@ -38,6 +38,7 @@ import { motifDeFermeture, statutDeService, type PorteDUnObjet, type StatutDeSer
 import { cyclesEcoules as cyclesEcoulesDepuis } from '../routeur/cycles'
 import { ordonnerParObjet, type ContexteObjets } from './objets'
 import type { Competence, Couverture, Geste, Grain, Parcours } from '../routeur/types'
+import type { OffreArgument } from '../pilote-argument/distribution'
 
 // ════════════════════════════════════════════════════════════════════════════
 // CE QUE LE VIVIER REÇOIT
@@ -84,6 +85,10 @@ export interface MateriauRattache {
 
 /** Une instance telle que la couche 4 la regarde. */
 export interface InstanceDuVivier {
+  /** Offre virtuelle du pilote ; seul le choix effectif devient un contrat en base. */
+  piloteArgument?: OffreArgument
+  /** Contrat déjà attribué : seulement pour les doublons et l'historique du bonus. */
+  argumentAttribue?: OffreArgument
   exerciceId: string
   /** `exercices_types.code` — l'objet. */
   objet: string
@@ -1098,20 +1103,25 @@ export function candidatsPour(
 
   for (const r of vivier) {
     if (consommes.has(r.instance.exerciceId)) continue
+    // Ne pas exposer le même sujet au 6 puis au 8 dans une même semaine.
+    if (r.instance.piloteArgument && dejaPoses.some(p =>
+      p.candidat.sujetPiloteArgument === r.instance.piloteArgument!.sujet.id)) continue
     if (!r.ciblables.includes(competence)) continue
 
     const autres = r.ciblables.filter((c) => c !== competence)
     // Le plafond du grain compte LA PRIMAIRE : il reste `plafond - 1` places.
-    let secondaires = autres.slice(0, Math.max(0, r.plafondCibles - 1))
+    const plafond = r.instance.piloteArgument ? Math.min(2, r.plafondCibles) : r.plafondCibles
+    let secondaires = autres.slice(0, Math.max(0, plafond - 1))
     if (expressionEnSecondaire && r.instance.geste === 'produire'
       && (r.instance.grain === 'meso' || r.instance.grain === 'macro')
       && autres.includes('expression') && !secondaires.includes('expression')) {
       // « Elle prend EN PLUS une place de cible secondaire sur tout exercice de
       //   grain méso ou macro qui peut la porter » — et le geste est `produire`.
-      secondaires = [...secondaires.slice(0, Math.max(0, r.plafondCibles - 2)), 'expression']
+      secondaires = [...secondaires.slice(0, Math.max(0, plafond - 2)), 'expression']
     }
 
     out.push({
+      ...(r.instance.piloteArgument ? { sujetPiloteArgument: r.instance.piloteArgument.sujet.id } : {}),
       exerciceId: r.instance.exerciceId,
       competence,
       grain: r.instance.grain,
@@ -1142,7 +1152,7 @@ export function substratsDeLaSemaine(
     // « Est substrat un exercice qui la liste dans `competences[]` » — toutes les
     // compétences que l'objet permet de mesurer, `observable_seul` COMPRIS : une
     // sonde mesure en silence, elle n'entraîne pas.
-    const competences = r
+    const competences = r?.instance.piloteArgument ? [] : r
       ? ([...r.ciblables, ...r.observableSeul] as Competence[])
       : ([p.candidat.competence, ...p.candidat.ciblesSecondaires] as Competence[])
     return {

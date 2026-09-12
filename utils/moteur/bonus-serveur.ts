@@ -64,6 +64,7 @@ import {
 import { lireLaPorteNotions } from './porte-notions'
 import { lignesDeDecision } from './decision'
 import { composerPourUnEleve, dureesDesExercices, retenusPourLaPose, type ContextePose } from './cycle-serveur'
+import { chargeurBanqueArgument, instancesArgumentAttribuees, porteBanqueArgument, persisterAvecArguments } from '@/utils/pilote-argument/distribution-serveur'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -177,6 +178,7 @@ function posesDeLaSemaine(
       continue
     }
     const candidat: Candidat = {
+      ...(inst.argumentAttribue ? { sujetPiloteArgument: inst.argumentAttribue.sujet.id } : {}),
       exerciceId: inst.exerciceId,
       competence: d.cibleRetenue,
       grain: inst.grain,
@@ -299,6 +301,15 @@ export async function servirUnExerciceDePlus(
     lireLesInscriptions(admin, eleveId),
   ])
   incidents.push(...iInst)
+  const banqueArgumentActive = await porteBanqueArgument(admin)
+  // Les contrats déjà servis servent à reconstruire le budget, même porte OFF.
+  const historiqueArguments = await instancesArgumentAttribuees(admin, eleveId, doctrine)
+  instances.push(...historiqueArguments)
+  if (banqueArgumentActive) {
+    const offres = await chargeurBanqueArgument(admin, doctrine)(eleveId, inscriptions.map(i => i.classeId))
+    const existants = new Set(instances.map(i => i.exerciceId))
+    instances.push(...offres.filter(i => !existants.has(i.exerciceId)))
+  }
   const [positions, dejaDeposees, coursVus, fiches] = await Promise.all([
     lireLesPositionsDeLecture(admin, [eleveId]),
     lireLesInstancesDejaDeposees(admin, [eleveId]),
@@ -322,6 +333,7 @@ export async function servirUnExerciceDePlus(
   const echeance = toISODate(addDaysUTC(new Date(`${cycleLundi}T00:00:00Z`),
     options.joursDEcheance ?? 6))
   const contexte: ContextePose = {
+    banqueArgumentActive,
     eleveId, cycleLundi, segment: s.segment, fuseau, maintenant, echeance,
     decoupe, modesAdmis: doctrine.modesAdmis, instances,
     positions: positions.parEleve.get(eleveId) ?? new Map(),
@@ -399,6 +411,24 @@ export async function servirUnExerciceDePlus(
     alternatives: compo.journalPriorite,
     objets: compo.objets,
   })
+
+  if (banqueArgumentActive) {
+    try {
+      const service = await persisterAvecArguments(admin, [ligne], instances, contexte, rang)
+      if (service.deja_servi) return refus('un_a_la_fois', quota, incidents)
+      const dep = service.depots[0]
+      if (!dep) throw new Error('Le service n’a rendu aucun dépôt')
+      return {
+        servi: { depotId: dep.depot_id, exerciceId: dep.exercice_id, decisionId: dep.decision_id,
+          competence: elu.candidat.competence, dureeMin: elu.candidat.dureeMin },
+        motif: null, phrase: 'Un exercice de plus t’attend.',
+        quota: quotaOptionnel(compo.budget.budget.optionnel, minutesBonus + elu.candidat.dureeMin), incidents,
+      }
+    } catch (e) {
+      incidents.push(e instanceof Error ? e.message : 'Attribution automatique refusée')
+      return refus('incident', quota, incidents)
+    }
+  }
 
   const { data: dec, error: eDec } = await admin
     .from('routeur_decisions')

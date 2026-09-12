@@ -11,6 +11,7 @@ import PorteJugeDocuments from './PorteJugeDocuments'
 import PorteGabarit from './PorteGabarit'
 import PorteChaineCle from './PorteChaineCle'
 import PorteNotions from './PorteNotions'
+import PortePiloteArgument from './PortePiloteArgument'
 import PorteJugeMesure from './PorteJugeMesure'
 import PorteRetoursARelire from './PorteRetoursARelire'
 
@@ -49,6 +50,11 @@ export default async function SectionParametresScriptorium() {
       <PorteJugeMesure actif={!!p.juge_mesure_actif} jugeOuvert={!!p.juge_documents_actif} />
       {/* 10/09 — la troisième voie du rattachement : les sujets par notions, servis aux classes qui ont vu la notion. Même domicile, même tolérance, à OFF. */}
       <PorteNotions actif={!!p.notions_actif} />
+      <PortePiloteArgument actif={p.pilote_argument_actif === true}
+        disponible={typeof p.pilote_argument_actif === 'boolean'}
+        banqueActive={p.pilote_argument_banque_actif === true}
+        banqueDisponible={typeof p.pilote_argument_banque_actif === 'boolean'}
+        distributionOuverte={p.routeur_actif === true && p.exercices_actif === true} />
       <PorteRetoursARelire depuis={texte('retours_a_relire_depuis')}
         disponible={Object.hasOwn(p, 'retours_a_relire_depuis')} />
       <FormulaireReglagesRag

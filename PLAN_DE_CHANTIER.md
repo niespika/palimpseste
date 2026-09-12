@@ -1,5 +1,10 @@
 # PLAN DE CHANTIER — l'ordre des lots, et la fabrique de leurs prompts
 
+**Publication demandée par Louis — 11/09 au soir (12/09 UTC).** Autorisation explicite de publier, déployer et ouvrir la distribution automatique. Commande dédiée ajoutée dans Scriptorium → Paramètres → « Le pilote argument — crans 6 et 8 » : ouvrir/fermer la distribution sans fermer l’accès aux exercices déjà attribués. La commande générale du pilote reste distincte. Seize contrôles isolés des deux actions serveur réussis ; TypeScript, ESLint ciblé et build de production réussis (polices téléchargées avec accès réseau). Déploiement et migration production en cours ; l’état OFF et « non autorisé » ci-dessous devient historique dès leur vérification finale. Aucune calibration relancée, aucune manipulation de l’écran ou de Chrome.
+
+
+**État courant — 11/09 au soir, pilote argument crans 6/8 :** raccordement à la distribution automatique réalisé localement et éprouvé en sandbox pour TC, 1HLP et THLP, avec la banque entière et les portes de progression existantes. Contrats 0.4 conservés, aucune calibration relancée ni règle de progression ajoutée. Nouvelle migration `pilote_argument_banque.sql` sandbox seulement, porte dédiée OFF, rollback éprouvé, décor retiré. 2 633 tests, TypeScript et ESLint ciblé réussis ; passation serveur jusqu’au retour final. Bouton `fab8e12` conservé ; aucun push ni déploiement nouveau. Voir `RACCORDEMENT_Pilote_Argument_Banque.md` et les entrées courantes des deux journaux. L’attribution manuelle seule reste la limite du code publié `ed1dbd8`, plus celle du code local.
+
 **Ce document remplace `PLAN_CHANTIERS_RENTREE.md`**, qui travaillait au grain du chantier, sur cinq cycles de crédits et une date. Il travaille au grain du **lot**, et **il ne porte aucune date**.
 
 ---
@@ -29,6 +34,11 @@
 ---
 
 ## 2. L'état
+
+**Complément local :** commande ouvrir/fermer du pilote et lien d’attribution ajoutés aux paramètres de Scriptorium, vérifiés, non publiés. **Prochaine étape attendue par Louis :** raccorder les crans 6/8 du pilote à la distribution automatique de la banque ; l’attribution manuelle actuelle ne satisfait pas cette attente. Aucun nouveau seuil de progression adopté, calibration toujours différée.
+
+**Pilote argument 6/8 et banque THLP : en service.** Le contrat 0.4 est déployé, les migrations du pilote et du rattachement par notions sont appliquées en production et les deux portes sont ouvertes. Les 638 exercices de la banque finale THLP et les 20 sujets 1HLP sont importés et validés. Attribution du pilote par le professeur ; banque THLP disponible au routeur selon les notions vues. Calibration approfondie différée par Louis, non bloquante pour cet usage provisoire. État opérationnel et preuves : `SUIVI_SQL.md`, `SUIVI_tests_manuels.md`, `REPRISE_Pilote_Argument_Crans_6_8.md` et `REPRISE_Creation_Exercices_Crans_1_5_7_9.md`. **Les états historiques suivants ne remplacent pas cette mise à jour ciblée.**
+
 
 **Le moteur d'exercices est en construction, et le `SUIVI_SQL.md` en porte neuf migrations.** **C4-L1** *(le schéma, le seed, les touches à l'existant — trois migrations du 18/08)*, **C4-L8** *(la doctrine dérivée et la fabrique — quatre migrations du 20/08)* et **C4-L5** *(la chaîne et son complément — deux migrations du 21/08)* sont **joués en sandbox**. **Rien de C5 ni de C6 n'est construit.**
 

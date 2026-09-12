@@ -38,3 +38,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
   d'exercice de 31 caractères, la base en porte **129 en médiane** — le « titre » est la première
   ligne de la consigne. L'implémentation fidèle était juste et l'écran illisible. `tsc` et 1970
   tests étaient verts pendant que la page débordait de l'écran sur téléphone.*
+
+## Continuité entre Claude et GPT
+
+Avant de reprendre un lot, lire les entrées courantes de `SUIVI_SQL.md`, `SUIVI_tests_manuels.md`, `PLAN_DE_CHANTIER.md` et son fichier `REPRISE_*.md` local lorsqu’il existe ; côté conception, lire `CONTEXTE.md`. En fin de séance, mettre à jour ces journaux selon les opérations réellement effectuées : décision acceptée, code local/publié/déployé, sandbox/production, migrations, imports, portes ON/OFF, vérifications et limites. Placer l’état courant avant l’historique et signaler les états dépassés. Ne pas réinterpréter une ancienne interdiction déjà levée ni déclarer une opération faite sur la seule base de son autorisation. Les rapports détaillés et données privées restent ignorés par Git ; les journaux suivis ne contiennent aucun identifiant élève ni secret. `CLAUDE.md` inclut ce fichier : les deux assistants lisent les mêmes règles.

@@ -66,6 +66,7 @@ import {
   lireLesCoursVus, lireLesNotionsDesCours, notionsVuesDe, lireLesDevoirsServis, lireLesInstances, lireLesInstancesDejaDeposees, lireLesPositionsDeLecture,
 } from './vivier-serveur'
 import { lireLaPorteNotions } from './porte-notions'
+import { chargeurBanqueArgument, porteBanqueArgument, persisterAvecArguments } from '@/utils/pilote-argument/distribution-serveur'
 import {
   journalDuTirage, journaliserLEscalade, lignesDeDecision, poserLesSondesDeTrajectoire, signalDeTrajectoire,
   type LigneDeDecision, type SignalDeTrajectoire,
@@ -248,6 +249,8 @@ export async function poserLesSemainesDuRouteur(
   //    modes admis, dont le contrôle de trajectoire a besoin (`01-` §7).
   const doctrine = await chargerDoctrineDepuisBase(admin as never)
   const { instances, incidents } = await lireLesInstances(admin, doctrine)
+  const banqueArgumentActive = await porteBanqueArgument(admin)
+  const chargerArguments = chargeurBanqueArgument(admin, doctrine)
   bilan.erreurs.push(...incidents)
   // ⭐ C7-L7 — LES FICHES, une fois pour tous, jamais par élève (piège 20) : la
   //    règle 4 lit « non acquis » sur les observables REQUIS de la fiche.
@@ -389,7 +392,9 @@ export async function poserLesSemainesDuRouteur(
         return await poserLaSemaineDUnEleve(admin, {
           eleveId, cycleLundi, segment, fuseau, maintenant, echeance,
           decoupe, modesAdmis: doctrine.modesAdmis,
-          instances,
+          instances: banqueArgumentActive ? [...instances, ...await chargerArguments(eleveId,
+            (inscriptionsParEleve.get(eleveId) ?? []).map(i => i.classeId))] : instances,
+          banqueArgumentActive,
           positions: positions.parEleve.get(eleveId) ?? new Map(),
           dejaDeposees: dejaDeposees.parEleve.get(eleveId) ?? new Set(),
           devoirsServis: devoirsServis.parEleve.get(eleveId) ?? new Map(),
@@ -494,6 +499,8 @@ async function lirePopulation(admin: Admin, erreurs: string[]): Promise<string[]
 // ════════════════════════════════════════════════════════════════════════════
 
 export interface ContextePose {
+  /** Nouvelle distribution ; absente ou OFF = persistance historique. */
+  banqueArgumentActive?: boolean
   eleveId: string
   cycleLundi: string
   segment: Segment
@@ -797,7 +804,7 @@ export function retenusPourLaPose(
     cran2Servi, max, election)
 }
 
-async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<PoseDUnEleve> {
+export async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<PoseDUnEleve> {
   const out: PoseDUnEleve = {
     motifNonServi: null, dejaServi: false, listeVide: false, vivierVide: false, exercicesPoses: 0,
     decisionsEcrites: 0, depotsPoses: 0, sondesPosees: 0, ecart: null, ecartsDuVivier: [],
@@ -914,6 +921,14 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
     },
     // ⭐ C7-L6 — « sans devoir frais, le routeur sert quand même » : servi `degrade`.
     new Set(retenus.filter((r) => r.degrade).map((r) => r.instance.exerciceId)))
+  if (c.banqueArgumentActive) {
+    const service = await persisterAvecArguments(admin, lignes, c.instances, c)
+    out.dejaServi = service.deja_servi
+    out.decisionsEcrites = service.deja_servi ? 0 : service.depots.length
+    out.depotsPoses = out.decisionsEcrites
+    if (service.deja_servi) out.exercicesPoses = 0
+    return out
+  }
   const ecrites = await persister(admin, lignes, c)
   out.decisionsEcrites = ecrites.decisions
   out.depotsPoses = ecrites.depots

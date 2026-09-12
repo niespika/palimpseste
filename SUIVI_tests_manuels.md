@@ -1,5 +1,47 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+**Publication demandée par Louis — 11/09 au soir (12/09 UTC).** Autorisation explicite de publier, déployer et ouvrir la distribution automatique. Commande dédiée ajoutée dans Scriptorium → Paramètres → « Le pilote argument — crans 6 et 8 » : ouvrir/fermer la distribution sans fermer l’accès aux exercices déjà attribués. La commande générale du pilote reste distincte. Seize contrôles isolés des deux actions serveur réussis ; TypeScript, ESLint ciblé et build de production réussis (polices téléchargées avec accès réseau). Déploiement et migration production en cours ; l’état OFF et « non autorisé » ci-dessous devient historique dès leur vérification finale. Aucune calibration relancée, aucune manipulation de l’écran ou de Chrome.
+
+
+## État courant — raccordement automatique du pilote, 11/09 au soir
+
+Code local et migration sandbox ; **non publié, non déployé**. Offre automatique des crans 6/8 pour TC, 1HLP et THLP, derrière la nouvelle porte `pilote_argument_banque_actif` OFF. Le bouton `fab8e12` est conservé. Bilan autonome : `RACCORDEMENT_Pilote_Argument_Banque.md`.
+
+- [x] Six combinaisons parcours/crans servies en sandbox ; double appel concurrent, reprise, refus porte fermée et classe sans sujet admissible, annulation de la semaine après échec d’une ligne, brouillon et date conservés, bonus atomique.
+- [x] Banque entière et gabarit ON : le vrai point d’entrée sert un cran 6 dans chacun des trois parcours, avec les prérequis synthétiques complets. Le cran 8 est aussi servi, gabarit ON, par le signal de trajectoire existant sur mesures synthétiques. Les premiers décors incomplets (réussites 1/3 absentes) ont été corrigés ; aucune règle pédagogique modifiée.
+- [x] Une passation serveur d’un cran 8 automatiquement servi : V1 → retour → VF → retour final ; projection sans aide avant V1 ; lettres-équivalentes NULL et aucune réussite globale inventée. Dix appels de chaîne ; alerte de citation P1 conservée, sans calibration supplémentaire.
+- [x] 2 633 tests, TypeScript et ESLint ciblé réussis. Migration à blanc annulée puis appliquée en sandbox ; rollback éprouvé.
+- [x] Comptes et décor retirés ; empreintes des cinq tables de banque/contrats préexistantes identiques ; paramètres restaurés ; nouvelle porte OFF. Sandbox finale : 1 182 exercices et 128 sujets.
+- [ ] Traversée visuelle du bouton et de ce raccordement : non réalisée, à la demande de laisser l’écran et Chrome tranquilles. Ces tests ne prédisent pas les exercices qui seront servis lundi aux profils réels, ni la justesse pédagogique des retours.
+
+Production inchangée : `origin/main` et dernier déploiement Production déclaré par GitHub/Vercel à `ed1dbd8`, statut `success`, revérifiés côté serveur. Rapports et identifiants privés sous la campagne ignorée `v04-2026-09-11/raccordement-recette-*`. Les paragraphes ci-dessous sont l’historique antérieur au raccordement local.
+
+## Complément courant — commande du pilote dans les paramètres, 11/09/2026
+
+À la demande de Louis, ajout local du bloc « Le pilote argument — crans 6 et 8 » dans Scriptorium → Paramètres : ouvrir/fermer et lien « Attribuer un exercice du pilote ». La commande utilise la porte existante, réservée au professeur ; configuration absente ou écriture refusée ne sont pas présentées comme un succès. La fermeture suspend aussi l’accès aux travaux attribués, qui restent conservés. TypeScript, ESLint ciblé et huit contrôles isolés de l’action serveur réussis. Pas de contrôle visuel ni de manipulation du navigateur, à la demande de Louis ; aucune mutation de base dans cette étape.
+
+**État de publication : ce complément est local, pas encore publié ni déployé.** La production reste sur `ed1dbd8`, avec les deux portes précédemment ouvertes. Aucune migration ni nouvel import requis pour le bouton.
+
+**Attente de Louis à conserver : les crans 6 et 8 doivent pouvoir rejoindre la banque et être servis dès lundi.** L’implémentation actuelle impose encore une attribution manuelle ; ce n’est pas un choix pédagogique validé par Louis. Les 638 exercices importés couvrent les crans 1–5, 7 et 9. Le vivier exclut explicitement les contrats `pilote-argument-` et le registre ne leur calcule pas de progression. Reste à raccorder la distribution automatique en conservant les contrats figés et l’admissibilité des sujets, sans inventer de seuil de progression ni relancer la calibration. L’activation du pilote seule ne réalise pas ce raccordement.
+
+---
+
+## Mise en service du pilote argument et de la banque THLP — 11/09/2026
+
+- [x] Code `ed1dbd8` publié et Vercel Ready / Production Current sur palimpseste.ink ; 2 627 tests et TypeScript réussis avant publication.
+- [x] Fenêtre calme contrôlée avant publication, migration et activation : aucun dépôt/session élève récemment actif ni traitement en cours. Limite : une lecture silencieuse sans nouvelle requête n’est pas détectée.
+- [x] Sauvegarde préalable du schéma public et de ses données, archive relue ; répétition transactionnelle des migrations annulée et retour à l’état initial vérifié avant application définitive. Une restauration complète de l’archive n’a pas été rejouée.
+- [x] Migrations additives, RLS et privilèges serveur vérifiés ; les deux portes, initialement OFF, sont ouvertes après accord explicite de Louis. Autres paramètres conservés.
+- [x] Import natif, sandbox puis production : 638 exercices de la banque finale de Claude, 576 matériaux, 998 cas, 20 sujets 1HLP. Aucun refus ni incident. Vérification du vivier en mémoire sur données réelles : 638 nouveaux exercices retenus pour THLP, zéro pour 1HLP et T5, sans attribution.
+- [x] Conservation exacte de toutes les anciennes lignes des sept tables contrôlées, dont 789 dépôts, 154 retours, 50 travaux Aletheia et 107 sujets. Aucun compte ni dépôt synthétique en production.
+- [x] Page de connexion HTTP 200 et écran professeur consulté sur le code déployé. Offre du pilote après activation relue côté serveur : TC 15 sujets, 1HLP 20, THLP 46. Pas de nouvelle passation élève en production ; les passations complètes restent les preuves sandbox déjà consignées.
+- [x] Les 18 contrôles de présentation du pilote en sandbox couvraient les trois parcours, les deux crans et 375/768/1280 px ; deux passations complètes vérifiées jusqu’à la lecture finale. Tailles simulées, pas téléphone physique.
+- [ ] Calibration approfondie : différée par Louis, non bloquante pour l’usage provisoire. Les irrégularités connues et les réserves de relecture ne sont pas assimilées à une précision validée.
+
+Interrupteurs : banque par notions dans Scriptorium → Paramètres → « Les sujets rattachés par notions » ; pilote argument actuellement administré en base, sans bouton ouvrir/fermer. Attribution via `/prof/conception/pilote-argument` ; activation seule sans attribution. Preuves détaillées et bilans restent dans le dossier local ignoré du pilote.
+
+---
+
 > **Protocole.** Chaque spec/session ajoute sa section ici au moment où elle est écrite ou close
 > (Cowork s'en charge, à partir du rapport de clôture de Code). Un test coché `[x]` = soldé
 > (joué et validé, ou explicitement couvert autrement — la note de fin de ligne fait foi).

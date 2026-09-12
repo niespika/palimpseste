@@ -64,6 +64,8 @@ export function ciblesPossibles(
 
 /** Un exercice candidat, tel que la couche 4 le rend à la phase B. */
 export interface Candidat {
+  /** Le sujet du pilote, pour ne pas servir son 8 après son 6 dans le même cycle. */
+  sujetPiloteArgument?: string
   exerciceId: string
   competence: Competence
   grain: Grain
