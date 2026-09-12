@@ -22,6 +22,7 @@
 // ============================================================================
 
 import Link from 'next/link'
+import type React from 'react'
 import { garderProf } from '@/utils/routeur/acces'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { chargerLaFileDesSignalements } from '@/utils/signalements/serveur'
@@ -32,13 +33,21 @@ export const dynamic = 'force-dynamic'
 
 export default async function SignalementsPage({
   searchParams,
-}: { searchParams: Promise<{ sel?: string }> }) {
+}: { searchParams: Promise<{ sel?: string; vue?: string }> }) {
   const { admin } = await garderProf()
-  const { sel } = await searchParams
+  const { sel, vue } = await searchParams
   const fuseau = await lireFuseau()
   const file = await chargerLaFileDesSignalements(admin, fuseau, new Date().toISOString())
 
-  const active = file.lignes.find((l) => l.identite.exerciceId === sel) ?? file.lignes[0] ?? null
+  // ⭐ DEUX VUES (Louis, 11/09) : « quand j'ai traité un signalement, il
+  //    disparaît de la liste ». Un exercice est TRAITÉ quand TOUS ses
+  //    signalements sont arbitrés ; un nouveau signalement le ramène dans
+  //    « à traiter ». Les traités restent lisibles sous leur propre onglet.
+  const aTraiter = file.lignes.filter((l) => l.enAttente > 0)
+  const traites = file.lignes.filter((l) => l.enAttente === 0)
+  const vueTraites = vue === 'traites'
+  const visibles = vueTraites ? traites : aTraiter
+  const active = visibles.find((l) => l.identite.exerciceId === sel) ?? visibles[0] ?? null
 
   return (
     <div className="space-y-6 pb-12">
@@ -83,17 +92,29 @@ export default async function SignalementsPage({
         </p>
       )}
 
-      {file.lignes.length === 0 ? (
-        <Vide porteOuverte={file.porteOuverte} />
+      <nav className="flex gap-2 font-ui text-sm" aria-label="Vue">
+        <Onglet href="/prof/signalements" actif={!vueTraites}>
+          À traiter · {aTraiter.length}
+        </Onglet>
+        <Onglet href="/prof/signalements?vue=traites" actif={vueTraites}>
+          Traités · {traites.length}
+        </Onglet>
+      </nav>
+
+      {visibles.length === 0 ? (
+        vueTraites
+          ? <p className="rounded-xl border border-bordure bg-parchemin px-4 py-8 text-center
+                          font-corps text-encre-douce">Aucun exercice traité pour l’instant.</p>
+          : <Vide porteOuverte={file.porteOuverte} />
       ) : (
         // ⚠️ EMPILÉ SUR TÉLÉPHONE, CÔTE À CÔTE À PARTIR DE `lg`. La liste garde
         //    une largeur fixe : à `md`, deux colonnes mettraient un bloc de
         //    consigne de 129 caractères dans 180 px.
         <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start">
           <nav className="space-y-2" aria-label="Exercices signalés">
-            {file.lignes.map((l) => (
+            {visibles.map((l) => (
               <Vignette
-                key={l.exerciceId} ligne={l}
+                key={l.exerciceId} ligne={l} vue={vueTraites ? 'traites' : 'a_traiter'}
                 actif={active?.exerciceId === l.exerciceId}
               />
             ))}
@@ -110,14 +131,27 @@ export default async function SignalementsPage({
  *    (129 caractères en médiane). Deux lignes tronquées, et l'essentiel — combien
  *    d'élèves, combien attendent — au-dessus, où il se lit sans tronquer.
  */
+function Onglet({ href, actif, children }: { href: string; actif: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href} aria-current={actif ? 'page' : undefined}
+      className={`rounded-full border px-3 py-1 transition-colors ${actif
+        ? 'border-liseret bg-surface text-encre'
+        : 'border-bordure bg-parchemin text-encre-douce hover:bg-parchemin-fonce'}`}
+    >
+      {children}
+    </Link>
+  )
+}
+
 function Vignette({
-  ligne, actif,
+  ligne, actif, vue,
 }: { ligne: Awaited<ReturnType<typeof chargerLaFileDesSignalements>>['lignes'][number]
-  actif: boolean }) {
+  actif: boolean; vue: 'a_traiter' | 'traites' }) {
   const id = ligne.identite
   return (
     <Link
-      href={`/prof/signalements?sel=${id.exerciceId}`}
+      href={`/prof/signalements?sel=${id.exerciceId}${vue === 'traites' ? '&vue=traites' : ''}`}
       aria-current={actif ? 'page' : undefined}
       className={`block rounded-xl border p-3 transition-colors ${actif
         ? 'border-liseret bg-surface'

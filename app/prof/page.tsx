@@ -96,6 +96,16 @@ export default async function ProfAccueil() {
   const premierSigId = (premierSig?.id as string | undefined) ?? null
   const hrefIntegrite = premierSigId ? `/prof/integrite?sel=${premierSigId}` : '/prof/integrite'
 
+  // ── Zone 1 bis : exercices signalés par les élèves (11/09/2026) ──────────────
+  //    « Je ne reçois pas de message qu'un élève a signalé un exercice. » Le
+  //    tableau de bord est LE lieu où le professeur apprend ce qui se passe :
+  //    juste le compte d'EXERCICES (pas de signalements — 24 élèves sur la même
+  //    instance ne font qu'un exercice à traiter) et le lien vers la page.
+  const { data: sigExos } = await admin
+    .from('exercices_signalements_eleve').select('exercice_id').is('arbitrage', null)
+  const nbExercicesSignales = new Set(
+    ((sigExos ?? []) as Array<{ exercice_id: string }>).map((r) => r.exercice_id)).size
+
   // ── Zone 2 : santé de la cohorte (par inscription) ──────────────────────────
   const santeValues = [...sante.values()]
   const totalSuivi = santeValues.length
@@ -246,6 +256,18 @@ export default async function ProfAccueil() {
                         <span className="text-muet"> — intégrité</span>
                       </span>
                       <span className="font-ui text-xs text-retard bg-retard-teinte px-2 py-0.5 rounded-full flex-shrink-0">à traiter</span>
+                    </div>
+                  </Link>
+                )}
+                {nbExercicesSignales > 0 && (
+                  <Link href="/prof/signalements" className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full bg-attention flex-shrink-0" aria-hidden />
+                      <span className="font-corps text-base text-encre flex-1">
+                        {nbExercicesSignales} exercice{nbExercicesSignales > 1 ? 's' : ''} signalé{nbExercicesSignales > 1 ? 's' : ''} par des élèves
+                        <span className="text-muet"> — signalements</span>
+                      </span>
+                      <span className="font-ui text-xs text-attention bg-attention-teinte px-2 py-0.5 rounded-full flex-shrink-0">à traiter</span>
                     </div>
                   </Link>
                 )}
