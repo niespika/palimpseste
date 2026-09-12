@@ -1,6 +1,12 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
-## État courant — signalements : traiter, voir l'écran de l'élève, corriger (11/09, Claude)
+## État courant — signalements : DÉPLOYÉ le 11/09 au soir (Claude), et déjà trois reprises demandées
+
+`4f2e4e1` et `178a93d` poussés par Louis depuis GitHub Desktop (aucun identifiant github.com dans le trousseau, `brew` absent du Mac ; `git push` refusé à la séance Claude). `origin/main` = `178a93d`, Vercel suit. **`signalement_exercice_actif` mesuré ON en production** (22 signalements, 8 en attente) — l'ancienne mention « OFF en prod » est historique.
+
+Retour de Louis après usage : (1) il veut une case « cas traité » par exercice, seule mécanique de sortie de la liste — certains exercices n'en sortent pas sans raison claire ; (2) l'écran de l'élève ne montre que la page courante, pas l'exercice AVANT sa réponse ; (4) le formulaire de correction reste inutilisable : il doit corriger CE QUE L'ÉLÈVE A VU (consigne + distracteurs, ou consigne + texte à trou…), pas des champs non servis ; (3) plus tard, voir les exercices et réponses des élèves depuis Pilotage › Classe. Ces reprises sont en cours dans la même séance ; le bloc ci-dessous décrit l'état déployé.
+
+## Déployé le 11/09 — signalements : traiter, voir l'écran de l'élève, corriger (11/09, Claude)
 
 Trois demandes de Louis, deux lots. **Lot 1+3, commit `4f2e4e1` (local, push refusé faute d'identifiant GitHub dans ma session — à pousser par Louis)** : `/prof/signalements` ne montre que les exercices dont au moins un signalement attend ; onglet « Traités » pour les autres ; un nouveau signalement ramène l'exercice. Tableau de bord : ligne « N exercices signalés par des élèves » dans « À préparer ». Éprouvé en bac à sable avec le décor (4 exercices → tranché un → « À traiter · 3 / Traités · 1 »), desktop et 375 px.
 
