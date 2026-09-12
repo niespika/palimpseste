@@ -96,13 +96,13 @@ function CarteDeLExercice({ ligne }: { ligne: LigneDeLaFile }) {
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={`/prof/conception/${id.exerciceId}`}
-          className="min-h-11 rounded-[10px] bg-bouton px-4 py-2.5 font-ui text-sm font-semibold
-                     text-bouton-texte inline-flex items-center"
+          className="min-h-11 rounded-[10px] border border-bordure-bouton px-4 py-2.5 font-ui
+                     text-sm text-encre-douce inline-flex items-center hover:bg-parchemin-fonce"
         >
-          Corriger cet exercice
+          La fiche de conception
         </Link>
         <span className="font-ui text-xs text-muet">
-          formulaire d’édition et aperçu côté élève
+          pour corriger, passez plutôt par l’écran d’un élève, ci-dessous
         </span>
       </div>
 
@@ -153,7 +153,10 @@ function CarteDeLExercice({ ligne }: { ligne: LigneDeLaFile }) {
 
 // ── Un commentaire, et son arbitrage ────────────────────────────────────────
 
-function Commentaire({ s, nom, fenetreDepassee, heuresRestantes }: {
+/** ⭐ 11/09 — exporté : l'écran `/prof/signalements/[depotId]` le réemploie tel quel. */
+export function Commentaire({ s, nom, fenetreDepassee, heuresRestantes, lienEcran = true }: {
+  /** Faux sur l'écran de l'élève lui-même, où le lien se mordrait la queue. */
+  lienEcran?: boolean
   s: LigneDeLaFile['signalements'][number]
   nom: string
   fenetreDepassee: boolean
@@ -178,6 +181,18 @@ function Commentaire({ s, nom, fenetreDepassee, heuresRestantes }: {
       <p className="font-corps text-[15px] leading-[1.55] text-encre whitespace-pre-wrap">
         {s.texte}
       </p>
+
+      {/* ⭐⭐ 11/09 — « voir ce que l'élève a vu, tel qu'il l'a vu » : le lien mène
+          à SON écran, rendu en lecture seule, avec le formulaire de correction. */}
+      {lienEcran && (
+        <Link
+          href={`/prof/signalements/${s.depotId}`}
+          className="inline-flex min-h-11 items-center rounded-[10px] bg-bouton px-4 py-2 font-ui
+                     text-sm font-semibold text-bouton-texte"
+        >
+          Voir son écran et corriger →
+        </Link>
+      )}
 
       {tranche
         ? <Verdict arbitrage={s.arbitrage!} statutDepot={s.statutDepot} />

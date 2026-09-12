@@ -48,7 +48,7 @@
 //    s'enregistre n'a changé : mêmes actions, mêmes moments.
 // ============================================================================
 
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { TexteBalise, TexteBrut, MateriauMarque, MARQUE_ELEVE } from './TexteBalise'
@@ -87,13 +87,26 @@ const SONDAGE_MS = 5_000
 /** Ce que le champ porte à l'instant — pour la remise, qui se fait sur sa propre page. */
 type EtatDuChamp = { texte: string; t: TelemetrieSaisie | null }
 
+/**
+ * ⭐ 11/09 — LE PROFESSEUR REGARDE L'ÉCRAN DE L'ÉLÈVE (signalements). Le même
+ *    composant, la même vue, chargée pour le dépôt de l'élève : « voir ce que
+ *    l'élève a vu, tel qu'il l'a vu ». En lecture seule, RIEN NE S'ÉCRIT :
+ *    l'ouverture au montage ne part pas, le sondage de l'attente non plus, la
+ *    case « signaler » ne se montre pas, et le corps est rendu `inert`.
+ *    ⛔ La garde des données n'est PAS ici : toutes les actions passent par le
+ *    portier élève, qui refuse un professeur. Ce mode évite seulement les appels
+ *    qui échoueraient.
+ */
+const LectureSeule = createContext(false)
+
 export function EcranDeroule(
-  { vue, atelier = 'codex' }: { vue: VueDuDeroule; atelier?: Atelier },
+  { vue, atelier = 'codex', lectureSeule = false }:
+  { vue: VueDuDeroule; atelier?: Atelier; lectureSeule?: boolean },
 ) {
   const router = useRouter()
 
   // L'ouverture est idempotente côté serveur : `ouvert_at` ne se réécrit jamais.
-  useEffect(() => { void actionOuvrir(vue.depotId) }, [vue.depotId])
+  useEffect(() => { if (!lectureSeule) void actionOuvrir(vue.depotId) }, [vue.depotId, lectureSeule])
 
   // ── ⭐⭐ 04/09 — UNE PAIRE, UN CAS À LA FOIS (`utils/deroule/paire.ts`) ─────
   //    « Il faut un cas par écran » (Louis). Le moment se lit sur l'étape du
@@ -289,7 +302,9 @@ export function EcranDeroule(
   }
 
   return (
-    <div className="-mx-4 overflow-hidden border-y border-bordure bg-fond-module
+    <LectureSeule.Provider value={lectureSeule}>
+    <div inert={lectureSeule || undefined}
+         className="-mx-4 overflow-hidden border-y border-bordure bg-fond-module
                     sm:mx-0 sm:rounded-2xl sm:border">
       <BarreDeContenu
         vue={vue} atelier={atelier} ecran={ecran} reprise={reprise}
@@ -348,10 +363,11 @@ export function EcranDeroule(
           élève qui découvre un exercice cassé avant l'ouverture doit pouvoir le
           dire. ⛔ Il ne parle jamais de ce que l'élève a compris (`02-` §5) :
           c'est l'OBJET qui est mis en cause, pas lui. */}
-      {vue.signalement.ouvert && (
+      {vue.signalement.ouvert && !lectureSeule && (
         <SignalerUnProbleme depotId={vue.depotId} mien={vue.signalement.mien} />
       )}
     </div>
+    </LectureSeule.Provider>
   )
 }
 
@@ -2242,8 +2258,9 @@ function Attente({ vue }: { vue: VueDuDeroule }) {
   //    en bac à sable, sur la remise d'un cran 5.
   useEffect(() => { setEtat(vue.attente) }, [vue.attente])
 
+  const lectureSeule = useContext(LectureSeule)
   useEffect(() => {
-    if (!etat.enCours) return
+    if (!etat.enCours || lectureSeule) return
     const id = setInterval(async () => {
       const frais = await actionEtatDeLAttente(vue.depotId)
       if (!frais) return
@@ -2252,7 +2269,7 @@ function Attente({ vue }: { vue: VueDuDeroule }) {
       if (frais.retourPret || frais.echecDefinitif) router.refresh()
     }, SONDAGE_MS)
     return () => clearInterval(id)
-  }, [etat.enCours, vue.depotId, router])
+  }, [etat.enCours, vue.depotId, router, lectureSeule])
 
   if (etat.echecDefinitif) {
     return (

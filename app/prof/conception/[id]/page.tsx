@@ -21,6 +21,7 @@ import { lireLaBanque } from '@/utils/deroule/credence'
 import { cranNumero } from '@/utils/cran'
 import { lireLeGabaritDuDepot } from '@/utils/gabarit/lecture'
 import Edition from './Edition'
+import { chargerLEditionDeLInstance } from './charger-edition'
 import Apercu from './Apercu'
 import Assignation from './Assignation'
 
@@ -170,6 +171,8 @@ export default async function EditionEtApercu({
     })),
   })
 
+  const edition = await chargerLEditionDeLInstance(admin, id)
+
   const { data: classes } = await admin.from('classes')
     .select('id, nom, niveau, filiere').order('nom')
 
@@ -198,49 +201,9 @@ export default async function EditionEtApercu({
                               font-ui text-sm text-encre">{b}</p>
       ))}
 
-      <Edition
-        id={id}
-        paire={oui(e.paire_diagnostic)}
-        lieu={txt(e.lieu)}
-        guide={e.guide === null ? null : txt(e.guide)}
-        guideExige={c?.guide ?? 'null'}
-        cranCommande={{
-          defaut: c?.defaut === 'présent',
-          distracteurs: c?.distracteurs === 'présent',
-          reponseAttendue: c?.reponseAttendue === 'présent',
-        }}
-        optinSeJuger={oui(e.optin_se_juger)}
-        optinConfiance={oui(e.optin_confiance_remise)}
-        sansCran={cran === null}
-        consigneSeule={consignes[0] ?? ''}
-        cas={casTries.map((cs, i) => {
-          const mat = jointure(cs, 'exercices_materiaux')
-          return {
-            ordre: Number(cs.ordre),
-            consigne: consignes[i] ?? '',
-            defaut: cs.defaut === null ? null : txt(cs.defaut),
-            // ⭐⭐ LE MÊME DÉFAUT, UN SECOND SITE — ET CELUI-CI COÛTAIT DE LA DONNÉE.
-            //    Ce champ alimente le FORMULAIRE D'ÉDITION, pas l'aperçu. Avec
-            //    `txt()`, une instance dont les distracteurs sont des OBJETS
-            //    (la forme d'import, `08-` §5.2) affichait un textarea **VIDE** —
-            //    et `lireCas` (`../actions.ts`) écrit `null` quand le textarea
-            //    est vide : **ouvrir l'instance et l'enregistrer DÉTRUISAIT les
-            //    trois distracteurs**, sans un mot. Vu à l'écran le 24/08.
-            // ⚠️ CE QUI RESTE, ET QUI N'EST PAS DE CE LOT : `lireCas` réécrit
-            //    toujours des CHAÎNES. Enregistrer une instance importée garde
-            //    donc les textes mais **perd les `pourquoi_faux`**. C'est une
-            //    perte moindre — et surtout, la choisir, c'est trancher la FORME
-            //    STOCKÉE, qui est la normalisation confiée à `C4-L11`. On ne la
-            //    tranche pas ici ; elle est portée au registre.
-            distracteurs: Array.isArray(cs.distracteurs) ? lireLaBanque(cs.distracteurs).join('\n') : '',
-            reponseAttendue: cs.reponse_attendue === null ? null : txt(cs.reponse_attendue),
-            pourquoiJuste: cs.pourquoi_juste === null ? null : txt(cs.pourquoi_juste),
-            materiau: mat.defaut
-              ? `${mat.famille ? `[${txt(mat.famille)}] ` : ''}${txt(mat.defaut)}`
-              : null,
-          }
-        })}
-      />
+      {/* ⭐ 11/09 — les données du formulaire viennent de `charger-edition.ts`,
+          partagé avec l'écran des signalements : un seul chargeur, deux écrans. */}
+      {edition && <Edition {...edition} />}
 
       {apercu && <Apercu apercu={apercu} />}
 

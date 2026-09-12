@@ -26,7 +26,7 @@ export interface RetourSignalement {
 }
 
 function rafraichir(): void {
-  revalidatePath('/prof/signalements')
+  revalidatePath('/prof/signalements', 'layout')
   // ⚠️ L'arbitrage change le STATUT d'un dépôt : l'écran d'assiduité le compte,
   //    et celui de l'élève le sert. Les trois se revalident ensemble, sinon le
   //    professeur relit un chiffre d'avant son propre geste.

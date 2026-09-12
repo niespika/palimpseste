@@ -10,8 +10,10 @@ const CHAMP = 'rounded-md border border-bordure-bouton bg-parchemin px-2 py-1 fo
 
 export default function Edition({
   id, paire, lieu, guide, guideExige, cranCommande, optinSeJuger, optinConfiance, cas,
-  sansCran = false, consigneSeule = '',
+  sansCran = false, consigneSeule = '', clesDuGabarit = [],
 }: {
+  /** ⭐ 11/09 — les clés du gabarit : l'énoncé servi vient de la banque, pas d'ici. */
+  clesDuGabarit?: string[]
   id: string; paire: boolean; lieu: string; guide: string | null
   guideExige: string
   cranCommande: { defaut: boolean; distracteurs: boolean; reponseAttendue: boolean }
@@ -69,6 +71,15 @@ export default function Edition({
           <textarea name="consigne" rows={3} defaultValue={consigneSeule}
             className={`${CHAMP} w-full`} required />
         </fieldset>
+      )}
+
+      {clesDuGabarit.length > 0 && (
+        <p className="rounded-md border border-attention/35 bg-attention-teinte px-3 py-2 font-ui text-xs text-encre">
+          <strong>Cet exercice est au gabarit.</strong> Ce que l&apos;élève lit comme énoncé, pièces et
+          témoins vient de la banque (<code>{clesDuGabarit.join(', ')}</code>), pas des champs
+          ci-dessous : corriger la consigne ou la banque de distracteurs ici ne change pas ces
+          textes-là. Ils se corrigent dans les lots de la banque, puis se réimportent.
+        </p>
       )}
 
       {cas.map((cs, i) => (

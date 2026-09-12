@@ -1,5 +1,15 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## État courant — signalements : traiter, voir l'écran de l'élève, corriger (11/09, Claude)
+
+Trois demandes de Louis, deux lots. **Lot 1+3, commit `4f2e4e1` (local, push refusé faute d'identifiant GitHub dans ma session — à pousser par Louis)** : `/prof/signalements` ne montre que les exercices dont au moins un signalement attend ; onglet « Traités » pour les autres ; un nouveau signalement ramène l'exercice. Tableau de bord : ligne « N exercices signalés par des élèves » dans « À préparer ». Éprouvé en bac à sable avec le décor (4 exercices → tranché un → « À traiter · 3 / Traités · 1 »), desktop et 375 px.
+
+**Lot 2, commit ci-dessous (local)** : `/prof/signalements/[depotId]` rend LE DÉROULÉ ÉLÈVE (`EcranDeroule`, même chargeur `chargerLeDeroule`, sur le dépôt de l'élève qui a signalé) en lecture seule (`lectureSeule` : pas d'ouverture au montage, pas de sondage, pas de case « signaler », corps `inert`), puis le formulaire « Corriger l'instance » de la fabrique, nourri par un chargeur partagé (`conception/[id]/charger-edition.ts`). `editerInstance` n'exclut plus les instances `assigne` (seul `clos` reste fermé). Éprouvé en bac à sable : cran 4 (paire, surlignage) et cran 2 (v1 remise, retour) rendus sans erreur console, desktop et 375 px ; « Corriger » sur une instance assignée → « Instance corrigée. ». Décor retiré, porte remise à OFF.
+
+- [ ] Non éprouvé à l'écran : l'encart « cet exercice est au gabarit » (le bac à sable n'a pas de dépôt sur une instance au gabarit actif) ; un dépôt `retire` (le message de repli est codé, pas vu).
+- [ ] Limite dite : sur téléphone, le déroulé en lecture seule ne bascule pas entre Lire / Écrire (`inert`) — le professeur voit le volet « Lire ».
+- [ ] Mesuré en prod (lecture) : 198 exercices avec dépôt, 194 `concu` / 4 `assigne` ; 22 signalements dont 8 en attente ; crans 1·3·4·5·7·9 dominants, 6 exercices sur 2·6·8.
+
 ## État courant — publié, déployé et ouvert le 11 septembre au soir (12/09 UTC)
 
 À la demande explicite de Louis, le raccordement automatique des crans 6/8 pour TC, 1HLP et THLP et ses commandes Scriptorium sont **publiés et déployés en production**, commit `7e29494`. Vercel `success` ; le domaine palimpseste.ink sert les ressources marquées `dpl_BFv1MCWLos4pbsJeQmbYFQz5nGDd`. La page de connexion répond 200 ; l’accès anonyme aux paramètres redirige vers la connexion. Pas de recette visuelle ni de manipulation du navigateur.

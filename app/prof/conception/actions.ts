@@ -295,8 +295,15 @@ export async function editerInstance(
     .eq('id', id).maybeSingle()
   if (eLecture) return { ok: false, message: `Lecture impossible : ${eLecture.message}` }
   if (!ex) return { ok: false, message: 'Instance inconnue.' }
-  if (ex.statut === 'assigne' || ex.statut === 'clos') {
-    return { ok: false, message: 'Cette instance est déjà assignée : l’édition avant validation est passée.' }
+  // ⭐ 11/09 — UNE INSTANCE ASSIGNÉE SE CORRIGE. Le refus « l'édition avant
+  //    validation est passée » rendait impossible ce pour quoi les élèves
+  //    signalent : un exercice signalé porte TOUJOURS un dépôt. Le déroulé relit
+  //    `consigne_instanciee` et `exercices_cas` à chaque chargement : une
+  //    correction se voit chez tous les élèves de l'instance dès leur prochaine
+  //    visite ; ce qui est déjà rendu et jugé ne se rejuge pas. Seul `clos` reste
+  //    fermé — plus personne ne le lit.
+  if (ex.statut === 'clos') {
+    return { ok: false, message: 'Cette instance est close : plus aucun élève ne la lit.' }
   }
 
   // ⚠️ CE QUE LE FORMULAIRE PORTE ET CE QUE LA BASE DÉCLARE DOIVENT S'ACCORDER.
@@ -362,6 +369,7 @@ export async function editerInstance(
     else if ((casMaj ?? []).length === 0) rates.push(`cas ${i + 1} : aucune ligne touchée`)
   }
   revalidatePath(`/prof/conception/${id}`)
+  revalidatePath('/prof/signalements', 'layout')
   if (rates.length > 0) {
     return { ok: false, message: 'La consigne est corrigée, mais pas tout l’appui.', empechements: rates }
   }
