@@ -15,7 +15,7 @@
 import { revalidatePath } from 'next/cache'
 import { garderProf } from '@/utils/routeur/acces'
 import {
-  arbitrerUnSignalement, basculerLePool, basculerLaPorteDuSignalement,
+  arbitrerUnSignalement, basculerLePool, basculerLaPorteDuSignalement, marquerLeCasTraite,
 } from '@/utils/signalements/serveur'
 import type { Arbitrage } from '@/utils/signalements/regles'
 
@@ -73,5 +73,18 @@ export async function actionBasculerLaPorte(
   const actif = form.get('actif') === 'oui'
   const r = await basculerLaPorteDuSignalement(admin, actif)
   if (r.ok) rafraichir()
+  return r
+}
+
+/** ⭐ 11/09 — la case « cas traité » : la seule mécanique de sortie de la file. */
+export async function actionMarquerTraite(
+  _prec: RetourSignalement | null, form: FormData,
+): Promise<RetourSignalement> {
+  const { admin, userId } = await garderProf(false)
+  const exerciceId = String(form.get('exercice_id') ?? '')
+  if (!exerciceId) return { ok: false, message: 'Exercice manquant.' }
+  const traite = form.get('traite') === 'oui'
+  const r = await marquerLeCasTraite(admin, exerciceId, traite, userId, new Date().toISOString())
+  if (r.ok) { rafraichir(); revalidatePath('/prof') }
   return r
 }

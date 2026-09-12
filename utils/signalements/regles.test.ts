@@ -9,7 +9,7 @@ import {
   HEURE_DU_COMPTAGE_UTC, MARQUE_RETRAIT_POOL,
   bilanDuRetraitDuPool, blocagesSansLesNotres, echeanceDArbitrage, emportesParLeRetraitDuPool,
   etatDuSignalement, fenetreDArbitrage, grouperParExercice, lundiDeLaDate,
-  motifDuRetraitDuPool, peutRevenirAuPool, peutSeRetracter,
+  motifDuRetraitDuPool, peutRevenirAuPool, peutSeRetracter, estATraiter,
   type Signalement,
 } from './regles'
 
@@ -169,4 +169,30 @@ test('⛔ un exercice bloqué PAR LA FABRIQUE ne revient pas au pool par notre c
   assert.equal(peutRevenirAuPool([]), true)
   assert.equal(peutRevenirAuPool([notre, 'Le cran 4 exige un défaut : il manque.']), false,
     'décocher passerait par-dessus une décision qu\'on n\'a pas prise')
+})
+
+// ── « Cas traité » ─────────────────────────────────────────────────────────
+
+test('sans geste, un exercice signalé est à traiter — quel que soit l’arbitrage', () => {
+  assert.equal(estATraiter([sig({ arbitrage: 'ecarte' })], null), true)
+  assert.equal(estATraiter([sig({ statutDepot: 'clos' })], null), true)
+})
+
+test('coché après le dernier signalement : il sort de la file', () => {
+  assert.equal(estATraiter([sig()], '2026-09-01T11:00:00.000Z'), false)
+})
+
+test('un signalement plus récent que le geste le ramène', () => {
+  assert.equal(estATraiter(
+    [sig(), sig({ id: 's2', signaleAt: '2026-09-03T08:00:00.000Z' })],
+    '2026-09-02T00:00:00.000Z'), true)
+})
+
+test('un texte modifié après le geste le ramène aussi', () => {
+  assert.equal(estATraiter(
+    [sig({ majAt: '2026-09-03T08:00:00.000Z' })], '2026-09-02T00:00:00.000Z'), true)
+})
+
+test('aucun signalement : rien à traiter', () => {
+  assert.equal(estATraiter([], null), false)
 })

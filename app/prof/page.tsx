@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecRappel } from '@/utils/rappels'
 import { calculerSante, type SanteInscription } from '@/utils/sante'
 import { tachesDeriveesDuCalendrier } from '@/utils/calendrier-a-faire'
+import { compterLesExercicesATraiter } from '@/utils/signalements/serveur'
 import BoutonRetirerDuPlan from './BoutonRetirerDuPlan'
 import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import { type ModuleSceau } from '@/components/Pastille'
@@ -101,10 +102,8 @@ export default async function ProfAccueil() {
   //    tableau de bord est LE lieu où le professeur apprend ce qui se passe :
   //    juste le compte d'EXERCICES (pas de signalements — 24 élèves sur la même
   //    instance ne font qu'un exercice à traiter) et le lien vers la page.
-  const { data: sigExos } = await admin
-    .from('exercices_signalements_eleve').select('exercice_id').is('arbitrage', null)
-  const nbExercicesSignales = new Set(
-    ((sigExos ?? []) as Array<{ exercice_id: string }>).map((r) => r.exercice_id)).size
+  //    ⭐ 11/09 soir — la même règle que la file : le geste « cas traité ».
+  const nbExercicesSignales = await compterLesExercicesATraiter(admin)
 
   // ── Zone 2 : santé de la cohorte (par inscription) ──────────────────────────
   const santeValues = [...sante.values()]

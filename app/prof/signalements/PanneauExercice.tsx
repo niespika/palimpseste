@@ -20,7 +20,7 @@
 
 import { useActionState } from 'react'
 import Link from 'next/link'
-import { actionArbitrer, actionBasculerLePool, type RetourSignalement } from './actions'
+import { actionArbitrer, actionBasculerLePool, actionMarquerTraite, type RetourSignalement } from './actions'
 import type { LigneDeLaFile } from '@/utils/signalements/serveur'
 
 export default function PanneauExercice({ ligne }: { ligne: LigneDeLaFile }) {
@@ -28,6 +28,7 @@ export default function PanneauExercice({ ligne }: { ligne: LigneDeLaFile }) {
 
   return (
     <div className="space-y-4">
+      <CasTraite ligne={ligne} />
       <CarteDeLExercice ligne={ligne} />
 
       <section className="space-y-3">
@@ -55,6 +56,40 @@ export default function PanneauExercice({ ligne }: { ligne: LigneDeLaFile }) {
         en cours.
       </p>
     </div>
+  )
+}
+
+// ── ⭐⭐ « Cas traité » — la seule mécanique de sortie de la file (11/09) ────
+//    Mesuré en prod : 6 exercices sur 8 en attente portaient un dépôt clos, que
+//    l'arbitrage « a un problème » refuse — ils ne sortaient jamais. Ce geste ne
+//    touche ni l'assiduité ni les dépôts : il ne peut pas être refusé.
+
+function CasTraite({ ligne }: { ligne: LigneDeLaFile }) {
+  const [retour, action, enCours] = useActionState<RetourSignalement | null, FormData>(
+    actionMarquerTraite, null)
+  return (
+    <form action={action}
+      className={`rounded-xl border p-4 space-y-2 ${ligne.aTraiter
+        ? 'border-attention/50 bg-attention-teinte' : 'border-bordure bg-parchemin'}`}>
+      <input type="hidden" name="exercice_id" value={ligne.identite.exerciceId} />
+      <input type="hidden" name="traite" value={ligne.aTraiter ? 'oui' : 'non'} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="font-ui text-sm text-encre">
+          {ligne.aTraiter
+            ? <><strong>À traiter.</strong> Ce cas reste dans la file tant que vous ne le cochez pas.</>
+            : <><strong>Cas traité</strong> le {ligne.traiteAt?.slice(0, 10)}. Un nouveau signalement le ramènera.</>}
+        </p>
+        <button type="submit" disabled={enCours}
+          className={`min-h-11 rounded-[10px] px-4 py-2 font-ui text-sm font-semibold disabled:opacity-50 ${ligne.aTraiter
+            ? 'bg-bouton text-bouton-texte'
+            : 'border border-bordure-bouton text-encre-douce hover:bg-parchemin-fonce'}`}>
+          {enCours ? '…' : ligne.aTraiter ? '✓ Cas traité' : 'Remettre à traiter'}
+        </button>
+      </div>
+      {retour && (
+        <p className={`font-ui text-xs ${retour.ok ? 'text-ok' : 'text-retard'}`}>{retour.message}</p>
+      )}
+    </form>
   )
 }
 

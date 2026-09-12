@@ -33,7 +33,7 @@ import {
   bilanDuRetraitDuPool, blocagesSansLesNotres, fenetreDArbitrage, grouperParExercice,
   motifDuRetraitDuPool, peutRevenirAuPool, emportesParLeRetraitDuPool,
   type Arbitrage, type BilanDuRetrait, type ExerciceSignale, type FenetreDArbitrage,
-  type Signalement,
+  type Signalement, estATraiter,
 } from './regles'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -202,6 +202,10 @@ export interface IdentiteDExercice {
 
 export interface LigneDeLaFile extends ExerciceSignale {
   identite: IdentiteDExercice
+  /** ⭐ 11/09 — le geste « cas traité », daté ; `null` = jamais coché. */
+  traiteAt: string | null
+  /** ⭐ 11/09 — LA règle de la file (`estATraiter`) : un signalement plus récent que le geste. */
+  aTraiter: boolean
   /** Qui a signalé — le nom d'affichage, par identifiant d'élève. */
   noms: Record<string, string>
   /** L'état des dépôts de cette instance, pour annoncer le retrait du pool. */
@@ -255,6 +259,17 @@ export async function chargerLaFileDesSignalements(
   const exerciceIds = [...new Set(brut.map((s) => s.exercice_id))]
   const depotIds = brut.map((s) => s.depot_id)
   const eleveIds = [...new Set(brut.map((s) => s.eleve_id))]
+
+  // ── ⭐ 11/09 — Les gestes « cas traité », par exercice ──────────────────
+  const traiteAtPar = new Map<string, string>()
+  {
+    const { data, error } = await admin.from('exercices_signalements_traites')
+      .select('exercice_id, traite_at').in('exercice_id', exerciceIds)
+    if (error) incidents.push(`cas traités : ${error.message} — tout est montré comme à traiter`)
+    for (const t of (data ?? []) as Array<{ exercice_id: string; traite_at: string }>) {
+      traiteAtPar.set(t.exercice_id, t.traite_at)
+    }
+  }
 
   // ── Les dépôts SIGNALÉS : leur statut porte l'effet réel sur l'assiduité ──
   const { data: depotsSignales, error: eD } = await admin
@@ -325,8 +340,11 @@ export async function chargerLaFileDesSignalements(
       const cycle = toISODate(lundiDuCycle(new Date(assigneAt), fuseau))
       fenetres[s.id] = fenetreDArbitrage(cycle, maintenant)
     }
+    const traiteAt = traiteAtPar.get(g.exerciceId) ?? null
     return {
       ...g,
+      traiteAt,
+      aTraiter: estATraiter(g.signalements, traiteAt),
       identite: identites.get(g.exerciceId) ?? {
         exerciceId: g.exerciceId, premiereLigne: 'Instance introuvable', typeLibelle: null,
         cran: null, lieu: '', statut: '', bloque: false, blocages: [], peutRevenirAuPool: false,
@@ -643,4 +661,50 @@ export async function exerciceEnRevision(
     monTexte: mien?.texte ?? null,
     confirme: mien?.arbitrage === 'confirme',
   }
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// « CAS TRAITÉ » — le geste, et le compte pour le tableau de bord
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⭐⭐ COCHER « traité » DATE le geste ; décocher l'efface. Il ne touche ni les
+ *    signalements, ni les dépôts, ni l'assiduité — c'est tout son intérêt :
+ *    il ne peut pas être refusé pour une raison qui n'a rien à voir.
+ */
+export async function marquerLeCasTraite(
+  admin: Admin, exerciceId: string, traite: boolean, userId: string, maintenant: string,
+): Promise<{ ok: boolean; message: string }> {
+  if (traite) {
+    const { error } = await admin.from('exercices_signalements_traites')
+      .upsert({ exercice_id: exerciceId, traite_at: maintenant, traite_par: userId },
+        { onConflict: 'exercice_id' })
+    if (error) return { ok: false, message: `Le geste a échoué : ${error.message}` }
+    return { ok: true, message: 'Cas traité — il sort de la file. Un nouveau signalement le ramènera.' }
+  }
+  const { error } = await admin.from('exercices_signalements_traites')
+    .delete().eq('exercice_id', exerciceId)
+  if (error) return { ok: false, message: `Le geste a échoué : ${error.message}` }
+  return { ok: true, message: 'Remis à traiter.' }
+}
+
+/**
+ * Le nombre d'EXERCICES à traiter — pour le tableau de bord. La même règle que
+ * la file, sur les mêmes lectures, réduites au strict nécessaire.
+ */
+export async function compterLesExercicesATraiter(admin: Admin): Promise<number> {
+  const { data: sig } = await admin.from('exercices_signalements_eleve')
+    .select('exercice_id, signale_at, maj_at')
+  const par = new Map<string, Array<{ signaleAt: string; majAt: string | null }>>()
+  for (const s of (sig ?? []) as Array<{ exercice_id: string; signale_at: string; maj_at: string | null }>) {
+    par.set(s.exercice_id, [...(par.get(s.exercice_id) ?? []), { signaleAt: s.signale_at, majAt: s.maj_at }])
+  }
+  if (par.size === 0) return 0
+  const { data: tr } = await admin.from('exercices_signalements_traites')
+    .select('exercice_id, traite_at').in('exercice_id', [...par.keys()])
+  const traiteAt = new Map((tr ?? []).map((t) => [t.exercice_id as string, t.traite_at as string]))
+  let n = 0
+  for (const [id, ss] of par) if (estATraiter(ss, traiteAt.get(id) ?? null)) n++
+  return n
 }

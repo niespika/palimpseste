@@ -68,6 +68,29 @@ export function peutSeRetracter(s: Pick<Signalement, 'arbitrage'>): boolean {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// « CAS TRAITÉ » — la seule mécanique de sortie de la file (Louis, 11/09)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⭐⭐ UN EXERCICE EST À TRAITER TANT QUE LE PROFESSEUR N'A PAS COCHÉ « traité »
+ *    APRÈS le dernier signalement. Ni l'arbitrage, ni le statut du dépôt, ni
+ *    l'assiduité n'entrent ici : mesuré en prod le 11/09, 6 des 8 exercices en
+ *    attente portaient un dépôt `clos`, que l'arbitrage « a un problème »
+ *    refuse de retirer — ils ne pouvaient donc jamais sortir de la liste.
+ *
+ * ⭐ Un signalement (ou une modification de son texte) POSTÉRIEUR au geste
+ *    ramène l'exercice : le geste n'est pas effacé, il est dépassé.
+ */
+export function estATraiter(
+  signalements: ReadonlyArray<Pick<Signalement, 'signaleAt' | 'majAt'>>,
+  traiteAt: string | null,
+): boolean {
+  if (signalements.length === 0) return false
+  if (traiteAt === null) return true
+  return signalements.some((s) => (s.majAt ?? s.signaleAt) > traiteAt || s.signaleAt > traiteAt)
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // LE REGROUPEMENT — « je ne vois qu'UN exercice, mais TOUS les commentaires »
 // ════════════════════════════════════════════════════════════════════════════
 

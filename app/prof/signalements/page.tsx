@@ -43,8 +43,11 @@ export default async function SignalementsPage({
   //    disparaît de la liste ». Un exercice est TRAITÉ quand TOUS ses
   //    signalements sont arbitrés ; un nouveau signalement le ramène dans
   //    « à traiter ». Les traités restent lisibles sous leur propre onglet.
-  const aTraiter = file.lignes.filter((l) => l.enAttente > 0)
-  const traites = file.lignes.filter((l) => l.enAttente === 0)
+  // ⭐⭐ 11/09 soir — LA RÈGLE EST LE GESTE « cas traité » (`estATraiter`), plus
+  //    l'arbitrage : six exercices en prod ne pouvaient pas sortir de la liste
+  //    parce que leur dépôt clos refusait le retrait du comptage.
+  const aTraiter = file.lignes.filter((l) => l.aTraiter)
+  const traites = file.lignes.filter((l) => !l.aTraiter)
   const vueTraites = vue === 'traites'
   const visibles = vueTraites ? traites : aTraiter
   const active = visibles.find((l) => l.identite.exerciceId === sel) ?? visibles[0] ?? null
@@ -167,9 +170,9 @@ function Vignette({
       </p>
       <p className="mt-1.5 font-ui text-xs text-encre-douce">
         {ligne.signalements.length} élève(s)
-        {ligne.enAttente > 0
-          ? <span className="text-attention"> · {ligne.enAttente} à trancher</span>
-          : <span className="text-muet"> · tranché</span>}
+        {ligne.aTraiter
+          ? <span className="text-attention"> · à traiter</span>
+          : <span className="text-muet"> · traité</span>}
       </p>
     </Link>
   )
