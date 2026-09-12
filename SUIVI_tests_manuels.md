@@ -2,7 +2,7 @@
 
 ## État courant — signalements, les trois reprises de Louis : CODÉES, commits locaux (11/09 tard)
 
-Trois commits après `c340ce2`, à pousser par GitHub Desktop. **⚠️ Une migration attend la prod : `signalements_traites.sql`** (jouée en bac à sable ; ligne au `SUIVI_SQL.md`). Tant qu'elle n'est pas jouée en prod, la page des signalements montrera tout comme « à traiter » et signalera l'incident en tête — le code lit la table sans planter.
+**12/09 : poussé par Louis (`origin/main` = `2b1958d`), et `signalements_traites.sql` JOUÉE EN PROD** sur son ordre (table créée, 0 ligne, RLS posée). Les trois reprises sont donc déployées et opérantes. La mention « migration en attente » ci-dessous est historique.
 
 - **(1) « Cas traité »** — un bouton par exercice, seule mécanique de sortie de la file ; un signalement postérieur ramène l'exercice. Cause mesurée en prod du blocage : 6 des 8 exercices en attente portaient un dépôt `clos`, que l'arbitrage « a un problème » refuse de retirer du comptage. Règle pure `estATraiter` + 5 tests. Éprouvé : 4 → clic → « À traiter · 3 / Traités · 1 » ; tableau de bord « 3 exercices ».
 - **(2) « Avant sa réponse »** — bascule sur l'écran de l'élève (défaut) : la même vue, remise à zéro par `vueAvantReponse` (module pur, 3 tests) ; « Où il en est aujourd'hui » garde l'état réel. Éprouvé sur un cran 3 (« en cours : Préparer », 0 jeton posé) et un cran 2.
