@@ -322,9 +322,15 @@ export const MODULES: readonly ModuleConfig[] = [
     // dans la matrice de C6 — sa page reste en place, à reprendre là-bas.
     // « Semestre » se replie sous Quizz : ses notes ne viennent que des quiz fermés,
     // et `prefixes` garde l'onglet Quizz allumé quand on y est.
+    // 13/09 — « Diagnostic » REVIENT dans la barre, à la demande de Louis : depuis
+    // C6-L1 l'écran a une porte (Compétences du profil de classe) et rend ses trois
+    // vues (`?vue=classe|unite|flashcards`), mais il n'était atteignable que par ce
+    // détour. Quatre onglets, comme Fragments : exception assumée à la règle R8.
+    // Le détail par élève (`/diagnostic/<id>`) allume le même onglet par préfixe.
     sousOngletsProf: [
       { href: '/prof/quazian', label: 'Flashcards' },
       { href: '/prof/quazian/quizz', label: 'Quizz', prefixes: ['/prof/quazian/semestre'] },
+      { href: '/prof/quazian/diagnostic', label: 'Diagnostic' },
       { href: '/prof/quazian/parametres', label: 'Paramètres' },
     ],
     // C7·L2 — face élève : deux onglets pilotés par `?vue=` (même mécanique que

@@ -126,10 +126,23 @@ describe("ce que le lot ne touche pas", () => {
     ]))
     // ⚠️ « Un module = 2-3 onglets » (`AGENTS.md`) : Aletheia est passé de [2, 0]
     //    à [3, 3] avec C5-L4, et c'est LE PLAFOND — il n'y a pas de place pour un
-    //    quatrième. Fragments (4) est l'exception documentée de C8·L3.
+    //    quatrième. Fragments (4) est l'exception documentée de C8·L3, Quazian (4)
+    //    celle du 13/09 : « Diagnostic » revient dans la barre à la demande de Louis.
     assert.deepEqual(compte, {
-      aletheia: [3, 3], codex: [2, 2], fragments: [4, 3], quazian: [3, 2], scriptorium: [4, 2],
+      aletheia: [3, 3], codex: [2, 2], fragments: [4, 3], quazian: [4, 2], scriptorium: [4, 2],
     })
+  })
+
+  test('13/09 — Quazian : « Diagnostic » est un onglet, et ses trois vues + le détail élève l’allument', () => {
+    const quazian = MODULES.find((m) => m.cle === 'quazian')!
+    const onglets = sousOngletsPour(quazian, 'prof')
+    assert.deepEqual(onglets.map((o) => o.label), ['Flashcards', 'Quizz', 'Diagnostic', 'Paramètres'])
+    for (const route of ['/prof/quazian/diagnostic', '/prof/quazian/diagnostic/abc-123']) {
+      assert.equal(labelDe(onglets, ongletActifParRoute(onglets, route)), 'Diagnostic', route)
+    }
+    // Et la racine reste Flashcards : le plus long préfixe gagne, pas le premier.
+    assert.equal(labelDe(onglets, ongletActifParRoute(onglets, '/prof/quazian')), 'Flashcards')
+    assert.equal(labelDe(onglets, ongletActifParRoute(onglets, '/prof/quazian/semestre')), 'Quizz')
   })
 })
 
