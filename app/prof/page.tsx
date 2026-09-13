@@ -42,13 +42,28 @@ export default async function ProfAccueil() {
   const inscrits = inscriptionsActives ?? []
 
   // ── Zone 1 : fragments à valider (analyses générées, toutes classes) ────────
-  const { data: analysesAValider } = await admin
-    .from('fragments_analyses').select('depot_id').eq('statut', 'generee')
-  const depotIdsAValider = (analysesAValider ?? []).map((a) => a.depot_id as string)
-  const { data: depotsAValider } = depotIdsAValider.length > 0
-    ? await admin.from('fragments_depots').select('id, inscription_id, semaine_id').in('id', depotIdsAValider)
+  //    ⭐ 13/09/2026 — ET LES ANALYSES EN ÉCHEC. « 2 fragments déposés THLP ont eu
+  //    une erreur au moment de l'analyse et je n'ai pas eu de message. » Le statut
+  //    `erreur` n'était lu que par la page de l'analyse elle-même, que personne
+  //    n'ouvre quand rien ne l'y invite. Une analyse restée `en_cours` plus de
+  //    30 min est comptée en échec aussi : la fonction a été tuée avant d'écrire
+  //    `erreur`, et elle n'en sortira jamais seule.
+  const { data: analysesOuvertes } = await admin
+    .from('fragments_analyses').select('depot_id, statut, updated_at')
+    .in('statut', ['generee', 'erreur', 'en_cours'])
+  const seuilEnCoursMs = Date.now() - 30 * 60 * 1000
+  const estEnEchec = (a: { statut: string; updated_at: string | null }) =>
+    a.statut === 'erreur'
+    || (a.statut === 'en_cours' && a.updated_at != null && new Date(a.updated_at).getTime() < seuilEnCoursMs)
+  const depotIdsAValider = (analysesOuvertes ?? []).filter((a) => a.statut === 'generee').map((a) => a.depot_id as string)
+  const depotIdsEnEchec = (analysesOuvertes ?? []).filter(estEnEchec).map((a) => a.depot_id as string)
+  const depotIdsOuverts = [...depotIdsAValider, ...depotIdsEnEchec]
+  const { data: depotsOuverts } = depotIdsOuverts.length > 0
+    ? await admin.from('fragments_depots').select('id, inscription_id, semaine_id').in('id', depotIdsOuverts)
     : { data: [] }
-  const inscIdsAValider = [...new Set((depotsAValider ?? []).map((d) => d.inscription_id as string))]
+  const depotsAValider = (depotsOuverts ?? []).filter((d) => depotIdsAValider.includes(d.id as string))
+  const depotsEnEchec = (depotsOuverts ?? []).filter((d) => depotIdsEnEchec.includes(d.id as string))
+  const inscIdsAValider = [...new Set((depotsOuverts ?? []).map((d) => d.inscription_id as string))]
   const { data: inscAValider } = inscIdsAValider.length > 0
     ? await admin.from('inscriptions').select('id, eleve_id, classe_id').in('id', inscIdsAValider)
     : { data: [] }
@@ -68,7 +83,7 @@ export default async function ProfAccueil() {
   const numSemaine = new Map((semainesV ?? []).map((s) => [s.id as string, s.numero as number]))
   const nomClasse = new Map(toutesClasses.map((c) => [c.id, c.nom]))
 
-  const aValider = (depotsAValider ?? []).map((d) => {
+  const decrireDepot = (d: { id: unknown; inscription_id: unknown; semaine_id: unknown }) => {
     const insc = inscMap.get(d.inscription_id as string)
     return {
       depotId: d.id as string,
@@ -77,9 +92,15 @@ export default async function ProfAccueil() {
       classeNom: insc ? nomClasse.get(insc.classe_id as string) ?? '' : '',
       semaineNum: numSemaine.get(d.semaine_id as string) ?? '?',
     }
-  })
+  }
+  const aValider = depotsAValider.map(decrireDepot)
+  const enEchec = depotsEnEchec.map(decrireDepot)
   const aValiderParClasse = new Map<string, number>()
   for (const v of aValider) if (v.classeId) aValiderParClasse.set(v.classeId, (aValiderParClasse.get(v.classeId) ?? 0) + 1)
+  const enEchecParClasse = new Map<string, number>()
+  for (const v of enEchec) if (v.classeId) enEchecParClasse.set(v.classeId, (enEchecParClasse.get(v.classeId) ?? 0) + 1)
+  const hrefEnEchec = enEchec.length > 0 ? `/prof/fragments-erudition/analyse/${enEchec[0].depotId}` : '/prof/fragments-erudition'
+  const libelleEnEchec = (n: number) => `${n} analyse${n > 1 ? 's' : ''} de fragments en échec`
 
   // ── Zone 1 : intégrité (« petits malins ») — signalements à traiter + bloqués ─
   const [{ count: nbSignalements }, { count: nbBloques }, { data: integriteParams }, { data: premierSig }] = await Promise.all([
@@ -132,6 +153,7 @@ export default async function ProfAccueil() {
   let heroTacheId: string | null = null
   let heroIntegrite = false
   let heroExamen = false
+  let heroEnEchec = false
   // ⭐⭐ L'EXAMEN HUMAIN PASSE EN TÊTE DE LA CASCADE, ET LE MOTIF N'EST PAS LE
   //    CONFORT. C'est le seul item de cette liste qui soit une OBLIGATION
   //    LÉGALE : « toute contestation portant sur une citation absente part
@@ -158,6 +180,20 @@ export default async function ProfAccueil() {
       danger: true,
     }
     heroExamen = true
+  } else if (enEchec.length > 0) {
+    // ⭐ Avant les fragments à valider : un fragment à valider attend sans dommage,
+    //    une analyse en échec laisse l'élève sans retour tant que personne ne la
+    //    relance — et rien d'autre à l'écran ne le dit.
+    const noms = [...new Set(enEchec.slice(0, 2).map((v) => v.eleveNom))].filter((n) => n && n !== '?')
+    hero = {
+      titre: libelleEnEchec(enEchec.length),
+      sousTitre: [noms.join(' & '), enEchec[0].classeNom, `semaine ${enEchec[0].semaineNum}`, 'à relancer'].filter(Boolean).join(' · '),
+      ctaLabel: 'Relancer →',
+      ctaHref: hrefEnEchec,
+      module: 'fragments',
+      danger: true,
+    }
+    heroEnEchec = true
   } else if (aValider.length > 0) {
     const noms = [...new Set(aValider.slice(0, 2).map((v) => v.eleveNom))].filter((n) => n && n !== '?')
     hero = {
@@ -189,6 +225,7 @@ export default async function ProfAccueil() {
   // ⭐ Elle reste dans « À préparer » quand un item plus urgent l'a précédée au
   //    héros — elle ne disparaît jamais de l'écran tant qu'elle n'est pas vide.
   const examenEnPreparer = examen.actes.length > 0 && !heroExamen
+  const enEchecEnPreparer = enEchec.length > 0 && !heroEnEchec
   const tachesEnPreparer = tachesAFaire.filter((t) => t.id !== heroTacheId)
 
   const labelClasse = (n: number) => `${n} élève${n > 1 ? 's' : ''}`
@@ -241,6 +278,18 @@ export default async function ProfAccueil() {
                         <span className="text-muet"> — examen humain</span>
                       </span>
                       <span className="font-ui text-xs text-retard bg-retard-teinte px-2 py-0.5 rounded-full flex-shrink-0">exigence de la loi</span>
+                    </div>
+                  </Link>
+                )}
+                {enEchecEnPreparer && (
+                  <Link href={hrefEnEchec} className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full bg-retard flex-shrink-0" aria-hidden />
+                      <span className="font-corps text-base text-encre flex-1">
+                        {libelleEnEchec(enEchec.length)}
+                        <span className="text-muet"> — {[...new Set(enEchec.map((v) => v.classeNom))].filter(Boolean).join(', ') || 'Vestigia'}</span>
+                      </span>
+                      <span className="font-ui text-xs text-retard bg-retard-teinte px-2 py-0.5 rounded-full flex-shrink-0">à relancer</span>
                     </div>
                   </Link>
                 )}
@@ -366,6 +415,7 @@ export default async function ProfAccueil() {
                     const aDesFragments = santeClasse.length > 0
                     const nbDiff = santeClasse.filter((s) => s.enDifficulte).length
                     const nbValider = aValiderParClasse.get(c.id) ?? 0
+                    const nbEchec = enEchecParClasse.get(c.id) ?? 0
                     const couleur: CouleurTuile = !aDesFragments ? 'neutre' : nbDiff > 0 ? 'rouge' : 'vert'
                     return (
                       <Tuile
@@ -378,6 +428,7 @@ export default async function ProfAccueil() {
                             <span className="text-muet">{labelClasse(nbInscrits)}</span>
                             {nbDiff > 0 && <span className="text-retard">· {nbDiff} à risque</span>}
                             {nbValider > 0 && <span className="text-attention">· {nbValider} à valider</span>}
+                            {nbEchec > 0 && <span className="text-retard">· {nbEchec} analyse{nbEchec > 1 ? 's' : ''} en échec</span>}
                             {aDesFragments && nbDiff === 0 && <span className="text-ok">· à jour</span>}
                           </div>
                         }
