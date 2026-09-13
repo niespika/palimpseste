@@ -11,6 +11,7 @@ import type { ContenuBiblio } from './LigneContenuBiblio'
 import EditeurSections from './EditeurSections'
 import { reconstruirePlages, type PlageSection } from '@/utils/scriptorium-sections'
 import GrilleInstance from './GrilleInstance'
+import Tiroir from './Tiroir'
 import { chargerInstanceDeClasse, type InstanceDeClasse } from './instance-serveur'
 import BoutonRegenererSynthese from './BoutonRegenererSynthese'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -538,25 +539,32 @@ export default async function ScriptoriumPage({
       )}
       {vue === 'classes' && !instanceSel && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* Les classes en ONGLETS sur une rangée (13/09) : la grille de tuiles prenait deux
+              rangées avant le premier contenu utile. Au-delà de la largeur, la rangée défile. */}
+          <nav aria-label="Classes" className="-mx-1 px-1 flex gap-2 overflow-x-auto pb-1">
             {classesList.map(c => {
               const np = parcoursParClasse.get(c.id) ?? 0
               const nl = (livresParClasse.get(c.id) ?? []).length
               const parts: string[] = []
               if (np > 0) parts.push(`${np} parcours`)
               if (nl > 0) parts.push(`${nl} livre${nl > 1 ? 's' : ''}`)
+              const sel = classeSel === c.id
               return (
-                <Tuile
+                <Link
                   key={c.id}
-                  nom={c.nom}
-                  sousTitre={parts.length ? parts.join(' · ') : 'Rien d’assigné'}
                   href={`/prof/scriptorium?vue=classes&classe=${c.id}`}
-                  selectionnee={classeSel === c.id}
-                  couleur={np + nl > 0 ? 'vert' : 'neutre'}
-                />
+                  aria-current={sel ? 'page' : undefined}
+                  className={`font-ui text-sm rounded-full border px-3.5 py-1.5 flex-shrink-0 whitespace-nowrap ${
+                    sel ? 'bg-pigment text-surface border-pigment font-semibold'
+                      : np + nl > 0 ? 'bg-surface text-encre border-bordure hover:border-pigment'
+                        : 'bg-surface text-muet border-bordure hover:border-pigment'}`}
+                >
+                  {c.nom}
+                  {parts.length > 0 && <span className={`font-normal ${sel ? 'opacity-75' : 'text-muet'}`}> · {parts.join(' · ')}</span>}
+                </Link>
               )
             })}
-          </div>
+          </nav>
 
           {classeSel && (
             <div className="bg-surface border border-bordure rounded-xl p-4 space-y-4">
@@ -565,32 +573,45 @@ export default async function ScriptoriumPage({
               {parcoursDeClasse.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs text-muet uppercase tracking-wide">Parcours assignés</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {/* RAG L3 : la tuile ouvre le PARCOURS DE LA CLASSE (grille d'instance,
-                        pilotage « vu ») — le modèle partagé reste accessible dessous. */}
+                  {/* Une LIGNE par parcours (13/09) : un parcours de plus = 44 px de plus, jamais
+                      une tuile ni un panneau de plus. La ligne ouvre le PARCOURS DE LA CLASSE
+                      (grille d'instance, pilotage « vu ») ; le modèle partagé reste à droite. */}
+                  <ul className="space-y-1.5">
                     {parcoursDeClasse.map(p => (
-                      <div key={p.id} className="space-y-1">
-                        <Tuile
-                          nom={p.titre}
-                          sousTitre={`${p.nbSemaines} sem.${p.dateDebut ? ` · début ${p.dateDebut.split('-').reverse().join('/')}` : ' · sans date'} · pilotage « vu »`}
+                      <li key={p.id} className="rounded-lg border border-bordure bg-surface border-l-2 border-l-ok flex items-center gap-x-3 gap-y-1 flex-wrap px-3 py-2">
+                        <Link
                           href={`/prof/scriptorium?vue=classes&classe=${classeSel}&instance=${p.pcId}`}
-                          couleur="vert"
-                        />
+                          className="font-corps text-[15px] font-semibold text-encre hover:underline min-w-[10rem] flex-1 truncate"
+                        >
+                          {p.titre}
+                        </Link>
+                        <span className="font-ui text-[10px] px-1.5 py-0.5 rounded bg-parchemin-fonce text-encre-douce">{p.nbSemaines} sem.</span>
+                        {p.dateDebut
+                          ? <span className="font-ui text-[10px] px-1.5 py-0.5 rounded bg-parchemin-fonce text-encre-douce">début {p.dateDebut.split('-').reverse().slice(0, 2).join('/')}</span>
+                          : <span className="font-ui text-[10px] px-1.5 py-0.5 rounded bg-attention-teinte text-attention">sans date</span>}
+                        <span className="flex-1 hidden sm:block" />
+                        <Link
+                          href={`/prof/scriptorium?vue=classes&classe=${classeSel}&instance=${p.pcId}`}
+                          className="font-ui text-xs font-semibold text-pigment hover:opacity-80 whitespace-nowrap"
+                        >
+                          Ouvrir le parcours de la classe →
+                        </Link>
                         <Link
                           href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
-                          className="block px-1 text-xs text-muet hover:text-encre"
+                          className="font-ui text-xs text-muet hover:text-encre whitespace-nowrap"
                         >
-                          Modèle (tous groupes) →
+                          Modèle →
                         </Link>
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
 
+              {/* Le reste en TIROIRS repliés (13/09) — composant client `Tiroir`, pas de
+                  <details> natif (Chrome en restaure l'état au rechargement → hydratation). */}
               {(livresParClasse.get(classeSel) ?? []).length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muet uppercase tracking-wide">Livres (lecture Aletheia)</p>
+                <Tiroir titre="Livres (lecture Aletheia)" etat={<span className="text-muet">· {(livresParClasse.get(classeSel) ?? []).length}</span>}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(livresParClasse.get(classeSel) ?? []).map(u => {
                       const nb = u.nb_semaines ?? docs.filter(d => d.unite_id === u.id).length
@@ -605,26 +626,29 @@ export default async function ScriptoriumPage({
                       )
                     })}
                   </div>
-                </div>
+                </Tiroir>
               )}
 
               {planEvalActif && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muet uppercase tracking-wide">Plan d’évaluation</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Tuile
-                      nom="Plan d’évaluation de la classe"
-                      sousTitre="Voir et ajuster"
-                      href={`/prof/scriptorium?vue=evaluations&classe=${classeSel}`}
-                    />
-                  </div>
+                <div className="rounded-lg border border-bordure bg-surface px-3 py-2 flex items-center gap-2 font-ui text-sm">
+                  <span className="font-semibold text-encre">Plan d’évaluation</span>
+                  <span className="flex-1" />
+                  <Link href={`/prof/scriptorium?vue=evaluations&classe=${classeSel}`} className="text-xs font-semibold text-pigment hover:opacity-80">Voir et ajuster →</Link>
                 </div>
               )}
 
               {/* ── Synthèses du Scriptorium élève (RAG L7, §10.3) ─────────── */}
               {(ragActif || synthesesRag.length > 0) && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muet uppercase tracking-wide">Synthèses du Scriptorium élève</p>
+                <Tiroir
+                  titre="Synthèses du Scriptorium élève"
+                  ouvertParDefaut={syntheseDetail != null}
+                  etat={synthesesRag.length === 0
+                    ? <span className="text-muet">· aucune</span>
+                    : synthesesRag.some(r => r.statut === 'READY' && !r.vueAt)
+                      ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-attention-teinte text-attention">{synthesesRag.filter(r => r.statut === 'READY' && !r.vueAt).length} non lue{synthesesRag.filter(r => r.statut === 'READY' && !r.vueAt).length > 1 ? 's' : ''}</span>
+                      : <span className="text-muet">· {synthesesRag.length}</span>}
+                >
+                  <div className="space-y-2">
                   {synthesesRag.length === 0 ? (
                     <p className="text-sm text-muet">Aucune synthèse encore — le cron du lundi les génère (ou lance la semaine écoulée ci-dessous).</p>
                   ) : (
@@ -695,7 +719,8 @@ export default async function ScriptoriumPage({
                     </div>
                   )}
                   {ragActif && <BoutonRegenererSynthese classeId={classeSel} />}
-                </div>
+                  </div>
+                </Tiroir>
               )}
 
               {parcoursDeClasse.length === 0 && (livresParClasse.get(classeSel) ?? []).length === 0 && (
