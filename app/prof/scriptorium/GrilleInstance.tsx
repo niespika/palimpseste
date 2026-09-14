@@ -607,13 +607,25 @@ export default function GrilleInstance({ instance, cibles }: {
   function rendreChapitre(
     sem: SemaineInstance, el: ElementInstance, enCoursSem: boolean,
     pli?: { cle: string; ouvert: boolean; enfants: ElementInstance[] },
+    sousUnChapitre = false,
   ) {
+    // Un sous-chapitre rendu HORS de son chapitre (il est dans une autre semaine, ou
+    // retiré) : dire d'où il vient, au lieu de le retirer comme s'il était l'enfant du
+    // chapitre du dessus — c'est ce que Louis lisait en prod le 13/09 (« 4.4 » sous « 5 »).
+    const orphelin = el.niveau === 2 && !sousUnChapitre && el.numero
+      ? (() => {
+          const numChap = el.numero!.split('.')[0]
+          const chap = instance.semaines.flatMap(s2 => s2.elements)
+            .find(e => e.creneauId === el.creneauId && e.numero === numChap)
+          return { numero: numChap, semaine: chap ? chap.semaineReelle : null }
+        })()
+      : null
     const freres = sem.elements.filter(f => f.creneauId === el.creneauId && f.semaineReelle === el.semaineReelle)
     const idxFrere = freres.findIndex(f => f.id === el.id)
     const enCours = enCoursSem && el.vuAt == null
     const sousVus = pli ? pli.enfants.filter(e => e.vuAt != null).length : 0
     return (
-      <li key={el.id} className={`flex items-center gap-2 rounded px-1.5 py-1 min-h-[44px] sm:min-h-0 hover:bg-parchemin-fonce/60 ${el.niveau === 2 && !pli ? 'ml-5 sm:ml-6' : ''}`}>
+      <li key={el.id} className="flex items-center gap-2 rounded px-1.5 py-1 min-h-[44px] sm:min-h-0 hover:bg-parchemin-fonce/60">
         {pli ? (
           <button
             type="button"
@@ -645,6 +657,16 @@ export default function GrilleInstance({ instance, cibles }: {
         {pli && !pli.ouvert && (
           <span className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${sousVus === pli.enfants.length ? 'bg-ok-teinte text-ok' : 'bg-parchemin-fonce text-muet'}`}>
             {sousVus}/{pli.enfants.length} sous-chap.
+          </span>
+        )}
+        {orphelin && (
+          <span
+            className="font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-parchemin-fonce text-muet"
+            title={orphelin.semaine
+              ? `Sous-chapitre du chapitre ${orphelin.numero}, qui est en semaine ${orphelin.semaine} pour ${instance.classeNom}`
+              : `Sous-chapitre du chapitre ${orphelin.numero}, absent de ce parcours`}
+          >
+            chap. {orphelin.numero}{orphelin.semaine ? ` · sem. ${orphelin.semaine}` : ''}
           </span>
         )}
         {enCours && (
@@ -1037,7 +1059,7 @@ export default function GrilleInstance({ instance, cibles }: {
                                           {rendreChapitre(sem, n.el, enCoursSem, { cle, ouvert, enfants: n.enfants })}
                                           {ouvert && (
                                             <ul className="ml-5 sm:ml-7 border-l border-bordure pl-1">
-                                              {n.enfants.map(e => rendreChapitre(sem, e, enCoursSem))}
+                                              {n.enfants.map(e => rendreChapitre(sem, e, enCoursSem, undefined, true))}
                                             </ul>
                                           )}
                                         </Fragment>
