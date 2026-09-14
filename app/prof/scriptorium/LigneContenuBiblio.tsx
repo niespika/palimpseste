@@ -8,6 +8,8 @@ import {
   supprimerContenuBiblio,
   ajouterImageContenu,
   supprimerImageContenu,
+  deposerPresentation,
+  retirerPresentation,
 } from './actions'
 import ChoixDesNotions from './ChoixDesNotions'
 import type { ImageItem } from './LigneContenu'
@@ -32,6 +34,8 @@ export interface ContenuBiblio {
    * `plan_de_lecture` (`08-` §2).
    */
   notions: string[]
+  /** Un deck HTML de présentation est déposé pour ce cours (prof seul, jamais lu par le RAG). */
+  presentation: boolean
 }
 
 export default function LigneContenuBiblio({ item, notionsConnues }: {
@@ -46,6 +50,7 @@ export default function LigneContenuBiblio({ item, notionsConnues }: {
   const [ajoutImage, setAjoutImage] = useState(false)
   const [legendeImg, setLegendeImg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const deckRef = useRef<HTMLInputElement>(null)
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -99,6 +104,30 @@ export default function LigneContenuBiblio({ item, notionsConnues }: {
     router.refresh()
   }
 
+  async function handleDeposerDeck() {
+    const f = deckRef.current?.files?.[0]
+    if (!f) return
+    setChargement(true)
+    const fd = new FormData()
+    fd.append('contenuId', item.id)
+    fd.append('fichier', f)
+    const res = await deposerPresentation(fd)
+    setChargement(false)
+    if (res.error) { alert(res.error); return }
+    if (deckRef.current) deckRef.current.value = ''
+    setEdition(false)
+    router.refresh()
+  }
+
+  async function handleRetirerDeck() {
+    if (!confirm('Retirer la présentation de ce cours ?')) return
+    setChargement(true)
+    const res = await retirerPresentation(item.id)
+    setChargement(false)
+    if (res.error) { alert(res.error); return }
+    router.refresh()
+  }
+
   async function handleSupprimerImage(imageId: string) {
     setChargement(true)
     const res = await supprimerImageContenu(imageId)
@@ -149,6 +178,22 @@ export default function LigneContenuBiblio({ item, notionsConnues }: {
           </div>
         ) : (
           <button type="button" onClick={() => setAjoutImage(true)} className="text-xs text-muet hover:text-encre">+ Ajouter une image</button>
+        )}
+
+        {/* Le deck de présentation : un HTML autonome par cours, redéposer remplace.
+            Support du professeur seulement — il n'entre JAMAIS dans le RAG. */}
+        {item.type === 'cours' && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-bordure">
+            <span className="text-xs font-medium text-muet">Présentation (HTML)</span>
+            <input ref={deckRef} type="file" accept=".html,.htm"
+              className="text-xs text-encre-douce file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-parchemin-fonce" />
+            <button type="button" onClick={handleDeposerDeck} disabled={chargement} className="bg-bouton text-surface px-2 py-1 rounded text-xs disabled:opacity-50">
+              {item.presentation ? 'Remplacer' : 'Déposer'}
+            </button>
+            {item.presentation && (
+              <button type="button" onClick={handleRetirerDeck} disabled={chargement} className="text-xs text-muet hover:text-retard">Retirer</button>
+            )}
+          </div>
         )}
 
         {erreur && <p className="text-retard text-sm">{erreur}</p>}
@@ -217,6 +262,16 @@ export default function LigneContenuBiblio({ item, notionsConnues }: {
           )}
         </div>
         <div className="flex gap-2 flex-shrink-0">
+          {item.type === 'cours' && item.presentation && (
+            <>
+              <Link href={`/prof/scriptorium/presentation/${item.id}`} className="text-xs text-pigment hover:text-encre font-medium" title="Projeter le deck, avec le plein écran">
+                Présenter
+              </Link>
+              <a href={`/prof/scriptorium/presentation/${item.id}/fichier`} target="_blank" rel="noopener noreferrer" className="text-xs text-muet hover:text-encre" title="Ouvrir le fichier HTML dans un autre onglet">
+                Onglet ↗
+              </a>
+            </>
+          )}
           {item.type === 'cours' && (
             <Link
               href={`/prof/scriptorium?vue=cours&decouper=${item.id}`}

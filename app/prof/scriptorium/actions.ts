@@ -927,6 +927,9 @@ export async function purgerContenuBiblio(id: string): Promise<{ success?: boole
 
   // Fichiers Storage à nettoyer (collectés AVANT le delete qui cascade les images).
   const { data: imgs } = await supabase.from('scriptorium_contenu_images').select('fichier_ref').eq('contenu_id', id)
+  // Le deck de présentation aussi (lecture tolérante : colonne peut-être absente).
+  const { data: deck } = await supabase.from('scriptorium_contenus').select('presentation_ref').eq('id', id).maybeSingle()
+  const deckRef = (deck as { presentation_ref?: string | null } | null)?.presentation_ref ?? null
   // Créneaux référents d'abord (FK contenu_id ON DELETE RESTRICT) — modèle ET
   // instances (RAG L1 ; les éléments d'instance cascadent avec leur créneau, ce
   // qui libère aussi les sections du contenu, référencées en RESTRICT).
@@ -935,6 +938,7 @@ export async function purgerContenuBiblio(id: string): Promise<{ success?: boole
   const { error } = await supabase.from('scriptorium_contenus').delete().eq('id', id) // cascade → images
   if (error) return { error: error.message }
   const chemins = (imgs ?? []).map(i => i.fichier_ref as string).filter(Boolean)
+  if (deckRef) chemins.push(deckRef)
   if (chemins.length) await admin.storage.from('scriptorium').remove(chemins)
 
   revalidatePath('/prof/scriptorium')
@@ -3024,4 +3028,75 @@ export async function publierHoraire(
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   return { success: true }
+}
+
+// ── Le deck de présentation d'un cours (prof seul, JAMAIS lu par le RAG) ────
+// Un fichier HTML autonome par cours, dans le bucket privé `scriptorium`, à un
+// chemin FIXE (`<prof>/<contenu>/presentation.html`) : redéposer remplace.
+// Colonne `scriptorium_contenus.presentation_ref` (`scriptorium_presentation.sql`).
+
+const PRESENTATION_MAX_OCTETS = 8 * 1024 * 1024
+
+export async function deposerPresentation(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const { supabase, userId } = await verifierProf()
+  const contenuId = formData.get('contenuId') as string
+  const fichier = formData.get('fichier') as File | null
+  if (!contenuId || !RE_UUID.test(contenuId)) return { error: 'Contenu inconnu.' }
+  if (!fichier || fichier.size === 0) return { error: 'Choisis un fichier HTML.' }
+  const ext = fichier.name.split('.').pop()?.toLowerCase()
+  if (ext !== 'html' && ext !== 'htm') return { error: 'Le deck doit être un fichier .html.' }
+  if (fichier.size > PRESENTATION_MAX_OCTETS) return { error: 'Fichier trop lourd (plus de 8 Mo).' }
+
+  const { data: contenu } = await supabase.from('scriptorium_contenus')
+    .select('id, type, supprime_at').eq('id', contenuId).maybeSingle()
+  if (!contenu) return { error: 'Contenu introuvable.' }
+  if (contenu.type !== 'cours') return { error: 'Seul un cours porte une présentation.' }
+  if (contenu.supprime_at) return { error: 'Ce cours est dans la corbeille.' }
+  // L'ancien deck, s'il existe (lecture SÉPARÉE et tolérante : colonne peut-être absente).
+  const { data: avant } = await supabase.from('scriptorium_contenus').select('presentation_ref').eq('id', contenuId).maybeSingle()
+  const ancienRef = (avant as { presentation_ref?: string | null } | null)?.presentation_ref ?? null
+
+  const admin = createAdminClient()
+  // Nom VERSIONNÉ : le CDN de Supabase Storage peut servir l'ancien objet jusqu'à
+  // une minute après un `upsert` au même chemin ; un chemin neuf ne l'attend pas.
+  const chemin = `${userId}/${contenuId}/presentation-${Date.now()}.html`
+  const buffer = Buffer.from(await fichier.arrayBuffer())
+  const { error: eUp } = await admin.storage.from('scriptorium').upload(chemin, buffer, {
+    contentType: 'text/html; charset=utf-8', upsert: false,
+  })
+  if (eUp) return { error: eUp.message }
+  const { error } = await supabase.from('scriptorium_contenus').update({ presentation_ref: chemin }).eq('id', contenuId)
+  if (error) {
+    // Rien d'orphelin : le fichier qu'on ne peut pas référencer est retiré.
+    await admin.storage.from('scriptorium').remove([chemin])
+    return { error: /presentation_ref/.test(error.message)
+      ? 'La colonne du deck n\'est pas encore posée en base (migration `scriptorium_presentation.sql`).'
+      : error.message }
+  }
+  if (ancienRef && ancienRef !== chemin) await admin.storage.from('scriptorium').remove([ancienRef])
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+export async function retirerPresentation(contenuId: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(contenuId)) return { error: 'Contenu inconnu.' }
+  const { data: contenu } = await supabase.from('scriptorium_contenus').select('presentation_ref').eq('id', contenuId).maybeSingle()
+  const ref = (contenu as { presentation_ref?: string | null } | null)?.presentation_ref
+  if (!ref) return { error: 'Aucune présentation déposée.' }
+  const admin = createAdminClient()
+  await admin.storage.from('scriptorium').remove([ref])
+  const { error } = await supabase.from('scriptorium_contenus').update({ presentation_ref: null }).eq('id', contenuId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+/** Requête SÉPARÉE et TOLÉRANTE : colonne absente (migration non jouée) ⇒ aucun deck. */
+export async function presentationsDesContenus(): Promise<Map<string, string>> {
+  const { supabase } = await verifierProf()
+  const { data, error } = await supabase.from('scriptorium_contenus')
+    .select('id, presentation_ref').not('presentation_ref', 'is', null)
+  if (error || !data) return new Map()
+  return new Map((data as { id: string; presentation_ref: string }[]).map(r => [r.id, r.presentation_ref]))
 }

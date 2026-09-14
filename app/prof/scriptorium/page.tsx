@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { classesConflitWholeBook } from '@/utils/aletheia-dates'
-import { getUrlSignee } from './actions'
+import { getUrlSignee, presentationsDesContenus } from './actions'
 import Tuile from '@/components/Tuile'
 import FormulaireLivre from './FormulaireLivre'
 import { type ImageItem } from './LigneContenu'
@@ -124,7 +124,7 @@ export default async function ScriptoriumPage({
   // Le vocabulaire que la BANQUE connaît — ce que l'écran du cours propose.
   const notionsConnues: string[] = []
   if (biblioType) {
-    const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }, { data: parcVivantsC }, { data: secsC }] = await Promise.all([
+    const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }, { data: parcVivantsC }, { data: secsC }, presentations] = await Promise.all([
       supabase.from('scriptorium_contenus')
         .select('id, type, titre, auteur, texte_extrait, chapitres, notions, supprime_at')
         .eq('type', biblioType).order('titre'),
@@ -136,6 +136,8 @@ export default async function ScriptoriumPage({
       biblioType === 'cours'
         ? supabase.from('scriptorium_contenu_sections').select('contenu_id')
         : Promise.resolve({ data: [] as { contenu_id: string }[] }),
+      // Le deck de présentation (prof seul, jamais lu par le RAG) — lecture tolérante.
+      biblioType === 'cours' ? presentationsDesContenus() : Promise.resolve(new Map<string, string>()),
     ])
     const rows = (rowsC ?? []) as {
       id: string; type: string; titre: string; auteur: string | null
@@ -184,6 +186,7 @@ export default async function ScriptoriumPage({
       texte: r.texte_extrait, chapitres: r.chapitres, notions: r.notions ?? [],
       images: imagesParContenu.get(r.id) ?? [], nbParcours: parcoursParContenu.get(r.id)?.size ?? 0,
       nbSections: sectionsParContenu.get(r.id) ?? 0,
+      presentation: presentations.has(r.id),
     }))
     biblioCorbeille = rows.filter(r => r.supprime_at != null).map(r => ({ id: r.id, titre: r.titre }))
 
