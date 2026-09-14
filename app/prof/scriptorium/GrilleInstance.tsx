@@ -70,16 +70,43 @@ function ecrirePlis(cle: string, val: string) {
 // rencontré — et devient un nœud à lui seul si son chapitre vit dans une autre semaine.
 interface NoeudChapitre { el: ElementInstance; enfants: ElementInstance[] }
 function arbreChapitres(els: ElementInstance[]): NoeudChapitre[] {
+  // ⭐ Le rattachement se fait par le NUMÉRO, pas par la contiguïté (14/09). Mesuré en prod :
+  // après des déplacements, une semaine portait « 6, 4, 5.1, 5, 5.2, 5.3, 4.1, 4.2, 4.3 » —
+  // les 4.x étaient là, mais rendus « à part » parce qu'ils ne suivaient pas le 4. Désormais
+  // un sous-chapitre va sous son chapitre dès qu'il est dans la même semaine, et les enfants
+  // suivent l'ordre du cours. Un sous-chapitre sans numéro se rattache au chapitre précédent
+  // (ancien comportement) ; sans chapitre présent, il fait sa propre ligne.
+  const chapitreDe = (el: ElementInstance) => el.numero ? el.numero.split('.')[0] : null
+  const chapitres = new Map<string, NoeudChapitre>()
   const noeuds: NoeudChapitre[] = []
   for (const el of els) {
-    const dernier = noeuds[noeuds.length - 1]
-    // Le numéro tranche : « 4.4 » ne se range que sous « 4 ». Vu en prod le 13/09 : deux
-    // sous-chapitres du chapitre 4, déplacés en semaine 2 sans lui, s'étaient glissés sous
-    // « 5 Conclusion », seul chapitre présent dans la semaine.
-    const memeChapitre = dernier && dernier.el.niveau !== 2
-      && (el.numero && dernier.el.numero ? el.numero.split('.')[0] === dernier.el.numero : true)
-    if (el.niveau === 2 && memeChapitre) dernier.enfants.push(el)
-    else noeuds.push({ el, enfants: [] })
+    if (el.niveau !== 2) {
+      const n = { el, enfants: [] }
+      noeuds.push(n)
+      if (el.numero) chapitres.set(el.numero, n)
+    }
+  }
+  let dernierSansNumero: NoeudChapitre | null = null
+  const restants: ElementInstance[] = []
+  for (const el of els) {
+    if (el.niveau !== 2) { dernierSansNumero = noeuds.find(n => n.el === el) ?? null; continue }
+    const num = chapitreDe(el)
+    const parent = num ? chapitres.get(num) : dernierSansNumero
+    if (parent) parent.enfants.push(el)
+    else restants.push(el)
+  }
+  // Les enfants dans l'ordre du cours (2.1, 2.2, … et non l'ordre des déplacements).
+  const rang = (e: ElementInstance) => Number(e.numero?.split('.')[1] ?? e.ordre)
+  for (const n of noeuds) n.enfants.sort((x, y) => rang(x) - rang(y))
+  // Les orphelins gardent leur place dans la semaine.
+  if (restants.length) {
+    const tous: NoeudChapitre[] = []
+    for (const el of els) {
+      const n = noeuds.find(x => x.el === el)
+      if (n) tous.push(n)
+      else if (restants.includes(el)) tous.push({ el, enfants: [] })
+    }
+    return tous
   }
   return noeuds
 }
@@ -684,7 +711,7 @@ export default function GrilleInstance({ instance, cibles }: {
           </span>
         )}
         <span className="flex-1" />
-        {freres.length > 1 && (
+        {freres.length > 1 && !sousUnChapitre && (
           <span className="flex gap-0.5 flex-shrink-0">
             <button onClick={() => monterDescendre(el, freres, -1)} disabled={occupe || idxFrere <= 0}
               className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-2 py-2 sm:px-0.5 sm:py-0" aria-label="Monter">↑</button>

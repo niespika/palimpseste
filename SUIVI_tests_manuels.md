@@ -1,5 +1,11 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## État courant — Scriptorium : le regroupement des sous-chapitres se fait par le NUMÉRO, plus par la contiguïté (14/09/2026)
+
+Louis : « c'est toujours pas réglé ». Mesuré en prod, cours par cours : le déplacement emportait bien les sous-chapitres (« Convaincre », 1HLP : 4.1-4.3 arrivés en semaine 4 avec le 4), mais la semaine portait l'ordre « 6, 4, 5.1, 5, 5.2, 5.3, 4.1, 4.2, 4.3 » et l'écran ne rattachait un sous-chapitre qu'au chapitre qui le PRÉCÉDAIT immédiatement — les 4.x étaient rendus « à part » avec le jeton « chap. 4 · sem. 4 ». Quatre cours de prod portent encore des sous-chapitres séparés de leur chapitre par d'anciens déplacements (croyances 4.4-4.5, Nommer 3.2-3.3, vérité 5.1-5.3, Contenant 3.1-3.5) : ceux-là restent séparés tant que le prof ne redéplace pas le chapitre.
+
+Correctif (`GrilleInstance.tsx`, `arbreChapitres`) : un sous-chapitre se range sous son chapitre dès qu'ils sont dans la même semaine, quel que soit l'ordre ; les enfants suivent l'ordre du cours (2.1, 2.2…) et perdent leurs ↑ ↓ ; sans chapitre dans la semaine, il garde sa ligne et son jeton de provenance. Éprouvé en bac à sable avec un FAUX COURS temporaire (« DÉCOR — Faux cours Convaincre », 14 sections, créneau dans l'instance Test, semaine 4 posée exactement dans l'ordre de prod) : écran « 6 · 4 (0/3 sous-chap.) · 5 (0/3 sous-chap.) », le 4 déplié donne 4.1, 4.2, 4.3 ; déplacement de « 2 » depuis la semaine 3 → base sem. 4 ordres 10-12 (2, 2.1, 2.2), écran « 2 (0/2 sous-chap.) ». Aucune erreur console. Décor entièrement retiré (14 éléments, 1 créneau, 14 sections, 1 contenu).
+
 ## État courant — Scriptorium : les sous-chapitres SUIVENT leur chapitre déplacé (14/09/2026)
 
 Louis, en prod sur 1HLP : « 5 Socrate devant ses juges » passé en semaine 4, ses 5.1 à 5.3 restés en semaine 3. Correctif dans `deplacerElement` (`actions.ts`) : un chapitre (section de niveau 1) emporte les sous-chapitres qui le suivent dans l'ordre du cours jusqu'au chapitre suivant, **seulement ceux qui étaient dans sa semaine** (un sous-chapitre déjà déplacé à la main reste où il est) ; le chapitre arrive d'abord, ses sous-chapitres à sa suite. Aucune migration.
