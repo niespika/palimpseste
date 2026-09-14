@@ -2750,7 +2750,7 @@ export async function deplacerElement(elementId: string, nouvelleSemaine: number
 
   const { data: el } = await supabase
     .from('scriptorium_parcours_classe_elements')
-    .select('id, creneau_id, semaine').eq('id', elementId).maybeSingle()
+    .select('id, creneau_id, semaine, ref_type, section_id').eq('id', elementId).maybeSingle()
   if (!el) return { error: 'Élément introuvable.' }
   if ((el.semaine as number) === nouvelleSemaine) return {}
 
@@ -2768,18 +2768,55 @@ export async function deplacerElement(elementId: string, nouvelleSemaine: number
     return { error: `Le parcours n'a que ${parc.nb_semaines} semaines.` }
   }
 
-  for (let essai = 0; essai < 5; essai++) {
-    const { data: dernier } = await supabase
-      .from('scriptorium_parcours_classe_elements').select('ordre')
-      .eq('creneau_id', el.creneau_id as string).eq('semaine', nouvelleSemaine)
-      .order('ordre', { ascending: false }).limit(1).maybeSingle()
-    const ordre = (dernier?.ordre ?? 0) + 1
-    const { error } = await supabase.from('scriptorium_parcours_classe_elements')
-      .update({ semaine: nouvelleSemaine, ordre }).eq('id', elementId)
-    if (!error) { revalidatePath('/prof/scriptorium'); return {} }
-    if (error.code !== '23505') return { error: error.message }
+  // LES SOUS-CHAPITRES SUIVENT LEUR CHAPITRE (14/09). Vu par Louis en prod : « 5 Socrate
+  // devant ses juges » passé en semaine 4, ses 5.1 à 5.3 restés en semaine 3. Un chapitre
+  // (section de niveau 1) emporte les sous-chapitres (niveau 2) qui le suivent dans l'ordre
+  // du cours jusqu'au chapitre suivant — mais seulement ceux qui étaient DANS SA SEMAINE :
+  // un sous-chapitre que le prof a déjà déplacé ailleurs à la main reste où il l'a mis.
+  const suiveurs: string[] = []
+  if (el.ref_type === 'section' && el.section_id) {
+    const { data: sec } = await supabase.from('scriptorium_contenu_sections')
+      .select('contenu_id, niveau, ordre').eq('id', el.section_id as string).maybeSingle()
+    if (sec && ((sec.niveau as number) ?? 1) === 1) {
+      const { data: suite } = await supabase.from('scriptorium_contenu_sections')
+        .select('id, niveau').eq('contenu_id', sec.contenu_id as string)
+        .gt('ordre', sec.ordre as number).order('ordre')
+      const sousIds: string[] = []
+      for (const x of suite ?? []) {
+        if (((x.niveau as number) ?? 1) !== 2) break
+        sousIds.push(x.id as string)
+      }
+      if (sousIds.length) {
+        const { data: enfants } = await supabase.from('scriptorium_parcours_classe_elements')
+          .select('id, section_id').eq('creneau_id', el.creneau_id as string)
+          .eq('semaine', el.semaine as number).in('section_id', sousIds)
+        // dans l'ordre du cours, pas celui de la requête
+        const rang = new Map(sousIds.map((id, i) => [id, i]))
+        suiveurs.push(...(enfants ?? [])
+          .sort((a, b) => (rang.get(a.section_id as string) ?? 0) - (rang.get(b.section_id as string) ?? 0))
+          .map(e => e.id as string))
+      }
+    }
   }
-  return { error: 'Conflit d’ordre, réessaie.' }
+
+  // Le chapitre d'abord, puis ses sous-chapitres, chacun en fin de la semaine cible.
+  for (const id of [elementId, ...suiveurs]) {
+    let fait = false
+    for (let essai = 0; essai < 5 && !fait; essai++) {
+      const { data: dernier } = await supabase
+        .from('scriptorium_parcours_classe_elements').select('ordre')
+        .eq('creneau_id', el.creneau_id as string).eq('semaine', nouvelleSemaine)
+        .order('ordre', { ascending: false }).limit(1).maybeSingle()
+      const ordre = (dernier?.ordre ?? 0) + 1
+      const { error } = await supabase.from('scriptorium_parcours_classe_elements')
+        .update({ semaine: nouvelleSemaine, ordre }).eq('id', id)
+      if (!error) fait = true
+      else if (error.code !== '23505') { revalidatePath('/prof/scriptorium'); return { error: error.message } }
+    }
+    if (!fait) { revalidatePath('/prof/scriptorium'); return { error: 'Conflit d’ordre, réessaie.' } }
+  }
+  revalidatePath('/prof/scriptorium')
+  return {}
 }
 
 /**

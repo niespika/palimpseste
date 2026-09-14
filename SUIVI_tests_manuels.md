@@ -1,6 +1,12 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
 ## État courant — Scriptorium : le DECK DE PRÉSENTATION d'un cours — code LOCAL, non commité, SQL bac à sable seulement ; revue adversariale JOUÉE et corrigée (14/09/2026)
+## État courant — Scriptorium : les sous-chapitres SUIVENT leur chapitre déplacé (14/09/2026)
+
+Louis, en prod sur 1HLP : « 5 Socrate devant ses juges » passé en semaine 4, ses 5.1 à 5.3 restés en semaine 3. Correctif dans `deplacerElement` (`actions.ts`) : un chapitre (section de niveau 1) emporte les sous-chapitres qui le suivent dans l'ordre du cours jusqu'au chapitre suivant, **seulement ceux qui étaient dans sa semaine** (un sous-chapitre déjà déplacé à la main reste où il est) ; le chapitre arrive d'abord, ses sous-chapitres à sa suite. Aucune migration.
+
+Éprouvé en bac à sable avec un décor temporaire (deux sous-chapitres « DÉCOR 2.1 / 2.2 » sous le chapitre 2 de « NAture humaine », classe Test, Louis connecté en prof sur localhost) : chapitre 2 déplacé en semaine 3 par le sélecteur « sem. » → base : sem. 3 ordre 1 chapitre, 2 et 3 les sous-chapitres ; écran conforme, aucune erreur console. Décor retiré (2 éléments, 2 sections), chapitre 2 remis en semaine 4 ordre 2. Commit local, à pousser.
+
 
 Demande de Louis : déposer, sur chaque cours de la bibliothèque, le HTML autonome qu'il projette en classe, pour ne jamais l'oublier chez lui ; l'ouvrir depuis la page du cours dans un onglet, et le projeter en plein écran. Réponses fixées le 14/09 : page de projection dans l'application ; un deck par cours, redéposer remplace ; **pas d'interrupteur** (écran prof seul) ; ⛔ **jamais lu par le RAG** — c'est le support du professeur, il n'entre ni dans `texte_extrait` ni dans les sections.
 
