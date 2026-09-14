@@ -227,11 +227,12 @@ export async function assemblerEvenements(opts: {
     if (planIds.length > 0) {
       const { data: exos } = await admin
         .from('scriptorium_exercices_planifies')
-        .select('id, plan_id, type_exercice, diagnostique, lieu, module, statut, semaine_lundi, jour_prevu, quiz_id')
+        .select('id, plan_id, type_exercice, diagnostique, lieu, module, statut, semaine_lundi, jour_prevu, quiz_id, annonce')
         .in('plan_id', planIds)
         .eq('ancrage', 'semaine')
-        // Élève : `concu` seulement (a_concevoir est prof-only). Prof : les deux.
-        .in('statut', estEleve ? ['concu'] : ['a_concevoir', 'concu'])
+        // Les deux statuts, sur les deux surfaces : côté élève, un `a_concevoir` ne passe
+        // que s'il est ANNONCÉ (filtre ci-dessous) — on publie une date, pas un sujet.
+        .in('statut', ['a_concevoir', 'concu'])
         .is('supprime_at', null)
       const exosRows = exos ?? []
       // Dédup E3 : un quiz déjà lancé apparaît via la source 2 → on n'émet pas son
@@ -245,11 +246,14 @@ export async function assemblerEvenements(opts: {
       for (const e of exosRows) {
         if (e.quiz_id && quizLances.has(e.quiz_id as string)) continue
         const cid = classeParPlan.get(e.plan_id as string) ?? null
-        // Rétention élève (§8bis-3) : SEUL un quiz annoncé survit ; jamais d'événement
-        // sans classe (§8bis-4).
+        // Rétention élève (§8bis-3) : survivent SEULEMENT un examen ANNONCÉ par le prof
+        // (`annonce`, 14/09 — jour calé garanti par exercices_annonce_chk) ou un quiz
+        // conçu sous le réglage global D5 ; jamais d'événement sans classe (§8bis-4).
         if (estEleve) {
           if (!cid) continue
-          if (e.type_exercice !== 'quiz' || !quizAnnonce) continue
+          const annonce = !!(e.annonce as boolean | null)
+          const quizGlobal = e.type_exercice === 'quiz' && e.statut === 'concu' && quizAnnonce
+          if (!annonce && !quizGlobal) continue
         }
         const d = dateEffectiveSemaine(e.semaine_lundi as string, (e.jour_prevu as string | null) ?? null, e.lieu as 'classe' | 'maison')
         if (d < debut || d > fin) continue

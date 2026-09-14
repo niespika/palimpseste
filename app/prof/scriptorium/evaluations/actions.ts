@@ -19,6 +19,10 @@ import { semainesCouvertes } from './plan-serveur'
 import { classeAModule } from '@/utils/acces'
 
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Même table que la page calendrier élève (module de l'exercice → slug du module de classe).
+const SLUG_PAR_MODULE: Record<string, string> = {
+  fragments: 'fragments-erudition', quazian: 'quazian', codex: 'codex', aletheia: 'aletheia',
+}
 const GABARITS: Gabarit[] = ['tc', 'hlp', 'vierge']
 
 // Construit les lignes DB depuis les specs du moteur pur. Les exercices EN CLASSE
@@ -306,7 +310,8 @@ export async function retirerExercice(formData: FormData): Promise<{ success?: b
     ? await supabase.from('scriptorium_exercices_planifies').delete().eq('id', exerciceId).is('supprime_at', null)
     : await supabase
         .from('scriptorium_exercices_planifies')
-        .update({ statut: 'annule', updated_at: new Date().toISOString() })
+        // `annonce: false` : un examen annulé ne s'annonce plus (exercices_annonce_chk).
+        .update({ statut: 'annule', annonce: false, updated_at: new Date().toISOString() })
         .eq('id', exerciceId)
         .is('supprime_at', null)
   if (error) return { error: error.message }
@@ -607,7 +612,10 @@ export async function deplacerExercice(formData: FormData): Promise<{ success?: 
 
   const { error } = await supabase
     .from('scriptorium_exercices_planifies')
-    .update({ semaine_lundi: semaineLundi, jour_prevu: jourPrevu, origine, updated_at: new Date().toISOString() })
+    // Déplacer change la DATE : une annonce faite aux élèves ne survit pas au déplacement
+    // (le prof ré-annonce sur la semaine cible, jour calé) — et le CHECK l'exige si
+    // jour_prevu retombe à null.
+    .update({ semaine_lundi: semaineLundi, jour_prevu: jourPrevu, annonce: false, origine, updated_at: new Date().toISOString() })
     .eq('id', exerciceId).is('supprime_at', null)
   if (error) {
     if (error.code === '23505') return { error: 'Un exercice de cadence du même type occupe déjà cette semaine.' }
@@ -682,7 +690,12 @@ export async function fixerJourExercice(formData: FormData): Promise<{ success?:
   const poser = async (jourPrevu: string | null, attenduLundi: string | null): Promise<{ success?: boolean; error?: string }> => {
     let q = supabase
       .from('scriptorium_exercices_planifies')
-      .update({ jour_prevu: jourPrevu, updated_at: new Date().toISOString() })
+      // « À caler » (null) éteint l'annonce : un examen annoncé sans jour n'existe pas
+      // (exercices_annonce_chk). Un CHANGEMENT de jour garde l'annonce : la nouvelle date
+      // est celle que l'élève doit voir.
+      .update(jourPrevu === null
+        ? { jour_prevu: null, annonce: false, updated_at: new Date().toISOString() }
+        : { jour_prevu: jourPrevu, updated_at: new Date().toISOString() })
       .eq('id', exerciceId).eq('lieu', 'classe').neq('statut', 'annule').is('supprime_at', null)
     // Épingle la semaine LUE : un deplacer/recaler concurrent (qui déplace l'exercice
     // sur une AUTRE semaine + remet jour_prevu=null) fait alors matcher 0 ligne → no-op
@@ -744,6 +757,10 @@ export async function regenererPlan(
     .eq('plan_id', planId)
     .in('origine', ['cadence', 'diagnostic'])
     .eq('statut', 'a_concevoir')
+    // Un examen ANNONCÉ aux élèves est une promesse : il ne se régénère pas (revue
+    // adversariale 14/09 — sinon il disparaissait du calendrier élève en silence). Il
+    // reste vivant, donc il bloque sa clé ci-dessous, comme un conçu.
+    .eq('annonce', false)
     .is('supprime_at', null)
     .gte('semaine_lundi', aPartirDe)
   const idsPerim = (perim ?? []).map((r) => r.id as string)
@@ -834,7 +851,7 @@ export async function recalerExercice(formData: FormData): Promise<{ success?: b
   if (action === 'annuler') {
     const { error } = await supabase
       .from('scriptorium_exercices_planifies')
-      .update({ statut: 'annule', updated_at: new Date().toISOString() }).eq('id', exerciceId).is('supprime_at', null)
+      .update({ statut: 'annule', annonce: false, updated_at: new Date().toISOString() }).eq('id', exerciceId).is('supprime_at', null)
     if (error) return { error: error.message }
     revalidatePath('/prof/scriptorium')
     return { success: true }
@@ -858,13 +875,56 @@ export async function recalerExercice(formData: FormData): Promise<{ success?: b
   const jourPrevu = exo.lieu === 'classe' ? await jourDeCours(plan.classe_id as string, cible.dateDebutLundi) : null
   const { error } = await supabase
     .from('scriptorium_exercices_planifies')
-    .update({ semaine_lundi: cible.dateDebutLundi, jour_prevu: jourPrevu, origine, updated_at: new Date().toISOString() })
+    .update({ semaine_lundi: cible.dateDebutLundi, jour_prevu: jourPrevu, annonce: false, origine, updated_at: new Date().toISOString() })
     .eq('id', exerciceId).is('supprime_at', null)
   if (error) {
     if (error.code === '23505') return { error: 'La semaine cible porte déjà un exercice de cadence du même type — annule plutôt.' }
     return { error: error.message }
   }
   revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+/**
+ * Annoncer / taire un EXAMEN au calendrier élève (14/09, demande des élèves de Louis).
+ * L'interrupteur est PAR EXERCICE (`annonce`), à côté du réglage global des quiz (D5).
+ * Conditions (le CHECK `exercices_annonce_chk` les garde aussi) : évaluatif, en classe,
+ * non annulé, et JOUR CALÉ — sans jour, l'élève lirait une date qui n'est pas celle de
+ * l'examen. Un `a_concevoir` s'annonce : c'est la date qu'on publie, pas le sujet.
+ */
+export async function annoncerExercice(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const exerciceId = (formData.get('exercice_id') as string) ?? ''
+  const voulu = (formData.get('annonce') as string) === '1'
+  if (!RE_UUID.test(exerciceId)) return { error: 'Exercice invalide.' }
+  const { data: exo } = await gardé.supabase
+    .from('scriptorium_exercices_planifies')
+    .select('nature, lieu, statut, jour_prevu, module, plan_id')
+    .eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+  if (!exo) return { error: 'Exercice introuvable.' }
+  if (voulu) {
+    if (exo.statut === 'annule') return { error: 'Exercice annulé.' }
+    if (exo.nature !== 'evaluatif' || exo.lieu !== 'classe') return { error: 'Seul un examen en classe s’annonce aux élèves.' }
+    if (!exo.jour_prevu) return { error: 'Cale d’abord le jour de l’examen : les élèves verront cette date.' }
+    // Le calendrier élève filtre les événements par MODULE de la classe (page élève,
+    // SLUG_PAR_SOURCE) : annoncer un bac blanc (codex) à une classe sans Codex poserait
+    // un badge côté prof et rien côté élève. On refuse, et on le dit.
+    const { data: plan } = await gardé.supabase
+      .from('scriptorium_plans_evaluation').select('classe_id').eq('id', exo.plan_id as string).maybeSingle()
+    if (!plan) return { error: 'Plan introuvable.' }
+    const slug = SLUG_PAR_MODULE[exo.module as string]
+    if (!slug || !(await classeAModule(gardé.supabase, plan.classe_id as string, slug))) {
+      return { error: 'Cette classe n’a pas le module de cet examen : son calendrier ne l’afficherait pas.' }
+    }
+  }
+  const { error } = await gardé.supabase
+    .from('scriptorium_exercices_planifies')
+    .update({ annonce: voulu, updated_at: new Date().toISOString() })
+    .eq('id', exerciceId).is('supprime_at', null)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  revalidatePath('/eleve/calendrier')
   return { success: true }
 }
 

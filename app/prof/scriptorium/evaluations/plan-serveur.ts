@@ -38,6 +38,7 @@ export interface ExerciceLigne {
   fenetre: string | null
   semaineLundi: string
   jourPrevu: string | null
+  annonce: boolean   // examen annoncé au calendrier élève (exige jourPrevu)
   echeance: string   // date effective (§4.6)
   enRetard: boolean  // dérivé : a_concevoir ∧ échéance passée
 }
@@ -171,7 +172,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     semainesCouvertes(dateDebut),
     supabase
       .from('scriptorium_exercices_planifies')
-      .select('id, type_exercice, diagnostique, nature, lieu, module, origine, statut, fenetre_diagnostique, semaine_lundi, jour_prevu')
+      .select('id, type_exercice, diagnostique, nature, lieu, module, origine, statut, fenetre_diagnostique, semaine_lundi, jour_prevu, annonce')
       .eq('plan_id', plan.id as string)
       .eq('ancrage', 'semaine')
       .is('supprime_at', null),
@@ -200,6 +201,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
       fenetre: (e.fenetre_diagnostique as string | null) ?? null,
       semaineLundi,
       jourPrevu,
+      annonce: !!(e.annonce as boolean | null),
       echeance,
       enRetard: statut === 'a_concevoir' && echeance < today,
     }

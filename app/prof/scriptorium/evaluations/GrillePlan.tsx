@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   validerPlan, supprimerPlan, marquerConcu, retirerExercice,
-  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, fixerJourExercice,
+  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, fixerJourExercice, annoncerExercice,
 } from './actions'
 import PanneauSegments from './PanneauSegments'
 import type { PlanDetail, ExerciceLigne } from './plan-serveur'
@@ -111,6 +111,25 @@ function LigneExercice({ e, semaines, joursCours }: { e: ExerciceLigne; semaines
           )}
           {joursCours.map(j => <option key={j.iso} value={j.iso}>{j.label} {fmtJour(j.iso)}</option>)}
         </select>
+      )}
+      {/* Annoncer aux élèves (14/09) : un EXAMEN (évaluatif, en classe) peut être publié au
+          calendrier élève, sous son libellé générique. Le jour doit être calé d'abord —
+          sinon le bouton reste, et la garde serveur dit pourquoi. Un « à concevoir »
+          s'annonce : on publie une date, pas un sujet. */}
+      {e.nature === 'evaluatif' && e.lieu === 'classe' && (
+        e.annonce ? (
+          <span className="flex items-center gap-1.5">
+            <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.05em] rounded-full px-2.5 py-0.5 border border-famille-eval text-famille-eval">annoncé aux élèves</span>
+            <button onClick={() => act(annoncerExercice, { annonce: '0' })} disabled={busy} className="font-ui text-[12px] text-muet hover:text-encre disabled:opacity-50">Taire</button>
+          </span>
+        ) : (
+          <button
+            onClick={() => act(annoncerExercice, { annonce: '1' })}
+            disabled={busy}
+            title={e.jourPrevu ? 'Publier la date au calendrier élève (un quiz annoncé ici s’affiche même en mode « surprise »)' : 'Cale d’abord le jour'}
+            className={`font-ui text-[12px] disabled:opacity-50 ${e.jourPrevu ? 'text-famille-eval hover:underline' : 'text-muet'}`}
+          >Annoncer aux élèves</button>
+        )
       )}
       <span className="ml-auto flex items-center gap-2.5 flex-none">
         <BadgeStatut e={e} />

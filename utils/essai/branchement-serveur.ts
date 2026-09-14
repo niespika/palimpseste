@@ -363,9 +363,13 @@ export async function debrancherEssaiClasse(
   if (eDel) return refus(`L’instance n’a pas été retirée : ${eDel.message}`)
   if (planifieId) {
     const maintenant = new Date().toISOString()
-    await admin.from('scriptorium_exercices_planifies')
-      .update({ statut: 'annule', supprime_at: maintenant, updated_at: maintenant })
+    // `annonce: false` : exercices_annonce_chk refuse un annulé annoncé — et l'erreur
+    // est TESTÉE : sans cela la ligne de plan restait vivante et annoncée après le
+    // retrait de l'essai (revue adversariale 14/09).
+    const { error: ePlan } = await admin.from('scriptorium_exercices_planifies')
+      .update({ statut: 'annule', annonce: false, supprime_at: maintenant, updated_at: maintenant })
       .eq('id', planifieId)
+    if (ePlan) return refus(`L’essai est retiré, mais sa ligne du plan n’a pas été annulée : ${ePlan.message}`)
   }
   return ok({ retire: true })
 }
