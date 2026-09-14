@@ -26,7 +26,13 @@ export interface ElementInstance {
   creneauTitre: string           // libellé du créneau porteur (confirmation de retrait)
   refType: 'contenu' | 'section' | 'livre_semaine'
   badge: 'Texte' | 'Cours' | 'Section' | 'Livre'
-  titre: string
+  titre: string                  // libellé COMPLET (« cours — section ») : confirmations, aria
+  // Pour une section (13/09) : son titre SEUL, son niveau et son numéro dérivé de l'ordre
+  // des sections du cours (« 2 » pour un chapitre, « 2.3 » pour un sous-chapitre). Mesuré
+  // en prod : le préfixe « cours — » fait 25 à 51 caractères et mangeait toute la ligne.
+  sectionTitre: string | null
+  niveau: 1 | 2 | null
+  numero: string | null
   vuAt: string | null
   aRevoir: boolean               // séance de livre hors de l'étendue réelle (schema-S2)
   ordre: number
@@ -293,8 +299,15 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
     contenuIds.length
       ? supabase.from('scriptorium_contenus').select('id, titre, type, supprime_at').in('id', contenuIds)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-    sectionIds.length
-      ? supabase.from('scriptorium_contenu_sections').select('id, titre, niveau').in('id', sectionIds)
+    // Toutes les sections des cours de l'instance (et pas seulement les référencées) :
+    // le NUMÉRO d'un chapitre se dérive de l'ordre complet du cours.
+    contenuIds.length || sectionIds.length
+      ? supabase.from('scriptorium_contenu_sections').select('id, contenu_id, titre, niveau, ordre')
+        .or([
+          contenuIds.length ? `contenu_id.in.(${contenuIds.join(',')})` : null,
+          sectionIds.length ? `id.in.(${sectionIds.join(',')})` : null,
+        ].filter((x): x is string => !!x).join(','))
+        .order('ordre')
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     livreIds.length
       ? supabase.from('scriptorium_unites').select('id, label, supprime_at').in('id', livreIds)
@@ -305,6 +318,26 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
   ])
   const contenuMap = new Map((conts ?? []).map(c => [c.id as string, { titre: c.titre as string, type: c.type as string, supprime: c.supprime_at != null }]))
   const sectionMap = new Map((secs ?? []).map(s => [s.id as string, { titre: s.titre as string, niveau: (s.niveau as number) ?? 1 }]))
+  // Numérotation hiérarchique par cours : un niveau 1 avance le chapitre, un niveau 2 se
+  // compte sous le dernier chapitre rencontré (« 0.1 » si un sous-chapitre ouvre le cours).
+  const numeroSection = new Map<string, string>()
+  {
+    const parContenu = new Map<string, { id: string; niveau: number; ordre: number }[]>()
+    for (const r of secs ?? []) {
+      const cid = r.contenu_id as string
+      const l = parContenu.get(cid) ?? []
+      l.push({ id: r.id as string, niveau: (r.niveau as number) ?? 1, ordre: (r.ordre as number) ?? 0 })
+      parContenu.set(cid, l)
+    }
+    for (const l of parContenu.values()) {
+      l.sort((a, b) => a.ordre - b.ordre)
+      let n1 = 0, n2 = 0
+      for (const x of l) {
+        if (x.niveau === 2) { n2 += 1; numeroSection.set(x.id, `${n1}.${n2}`) }
+        else { n1 += 1; n2 = 0; numeroSection.set(x.id, `${n1}`) }
+      }
+    }
+  }
   const livreMap = new Map((livres ?? []).map(l => [l.id as string, { label: l.label as string, supprime: l.supprime_at != null }]))
   const seancesParLivre = new Map<string, Set<number>>()
   const chapitresParSeance = new Map<string, string>() // `${livreId}|${k}` → chapitres
@@ -339,6 +372,8 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
         id: e.id, creneauId: cr.id, creneauTitre: label, refType: e.ref_type,
         badge: 'Livre' as const,
         titre: `${label} — séance ${k}${chap ? `, ${chap}` : ''}`,
+        // Même logique que les sections : le nom du livre est déjà sur la ligne du cours.
+        sectionTitre: `séance ${k}${chap ? `, ${chap}` : ''}`, niveau: 1, numero: null,
         vuAt: e.vu_at, aRevoir, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau, modeleRetireLe,
       }
     }
@@ -354,6 +389,9 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
         id: e.id, creneauId: cr.id, creneauTitre: contenuTitre, refType: e.ref_type,
         badge: 'Section' as const,
         titre: `${contenuTitre} — ${sec ? `${marque}${sec.titre}` : 'section retirée'}`,
+        sectionTitre: sec ? sec.titre : 'section retirée',
+        niveau: (sec?.niveau === 2 ? 2 : 1) as 1 | 2,
+        numero: e.section_id ? (numeroSection.get(e.section_id) ?? null) : null,
         vuAt: e.vu_at, aRevoir: !sec, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau, modeleRetireLe,
       }
     }
@@ -361,6 +399,7 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
       id: e.id, creneauId: cr.id, creneauTitre: contenuTitre, refType: e.ref_type,
       badge: (info?.type === 'texte' ? 'Texte' : 'Cours') as 'Texte' | 'Cours',
       titre: contenuTitre,
+      sectionTitre: null, niveau: null, numero: null,
       vuAt: e.vu_at, aRevoir: false, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau, modeleRetireLe,
     }
   })
@@ -499,7 +538,8 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
       })),
       elements: els2.map(e => ({
         id: e.id, creneauId: e.creneauId, creneauTitre: e.creneauTitre, refType: e.refType,
-        badge: e.badge, titre: e.titre, vuAt: e.vuAt, aRevoir: e.aRevoir, ordre: e.ordre,
+        badge: e.badge, titre: e.titre, sectionTitre: e.sectionTitre, niveau: e.niveau, numero: e.numero,
+        vuAt: e.vuAt, aRevoir: e.aRevoir, ordre: e.ordre,
         semaineReelle: e.semaineReelle, modeleRetireLe: e.modeleRetireLe,
       })),
     })

@@ -1,5 +1,15 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## État courant — Scriptorium « par classe », reprise après le premier regard de Louis en prod (13/09/2026, soir)
+
+Louis, sur T5 en prod après le déploiement de `6e34065` : « seul le nom du cours apparaît, je ne sais pas ce que je coche ». Mesuré en prod : chaque ligne de chapitre était composée « *titre du cours* — *titre de section* », préfixe de 25 à 51 caractères ; les quatre cours de T5 portent 12, 16, 14 et 23 sections dont 7, 11, 7 et 15 sous-chapitres (niveau 2). Trois demandes, trois réponses, **codées en local, non commitées** :
+
+- **(b) le nom du cours quitte la ligne** — `instance-serveur.ts` ajoute `sectionTitre`, `niveau`, `numero` à `ElementInstance` (le `titre` complet reste pour les confirmations et l'aria) ; la séance de livre suit la même règle (« séance 1, Paragraphes 1 à 4 » sans le nom du livre).
+- **(c) un numéro** — dérivé de l'ordre complet des sections du cours (toutes les sections des cours de l'instance sont chargées, pas seulement les référencées) : « 2 » pour un chapitre, « 2.3 » pour un sous-chapitre. Aucune colonne, aucune migration.
+- **(a) chapitres › sous-chapitres repliables** — `arbreChapitres()` range un niveau 2 sous le dernier chapitre rencontré ; le chapitre porte le triangle et, replié, « k/m sous-chap. » ; ouvert par défaut : le chapitre du prochain non-vu ; pli mémorisé avec les autres. La grille à deux colonnes est abandonnée : une seule colonne.
+
+Vérifié en bac à sable (aucune section de niveau 2 n'y existe) : titres seuls et numéros sur les sections de niveau 1, séances de livre sans préfixe, aucune erreur console, `tsc` et `eslint` propres. **Limite** : le repli des sous-chapitres et la numérotation « 2.3 » ne peuvent se voir qu'en prod sur T5 après déploiement.
+
 ## État courant — Vestigia « Semaine » (prof) : un seul écran, frise + classes + retour validé sur place — CODÉ, COMMIT LOCAL, non poussé (13/09/2026 soir)
 
 Demande de Louis : l'onglet Semaine listait 17 tuiles (scroll), puis une page par semaine, une par classe, une par élève — quatre chargements pour lire un retour. Mesure en prod par PostgREST AVANT le wireframe : S1 = 17 semaines de travail + 3 vacances, Vestigia compte dès la S3, aucun titre de semaine ; 3 classes avec le module (1HLP 25, THLP 16, Classe Test 1 = 42 inscrits) ; S3 = 18 dépôts / 42, 14 publiés, 2 à valider, 1 en cours, 1 en erreur ; noms 13 car. en médiane (25 max) ; commentaire général 737 car. en médiane (946 max) ; 2 photos par dépôt (4 max). Wireframe (canevas Claude Design, frise A retenue, puis « le nom de l'élève doit ouvrir le retour et permettre de valider de là »), puis implémentation. **Aucune migration, aucun interrupteur** (écran prof, présentation et lecture ; les écritures passent par les actions existantes).

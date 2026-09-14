@@ -65,6 +65,20 @@ function ecrirePlis(cle: string, val: string) {
   abonnesPlis.forEach(f => f())
 }
 
+// L'ARBRE d'un cours dans une semaine : un chapitre (niveau 1, ou tout élément sans
+// niveau) ouvre un nœud ; un sous-chapitre (niveau 2) se range sous le dernier chapitre
+// rencontré — et devient un nœud à lui seul si son chapitre vit dans une autre semaine.
+interface NoeudChapitre { el: ElementInstance; enfants: ElementInstance[] }
+function arbreChapitres(els: ElementInstance[]): NoeudChapitre[] {
+  const noeuds: NoeudChapitre[] = []
+  for (const el of els) {
+    const dernier = noeuds[noeuds.length - 1]
+    if (el.niveau === 2 && dernier && dernier.el.niveau !== 2) dernier.enfants.push(el)
+    else noeuds.push({ el, enfants: [] })
+  }
+  return noeuds
+}
+
 // Le petit triangle des plis (hors composant : sinon il se remonte à chaque rendu).
 function Tri({ ouvert }: { ouvert: boolean }) {
   return (
@@ -346,6 +360,17 @@ export default function GrilleInstance({ instance, cibles }: {
       ?? sem.elements.find(e => e.vuAt == null) ?? sem.elements[0]
     return `${sem.semaine}:${prochain.creneauId}`
   })()
+  // Le CHAPITRE ouvert par défaut : celui qui contient le prochain sous-chapitre non vu.
+  const chapitreDefaut = (() => {
+    if (!coursDefaut) return null
+    const [semStr, creneauId] = coursDefaut.split(':')
+    const sem = instance.semaines.find(s => s.semaine === Number(semStr))
+    if (!sem) return null
+    const noeuds = arbreChapitres(sem.elements.filter(e => e.creneauId === creneauId))
+    const n = noeuds.find(x => x.enfants.length > 0 && (x.el.vuAt == null || x.enfants.some(e => e.vuAt == null)))
+      ?? noeuds.find(x => x.enfants.length > 0)
+    return n ? `${coursDefaut}:${n.el.id}` : null
+  })()
   const clePlis = `palimpseste.scriptorium.plis.${instance.pcId}`
   // Le stockage se LIT comme une source externe (useSyncExternalStore) : aucun setState
   // dans un effet, et le serveur rend les défauts sans divergence d'hydratation. Le jour
@@ -355,24 +380,31 @@ export default function GrilleInstance({ instance, cibles }: {
   // Jour LOCAL du navigateur (fr-CA rend AAAA-MM-JJ) — pas `toISOString`, qui est UTC et
   // ferait « changer de jour » à 20 h à Montréal.
   const aujourdHui = new Date().toLocaleDateString('fr-CA')
-  const plis = useMemo((): { semaines: number[]; cours: string[] } => {
-    let stock: { semaines?: unknown; cours?: unknown; jour?: unknown } | null = null
+  const plis = useMemo((): { semaines: number[]; cours: string[]; chapitres: string[] } => {
+    let stock: { semaines?: unknown; cours?: unknown; chapitres?: unknown; jour?: unknown } | null = null
     try { stock = brutPlis ? JSON.parse(brutPlis) : null } catch { stock = null }
     const semaines = new Set<number>(Array.isArray(stock?.semaines) ? (stock!.semaines as number[]).filter(n => typeof n === 'number') : [])
     const cours = new Set<string>(Array.isArray(stock?.cours) ? (stock!.cours as string[]).filter(c => typeof c === 'string') : [])
+    const chapitres = new Set<string>(Array.isArray(stock?.chapitres) ? (stock!.chapitres as string[]).filter(c => typeof c === 'string') : [])
     if (!stock || stock.jour !== aujourdHui) {
       semaines.add(semaineDefaut)
       if (coursDefaut && ![...cours].some(c => c.startsWith(`${semaineDefaut}:`))) cours.add(coursDefaut)
+      if (chapitreDefaut && coursDefaut && ![...chapitres].some(c => c.startsWith(`${coursDefaut}:`))) chapitres.add(chapitreDefaut)
     }
-    return { semaines: [...semaines], cours: [...cours] }
-  }, [brutPlis, aujourdHui, semaineDefaut, coursDefaut])
+    return { semaines: [...semaines], cours: [...cours], chapitres: [...chapitres] }
+  }, [brutPlis, aujourdHui, semaineDefaut, coursDefaut, chapitreDefaut])
   const semainesOuvertes = plis.semaines
   const coursOuverts = plis.cours
-  function ecrire(semaines: number[], cours: string[]) {
-    ecrirePlis(clePlis, JSON.stringify({ semaines, cours, jour: aujourdHui }))
+  const chapitresOuverts = plis.chapitres
+  function ecrire(semaines: number[], cours: string[], chapitres: string[] = chapitresOuverts) {
+    ecrirePlis(clePlis, JSON.stringify({ semaines, cours, chapitres, jour: aujourdHui }))
   }
   const setSemainesOuvertes = (f: (prev: number[]) => number[]) => ecrire(f(semainesOuvertes), coursOuverts)
   const setCoursOuverts = (f: (prev: string[]) => string[]) => ecrire(semainesOuvertes, f(coursOuverts))
+  const chapitreOuvert = (k: string) => chapitresOuverts.includes(k)
+  function basculerChapitre(k: string) {
+    ecrire(semainesOuvertes, coursOuverts, chapitresOuverts.includes(k) ? chapitresOuverts.filter(x => x !== k) : [...chapitresOuverts, k])
+  }
   const [tiroirCalendrier, setTiroirCalendrier] = useState(!plan.dateDebut)
   const [tiroirModele, setTiroirModele] = useState(false)
 
@@ -566,12 +598,28 @@ export default function GrilleInstance({ instance, cibles }: {
   // Une ligne de chapitre : la case « vu », le titre, ses jetons — et, discrets à droite,
   // l'ordre entre frères et la semaine où il vit (déplacer un chapitre reste un geste de
   // CHAPITRE : c'est ainsi que « ch. 4–16 » sont passés en semaine 2).
-  function rendreChapitre(sem: SemaineInstance, el: ElementInstance, enCoursSem: boolean) {
+  // `pli` : sur un chapitre qui a des sous-chapitres, le triangle et le bilan replié.
+  function rendreChapitre(
+    sem: SemaineInstance, el: ElementInstance, enCoursSem: boolean,
+    pli?: { cle: string; ouvert: boolean; enfants: ElementInstance[] },
+  ) {
     const freres = sem.elements.filter(f => f.creneauId === el.creneauId && f.semaineReelle === el.semaineReelle)
     const idxFrere = freres.findIndex(f => f.id === el.id)
     const enCours = enCoursSem && el.vuAt == null
+    const sousVus = pli ? pli.enfants.filter(e => e.vuAt != null).length : 0
     return (
-      <li key={el.id} className="flex items-center gap-2 rounded px-1.5 py-1 min-h-[44px] sm:min-h-0 hover:bg-parchemin-fonce/60">
+      <li key={el.id} className={`flex items-center gap-2 rounded px-1.5 py-1 min-h-[44px] sm:min-h-0 hover:bg-parchemin-fonce/60 ${el.niveau === 2 && !pli ? 'ml-5 sm:ml-6' : ''}`}>
+        {pli ? (
+          <button
+            type="button"
+            onClick={() => basculerChapitre(pli.cle)}
+            aria-expanded={pli.ouvert}
+            aria-label={`${pli.ouvert ? 'Replier' : 'Déplier'} les ${pli.enfants.length} sous-chapitres de « ${el.sectionTitre ?? el.titre} »`}
+            className="flex items-center justify-center w-6 h-6 -ml-1 flex-shrink-0"
+          >
+            <Tri ouvert={pli.ouvert} />
+          </button>
+        ) : <span className="w-6 -ml-1 flex-shrink-0 hidden sm:block" />}
         <input
           type="checkbox"
           checked={el.vuAt != null}
@@ -580,9 +628,20 @@ export default function GrilleInstance({ instance, cibles }: {
           aria-label={`Marquer « ${el.titre} » comme vu`}
           className="w-5 h-5 sm:w-4 sm:h-4 accent-pigment flex-shrink-0 cursor-pointer disabled:opacity-50"
         />
-        <span className={`font-corps text-sm min-w-0 truncate ${el.vuAt != null ? 'text-encre' : 'text-encre-douce'}`} title={el.titre}>
-          {el.titre}
+        {el.numero && (
+          <span className={`font-ui text-xs tabular-nums flex-shrink-0 w-7 text-right ${el.niveau === 2 ? 'text-muet-clair' : 'text-muet'}`}>{el.numero}</span>
+        )}
+        <span
+          className={`font-corps min-w-0 truncate ${el.niveau === 2 ? 'text-sm' : 'text-[15px]'} ${el.vuAt != null ? 'text-encre' : 'text-encre-douce'} ${el.niveau !== 2 && el.sectionTitre ? 'font-semibold' : ''}`}
+          title={el.titre}
+        >
+          {el.sectionTitre ?? el.titre}
         </span>
+        {pli && !pli.ouvert && (
+          <span className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${sousVus === pli.enfants.length ? 'bg-ok-teinte text-ok' : 'bg-parchemin-fonce text-muet'}`}>
+            {sousVus}/{pli.enfants.length} sous-chap.
+          </span>
+        )}
         {enCours && (
           <span className="font-ui text-[10px] bg-attention-teinte text-attention px-1.5 py-0.5 rounded flex-shrink-0">en cours</span>
         )}
@@ -892,7 +951,9 @@ export default function GrilleInstance({ instance, cibles }: {
                                         className="w-5 h-5 sm:w-4 sm:h-4 accent-pigment flex-shrink-0 cursor-pointer disabled:opacity-50"
                                       />
                                       <span className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${badgeClasse(premier.badge)}`}>{badgeLabel(premier.badge)}</span>
-                                      <span className={`font-corps text-sm min-w-0 truncate ${premier.vuAt != null ? 'text-encre' : 'text-encre-douce'}`} title={premier.titre}>{premier.titre}</span>
+                                      <span className={`font-corps text-sm min-w-0 truncate ${premier.vuAt != null ? 'text-encre' : 'text-encre-douce'}`} title={premier.titre}>
+                                        {premier.sectionTitre ? <><span className="text-muet">{g.titre} · </span>{premier.numero ? `${premier.numero} ` : ''}{premier.sectionTitre}</> : premier.titre}
+                                      </span>
                                       {enCoursSem && premier.vuAt == null && (
                                         <span className="font-ui text-[10px] bg-attention-teinte text-attention px-1.5 py-0.5 rounded flex-shrink-0">en cours</span>
                                       )}
@@ -943,7 +1004,7 @@ export default function GrilleInstance({ instance, cibles }: {
                                         synthèse) ; et `flex-wrap` sur le bouton : à 390 px le compteur passait
                                         SOUS « ✓ tout vu » au lieu d'aller à la ligne (mesuré 13/09). */}
                                     <span className="font-corps text-[15px] font-semibold text-encre min-w-[10rem] flex-1 truncate" title={g.titre}>{g.titre}</span>
-                                    <span className="font-ui text-xs text-muet whitespace-nowrap">{g.els.length} chapitres · {nbVus} vu{nbVus > 1 ? 's' : ''}</span>
+                                    <span className="font-ui text-xs text-muet whitespace-nowrap">{g.els.length} {premier.badge === 'Livre' ? 'séances' : 'chapitres'} · {nbVus} vu{nbVus > 1 ? 's' : ''}</span>
                                     <span className="hidden sm:block w-24 h-1.5 rounded-full bg-parchemin-fonce overflow-hidden flex-shrink-0" aria-hidden>
                                       <span className="block h-full bg-pigment" style={{ width: `${pct}%` }} />
                                     </span>
@@ -961,8 +1022,22 @@ export default function GrilleInstance({ instance, cibles }: {
                                   {gestesCreneau(sem, g.creneauId, g.titre, premier)}
                                 </div>
                                 {ouvertC && (
-                                  <ul className="px-2 pb-1.5 grid grid-cols-1 xl:grid-cols-2 gap-x-4">
-                                    {g.els.map(el => rendreChapitre(sem, el, enCoursSem))}
+                                  <ul className="px-2 pb-1.5">
+                                    {arbreChapitres(g.els).map(n => {
+                                      if (n.enfants.length === 0) return rendreChapitre(sem, n.el, enCoursSem)
+                                      const cle = `${sem.semaine}:${g.creneauId}:${n.el.id}`
+                                      const ouvert = chapitreOuvert(cle)
+                                      return (
+                                        <Fragment key={n.el.id}>
+                                          {rendreChapitre(sem, n.el, enCoursSem, { cle, ouvert, enfants: n.enfants })}
+                                          {ouvert && (
+                                            <ul className="ml-5 sm:ml-7 border-l border-bordure pl-1">
+                                              {n.enfants.map(e => rendreChapitre(sem, e, enCoursSem))}
+                                            </ul>
+                                          )}
+                                        </Fragment>
+                                      )
+                                    })}
                                   </ul>
                                 )}
                                 {synth && <ul className="px-2 pb-1.5">{rendreSynthese(synth)}</ul>}
