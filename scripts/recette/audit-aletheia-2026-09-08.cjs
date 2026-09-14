@@ -207,13 +207,14 @@ function answer(job, obj) { job.resolve({usage:{input_tokens:1,output_tokens:1},
   const juste=await fen.preparerFenetres(admin(),'t1','l1',1,'demi_section',detail,[{relance:0,essais:1,verdict_code:'juste'}]);
   assert.deepEqual(juste[0].pivot,['s1-020']);
   let cursor=0;
-  const fakeReact={useState:init=>{const value=cursor++===0?1:(typeof init==='function'?init():init);return [value,()=>{}]}};
+  // useRef / useEffect : le brouillon local (13/09) ; un effet ne joue pas ici, un ref ne fait que porter.
+  const fakeReact={useState:init=>{const value=cursor++===0?1:(typeof init==='function'?init():init);return [value,()=>{}]},useRef:init=>({current:init}),useEffect:()=>{}};
   const jsx={jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props}),Fragment:'fragment'};
   const component=load('app/eleve/modules/aletheia/ReponsesRelancesFil.tsx',{
     react:fakeReact,'react/jsx-runtime':jsx,'next/navigation':{useRouter:()=>({refresh(){}})},
     './actions':{},'@/components/aletheia/FilEcrans':{__esModule:true,default:'FilEcrans'},'@/components/aletheia/PageDuLivre':{PageDuLivre:'PageDuLivre'},
   }).default;
-  const rendered=component({livreId:'l1',semaine:1,numeroSeance:1,retour:{relances:['Trouver la phrase'],relances_detail:detail,vocabulaire:[]},questionsEleve:[],rappelEleve:null,fenetres,surlignagesInitiaux:{0:{verdict_code:'ailleurs',essais:2,surlignage:['s1-030']}}});
+  const rendered=component({eleveId:'e1',livreId:'l1',semaine:1,numeroSeance:1,retour:{relances:['Trouver la phrase'],relances_detail:detail,vocabulaire:[]},questionsEleve:[],rappelEleve:null,fenetres,surlignagesInitiaux:{0:{verdict_code:'ailleurs',essais:2,surlignage:['s1-030']}}});
   const screen=rendered.props.ecrans.find(e=>e.id==='chercher-0');
   const page=screen.corps.props.children.find(c=>c?.type==='PageDuLivre');
   assert.equal(page.props.cliquable,false);assert.deepEqual(page.props.enEvidence,['s1-020']);assert.deepEqual(page.props.selection,[]);
