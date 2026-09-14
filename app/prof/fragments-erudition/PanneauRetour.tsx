@@ -321,18 +321,20 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
                 </div>
               )}
 
-              {/* Photos + notes + fil du semestre, sur une même bande */}
+              {/* Photos + notes sur une bande ; le fil du semestre sur la sienne.
+                  ⚠️ Mesuré en prod le 13/09 : à trois photos, les trois blocs sur une
+                  seule ligne débordaient des 600 px et la courbe recouvrait les lettres. */}
               <div className="flex gap-4 flex-wrap sm:flex-nowrap">
                 <div className="flex gap-1.5 flex-shrink-0">
                   {photos.map((p, i) => (
-                    <button key={p.id} onClick={() => setVisionneuse(true)} className="w-[68px] h-[90px] rounded-md overflow-hidden border border-bordure-bouton bg-parchemin-fonce hover:border-pigment transition-colors" title="Voir en grand">
+                    <button key={p.id} onClick={() => setVisionneuse(true)} className="w-[58px] h-[78px] rounded-md overflow-hidden border border-bordure-bouton bg-parchemin-fonce hover:border-pigment transition-colors" title="Voir en grand">
                       {retour.urls[p.storage_path]
                         ? <img src={retour.urls[p.storage_path]} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
                         : <span className="text-[10px] text-muet">…</span>}
                     </button>
                   ))}
                 </div>
-                <div className="flex-1 min-w-[200px] grid grid-rows-3 gap-1 content-center">
+                <div className="flex-1 min-w-[220px] grid grid-rows-3 gap-1 content-center">
                   {/* Sans analyse lisible, aucune pastille pleine : « E » sélectionné
                       ressemblerait à une note attribuée. */}
                   {!editable && (
@@ -361,23 +363,32 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
                     </div>
                   ))}
                 </div>
-                {retour.fil.length > 0 && (
-                  <div className="hidden sm:flex flex-col gap-1 w-[150px] flex-shrink-0">
-                    <span className="font-ui text-[10px] uppercase tracking-wider text-muet-clair">Semestre</span>
-                    <div className="flex-1 min-h-[52px] flex items-end gap-[3px] border-b border-bordure-bouton">
-                      {retour.fil.map(f => (
-                        <span
-                          key={f.numero}
-                          title={`Semaine ${f.numero}${f.moyenne !== null ? ` · ${LETTRES_SECTIONS[Math.round(f.moyenne)]}` : ''}`}
-                          className={`flex-1 rounded-t-sm ${f.courante ? 'bg-pigment' : f.moyenne !== null ? 'bg-pigment/45' : 'border-t border-dashed border-puce'}`}
-                          style={{ height: f.moyenne !== null ? `${18 + (f.moyenne / 4) * 82}%` : 0 }}
-                        />
-                      ))}
-                    </div>
-                    <span className="font-ui text-[10px] text-muet-clair">une barre par retour publié</span>
-                  </div>
-                )}
               </div>
+
+              {/* Le fil du semestre : une colonne par semaine de travail, une barre par
+                  retour publié (hauteur = moyenne des trois notes, la lettre au-dessus),
+                  la semaine courante en pigment plein, les autres en pigment pâle. */}
+              {retour.fil.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="font-ui text-[10px] uppercase tracking-wider text-muet-clair">Semestre · une barre par retour publié</span>
+                  <div className="flex items-end gap-[3px] h-11 border-b border-bordure-bouton">
+                    {retour.fil.map(f => (
+                      <div key={f.numero} className="flex-1 flex flex-col items-center justify-end h-full" title={`Semaine ${f.numero}${f.moyenne !== null ? ` · ${LETTRES_SECTIONS[Math.round(f.moyenne)]}` : ' · aucun retour publié'}`}>
+                        {f.moyenne !== null && <span className="font-ui text-[9px] leading-none text-encre-douce mb-0.5">{LETTRES_SECTIONS[Math.round(f.moyenne)]}</span>}
+                        <span
+                          className={`w-full max-w-[18px] rounded-t-sm ${f.moyenne !== null ? (f.courante ? 'bg-pigment' : 'bg-pigment/40') : f.courante ? 'border-t-2 border-pigment' : 'border-t border-dashed border-puce'}`}
+                          style={{ height: f.moyenne !== null ? `${18 + (f.moyenne / 4) * 62}%` : 0 }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-[3px]">
+                    {retour.fil.map(f => (
+                      <span key={f.numero} className={`flex-1 text-center font-ui text-[9px] tabular-nums ${f.courante ? 'text-pigment font-semibold' : 'text-muet-clair'}`}>{f.numero}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {retour.depot.commentaire_eleve && (
                 <p className="text-sm text-encre-douce italic border-l-2 border-puce pl-3">« {retour.depot.commentaire_eleve} »</p>

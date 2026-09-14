@@ -1,5 +1,15 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## État courant — Aletheia : brouillon LOCAL des formulaires V1 et VF — CODÉ EN LOCAL, non commité (13/09/2026, nuit)
+
+Cas de Louis : un élève de THLP écrivait sa séance 9 sur *La Naissance de la tragédie* pendant que Louis validait son fragment ; au rendu, la porte « retours non lus » a répondu « Va les valider, puis reviens » ; il est parti valider, et le texte est parti avec l'onglet. **Mesuré en prod par PostgREST** : sa ligne `aletheia_travaux` du soir (21:13 Montréal) est `DRAFT` avec `these`, `arguments`, `accord` à `null`, `questions` et `vocabulaire` à `[]` — rien n'a jamais été écrit en base, rien n'est récupérable. Cause : la sauvegarde automatique (« brouillon enregistré · 14:02 ») n'existe que dans `ChampDeRedaction` du déroulé (Codex) ; les quatre formulaires Aletheia ne gardaient le texte qu'en state React (C1-B2 avait laissé le brouillon persistant hors périmètre, `IDEES_post_rentree.md` l. 32).
+
+- `utils/aletheia/brouillon.ts` (pur, 7 tests) — clé `aletheia:brouillon:<élève>:<livre>:<semaine>:<v1|vf>` (l'élève dans la clé : un poste partagé ne sert jamais le brouillon d'un autre) ; tout vide ⇒ retiré ; fusion = le brouillon là où il dit quelque chose, l'initial ailleurs ; stockage qui refuse ⇒ rien ne casse.
+- `app/eleve/modules/aletheia/useBrouillonLocal.ts` — lecture au montage puis écriture 300 ms après chaque changement ; `purger()` après un rendu accepté (avant l'avertissement « petit malin » et le `refresh`).
+- Les quatre formulaires (`FormulaireV1Classique`, `FormulaireV1Fil`, `FormulaireVfClassique`, `FormulaireVfFil`) reçoivent `eleveId` de la page ; V1 garde aussi rappel, question fixe, questions, vocabulaire et les champs « je ne sais pas » (les cases se recochent si un de leurs champs est plein). Aucune migration, aucun interrupteur, aucun changement d'écran.
+
+Vérifié en bac à sable (élève de test, *Qu'est-ce que les Lumières ?* séance 1, formulaire VF fil) : texte tapé dans le premier champ → clé écrite dans `localStorage` avec les trois champs ; navigation vers Fragments puis retour sur la séance → le champ montre le texte tapé, pas la V1 de la base ; aucune erreur console. `tsc`, `eslint` propres ; brouillon de test purgé du volet. **Limites** : l'écran des réponses aux relances (`ReponsesRelancesFil`, entre le retour 1 et la VF) n'a pas de brouillon — ses réponses ne partent en base qu'au dernier écran ; le formulaire V1 n'a pas été rejoué dans le navigateur (même hook, mêmes tests) ; le brouillon ne survit pas à un changement d'appareil.
+
 ## État courant — Scriptorium « par classe », reprise après le premier regard de Louis en prod (13/09/2026, soir)
 
 Louis, sur T5 en prod après le déploiement de `6e34065` : « seul le nom du cours apparaît, je ne sais pas ce que je coche ». Mesuré en prod : chaque ligne de chapitre était composée « *titre du cours* — *titre de section* », préfixe de 25 à 51 caractères ; les quatre cours de T5 portent 12, 16, 14 et 23 sections dont 7, 11, 7 et 15 sous-chapitres (niveau 2). Trois demandes, trois réponses, **codées en local, non commitées** :
