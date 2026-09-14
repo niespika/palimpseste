@@ -293,7 +293,7 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
         )}
 
         {/* La liste : deux colonnes dès qu'il y a la place, pour que 25 élèves tiennent
-            sans défiler (13 rangs de 34 px). Avec le panneau ouvert, il faut ≥ 1400 px. */}
+            sans défiler (13 rangs de 30 px). Avec le panneau ouvert, il faut ≥ 1400 px. */}
         <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
           {eleves.length === 0 ? (
             <p className="p-8 text-center text-muet text-sm">Aucun élève inscrit dans cette classe.</p>
@@ -323,7 +323,7 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
                 return (
                   <div
                     key={e.id}
-                    className={`group flex items-center gap-2 pl-3 pr-3 h-[38px] md:h-[34px] border-t border-bordure ${
+                    className={`group flex items-center gap-2 pl-3 pr-3 h-[38px] md:h-[30px] border-t border-bordure ${
                       estOuvert ? 'bg-pigment-teinte' : choisi ? 'bg-pigment-teinte/60' : !e.depot ? 'bg-retard-teinte/20' : 'hover:bg-parchemin-fonce'
                     } ${i === 0 ? 'max-md:border-t-0' : ''} transition-colors`}
                   >
