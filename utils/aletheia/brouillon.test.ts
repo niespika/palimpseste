@@ -44,10 +44,15 @@ test('un stockage qui refuse ne casse rien', () => {
   assert.doesNotThrow(() => purgerBrouillon(s, 'k'))
 })
 
-test('la fusion garde l’initial là où le brouillon ne dit rien', () => {
-  const initial = { these: 'V1 de la base', args: 'args V1', accord: '' }
+test('la fusion prend le brouillon là où il porte la clé, même vide, et l’initial ailleurs', () => {
+  const initial = { these: 'V1 de la base', args: 'args V1', accord: 'accord V1' }
   assert.deepEqual(fusionnerBrouillon(initial, null), initial)
-  assert.deepEqual(fusionnerBrouillon(initial, { these: 'réécrit', args: '  ', inconnu: 'ignoré' }), { these: 'réécrit', args: 'args V1', accord: '' })
+  assert.deepEqual(fusionnerBrouillon(initial, { these: 'réécrit', args: '', inconnu: 'ignoré' }), { these: 'réécrit', args: '', accord: 'accord V1' })
+})
+
+test('la fusion ne rend jamais undefined, même si l’initial en porte', () => {
+  const initial = { these: 'x', args: undefined as unknown as string }
+  assert.deepEqual(fusionnerBrouillon(initial, { these: 'y' }), { these: 'y', args: '' })
 })
 
 test('purger retire le brouillon', () => {

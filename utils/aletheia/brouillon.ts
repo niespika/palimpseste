@@ -9,7 +9,7 @@
 // Règles :
 // - la clé porte l'ÉLÈVE : un poste partagé ne doit jamais servir le brouillon d'un autre ;
 // - un brouillon dont tous les champs sont vides n'existe pas (on le retire) ;
-// - à la fusion, un champ du brouillon ne remplace le champ initial que s'il est non vide ;
+// - à la fusion, un champ présent dans le brouillon remplace l'initial, même vide (effacé = effacé) ;
 // - le brouillon se PURGE à la soumission acceptée, jamais avant.
 
 export type ValeursBrouillon = Record<string, string>
@@ -60,13 +60,15 @@ export function purgerBrouillon(stockage: StockageBrouillon, cle: string): void 
   try { stockage.removeItem(cle) } catch { /* idem */ }
 }
 
-/** Les valeurs à afficher : le brouillon là où il dit quelque chose, l'initial ailleurs. */
+/**
+ * Les valeurs à afficher : le brouillon là où il porte la clé — y compris VIDE : un champ que
+ * l'élève a effacé reste effacé (revue du 13/09) —, l'initial ailleurs.
+ */
 export function fusionnerBrouillon<T extends ValeursBrouillon>(initial: T, brouillon: ValeursBrouillon | null): T {
-  if (!brouillon) return initial
-  const resultat: ValeursBrouillon = { ...initial }
+  const resultat: ValeursBrouillon = {}
   for (const k of Object.keys(initial)) {
-    const v = brouillon[k]
-    if (typeof v === 'string' && v.trim()) resultat[k] = v
+    const v = brouillon?.[k]
+    resultat[k] = typeof v === 'string' ? v : (initial[k] ?? '')
   }
   return resultat as T
 }

@@ -58,8 +58,8 @@ export default function FormulaireVfFil({ eleveId, livreId, semaine, numeroSeanc
   // ⭐ 13/09 — brouillon local (cf. FormulaireV1Classique).
   const { purger } = useBrouillonLocal(
     { eleveId, livreId, semaine, phase: 'vf' },
-    { these, args, accord, champFixe },
-    (b) => { setThese(b.these); setArgs(b.args); setAccord(b.accord); setChampFixe(b.champFixe) },
+    { these, args, accord, champFixe, index: String(index) },
+    (b) => { setThese(b.these); setArgs(b.args); setAccord(b.accord); setChampFixe(b.champFixe); setIndex(Number(b.index) || 0) },
   )
   const avance = () => { setErreur(null); setIndex(i => i + 1) }
 

@@ -67,13 +67,14 @@ export default function FormulaireV1Fil({
   // ⭐ 13/09 — brouillon local (cf. FormulaireV1Classique).
   const { purger } = useBrouillonLocal(
     { eleveId, livreId, semaine, phase: 'v1' },
-    { rappel, these, args, accord, champFixe, questions, vocabulaire, blocage1, choix1, pourquoi1, blocage2, phrase2 },
+    { rappel, these, args, accord, champFixe, questions, vocabulaire, blocage1, choix1, pourquoi1, blocage2, phrase2, jnsp1: jnsp1 ? '1' : '', jnsp2: jnsp2 ? '1' : '', index: String(index) },
     (b) => {
       setRappel(b.rappel); setThese(b.these); setArgs(b.args); setAccord(b.accord); setChampFixe(b.champFixe)
       setQuestions(b.questions); setVocabulaire(b.vocabulaire)
       setBlocage1(b.blocage1); setChoix1(b.choix1); setPourquoi1(b.pourquoi1); setBlocage2(b.blocage2); setPhrase2(b.phrase2)
-      if (b.blocage1 || b.choix1 || b.pourquoi1) setJnsp1(true)
-      if (b.blocage2 || b.phrase2) setJnsp2(true)
+      // Les cases telles qu'elles étaient : un « je ne sais pas » rouvert puis refermé reste fermé.
+      setJnsp1(b.jnsp1 === '1'); setJnsp2(b.jnsp2 === '1')
+      setIndex(Number(b.index) || 0)
     },
   )
 
