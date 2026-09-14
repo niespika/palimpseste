@@ -24,8 +24,13 @@ export interface StockageBrouillon {
 /** `relances` : l'écran des réponses aux relances, entre le retour 1 et la VF. */
 export type PhaseBrouillon = 'v1' | 'vf' | 'relances'
 
-export function cleBrouillon(eleveId: string, livreId: string, semaine: number, phase: PhaseBrouillon): string {
-  return `aletheia:brouillon:${eleveId}:${livreId}:${semaine}:${phase}`
+/**
+ * `travailId` (facultatif) : pour la phase `relances`, les réponses répondent aux relances d'UN
+ * retour ; si un travail est recréé pour le même livre et la même semaine, elles ne doivent pas
+ * revenir sous d'autres relances (revue du 13/09).
+ */
+export function cleBrouillon(eleveId: string, livreId: string, semaine: number, phase: PhaseBrouillon, travailId?: string): string {
+  return `aletheia:brouillon:${eleveId}:${livreId}:${semaine}:${phase}${travailId ? `:${travailId}` : ''}`
 }
 
 function estVide(valeurs: ValeursBrouillon): boolean {

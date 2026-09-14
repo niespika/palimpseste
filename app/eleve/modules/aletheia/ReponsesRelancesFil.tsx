@@ -23,8 +23,9 @@ import { PageDuLivre } from '@/components/aletheia/PageDuLivre'
 // ============================================================================
 
 interface Props {
-  /** Pour la clé du brouillon local (poste partagé). */
+  /** Pour la clé du brouillon local (poste partagé) ; le travail, parce que les réponses répondent à CE retour. */
   eleveId: string
+  travailId: string
   livreId: string
   semaine: number
   numeroSeance: number
@@ -49,7 +50,7 @@ function Bulle({ titre, accent, children }: { titre: string; accent: 'ok' | 'att
   )
 }
 
-export default function ReponsesRelancesFil({ eleveId, livreId, semaine, numeroSeance, retour: rv, questionsEleve, rappelEleve, titres, fenetres, surlignagesInitiaux }: Props) {
+export default function ReponsesRelancesFil({ eleveId, travailId, livreId, semaine, numeroSeance, retour: rv, questionsEleve, rappelEleve, titres, fenetres, surlignagesInitiaux }: Props) {
   const router = useRouter()
   const relances = rv.relances ?? []
   const detail: RelanceDetail[] = rv.relances_detail ?? []
@@ -66,9 +67,14 @@ export default function ReponsesRelancesFil({ eleveId, livreId, semaine, numeroS
   // ⭐ 13/09 — brouillon local des réponses et de la position (cf. FormulaireV1Classique) ;
   // les surlignages, eux, sont déjà en base à chaque vérification.
   const { purger } = useBrouillonLocal(
-    { eleveId, livreId, semaine, phase: 'relances' },
+    { eleveId, livreId, semaine, phase: 'relances', travailId },
     { ...Object.fromEntries(reponses.map((r, k) => [`reponse${k}`, r])), index: String(index) } as Record<string, string>,
-    (b) => { setReponses(relances.map((_, k) => b[`reponse${k}`] ?? '')); setIndex(Number(b.index) || 0) },
+    (b) => {
+      setReponses(relances.map((_, k) => b[`reponse${k}`] ?? ''))
+      setIndex(Number(b.index) || 0)
+      // Au téléphone, une relance déjà répondue rouvre sur « Ta réponse », pas sur le texte.
+      setEtats(e => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, b[`reponse${k}`]?.trim() ? { ...v, vue: 1 as const } : v])))
+    },
   )
   const maj = (i: number, patch: Partial<EtatRelance>) => setEtats(e => ({ ...e, [i]: { ...e[i], ...patch } }))
   const fenetreDe = (i: number) => fenetres.find(f => f.relance === i)

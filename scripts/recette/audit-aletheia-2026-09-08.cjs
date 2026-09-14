@@ -214,7 +214,7 @@ function answer(job, obj) { job.resolve({usage:{input_tokens:1,output_tokens:1},
     react:fakeReact,'react/jsx-runtime':jsx,'next/navigation':{useRouter:()=>({refresh(){}})},
     './actions':{},'@/components/aletheia/FilEcrans':{__esModule:true,default:'FilEcrans'},'@/components/aletheia/PageDuLivre':{PageDuLivre:'PageDuLivre'},
   }).default;
-  const rendered=component({eleveId:'e1',livreId:'l1',semaine:1,numeroSeance:1,retour:{relances:['Trouver la phrase'],relances_detail:detail,vocabulaire:[]},questionsEleve:[],rappelEleve:null,fenetres,surlignagesInitiaux:{0:{verdict_code:'ailleurs',essais:2,surlignage:['s1-030']}}});
+  const rendered=component({eleveId:'e1',travailId:'t1',livreId:'l1',semaine:1,numeroSeance:1,retour:{relances:['Trouver la phrase'],relances_detail:detail,vocabulaire:[]},questionsEleve:[],rappelEleve:null,fenetres,surlignagesInitiaux:{0:{verdict_code:'ailleurs',essais:2,surlignage:['s1-030']}}});
   const screen=rendered.props.ecrans.find(e=>e.id==='chercher-0');
   const page=screen.corps.props.children.find(c=>c?.type==='PageDuLivre');
   assert.equal(page.props.cliquable,false);assert.deepEqual(page.props.enEvidence,['s1-020']);assert.deepEqual(page.props.selection,[]);

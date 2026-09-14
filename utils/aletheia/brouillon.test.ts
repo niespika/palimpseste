@@ -11,6 +11,8 @@ test('la clé porte l’élève, le livre, la semaine et la phase', () => {
   assert.equal(cleBrouillon('e1', 'l1', 9, 'v1'), 'aletheia:brouillon:e1:l1:9:v1')
   assert.notEqual(cleBrouillon('e1', 'l1', 9, 'v1'), cleBrouillon('e2', 'l1', 9, 'v1'))
   assert.notEqual(cleBrouillon('e1', 'l1', 9, 'v1'), cleBrouillon('e1', 'l1', 9, 'vf'))
+  assert.equal(cleBrouillon('e1', 'l1', 9, 'relances', 't1'), 'aletheia:brouillon:e1:l1:9:relances:t1')
+  assert.notEqual(cleBrouillon('e1', 'l1', 9, 'relances', 't1'), cleBrouillon('e1', 'l1', 9, 'relances', 't2'))
 })
 
 test('écrire puis lire rend les mêmes champs', () => {

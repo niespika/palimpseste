@@ -27,11 +27,11 @@ function stockage(): Storage | null {
  * pas un brouillon), ni par la passe de restauration.
  */
 export function useBrouillonLocal<T extends ValeursBrouillon>(
-  ids: { eleveId: string; livreId: string; semaine: number; phase: PhaseBrouillon },
+  ids: { eleveId: string; livreId: string; semaine: number; phase: PhaseBrouillon; travailId?: string },
   valeurs: T,
   appliquer: (fusion: T) => void,
 ) {
-  const cle = cleBrouillon(ids.eleveId, ids.livreId, ids.semaine, ids.phase)
+  const cle = cleBrouillon(ids.eleveId, ids.livreId, ids.semaine, ids.phase, ids.travailId)
   // Le contenu sérialisé sert de dépendance : l'objet `valeurs` change à chaque rendu.
   const serialise = JSON.stringify(valeurs)
   const lu = useRef(false)
