@@ -81,6 +81,33 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
     setOuvertId(id)
   }, [peutQuitter])
 
+  // La même garde sur TOUT ce qui quitte l'écran : une case de la frise, un onglet
+  // du module, le lien « Ouvrir en grand », la fermeture ou le rechargement de
+  // l'onglet. Un clic sur un lien est intercepté en phase de capture, avant Next.
+  useEffect(() => {
+    function surClic(e: MouseEvent) {
+      if (!modifieRef.current) return
+      const lien = (e.target as HTMLElement | null)?.closest?.('a[href]')
+      if (!lien || e.defaultPrevented) return
+      if (!window.confirm('Des modifications ne sont pas enregistrées. Quitter ce retour quand même ?')) {
+        e.preventDefault()
+        e.stopPropagation()
+      } else {
+        modifieRef.current = false
+      }
+    }
+    function avantDecharge(e: BeforeUnloadEvent) {
+      if (!modifieRef.current) return
+      e.preventDefault()
+    }
+    document.addEventListener('click', surClic, true)
+    window.addEventListener('beforeunload', avantDecharge)
+    return () => {
+      document.removeEventListener('click', surClic, true)
+      window.removeEventListener('beforeunload', avantDecharge)
+    }
+  }, [])
+
   const classe = classes.find(c => c.id === classeId) ?? classes[0]
   const eleves = classe.eleves
 
@@ -145,9 +172,18 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
 
   // ── Validation par lot (C8·L2) — inchangée : la répartition vit dans
   //    utils/validation-lot.ts, testée. ───────────────────────────────────────
-  const aValider = useMemo(() => elevesAValider(eleves), [eleves])
-  const { choisis, aPublier, aDepublier, cibles } = useMemo(() => repartirSelection(eleves, selection), [eleves, selection])
-  const toutAValiderChoisi = toutAValiderEstChoisi(eleves, selection)
+  // ⚠️ La pile se coche et se publie sur ce qui est À L'ÉCRAN : changer de filtre
+  //    vide la sélection, et la case d'en-tête ne coche que les lignes visibles.
+  //    Sinon, sous « Manquants », on publierait douze retours que personne ne voit.
+  const aValider = useMemo(() => elevesAValider(visibles), [visibles])
+  const { choisis, aPublier, aDepublier, cibles } = useMemo(() => repartirSelection(visibles, selection), [visibles, selection])
+  const toutAValiderChoisi = toutAValiderEstChoisi(visibles, selection)
+
+  function choisirFiltre(f: Filtre) {
+    setFiltre(f)
+    setSelection(new Set())
+    setBilan(null)
+  }
 
   function basculer(depotId: string) {
     setBilan(null)
@@ -239,7 +275,7 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
             {filtres.map(f => (
               <button
                 key={f.cle}
-                onClick={() => setFiltre(f.cle)}
+                onClick={() => choisirFiltre(f.cle)}
                 className={`px-2.5 py-1 rounded-full border transition-colors ${
                   filtre === f.cle ? 'bg-encre-douce border-encre-douce text-parchemin' : 'border-bordure-bouton text-encre-douce hover:bg-parchemin-fonce'
                 }`}
@@ -265,12 +301,12 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
             <p className="p-8 text-center text-muet text-sm">Personne dans ce filtre.</p>
           ) : (
             <div className={`grid ${ouvert ? 'min-[1400px]:grid-cols-2' : 'md:grid-cols-2'}`}>
-              <div className={`hidden md:flex items-center gap-2 px-3 h-8 bg-parchemin-fonce border-b border-bordure ${ouvert ? '' : 'md:col-span-2'}`}>
+              <div className={`hidden md:flex items-center gap-2 px-3 h-8 bg-parchemin-fonce ${ouvert ? '' : 'md:col-span-2'}`}>
                 <input
                   type="checkbox"
                   checked={toutAValiderChoisi}
                   disabled={aValider.length === 0 || enCours}
-                  onChange={() => { setBilan(null); setSelection(prev => basculerPile(eleves, prev)) }}
+                  onChange={() => { setBilan(null); setSelection(prev => basculerPile(visibles, prev)) }}
                   className="rounded accent-[color:var(--bouton)] disabled:opacity-30"
                   title={aValider.length > 0 ? `Sélectionner les ${aValider.length} analyses à valider` : 'Aucune analyse à valider'}
                   aria-label="Sélectionner toutes les analyses à valider"
@@ -279,7 +315,7 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
                   {aValider.length > 0 ? `cocher les ${aValider.length} à valider` : 'élève · dépôt · notes'}
                 </span>
               </div>
-              {ouvert && <div className="hidden min-[1400px]:block h-8 bg-parchemin-fonce border-b border-bordure" />}
+              {ouvert && <div className="hidden min-[1400px]:block h-8 bg-parchemin-fonce" />}
               {visibles.map((e, i) => {
                 const choisi = !!e.depot && selection.has(e.depot.id)
                 const estOuvert = ouvert?.id === e.id
@@ -288,10 +324,8 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
                   <div
                     key={e.id}
                     className={`group flex items-center gap-2 pl-3 pr-3 h-[38px] md:h-[34px] border-t border-bordure ${
-                      ouvert ? 'min-[1400px]:[&:nth-child(-n+3)]:border-t-0' : 'md:[&:nth-child(-n+3)]:border-t-0'
-                    } ${
                       estOuvert ? 'bg-pigment-teinte' : choisi ? 'bg-pigment-teinte/60' : !e.depot ? 'bg-retard-teinte/20' : 'hover:bg-parchemin-fonce'
-                    } ${i === 0 ? 'border-t-0' : ''} transition-colors`}
+                    } ${i === 0 ? 'max-md:border-t-0' : ''} transition-colors`}
                   >
                     <input
                       type="checkbox"

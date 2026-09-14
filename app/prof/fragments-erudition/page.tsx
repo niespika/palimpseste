@@ -8,7 +8,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { estSemaineComptee, mentionPremiereSemaine } from '@/utils/fragments-semaines'
 import { semaineCourante } from '@/utils/fragments-semaine-courante'
 import { semestreFragmentsActif } from './contexte-semestre'
-import { toggleSemaineOuverte } from './actions'
+import { toggleSemaineOuverte, definirSemestreFragments } from './actions'
 import FriseSemaines from './FriseSemaines'
 import VueSemaine, { type ClasseSemaine } from './VueSemaine'
 import type { EleveAvecDepot, FragmentSemaine, StatutPresentation } from '@/types/fragments'
@@ -16,6 +16,12 @@ import type { EleveAvecDepot, FragmentSemaine, StatutPresentation } from '@/type
 async function toggleAction(formData: FormData): Promise<void> {
   'use server'
   await toggleSemaineOuverte(formData)
+}
+
+async function suivreSemestreAction(formData: FormData): Promise<void> {
+  'use server'
+  const id = String(formData.get('semestre') ?? '')
+  if (id) await definirSemestreFragments(id)
 }
 
 // ----------------------------------------------------------------------------
@@ -52,11 +58,17 @@ export default async function PageFragmentsProf({
   // la semaine, jamais le cookie : substituer une autre semaine en silence ferait
   // publier des retours en croyant être ailleurs. Une semaine inconnue → 404.
   let semestre = semestreCookie
+  let semestreSuivi = false
   if (semaineParam) {
-    const { data: voulue } = await supabase.from('fragments_semaines').select('id, semestre_id').eq('id', semaineParam).maybeSingle()
-    if (!voulue) notFound()
-    if (voulue.semestre_id && voulue.semestre_id !== semestre?.id) {
-      semestre = semestres.find(s => s.id === voulue.semestre_id) ?? semestre
+    const { data: voulue } = await supabase.from('fragments_semaines').select('id, semestre_id, is_vacation').eq('id', semaineParam).maybeSingle()
+    // Inconnue, vacances (pas une case de la frise), ou semestre hors liste : 404,
+    // jamais une autre semaine à la place.
+    if (!voulue || voulue.is_vacation) notFound()
+    if (voulue.semestre_id !== (semestre?.id ?? null)) {
+      const autre = semestres.find(s => s.id === voulue.semestre_id)
+      if (!autre) notFound()
+      semestre = autre
+      semestreSuivi = true
     }
   }
 
@@ -77,6 +89,9 @@ export default async function PageFragmentsProf({
     ? await admin.from('inscriptions').select('id, classe_id, eleve_id').eq('statut', 'active').in('classe_id', classeIds)
     : { data: [] }
   const inscriptionIds = (inscriptions ?? []).map(i => i.id as string)
+  // Le dénominateur de la frise compte des PERSONNES : un élève inscrit dans deux
+  // classes du module a deux inscriptions (deux dépôts possibles), une seule tête.
+  const nbElevesDistincts = new Set((inscriptions ?? []).map(i => i.eleve_id as string)).size
 
   // Le compte de dépôts de chaque semaine de travail, pour la frise. Une requête
   // `head` par semaine, en parallèle : ⛔ une seule lecture de tous les dépôts du
@@ -89,7 +104,7 @@ export default async function PageFragmentsProf({
           .select('id', { count: 'exact', head: true })
           .eq('semaine_id', s.id)
           .in('inscription_id', inscriptionIds)
-        return [s.id, { deposes: count ?? 0, inscrits: inscriptionIds.length }] as const
+        return [s.id, { deposes: count ?? 0, inscrits: nbElevesDistincts }] as const
       }))
     : []
   const comptes = Object.fromEntries(comptesListe)
@@ -178,6 +193,16 @@ export default async function PageFragmentsProf({
           Gérer le calendrier →
         </Link>
       </div>
+
+      {semestreSuivi && semestre && (
+        // Le sélecteur de l'en-tête lit le cookie ; la page, elle, suit le lien.
+        // On le dit, et on offre de réaligner le sélecteur d'un clic.
+        <form action={suivreSemestreAction} className="bg-attention-teinte border border-attention text-attention rounded-xl px-4 py-2 text-sm flex items-center gap-3 flex-wrap">
+          <input type="hidden" name="semestre" value={semestre.id} />
+          <span>Cette semaine appartient au semestre <b>{semestre.label}</b>, pas à celui du sélecteur.</span>
+          <button type="submit" className="font-ui text-xs underline underline-offset-2 hover:text-encre">Passer le sélecteur sur {semestre.label}</button>
+        </form>
+      )}
 
       {semaines.length === 0 ? (
         // Sans semaine, aucun élève ne peut déposer : l'écran doit dire quoi faire et

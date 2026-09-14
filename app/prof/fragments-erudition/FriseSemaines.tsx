@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { estSemaineComptee } from '@/utils/fragments-semaines'
 import { formatJour } from '@/utils/fuseau'
 import type { FragmentSemaine } from '@/types/fragments'
@@ -9,7 +12,8 @@ import type { FragmentSemaine } from '@/types/fragments'
 // la semaine choisie se charge dessous. Les vacances sont un simple trait, les
 // semaines que Vestigia ne réclame pas sont hachurées (mais restent ouvrables),
 // une semaine passée porte son compte de dépôts, une semaine à venir ses dates.
-// Composant serveur : chaque case est un lien `?semaine=`, prérendu et préchargé.
+// Composant client (pour lire `?classe=` posé par `replaceState` quand on change de
+// segment) : chaque case est un lien `?semaine=&classe=` qui garde la classe.
 // ----------------------------------------------------------------------------
 
 interface Props {
@@ -25,7 +29,11 @@ interface Props {
 
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 
-export default function FriseSemaines({ semaines, premiere, choisieId, classeId, aujourdHui, comptes }: Props) {
+export default function FriseSemaines({ semaines, premiere, choisieId, classeId: classeInitiale, aujourdHui, comptes }: Props) {
+  // Le segment de classe écrit `?classe=` par `replaceState` sans re-rendre le
+  // serveur ; `useSearchParams` suit ce changement, le prop ne serait pas à jour.
+  const params = useSearchParams()
+  const classeId = params.get('classe') ?? classeInitiale
   // Le mois ne s'écrit qu'au premier changement : calculé AVANT le rendu, pas pendant.
   const premieresDuMois = new Set<string>()
   let moisPrecedent = -1

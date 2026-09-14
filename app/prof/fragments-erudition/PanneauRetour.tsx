@@ -96,6 +96,7 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
   // Un dépôt sans analyse dont on vient de LANCER l'analyse : la ligne n'existe
   // pas encore, donc pas de statut `en_cours` à guetter — on guette quand même.
   const [attenteAnalyse, setAttenteAnalyse] = useState(false)
+  const sondages = useRef(0)
 
   // Une action serveur peut RENDRE une erreur ou LEVER (session expirée, réseau) :
   // les deux finissent dans `erreurChargement`, jamais dans un squelette éternel.
@@ -128,9 +129,19 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
   }, [depotId])
 
   // L'analyse se refait en arrière-plan : on la guette sans recharger l'écran.
+  // Bornée : au bout de deux minutes sans ligne d'analyse, on cesse d'interroger
+  // la base toutes les cinq secondes et on le dit, plutôt que d'attendre en silence.
   useEffect(() => {
     if (retour?.analyse?.statut !== 'en_cours' && !attenteAnalyse) return
-    const t = setInterval(() => { charger(false) }, 5000)
+    const t = setInterval(() => {
+      sondages.current += 1
+      if (attenteAnalyse && sondages.current > 24) {
+        setAttenteAnalyse(false)
+        setMessage({ type: 'err', texte: 'L’analyse n’a pas démarré après deux minutes — relancez-la, ou ouvrez le retour en grand.' })
+        return
+      }
+      charger(false)
+    }, 5000)
     return () => clearInterval(t)
   }, [retour?.analyse?.statut, attenteAnalyse, charger])
 
@@ -156,15 +167,27 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
   // le titre de la semaine), et son pied — Publier — reste visible d'emblée.
   const [hauteurMax, setHauteurMax] = useState<string | undefined>(undefined)
   useLayoutEffect(() => {
+    let demande = 0
     function mesurer() {
       const el = panneau.current
       if (!el || window.innerWidth < 1024) { setHauteurMax(undefined); return }
-      const haut = el.getBoundingClientRect().top + window.scrollY
-      setHauteurMax(`calc(100vh - ${Math.max(16, Math.min(haut, 480))}px - 16px)`)
+      // Position COURANTE dans la fenêtre : collé en haut (sticky) une fois la page
+      // défilée, plus bas sinon — la hauteur suit, sans défilement interne inutile.
+      const haut = Math.max(16, el.getBoundingClientRect().top)
+      setHauteurMax(`calc(100vh - ${Math.round(Math.min(haut, 480))}px - 16px)`)
+    }
+    function planifier() {
+      cancelAnimationFrame(demande)
+      demande = requestAnimationFrame(mesurer)
     }
     mesurer()
-    window.addEventListener('resize', mesurer)
-    return () => window.removeEventListener('resize', mesurer)
+    window.addEventListener('resize', planifier)
+    window.addEventListener('scroll', planifier, { passive: true })
+    return () => {
+      cancelAnimationFrame(demande)
+      window.removeEventListener('resize', planifier)
+      window.removeEventListener('scroll', planifier)
+    }
   }, [])
 
   function poser<K extends keyof Champs>(cle: K, valeur: Champs[K]) {
@@ -222,7 +245,9 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
 
   const handleRelancer = () => geste(async () => {
     if (!depotId) return
+    if (modifie && !window.confirm('Relancer l’analyse remplacera le retour, y compris vos modifications non enregistrées. Continuer ?')) return
     setMessage(null)
+    sondages.current = 0
     const res = await relancerAnalyse(depotId, eleve.id)
     if (res.error) { setMessage({ type: 'err', texte: res.error }); return }
     setMessage({ type: 'ok', texte: 'Analyse relancée — le panneau se mettra à jour tout seul.' })
@@ -248,7 +273,7 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
         tabIndex={-1}
         style={hauteurMax ? { maxHeight: hauteurMax } : undefined}
         className="fixed inset-x-0 bottom-0 top-[10vh] z-40 rounded-t-2xl shadow-2xl overflow-y-auto overscroll-contain
-                   lg:static lg:inset-auto lg:z-auto lg:rounded-xl lg:shadow-none lg:sticky lg:top-4
+                   lg:sticky lg:inset-auto lg:z-auto lg:rounded-xl lg:shadow-none lg:top-4
                    bg-surface border border-bordure border-l-4 border-l-liseret flex flex-col focus:outline-none"
       >
         <div className="px-4 pt-3 pb-2 sm:px-5 flex items-start gap-3 sticky top-0 bg-surface/95 backdrop-blur-sm z-10 border-b border-bordure">
@@ -308,7 +333,14 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
                   ))}
                 </div>
                 <div className="flex-1 min-w-[200px] grid grid-rows-3 gap-1 content-center">
-                  {([['note_decouvertes', 'Découvertes'], ['note_sources', 'Sources'], ['note_reflexions', 'Réflexions']] as const).map(([cle, label]) => (
+                  {/* Sans analyse lisible, aucune pastille pleine : « E » sélectionné
+                      ressemblerait à une note attribuée. */}
+                  {!editable && (
+                    <p className="row-span-3 self-center text-sm text-muet-clair italic">
+                      {analyse?.statut === 'en_cours' ? 'Notes à venir…' : 'Pas de notes sans analyse.'}
+                    </p>
+                  )}
+                  {editable && ([['note_decouvertes', 'Découvertes'], ['note_sources', 'Sources'], ['note_reflexions', 'Réflexions']] as const).map(([cle, label]) => (
                     <div key={cle} className="flex items-center gap-2">
                       <span className="w-[84px] text-[13px] text-encre-douce">{label}</span>
                       <div className="flex gap-1 font-ui text-xs">
@@ -422,7 +454,7 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
         )}
 
         {eleve.depot && retour && (
-          <div className="px-4 py-3 sm:px-5 border-t border-bordure bg-surface sticky bottom-0 flex items-center gap-2 flex-wrap font-ui text-[13px]">
+          <div className="px-4 py-3 sm:px-5 border-t border-bordure bg-surface sticky bottom-0 flex items-center gap-2 flex-wrap font-ui text-[13px] max-lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {editable && (analyse!.statut === 'publiee'
               ? <button onClick={handleDepublier} disabled={enregistrement} className="border border-attention text-attention px-3.5 py-1.5 rounded-lg hover:bg-attention-teinte disabled:opacity-50 transition-colors">Dépublier</button>
               : <button onClick={handlePublier} disabled={enregistrement} className="bg-bouton text-bouton-texte px-4 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors">{enregistrement ? '…' : modifie ? 'Enregistrer et publier ✓' : 'Publier ✓'}</button>
@@ -434,7 +466,7 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
               <button onClick={handleRelancer} disabled={enregistrement} className="text-muet hover:text-encre-douce px-2 py-1.5 disabled:opacity-50">Relancer l’analyse</button>
             )}
             <span className="flex-1" />
-            <Link href={`/prof/fragments-erudition/analyse/${eleve.depot.id}?semaine=${semaineId}`} onClick={e => { if (modifie && !window.confirm('Des modifications ne sont pas enregistrées. Quitter quand même ?')) e.preventDefault() }} className="text-xs text-muet hover:text-encre-douce underline underline-offset-2">Ouvrir en grand →</Link>
+            <Link href={`/prof/fragments-erudition/analyse/${eleve.depot.id}?semaine=${semaineId}`} className="text-xs text-muet hover:text-encre-douce underline underline-offset-2">Ouvrir en grand →</Link>
           </div>
         )}
       </aside>
