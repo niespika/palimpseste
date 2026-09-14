@@ -73,7 +73,12 @@ function arbreChapitres(els: ElementInstance[]): NoeudChapitre[] {
   const noeuds: NoeudChapitre[] = []
   for (const el of els) {
     const dernier = noeuds[noeuds.length - 1]
-    if (el.niveau === 2 && dernier && dernier.el.niveau !== 2) dernier.enfants.push(el)
+    // Le numéro tranche : « 4.4 » ne se range que sous « 4 ». Vu en prod le 13/09 : deux
+    // sous-chapitres du chapitre 4, déplacés en semaine 2 sans lui, s'étaient glissés sous
+    // « 5 Conclusion », seul chapitre présent dans la semaine.
+    const memeChapitre = dernier && dernier.el.niveau !== 2
+      && (el.numero && dernier.el.numero ? el.numero.split('.')[0] === dernier.el.numero : true)
+    if (el.niveau === 2 && memeChapitre) dernier.enfants.push(el)
     else noeuds.push({ el, enfants: [] })
   }
   return noeuds
