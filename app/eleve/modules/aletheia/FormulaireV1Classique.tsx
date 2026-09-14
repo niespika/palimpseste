@@ -3,10 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { soumettreV1 } from './actions'
+import { useBrouillonLocal } from './useBrouillonLocal'
 import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
 import type { LibellesSeance } from '@/utils/aletheia/gabarits'
 
 interface Props {
+  /** Pour la clé du brouillon local : un poste partagé ne sert jamais le brouillon d'un autre. */
+  eleveId: string
   livreId: string
   semaine: number
   theseInitial?: string
@@ -49,7 +52,7 @@ function Etiquette({ titre, detail }: { titre: string; detail?: string }) {
 // Avec `libelles` (E3), les cinq emplacements portent les questions du gabarit, plus la
 // question FIXE du dialogué ; les colonnes de base gardent leurs noms.
 export default function FormulaireV1Classique({
-  livreId, semaine,
+  eleveId, livreId, semaine,
   theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
   aides = AIDES_V1_DEFAUT, libelles, avecRappel = false, rappelInitial = '', jeNeSaisPas = false, propositions = [],
 }: Props) {
@@ -72,6 +75,20 @@ export default function FormulaireV1Classique({
   const [pourquoi1, setPourquoi1] = useState('')
   const [blocage2, setBlocage2] = useState('')
   const [phrase2, setPhrase2] = useState('')
+
+  // ⭐ 13/09 — brouillon local : la porte « retours non lus » renvoie l'élève valider
+  // ailleurs ; sans ceci, son texte partait avec l'onglet.
+  const { purger } = useBrouillonLocal(
+    { eleveId, livreId, semaine, phase: 'v1' },
+    { rappel, these, args, accord, champFixe, questions, vocabulaire, blocage1, choix1, pourquoi1, blocage2, phrase2 },
+    (b) => {
+      setRappel(b.rappel); setThese(b.these); setArgs(b.args); setAccord(b.accord); setChampFixe(b.champFixe)
+      setQuestions(b.questions); setVocabulaire(b.vocabulaire)
+      setBlocage1(b.blocage1); setChoix1(b.choix1); setPourquoi1(b.pourquoi1); setBlocage2(b.blocage2); setPhrase2(b.phrase2)
+      if (b.blocage1 || b.choix1 || b.pourquoi1) setJnsp1(true)
+      if (b.blocage2 || b.phrase2) setJnsp2(true)
+    },
+  )
 
   const g = libelles
   const avecFixe = !!g?.champFixe
@@ -103,6 +120,7 @@ export default function FormulaireV1Classique({
       })
       if (res?.error) { setErreur(res.error); return }
       // Rendu accepté mais signalé « petit malin » : on montre le message avant de continuer.
+      purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
     } catch {

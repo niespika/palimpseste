@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { soumettreV1 } from './actions'
+import { useBrouillonLocal } from './useBrouillonLocal'
 import type { LibellesSeance } from '@/utils/aletheia/gabarits'
 import FilEcrans, { type EcranFil } from '@/components/aletheia/FilEcrans'
 
@@ -17,6 +18,8 @@ import FilEcrans, { type EcranFil } from '@/components/aletheia/FilEcrans'
 // ============================================================================
 
 interface Props {
+  /** Pour la clé du brouillon local (poste partagé). */
+  eleveId: string
   livreId: string
   semaine: number
   libelles: LibellesSeance
@@ -38,7 +41,7 @@ function Aide({ children }: { children: React.ReactNode }) { return <p className
 function Etiquette({ children }: { children: React.ReactNode }) { return <p className="text-sm text-encre-douce mb-2">{children}</p> }
 
 export default function FormulaireV1Fil({
-  livreId, semaine, libelles: g, theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
+  eleveId, livreId, semaine, libelles: g, theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
   avecRappel = false, rappelInitial = '', propositions = [], numeroSeance,
 }: Props) {
   const router = useRouter()
@@ -60,6 +63,19 @@ export default function FormulaireV1Fil({
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [avertissement, setAvertissement] = useState<string | null>(null)
+
+  // ⭐ 13/09 — brouillon local (cf. FormulaireV1Classique).
+  const { purger } = useBrouillonLocal(
+    { eleveId, livreId, semaine, phase: 'v1' },
+    { rappel, these, args, accord, champFixe, questions, vocabulaire, blocage1, choix1, pourquoi1, blocage2, phrase2 },
+    (b) => {
+      setRappel(b.rappel); setThese(b.these); setArgs(b.args); setAccord(b.accord); setChampFixe(b.champFixe)
+      setQuestions(b.questions); setVocabulaire(b.vocabulaire)
+      setBlocage1(b.blocage1); setChoix1(b.choix1); setPourquoi1(b.pourquoi1); setBlocage2(b.blocage2); setPhrase2(b.phrase2)
+      if (b.blocage1 || b.choix1 || b.pourquoi1) setJnsp1(true)
+      if (b.blocage2 || b.phrase2) setJnsp2(true)
+    },
+  )
 
   const avecFixe = !!g.champFixe
   const suivant = (label = 'Suivant →', disabled = false) => ({ label, disabled, onClick: () => { setErreur(null); setIndex(i => i + 1) } })
@@ -172,6 +188,7 @@ export default function FormulaireV1Fil({
         } } : {}),
       })
       if (res?.error) { setErreur(res.error); return }
+      purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
     } catch {

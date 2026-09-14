@@ -436,7 +436,7 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
             // (Refonte 04/09) Un champ par écran, la relance qui le concerne en regard.
             <section className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
               <FormulaireVfFil
-                livreId={livreId} semaine={semaine} numeroSeance={numeroSeance} libelles={libelles} retour={t.retour_v1}
+                eleveId={user.id} livreId={livreId} semaine={semaine} numeroSeance={numeroSeance} libelles={libelles} retour={t.retour_v1}
                 reponses={reponsesRelances.map(r => ({ relance: r.relance, texte: r.texte }))} rolesPassages={rolesPassages}
                 v1={{ these: t.these ?? '', arguments: t.arguments ?? '', accord: t.accord ?? '', champ_fixe: t.champ_fixe ?? '' }}
                 initial={{ these: t.these_vf ?? t.these ?? '', arguments: t.arguments_vf ?? t.arguments ?? '', accord: t.accord_vf ?? t.accord ?? '', champ_fixe: t.champ_fixe_vf ?? t.champ_fixe ?? '' }}
@@ -462,6 +462,7 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
             formulaire={
               <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
                 <FormulaireVf
+                  eleveId={user.id}
                   livreId={livreId}
                   semaine={semaine}
                   theseInitial={t?.these_vf ?? t?.these ?? ''}
@@ -486,6 +487,7 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
             // Porte ouverte (refonte 04/09) : un écran par question, le fil d'écrans.
             <section className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
               <FormulaireV1Fil
+                eleveId={user.id}
                 livreId={livreId}
                 semaine={semaine}
                 libelles={libelles}
@@ -504,6 +506,7 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
           ) : (
             <Bloc titre="1. Ta lecture de la séance">
               <FormulaireV1Classique
+                eleveId={user.id}
                 livreId={livreId}
                 semaine={semaine}
                 theseInitial={t?.these ?? ''}

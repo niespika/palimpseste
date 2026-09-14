@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { soumettreVf } from './actions'
+import { useBrouillonLocal } from './useBrouillonLocal'
 import type { RetourV1 } from './types'
 import type { LibellesSeance } from '@/utils/aletheia/gabarits'
 import FilEcrans, { type EcranFil } from '@/components/aletheia/FilEcrans'
@@ -16,6 +17,8 @@ import FilEcrans, { type EcranFil } from '@/components/aletheia/FilEcrans'
 // ============================================================================
 
 interface Props {
+  /** Pour la clé du brouillon local (poste partagé). */
+  eleveId: string
   livreId: string
   semaine: number
   numeroSeance: number
@@ -39,7 +42,7 @@ function Bulle({ titre, accent, children }: { titre: string; accent: 'liseret' |
   )
 }
 
-export default function FormulaireVfFil({ livreId, semaine, numeroSeance, libelles: g, retour: rv, reponses, rolesPassages, v1, initial }: Props) {
+export default function FormulaireVfFil({ eleveId, livreId, semaine, numeroSeance, libelles: g, retour: rv, reponses, rolesPassages, v1, initial }: Props) {
   const router = useRouter()
   const [index, setIndex] = useState(0)
   const [vues, setVues] = useState<Record<string, 0 | 1>>({})
@@ -51,6 +54,13 @@ export default function FormulaireVfFil({ livreId, semaine, numeroSeance, libell
   const [erreur, setErreur] = useState<string | null>(null)
   const [avertissement, setAvertissement] = useState<string | null>(null)
   const avecFixe = !!g.champFixe
+
+  // ⭐ 13/09 — brouillon local (cf. FormulaireV1Classique).
+  const { purger } = useBrouillonLocal(
+    { eleveId, livreId, semaine, phase: 'vf' },
+    { these, args, accord, champFixe },
+    (b) => { setThese(b.these); setArgs(b.args); setAccord(b.accord); setChampFixe(b.champFixe) },
+  )
   const avance = () => { setErreur(null); setIndex(i => i + 1) }
 
   // Quelle relance concerne quel champ : par le rôle du passage désigné ; sans passage, la
@@ -89,6 +99,7 @@ export default function FormulaireVfFil({ livreId, semaine, numeroSeance, libell
     try {
       const res = await soumettreVf(livreId, semaine, { these_vf: these, arguments_vf: args, accord_vf: accord, ...(avecFixe ? { champ_fixe_vf: champFixe } : {}) })
       if (res?.error) { setErreur(res.error); return }
+      purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
     } catch { setErreur('L’envoi a échoué — ton texte est toujours là. Vérifie ta connexion et réessaie.') }

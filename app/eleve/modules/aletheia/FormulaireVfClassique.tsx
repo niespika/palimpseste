@@ -3,9 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { soumettreVf } from './actions'
+import { useBrouillonLocal } from './useBrouillonLocal'
 import type { LibellesSeance } from '@/utils/aletheia/gabarits'
 
 interface Props {
+  /** Pour la clé du brouillon local (poste partagé). */
+  eleveId: string
   livreId: string
   semaine: number
   theseInitial?: string
@@ -22,7 +25,7 @@ const champClasse =
 // Réécriture (VF) — 3 champs retravaillés (SPEC §1) : idée principale, arguments,
 // accord (+ la question fixe du dialogué, E3). Les questions et le vocabulaire ne se
 // réécrivent pas. Pré-rempli avec la V1.
-export default function FormulaireVfClassique({ livreId, semaine, theseInitial = '', argumentsInitial = '', accordInitial = '', champFixeInitial = '', libelles }: Props) {
+export default function FormulaireVfClassique({ eleveId, livreId, semaine, theseInitial = '', argumentsInitial = '', accordInitial = '', champFixeInitial = '', libelles }: Props) {
   const router = useRouter()
   const [these, setThese] = useState(theseInitial)
   const [args, setArgs] = useState(argumentsInitial)
@@ -33,6 +36,13 @@ export default function FormulaireVfClassique({ livreId, semaine, theseInitial =
   const [avertissement, setAvertissement] = useState<string | null>(null)
   const g = libelles
   const avecFixe = !!g?.champFixe
+
+  // ⭐ 13/09 — brouillon local (cf. FormulaireV1Classique).
+  const { purger } = useBrouillonLocal(
+    { eleveId, livreId, semaine, phase: 'vf' },
+    { these, args, accord, champFixe },
+    (b) => { setThese(b.these); setArgs(b.args); setAccord(b.accord); setChampFixe(b.champFixe) },
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -48,6 +58,7 @@ export default function FormulaireVfClassique({ livreId, semaine, theseInitial =
         ...(avecFixe ? { champ_fixe_vf: champFixe } : {}),
       })
       if (res?.error) { setErreur(res.error); return }
+      purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
     } catch {
