@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { repondreRelances, verifierSurlignage } from './actions'
+import { useBrouillonLocal } from './useBrouillonLocal'
 import type { RetourV1 } from './types'
 import type { RelanceDetail } from '@/utils/aletheia/retour-v1'
 import type { FenetreServie } from '@/utils/aletheia/fenetre-serveur'
@@ -22,6 +23,8 @@ import { PageDuLivre } from '@/components/aletheia/PageDuLivre'
 // ============================================================================
 
 interface Props {
+  /** Pour la clé du brouillon local (poste partagé). */
+  eleveId: string
   livreId: string
   semaine: number
   numeroSeance: number
@@ -46,7 +49,7 @@ function Bulle({ titre, accent, children }: { titre: string; accent: 'ok' | 'att
   )
 }
 
-export default function ReponsesRelancesFil({ livreId, semaine, numeroSeance, retour: rv, questionsEleve, rappelEleve, titres, fenetres, surlignagesInitiaux }: Props) {
+export default function ReponsesRelancesFil({ eleveId, livreId, semaine, numeroSeance, retour: rv, questionsEleve, rappelEleve, titres, fenetres, surlignagesInitiaux }: Props) {
   const router = useRouter()
   const relances = rv.relances ?? []
   const detail: RelanceDetail[] = rv.relances_detail ?? []
@@ -59,6 +62,14 @@ export default function ReponsesRelancesFil({ livreId, semaine, numeroSeance, re
   })))
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+
+  // ⭐ 13/09 — brouillon local des réponses et de la position (cf. FormulaireV1Classique) ;
+  // les surlignages, eux, sont déjà en base à chaque vérification.
+  const { purger } = useBrouillonLocal(
+    { eleveId, livreId, semaine, phase: 'relances' },
+    { ...Object.fromEntries(reponses.map((r, k) => [`reponse${k}`, r])), index: String(index) } as Record<string, string>,
+    (b) => { setReponses(relances.map((_, k) => b[`reponse${k}`] ?? '')); setIndex(Number(b.index) || 0) },
+  )
   const maj = (i: number, patch: Partial<EtatRelance>) => setEtats(e => ({ ...e, [i]: { ...e[i], ...patch } }))
   const fenetreDe = (i: number) => fenetres.find(f => f.relance === i)
   const merite = (i: number) => { const e = etats[i]; return e.verdict === 'juste' || e.essais >= ESSAIS_MAX || !!e.pivot }
@@ -87,6 +98,7 @@ export default function ReponsesRelancesFil({ livreId, semaine, numeroSeance, re
     try {
       const res = await repondreRelances(livreId, semaine, reponses)
       if (res?.error) { setErreur(res.error); return }
+      purger()
       router.refresh()
     } catch { setErreur('L’envoi a échoué — tes réponses sont toujours là. Vérifie ta connexion et réessaie.') }
     finally { setChargement(false) }

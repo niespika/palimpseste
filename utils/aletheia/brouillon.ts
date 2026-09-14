@@ -21,7 +21,8 @@ export interface StockageBrouillon {
   removeItem(cle: string): void
 }
 
-export type PhaseBrouillon = 'v1' | 'vf'
+/** `relances` : l'écran des réponses aux relances, entre le retour 1 et la VF. */
+export type PhaseBrouillon = 'v1' | 'vf' | 'relances'
 
 export function cleBrouillon(eleveId: string, livreId: string, semaine: number, phase: PhaseBrouillon): string {
   return `aletheia:brouillon:${eleveId}:${livreId}:${semaine}:${phase}`

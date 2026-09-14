@@ -422,7 +422,7 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
       ) : statut === 'FEEDBACK1_READY' && t?.retour_v1 && doitRepondre ? (
         // (Refonte 04/09) Le retour se lit en fil d'écrans, et l'élève répond aux relances au fil.
         <section className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
-          <ReponsesRelancesFil livreId={livreId} semaine={semaine} numeroSeance={numeroSeance} retour={t.retour_v1} questionsEleve={t.questions ?? []} rappelEleve={t.rappel ?? null} titres={titresRetour} fenetres={fenetres} surlignagesInitiaux={surlignagesInitiaux} />
+          <ReponsesRelancesFil eleveId={user.id} livreId={livreId} semaine={semaine} numeroSeance={numeroSeance} retour={t.retour_v1} questionsEleve={t.questions ?? []} rappelEleve={t.rappel ?? null} titres={titresRetour} fenetres={fenetres} surlignagesInitiaux={surlignagesInitiaux} />
         </section>
       ) : statut === 'FEEDBACK1_READY' && t?.retour_v1 ? (
         // Réécriture — atelier 2 colonnes SEUL : le retour reste sous les yeux.
