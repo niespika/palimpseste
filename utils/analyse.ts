@@ -218,7 +218,10 @@ export async function lancerAnalyse(
     const client = new Anthropic()
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      // 8192 : à 4096, un dépôt de trois pages denses (transcription + six
+      // retours) dépassait le plafond ; le JSON tronqué ne se parsait plus et
+      // l'analyse tombait en `erreur` à chaque relance (Lisa G., S3, 14/09).
+      max_tokens: 8192,
       messages: [
         {
           role: 'user',
@@ -235,12 +238,17 @@ export async function lancerAnalyse(
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
 
+    if (response.stop_reason === 'max_tokens') {
+      console.error(`[analyse] dépôt ${depotId} : réponse tronquée (max_tokens, ${response.usage.output_tokens} jetons de sortie)`)
+    }
+
     // Parser le JSON (Claude peut ajouter des balises ```)
     let parsed: AnalyseJSON
     try {
       const nettoye = texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
       parsed = JSON.parse(nettoye)
-    } catch {
+    } catch (e) {
+      console.error(`[analyse] dépôt ${depotId} : JSON illisible (${(e as Error).message}) — fin de réponse : ${JSON.stringify(texte.slice(-200))}`)
       await admin.from('fragments_analyses').update({ statut: 'erreur' }).eq('id', analyseId)
       return
     }
@@ -302,7 +310,8 @@ export async function lancerAnalyse(
         .update({ statut: bilan.statut })
         .eq('id', bilan.piste_id)
     }
-  } catch {
+  } catch (e) {
+    console.error(`[analyse] dépôt ${depotId} : échec`, e)
     await admin.from('fragments_analyses').update({ statut: 'erreur' }).eq('id', analyseId)
   }
 }
