@@ -6,7 +6,7 @@ Louis, en prod sur 1HLP : « 5 Socrate devant ses juges » passé en semaine 4, 
 
 Éprouvé en bac à sable avec un décor temporaire (deux sous-chapitres « DÉCOR 2.1 / 2.2 » sous le chapitre 2 de « NAture humaine », classe Test, Louis connecté en prof sur localhost) : chapitre 2 déplacé en semaine 3 par le sélecteur « sem. » → base : sem. 3 ordre 1 chapitre, 2 et 3 les sous-chapitres ; écran conforme, aucune erreur console. Décor retiré (2 éléments, 2 sections), chapitre 2 remis en semaine 4 ordre 2. Commit local, à pousser.
 
-## État courant — Plan d'évaluation : ANNONCER un examen au calendrier élève — CODÉ LOCAL 14/09, SQL bac à sable joué, NON commité
+## État courant — Plan d'évaluation : ANNONCER un examen au calendrier élève — DÉPLOYÉ 14/09 (`3ca260b`, Vercel success 21:32 UTC), SQL joué en bac à sable ET en prod ; smoke prod NON fait (pas de session prof)
 
 - **Origine** : les élèves de Louis demandent les dates d'examen sur le calendrier. Elles n'y étaient pas, par construction (rétention §8bis-3 de `utils/calendrier-evenements.ts` : seul un quiz conçu passe, et seulement sous `quiz_annonce_defaut`, mesuré OFF en prod). Mesuré en prod avant d'écrire : porte plan ON, 4 plans validés, 19 créneaux vivants, 4 `concu`, 11 avec jour.
 - **Arbitrages de Louis** : un `a_concevoir` s'annonce (on publie une date, pas un sujet) ; le jour est obligatoire.
