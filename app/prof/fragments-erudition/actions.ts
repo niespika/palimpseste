@@ -8,7 +8,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
 import { inscriptionsClasse } from '@/utils/acces'
 import { COOKIE_SEMESTRE_FRAGMENTS, semestreFragmentsActif, type ContexteSemestre } from './contexte-semestre'
-import type { StatutPiste } from '@/types/fragments'
+import type { StatutPiste, StatutDepot, FragmentPhoto, FragmentAnalyse, FragmentPiste, RetourDepotComplet } from '@/types/fragments'
+import { LABEL_SIGNAL, type SignalIntegrite } from '@/utils/detecteur-integrite'
 import { normaliserRetours } from '@/utils/passation/transcription-calcul'
 import { commentaireProf } from '@/utils/fragments-theme'
 
@@ -670,7 +671,7 @@ export async function tirerOrateur(semaineId: string, classeId: string, excluIds
     .eq('id', gagnantId)
     .single()
 
-  revalidatePath(`/prof/fragments-erudition/semaine/${semaineId}`)
+  revalidatePath('/prof/fragments-erudition')
   return { data: { presentationId: presentation.id, eleve: profil }, error: null }
 }
 
@@ -687,7 +688,7 @@ export async function mettreAJourPresentation(presentationId: string, statut: 'p
     .update({ statut })
     .eq('id', presentationId)
   if (error) return { error: error.message }
-  if (pres?.semaine_id) revalidatePath(`/prof/fragments-erudition/semaine/${pres.semaine_id}`)
+  if (pres?.semaine_id) revalidatePath('/prof/fragments-erudition')
   return { success: true }
 }
 
@@ -704,7 +705,7 @@ export async function annulerPresentation(presentationId: string) {
     .delete()
     .eq('id', presentationId)
   if (error) return { error: error.message }
-  if (pres?.semaine_id) revalidatePath(`/prof/fragments-erudition/semaine/${pres.semaine_id}`)
+  if (pres?.semaine_id) revalidatePath('/prof/fragments-erudition')
   return { success: true }
 }
 
@@ -729,4 +730,99 @@ export async function supprimerDepot(formData: FormData) {
 
   revalidatePath('/prof/fragments-erudition')
   return { success: true }
+}
+
+// ============================================================
+// Vestigia · onglet Semaine — LE RETOUR COMPLET, CHARGÉ EN PLACE
+// ------------------------------------------------------------
+// Le panneau de droite de la vue Semaine lit, corrige et publie un retour sans
+// quitter l'écran. Il charge ici, à l'ouverture d'un élève, tout ce que la page
+// `analyse/[depotId]` assemblait côté serveur : le dépôt, ses photos signées,
+// l'analyse, ses pistes, les signaux d'intégrité, et le fil du semestre (les
+// notes publiées des autres semaines, pour la petite courbe). Un seul
+// aller-retour, pas de rechargement de page.
+// ============================================================
+
+// ⛔ Le type `RetourDepotComplet` vit dans `types/fragments.ts` : un `export type`
+// ici tuerait TOUT le module à l'exécution (piège du 24/08, cf. app/deroule).
+
+export async function chargerRetourDepot(depotId: string): Promise<{ data: RetourDepotComplet | null; error: string | null }> {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { data: depot, error } = await admin
+    .from('fragments_depots')
+    .select('id, eleve_id, inscription_id, semaine_id, statut, commentaire_eleve, photos_suspectes, signal_integrite, created_at, photos:fragments_photos(id, depot_id, storage_path, ordre, created_at), semaine:fragments_semaines(semestre_id)')
+    .eq('id', depotId)
+    .maybeSingle()
+  if (error) return { data: null, error: error.message }
+  if (!depot) return { data: null, error: 'Dépôt introuvable.' }
+
+  const photos = ((depot.photos ?? []) as FragmentPhoto[]).slice().sort((a, b) => a.ordre - b.ordre)
+
+  const [{ data: analyse }, urls] = await Promise.all([
+    admin.from('fragments_analyses').select('*').eq('depot_id', depotId).maybeSingle(),
+    getSignedUrlsProf(photos.map(p => p.storage_path)),
+  ])
+
+  const { data: pistes } = analyse
+    ? await admin.from('fragments_pistes').select('*').eq('analyse_id', analyse.id).order('created_at')
+    : { data: [] }
+
+  const signauxBruts = [
+    (depot as { signal_integrite?: SignalIntegrite | null }).signal_integrite ?? null,
+    (analyse as { signal_integrite?: SignalIntegrite | null } | null)?.signal_integrite ?? null,
+  ].filter((s): s is SignalIntegrite => !!s && s.type in LABEL_SIGNAL)
+  const signaux = [...new Map(signauxBruts.map(s => [s.type, s])).values()]
+
+  // Le fil du semestre : une barre par retour publié, sur les semaines de travail.
+  const semestreId = (depot.semaine as unknown as { semestre_id: string | null } | null)?.semestre_id ?? null
+  let fil: RetourDepotComplet['fil'] = []
+  if (semestreId && depot.inscription_id) {
+    const { data: semaines } = await admin
+      .from('fragments_semaines')
+      .select('id, numero, is_vacation')
+      .eq('semestre_id', semestreId)
+      .eq('is_vacation', false)
+      .order('numero')
+    const semaineIds = (semaines ?? []).map(s => s.id as string)
+    const { data: depotsEleve } = semaineIds.length > 0
+      ? await admin.from('fragments_depots').select('id, semaine_id').eq('inscription_id', depot.inscription_id).in('semaine_id', semaineIds)
+      : { data: [] }
+    const depotIds = (depotsEleve ?? []).map(d => d.id as string)
+    const { data: publiees } = depotIds.length > 0
+      ? await admin.from('fragments_analyses').select('depot_id, note_decouvertes, note_sources, note_reflexions').eq('statut', 'publiee').in('depot_id', depotIds)
+      : { data: [] }
+    const semaineParDepot = Object.fromEntries((depotsEleve ?? []).map(d => [d.id as string, d.semaine_id as string]))
+    const moyenneParSemaine: Record<string, number> = {}
+    for (const a of publiees ?? []) {
+      const notes = [a.note_decouvertes, a.note_sources, a.note_reflexions].filter((n): n is number => typeof n === 'number')
+      if (notes.length === 0) continue
+      moyenneParSemaine[semaineParDepot[a.depot_id as string]] = notes.reduce((s, n) => s + n, 0) / notes.length
+    }
+    fil = (semaines ?? [])
+      .filter(s => typeof s.numero === 'number')
+      .map(s => ({ numero: s.numero as number, moyenne: moyenneParSemaine[s.id as string] ?? null, courante: s.id === depot.semaine_id }))
+  }
+
+  return {
+    data: {
+      depot: {
+        id: depot.id as string,
+        eleve_id: depot.eleve_id as string,
+        inscription_id: (depot.inscription_id as string | null) ?? null,
+        statut: depot.statut as StatutDepot,
+        commentaire_eleve: (depot.commentaire_eleve as string | null) ?? null,
+        photos_suspectes: !!(depot as { photos_suspectes?: boolean }).photos_suspectes,
+        created_at: depot.created_at as string,
+        photos,
+      },
+      urls,
+      analyse: (analyse as FragmentAnalyse | null) ?? null,
+      pistes: (pistes ?? []) as FragmentPiste[],
+      signaux,
+      fil,
+    },
+    error: null,
+  }
 }

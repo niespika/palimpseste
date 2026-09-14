@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
-import { getSignedUrlsProf } from '../../actions'
+import { getSignedUrlsProf } from './actions'
 import type { FragmentPhoto } from '@/types/fragments'
 
 interface Props {

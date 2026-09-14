@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { tirerOrateur, mettreAJourPresentation, annulerPresentation } from '../../actions'
+import { tirerOrateur, mettreAJourPresentation, annulerPresentation } from './actions'
 import type { FragmentPresentation } from '@/types/fragments'
 
 interface EleveEligible {

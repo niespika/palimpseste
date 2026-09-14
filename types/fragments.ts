@@ -1,3 +1,5 @@
+import type { SignalIntegrite } from '@/utils/detecteur-integrite'
+
 export type StatutDepot = 'depose' | 'en_retard'
 export type StatutAnalyse = 'en_cours' | 'generee' | 'erreur' | 'publiee'
 export type StatutPiste = 'proposee' | 'suivie' | 'partiellement_suivie' | 'abandonnee'
@@ -222,6 +224,27 @@ export interface FragmentSynthese {
   created_at: string
   updated_at: string
   publiee_at: string | null
+}
+
+// Vestigia · onglet Semaine — ce que le panneau de droite reçoit en UN aller-retour
+// (`chargerRetourDepot`). Déclaré ici, jamais dans le fichier d'actions.
+export interface RetourDepotComplet {
+  depot: {
+    id: string
+    eleve_id: string
+    inscription_id: string | null
+    statut: StatutDepot
+    commentaire_eleve: string | null
+    photos_suspectes: boolean
+    created_at: string
+    photos: FragmentPhoto[]
+  }
+  urls: Record<string, string>
+  analyse: FragmentAnalyse | null
+  pistes: FragmentPiste[]
+  signaux: SignalIntegrite[]
+  /** Les semaines de travail du semestre, avec la moyenne publiée s'il y en a une. */
+  fil: { numero: number; moyenne: number | null; courante: boolean }[]
 }
 
 export interface EleveAvecDepot {
