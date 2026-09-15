@@ -29,6 +29,39 @@ export async function lireLesDepotsPourLeRegistre(
    */
   seulement: { depotId?: string } = {},
 ): Promise<{ depots: DepotPourLeRegistre[]; incidents: string[] }> {
+  return lireLesDepots(admin, (q) => {
+    q = q.eq('eleve_id', eleveId)
+    return seulement.depotId ? q.eq('id', seulement.depotId) : q
+  })
+}
+
+/**
+ * ⭐ 14/09 — LE SUIVI DES EXERCICES lit l'issue de TOUS les dépôts d'une semaine
+ *    d'un coup (une classe, ~150 dépôts) : même lecture, même forme, bornée par
+ *    une liste d'identifiants au lieu d'un élève. La règle reste `issueDuDepot`,
+ *    jamais une seconde implémentation (« un second calcul divergera »).
+ */
+export async function lireLesDepotsPourLeRegistreDesDepots(
+  admin: Admin, depotIds: readonly string[],
+): Promise<{ depots: DepotPourLeRegistre[]; incidents: string[] }> {
+  if (!depotIds.length) return { depots: [], incidents: [] }
+  // ⛔ Un `.in()` part dans l'URL : mesuré le 14/09 en bac à sable, 700 uuid font
+  //    un 400 Bad Request SANS erreur levée. Par tranches de 200, donc.
+  const depots: DepotPourLeRegistre[] = []
+  const incidents: string[] = []
+  for (let i = 0; i < depotIds.length; i += 200) {
+    const r = await lireLesDepots(admin, (q) => q.in('id', depotIds.slice(i, i + 200)))
+    depots.push(...r.depots); incidents.push(...r.incidents)
+  }
+  return { depots, incidents }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Requete = any
+
+async function lireLesDepots(
+  admin: Admin, borner: (q: Requete) => Requete,
+): Promise<{ depots: DepotPourLeRegistre[]; incidents: string[] }> {
   const incidents: string[] = []
   // ⭐ C7-L7 — LE DEVOIR entre au registre : `materiau_id` sur la même jointure,
   //    et `id_import` pour la souche du cran 2 (`devoirsDeLInstance`).
@@ -39,8 +72,8 @@ export async function lireLesDepotsPourLeRegistre(
     .select('id, statut, v1_remis_at, vf_remis_at, exercices(cran, variante, id_import, exercices_types(code), '
       + 'exercices_cas(ordre, materiau_id, exercices_materiaux(contenu, version_corrigee))), '
       + 'exercices_metacognition(credence)')
-    .eq('eleve_id', eleveId).in('statut', [...STATUTS_JUGES])
-  if (seulement.depotId) q = q.eq('id', seulement.depotId)
+    .in('statut', [...STATUTS_JUGES])
+  q = borner(q)
   const { data, error } = await q
   if (error) return { depots: [], incidents: [`dépôts illisibles : ${error.code} ${error.message}`] }
   const lignes = (data ?? []) as unknown as Array<{
@@ -60,12 +93,17 @@ export async function lireLesDepotsPourLeRegistre(
 
   // ⭐ C7-L7 — la souche du cran 2 retrouve son devoir par l'`id_import` des
   //    matériaux fabriqués. Tolérant : illisible ⇒ le cran 2 est son propre devoir.
+  // ⛔⛔ PostgREST rend 1000 lignes MAX par requête, `limit(10000)` ou pas, sans
+  //    erreur : mesuré le 14/09, 1140 matériaux à `id_import` en prod, 1074 en bac
+  //    à sable — la table était tronquée en silence. Paginé par `range`, trié.
   const parImport = new Map<string, string>()
-  const { data: mats, error: eM } = await admin.from('exercices_materiaux')
-    .select('id, id_import').not('id_import', 'is', null).limit(10000)
-  if (eM) incidents.push(`matériaux fabriqués illisibles (${eM.code}) : le devoir du cran 2 ne se retrouve pas`)
-  for (const m of (mats ?? []) as Array<{ id: string; id_import: string | null }>) {
-    if (m.id_import) parImport.set(m.id_import, m.id)
+  for (let de = 0; ; de += 1000) {
+    const { data: mats, error: eM } = await admin.from('exercices_materiaux')
+      .select('id, id_import').not('id_import', 'is', null).order('id').range(de, de + 999)
+    if (eM) { incidents.push(`matériaux fabriqués illisibles (${eM.code}) : le devoir du cran 2 ne se retrouve pas`); break }
+    const page = (mats ?? []) as Array<{ id: string; id_import: string | null }>
+    for (const m of page) if (m.id_import) parImport.set(m.id_import, m.id)
+    if (page.length < 1000) break
   }
 
   const un = <T,>(x: unknown): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x as T | null))

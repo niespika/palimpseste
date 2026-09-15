@@ -189,6 +189,7 @@ export function vueFermee(v: VueDuDeroule): VueDuDeroule {
     regime: v.regime,
     echeance: v.echeance,
     v1RemiseLe: v.v1RemiseLe,
+    vfRemiseLe: v.vfRemiseLe,
 
     // ── TOUT LE RESTE, VIDÉ ─────────────────────────────────────────────────
     telemetrie: {},

@@ -84,8 +84,8 @@ const COMBIEN: Record<number, string> = {
  *        replier.
  */
 export function SeJuger({
-  depotId, offre, texteRendu = null,
-}: { depotId: string; offre: OffreSeJuger; texteRendu?: string | null }) {
+  depotId, offre, texteRendu = null, lectureSeule = false,
+}: { depotId: string; offre: OffreSeJuger; texteRendu?: string | null; lectureSeule?: boolean }) {
   const router = useRouter()
   const [reponses, setReponses] = useState<Record<string, string>>({})
   const [enCours, setEnCours] = useState(false)
@@ -102,9 +102,10 @@ export function SeJuger({
    * rechargement ne redémarre pas le chronomètre.
    */
   useEffect(() => {
-    if (questions.length === 0) return
+    // ⚠️ En rejeu (professeur), le portier élève refuserait : on n'appelle pas.
+    if (questions.length === 0 || lectureSeule) return
     void actionOuvrirSeJuger(depotId)
-  }, [depotId, questions.length])
+  }, [depotId, questions.length, lectureSeule])
 
   // Rien à servir : la banque ne portait aucune question pour les observables
   // élus. On n'affiche pas une section vide — et surtout pas la liste des

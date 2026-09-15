@@ -16,10 +16,16 @@
 import Link from 'next/link'
 import LibelleSuivi from '@/components/nav/LibelleSuivi'
 import { garderProf } from '@/utils/routeur/acces'
-import { chargerBudgets, chargerAssignation, chargerAssiduite } from './serveur'
+import { chargerBudgets, chargerAssiduite } from './serveur'
 import VueBudgets from './VueBudgets'
-import VueAssignation from './VueAssignation'
 import VueAssiduite from './VueAssiduite'
+import VueSuivi from './VueSuivi'
+import PanneauEcrans from './PanneauEcrans'
+import { chargerSuivi } from './suivi-serveur'
+import { lireFuseau } from '@/utils/fuseau-serveur'
+import { jourDansFuseau } from '@/utils/fuseau'
+import { lundiDe } from './serveur'
+import { Suspense } from 'react'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,24 +34,41 @@ type Vue = (typeof VUES)[number]
 
 const ONGLETS: Array<{ vue: Vue; label: string; sous: string }> = [
   { vue: 'budgets', label: 'Budgets', sous: 'le plancher, le plafond et le quota de chaque élève' },
-  { vue: 'assignation', label: 'Assignation', sous: 'ce que le routeur a posé cette semaine' },
+  // ⭐ 14/09 — L'ASSIGNATION REFAITE (décision de Louis, sans interrupteur : « ce
+  //    travail remplace l'onglet assignation, il fait la même chose et plus »).
+  //    Classes → élèves → exercices → les écrans de l'élève ; le retrait reste.
+  { vue: 'assignation', label: 'Assignation', sous: 'ce que chaque élève fait cette semaine, et comment ça se passe' },
   { vue: 'assiduite', label: 'Assiduité', sous: 'la semaine des classes, et qui la fait' },
 ]
 
 export default async function RouteurPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string; semaine?: string; classe?: string }>
+  searchParams: Promise<{ vue?: string; semaine?: string; classe?: string; eleve?: string; depot?: string }>
 }) {
   const { admin, routeurActif } = await garderProf()
   const sp = await searchParams
   const vue: Vue = (VUES as readonly string[]).includes(sp.vue ?? '') ? (sp.vue as Vue) : 'budgets'
 
-  const [budgets, assignation, assiduite] = await Promise.all([
+  const [budgets, assiduite, suivi] = await Promise.all([
     vue === 'budgets' ? chargerBudgets(admin) : null,
-    vue === 'assignation' ? chargerAssignation(admin, sp.semaine, routeurActif) : null,
     vue === 'assiduite' ? chargerAssiduite(admin, sp.semaine) : null,
+    vue === 'assignation' ? (async () => {
+      const fuseau = await lireFuseau()
+      // ⚠️ `2026-13-45` passe une regex de forme et fait lever `toISOString` : on
+      //    exige une date que `Date.parse` accepte (audit du 14/09).
+      const valide = /^\d{4}-\d{2}-\d{2}$/.test(sp.semaine ?? '') && !Number.isNaN(Date.parse(`${sp.semaine}T00:00:00Z`))
+      const lundi = valide ? lundiDe(sp.semaine!) : lundiDe(jourDansFuseau(new Date(), fuseau))
+      return chargerSuivi(admin, { cycleLundi: lundi, classeId: sp.classe ?? null, fuseau })
+    })() : null,
   ])
+  const eleveDuDepot = suivi?.classe?.eleves.find((e) => e.id === sp.eleve
+    && e.exercices.some((x) => x.depotId === sp.depot)) ?? null
+  const exerciceDuDepot = eleveDuDepot?.exercices.find((x) => x.depotId === sp.depot) ?? null
+  const resumeDuDepot = exerciceDuDepot
+    ? [exerciceDuDepot.objet ?? exerciceDuDepot.observable ?? 'exercice', exerciceDuDepot.cran != null ? `cran ${exerciceDuDepot.cran}` : null]
+      .filter(Boolean).join(' · ')
+    : ''
 
   return (
     <div className="space-y-6">
@@ -93,8 +116,15 @@ export default async function RouteurPage({
       </p>
 
       {budgets && <VueBudgets charge={budgets} />}
-      {assignation && <VueAssignation charge={assignation} />}
       {assiduite && <VueAssiduite charge={assiduite} classeDemandee={sp.classe} />}
+      {suivi && (
+        <VueSuivi charge={suivi} eleveInitial={sp.eleve ?? null} depotId={eleveDuDepot && sp.depot ? sp.depot : null}
+          ecrans={eleveDuDepot && sp.depot ? (
+            <Suspense fallback={<p className="px-4 py-6 font-ui text-sm text-muet">Les écrans de {eleveDuDepot.nom} se chargent…</p>}>
+              <PanneauEcrans admin={admin} depotId={sp.depot} eleveId={eleveDuDepot.id} nom={eleveDuDepot.nom} resume={resumeDuDepot} />
+            </Suspense>
+          ) : null} />
+      )}
     </div>
   )
 }

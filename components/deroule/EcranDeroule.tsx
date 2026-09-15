@@ -62,17 +62,18 @@ import { RetourSegmente } from './RetourSegmente'
 import { TexteATrou } from './TexteATrou'
 import { PlanAOrdonner } from './PlanAOrdonner'
 import { SignalerUnProbleme } from './SignalerUnProbleme'
-import type { VueDuDeroule } from '@/utils/deroule/vue'
-import type { TelemetrieSaisie, Temps } from '@/utils/deroule/types'
+import type { CasServi, VueDuDeroule } from '@/utils/deroule/vue'
+import { NOM_COMPETENCE, type TelemetrieSaisie, type Temps } from '@/utils/deroule/types'
 import type { Atelier } from '@/utils/codex-onglets/regles'
 import {
   formeDuTravail, voletInitial, ecranDuDeroule, tempsAffiche, libelleDuTemps, etatDuTemps,
   rangDuTemps, colonnesDuPlan, type FormeDuTravail, type Volet,
 } from '@/utils/deroule/plan-de-travail'
 import {
-  etapeDuTravail, etapesServies, rangDeLEtape, gestesServis, titreDeLEtape,
+  etapeDuTravail, etapesServies, rangDeLEtape, titreDeLEtape, type EtapeServie,
   libelleDuVoletDeTravail, tempsDeLaPage, type EtapeDuTravail,
 } from '@/utils/deroule/etapes'
+import { suiteDeLaVue, estUnEcranDApres, LIBELLE_CONFIANCE, LIBELLE_CONDITION, type EcranRejoue } from '@/utils/deroule/rembobinage'
 import { segmentsDuRenvoi } from '@/utils/deroule/renvoi'
 import { momentDeLaPaire, casDuMoment, versionDuCas, type MomentDeLaPaire } from '@/utils/deroule/paire'
 import { lireLaRepartition } from '@/utils/deroule/repartition'
@@ -100,9 +101,21 @@ type EtatDuChamp = { texte: string; t: TelemetrieSaisie | null }
 const LectureSeule = createContext(false)
 
 export function EcranDeroule(
-  { vue, atelier = 'codex', lectureSeule = false }:
-  { vue: VueDuDeroule; atelier?: Atelier; lectureSeule?: boolean },
+  { vue, atelier = 'codex', lectureSeule = false, etapeForcee: ecranForce = null }:
+  {
+    vue: VueDuDeroule; atelier?: Atelier; lectureSeule?: boolean
+    /**
+     * ⭐ 14/09 — LE SUIVI DU PROFESSEUR rejoue le déroulé écran par écran
+     *    (`utils/deroule/rembobinage.ts`) : la page à montrer est IMPOSÉE, au
+     *    lieu d'être dérivée de l'état. Toujours avec `lectureSeule`.
+     */
+    etapeForcee?: EcranRejoue | null
+  },
 ) {
+  // Les écrans d'après la remise (`retour`, `vf_*`) se dérivent de la vue
+  // rembobinée ; seule une étape de TRAVAIL impose sa page.
+  const etapeForcee: EtapeServie | null = ecranForce && !estUnEcranDApres(ecranForce.etape)
+    ? (ecranForce as EtapeServie) : null
   const router = useRouter()
 
   // L'ouverture est idempotente côté serveur : `ouvert_at` ne se réécrit jamais.
@@ -112,8 +125,13 @@ export function EcranDeroule(
   //    « Il faut un cas par écran » (Louis). Le moment se lit sur l'étape du
   //    serveur ; « passer au second cas » est le geste de l'élève, tenu ici.
   const [passeAuSecond, setPasseAuSecond] = useState(false)
-  const moment: MomentDeLaPaire | null = vue.estUnePaire
-    ? momentDeLaPaire(vue.etapePaire, passeAuSecond) : null
+  const moment: MomentDeLaPaire | null = !vue.estUnePaire ? null
+    : etapeForcee
+      // ⚠️ La correction porte `cas: 1` dans la suite : la tester AVANT le cas.
+      ? (etapeForcee.etape === 'correction' ? 'correction_1'
+        : etapeForcee.cas === 1 ? 'cas_1'
+        : etapeForcee.cas === 2 ? 'cas_2' : 'fin')
+      : momentDeLaPaire(vue.etapePaire, passeAuSecond)
   const casAffiche: 1 | 2 | null = moment ? casDuMoment(moment) : null
   /** Le texte de chaque cas est-il ENREGISTRÉ ? La crédence d'un cas se déclare après. */
   const [texteSauve, setTexteSauve] = useState<Record<number, boolean>>(() => ({
@@ -129,7 +147,8 @@ export function EcranDeroule(
   const [redactionFinie, setRedactionFinie] = useState<Record<string, boolean>>(() => ({
     1: vue.cas.find((c) => c.ordre === 1)?.credenceDonnee != null,
     2: vue.cas.find((c) => c.ordre === 2)?.credenceDonnee != null,
-    vf: false,
+    // En rejeu, « rendre la version finale » est la page d'après l'écriture.
+    vf: ecranForce?.etape === 'vf_rendre',
   }))
   /** Le champ a-t-il du texte ? — pour que la bascule « Crédence » du téléphone ne mène pas au vide. */
   const [aDuTexte, setADuTexte] = useState<Record<string, boolean>>(() => ({
@@ -159,7 +178,7 @@ export function EcranDeroule(
   const credenceASaisir = !!casCourant?.credence && !casCourant.credence.empechement
     && casCourant.credenceDonnee == null
   const cleCourante = cleDuChamp(vue.estUnePaire, versionEnCours(vue, casAffiche), casAffiche)
-  const etape: EtapeDuTravail = etapeDuTravail({
+  const etape: EtapeDuTravail = etapeForcee ? etapeForcee.etape : etapeDuTravail({
     moment,
     credenceEstLaReponse: vue.credenceEstLaReponse,
     enRedaction: enRedactionV1,
@@ -185,18 +204,9 @@ export function EcranDeroule(
     redactionFinie: (redactionFinie[cleCourante] ?? false)
       || (casCourant?.sansEcriture ? casCourant.designationDonnee : false),
   })
-  const suite = etapesServies({
-    estUnePaire: vue.estUnePaire, credenceEstLaReponse: vue.credenceEstLaReponse,
-    credenceDemandee: vue.cas.some((c) => c.credence !== null && !c.credence.empechement),
-    gestes: gestesServis({
-      confianceDemandee: vue.competencesDeLaConfiance.length > 0,
-      // ⚠️ Ce que la vue sert, ou a déjà reçu : la restitution n'est due qu'au produire.
-      restitutionDemandee: vue.gestesRestants.includes('restitution') || vue.restitutionAChaud !== null,
-    }),
-    versionFinale: false,
-    sansEcriture: vue.cas.map((c) => c.sansEcriture),
-    aucuneRemise: vue.aucuneRemise,
-  })
+  // ⭐ 14/09 — la suite se lit par `suiteDeLaVue`, que la frise du professeur
+  //    partage : deux lectures divergeraient.
+  const suite = suiteDeLaVue(vue)
   const rang = rangDeLEtape(suite, etape, casAffiche)
 
   // ⚠️ Pas de `useCallback` ici : le compilateur React mémoïse lui-même, et il
@@ -261,7 +271,9 @@ export function EcranDeroule(
   /** Téléphone : `Lire` (la matière) ou `Écrire` (le travail). ⭐ 01/09 — il
    *  s'ouvre sur la MATIÈRE quand le travail est d'y surligner : l'élève
    *  ouvrait « surligne l'endroit » sur un champ vide, sans le texte. */
-  const [volet, setVolet] = useState<Volet>(() => voletInitial(forme))
+  // ⭐ 14/09 — en rejeu, le volet suit l'écran imposé (la bascule est inerte).
+  const [volet, setVolet] = useState<Volet>(() => etapeForcee
+    ? (etapeForcee.etape === 'designer' ? 'lire' : 'ecrire') : voletInitial(forme))
   /** La citation du retour que la colonne de gauche met en évidence. */
   const [renvoi, setRenvoi] = useState<string | null>(null)
   /**
@@ -270,7 +282,7 @@ export function EcranDeroule(
    * ⚠️ Vrai d'emblée si une version finale est déjà commencée : sinon un
    *    rechargement cacherait un brouillon en cours.
    */
-  const [reprise, setReprise] = useState((vue.texteVf ?? '') !== '')
+  const [reprise, setReprise] = useState((vue.texteVf ?? '') !== '' || ecranForce?.etape === 'vf_rendre')
 
   const ecran = ecranDuDeroule({
     ouvert: vue.ouvert, tempsCourant: vue.tempsCourant, forme, corrections: vue.corrections,
@@ -342,7 +354,7 @@ export function EcranDeroule(
           le retour ne mesurerait plus la métacognition* (`06-` §2). */}
       {ecran === 'se_juger' && vue.seJuger.offre && (
         <div className="px-4 py-8 sm:px-6 sm:py-10">
-          <SeJuger depotId={vue.depotId} offre={vue.seJuger.offre} texteRendu={vue.texteV1} />
+          <SeJuger depotId={vue.depotId} offre={vue.seJuger.offre} texteRendu={vue.texteV1} lectureSeule={lectureSeule} />
         </div>
       )}
 
@@ -961,6 +973,9 @@ function ColonneTravail({
   cache: boolean
 } & PagesDuTravail) {
   const [texteRelu, setTexteRelu] = useState<string | null>(null)
+  // ⭐ 14/09 — EN REJEU (le professeur), une réponse DÉJÀ DONNÉE se LIT : le
+  //    formulaire vierge mentait sur ce que l'élève avait déclaré (audit).
+  const rejoue = useContext(LectureSeule)
   const enRedactionV1 = vue.tempsCourant === 'ecrire' || vue.tempsCourant === 'preparer'
   const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
   const casCourant = casMontres[0] ?? null
@@ -1114,7 +1129,9 @@ function ColonneTravail({
             réponse, et elle prend la colonne.
             ⚠️ Aux crans guidés `v1_remis_at` n'est JAMAIS posé — la crédence EST
             la réponse —, donc `enRedactionV1` y reste vrai et rien ne disparaît. */}
-        {credenceASaisir && casCourant?.credence && (
+        {rejoue && casCourant?.credenceDonnee != null ? (
+          <CredenceLue cas={casCourant} />
+        ) : credenceASaisir && casCourant?.credence && (
           <div key={casCourant.ordre} className="page-tourne">
             <CredenceSaisie
               depotId={vue.depotId} cas={casCourant.ordre} offre={casCourant.credence} nu />
@@ -1242,6 +1259,8 @@ function ColonneTravail({
                 Ta réponse n’est pas encore enregistrée : reviens à ton texte et enregistre-le.
               </p>
             </Encart>
+          ) : rejoue && casCourant.credenceDonnee != null ? (
+            <CredenceLue cas={casCourant} />
           ) : (
             <CredenceSaisie
               depotId={vue.depotId} cas={casCourant.ordre} offre={casCourant.credence} nu />
@@ -1253,7 +1272,13 @@ function ColonneTravail({
       {/* ── LES TROIS GESTES, UN PAR PAGE (`06-` §3 : avant tout envoi à l'IA) ── */}
       {(etape === 'confiance' || etape === 'conditions' || etape === 'restitution') && (
         <div key={etape} className="page-tourne flex flex-col gap-3">
-          <GestesDeLaRemise vue={vue} />
+          {rejoue && declarationLue(vue, etape) !== null ? (
+            <Encart ton="ok">
+              <p className="font-ui text-sm text-encre">
+                <strong>Déclaré :</strong> {declarationLue(vue, etape)}
+              </p>
+            </Encart>
+          ) : <GestesDeLaRemise vue={vue} />}
           {modifiable && <RetourAuTexte onClick={() => tournerLaPage(false)} libelle="Modifier mon texte" />}
         </div>
       )}
@@ -2465,6 +2490,58 @@ function ContenuDemonstration(
       })}
     </ol>
   )
+}
+
+/** ⭐ 14/09 — la crédence DÉJÀ DONNÉE, lue : pourcentage, ou jetons par lecture. */
+function CredenceLue({ cas }: { cas: CasServi }) {
+  const e = cas.credenceDonnee as { pourcentage?: unknown; index_correct?: unknown } | null
+  const lectures = lireLaRepartition(cas.credenceDonnee)
+  if (lectures) {
+    const max = Math.max(...lectures.map((l) => l.jetons))
+    return (
+      <Encart ton="ok">
+        <p className="font-ui text-xs uppercase tracking-wide text-muet">Crédence déclarée</p>
+        <ul className="mt-2 flex flex-col gap-2">
+          {lectures.map((l, i) => (
+            <li key={i} className="flex items-baseline gap-3">
+              <span className={`w-10 shrink-0 text-right font-ui text-sm ${l.jetons === max && max > 0 ? 'font-bold text-encre' : 'text-muet'}`}>
+                {l.jetons}
+              </span>
+              <span className={`font-corps text-[15px] leading-[1.45] ${l.jetons > 0 ? 'text-encre' : 'text-muet'}`}>
+                {l.candidat}{typeof e?.index_correct === 'number' && e.index_correct === i
+                  ? <span className="ml-2 font-ui text-xs text-ok">← attendue</span> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Encart>
+    )
+  }
+  if (typeof e?.pourcentage === 'number') {
+    return (
+      <Encart ton="ok">
+        <p className="font-ui text-sm text-encre"><strong>Crédence déclarée :</strong> {e.pourcentage} %</p>
+      </Encart>
+    )
+  }
+  return null
+}
+
+/** La déclaration de l'élève sur ce geste, en clair ; `null` s'il ne l'a pas faite. */
+function declarationLue(vue: VueDuDeroule, etape: EtapeDuTravail): string | null {
+  if (etape === 'confiance') {
+    const v = vue.confianceDeclaree
+    if (!v || !Object.keys(v).length) return null
+    return Object.entries(v)
+      .map(([c, x]) => `${NOM_COMPETENCE[c as keyof typeof NOM_COMPETENCE] ?? c} — ${LIBELLE_CONFIANCE[x] ?? x}`)
+      .join(' · ')
+  }
+  if (etape === 'conditions') {
+    const v = vue.conditionsDeclarees as { valeur?: unknown } | null
+    return typeof v?.valeur === 'string' ? (LIBELLE_CONDITION[v.valeur] ?? v.valeur) : null
+  }
+  if (etape === 'restitution') return vue.restitutionAChaud ? `« ${vue.restitutionAChaud} »` : null
+  return null
 }
 
 export function Encart(

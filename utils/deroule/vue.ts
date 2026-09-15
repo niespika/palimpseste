@@ -219,6 +219,8 @@ export interface VueDuDeroule {
   echeance: string | null
   /** L'instant de la remise de v1 — « v1 rendue mardi » dans la barre. */
   v1RemiseLe: string | null
+  /** L'instant de la remise de la version finale — pour la frise du professeur. */
+  vfRemiseLe: string | null
   /**
    * ⭐⭐ AUX DEUX CRANS GUIDÉS, LA CRÉDENCE **EST** LA RÉPONSE — smoke élève du
    *    24/08, tranché par Louis : « la réponse c'est la crédence, il n'y a pas
@@ -484,7 +486,16 @@ function competencesVisees(
  */
 export async function chargerLeDeroule(
   admin: Admin, depotId: string, eleveId: string,
-  a: { ouvert: boolean; delaiVfJours: number; atelier?: Atelier },
+  a: {
+    ouvert: boolean; delaiVfJours: number; atelier?: Atelier
+    /**
+     * ⭐ 14/09 — LE PROFESSEUR REJOUE : il lit, il ne sert pas. La réduction de
+     *    C10-L1 (`vueFermee`) existe pour que l'exercice puisse être resservi à
+     *    l'ÉLÈVE ; le rejeu en lecture seule garde la charge entière. `fermee`
+     *    reste vrai dans la vue : le fait n'est pas caché, seule la réduction l'est.
+     */
+    sansFermeture?: boolean
+  },
 ): Promise<VueDuDeroule | null> {
   // ⭐ C5-L2 — LA PORTE BORNE, PAS LE CHARGEUR. Les deux ROUTES nomment leur
   //    atelier ; les ACTIONS partagées ne le font pas, et ne le peuvent pas :
@@ -1094,6 +1105,7 @@ export async function chargerLeDeroule(
     titre: titreDeLaConsigne(depot.exercice.consigne_instanciee),
     echeance: depot.echeance,
     v1RemiseLe: depot.v1_remis_at,
+    vfRemiseLe: depot.vf_remis_at,
     credenceEstLaReponse: surDesCandidats,
     regime, vfRequiseParEscalade, temps,
     // ⛔ 06/09 — « SE JUGER » N'EST DÛ QUE S'IL Y A DES QUESTIONS. Trouvé au smoke
@@ -1188,7 +1200,7 @@ export async function chargerLeDeroule(
   //    ⛔ Surtout PAS dans `lireContexte` : le même module nourrit l'écran ET la
   //    chaîne de mesure (`utils/chaine/contexte.ts`) — une réduction posée là
   //    ferait mesurer la chaîne sur un contexte amputé.
-  return fermee ? vueFermee(vue) : vue
+  return fermee && !a.sansFermeture ? vueFermee(vue) : vue
 }
 
 // ── Les pièces ──────────────────────────────────────────────────────────────

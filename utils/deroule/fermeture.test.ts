@@ -145,10 +145,10 @@ test('le message est celui de Louis, mot pour mot', () => {
 // LA VUE RÉDUITE — et l'épreuve est « aucun secret ne fuit », pas « j'ai vidé »
 // ════════════════════════════════════════════════════════════════════════════
 
-/** Les treize champs qui SURVIVENT à la fermeture (mission, effet 2). */
+/** Les quatorze champs qui SURVIVENT à la fermeture (mission, effet 2 ; `vfRemiseLe` ajouté le 14/09). */
 const GARDES = [
   'depotId', 'ouvert', 'fermee', 'titre', 'consigne', 'texteV1', 'texteVf',
-  'retourChaud', 'retourFinal', 'contestations', 'regime', 'echeance', 'v1RemiseLe',
+  'retourChaud', 'retourFinal', 'contestations', 'regime', 'echeance', 'v1RemiseLe', 'vfRemiseLe',
 ] as const
 
 /**
@@ -173,6 +173,7 @@ function vueFarcie(): VueDuDeroule {
     regime: 'plein',
     echeance: 'GARDE_echeance',
     v1RemiseLe: 'GARDE_v1RemiseLe',
+    vfRemiseLe: 'GARDE_vfRemiseLe',
 
     telemetrie: { v1: { signes_saisis: 4242 } } as unknown as VueDuDeroule['telemetrie'],
     credenceEstLaReponse: true,
