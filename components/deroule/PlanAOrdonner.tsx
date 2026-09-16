@@ -28,17 +28,20 @@ import { composerLePlan, lireLePlan, type EtatDuPlan, type Piece } from '@/utils
 import { nouvelleTelemetrie, accumuler, type EvenementDeSaisie } from '@/utils/deroule/telemetrie'
 import type { TelemetrieSaisie } from '@/utils/deroule/types'
 import { actionCollageBloque } from '@/app/deroule/actions'
-import type { PoigneeDuChamp } from './ChampDeRedaction'
+import { motifLisible, type PoigneeDuChamp } from './ChampDeRedaction'
 import { teinteDuMoment } from './TexteATrou'
+import { useBrouillonLocalParCle } from '@/app/eleve/brouillon/useBrouillonLocal'
 
 const AUTO_MS = 15_000
 const RANGS = ['I', 'II', 'III', 'IV', 'V', 'VI']
 
 export function PlanAOrdonner({
   depotId, theses, valeurInitiale, telemetrieInitiale = null, lectureSeule,
-  onEnregistrer, apresEnregistrement, onEtat, suite = null, ref,
+  onEnregistrer, apresEnregistrement, onEtat, suite = null, ref, cleBrouillon = null,
 }: {
   depotId: string
+  /** ⭐ 15/09 — la clé du brouillon local (`cleBrouillonDeroule`), ou `null` — cf. `ChampDeRedaction`. */
+  cleBrouillon?: string | null
   /** Les thèses servies, DANS LE DÉSORDRE de la banque. */
   theses: readonly Piece[]
   valeurInitiale: string
@@ -56,6 +59,8 @@ export function PlanAOrdonner({
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [enregistreA, setEnregistreA] = useState<string | null>(null)
+  const [panne, setPanne] = useState<string | null>(null)
+  const [restaure, setRestaure] = useState(false)
 
   const texte = composerLePlan(theses, etat)
   const releve = useRef<TelemetrieSaisie>(telemetrieInitiale ?? nouvelleTelemetrie())
@@ -68,6 +73,20 @@ export function PlanAOrdonner({
   useEffect(() => { onEtat?.(texte, releve.current) },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [])
+
+  // ⭐ 15/09 — le brouillon local, après l'état initial (cf. `ChampDeRedaction`). Le plan se
+  //    relit du texte composé ; un texte qui ne se relit pas n'est pas restauré.
+  const brouillon = useBrouillonLocalParCle(lectureSeule ? null : cleBrouillon, { texte }, (f) => {
+    if (f.texte === courant.current) return
+    const plan = lireLePlan(f.texte, theses)
+    if (!plan) return
+    courant.current = f.texte
+    dernier.current = { ...dernier.current, longueur: f.texte.length }
+    sale.current = true
+    setEtat(plan)
+    setRestaure(true)
+    onEtat?.(f.texte, releve.current)
+  })
 
   function changer(suivant: EtatDuPlan) {
     const v = composerLePlan(theses, suivant)
@@ -110,9 +129,16 @@ export function PlanAOrdonner({
     const id = setInterval(() => {
       if (!sale.current) return
       sale.current = false
-      void onEnregistrer(courant.current, releve.current).then(marquerEnregistre).catch(() => { sale.current = true })
+      const envoye = courant.current
+      void onEnregistrer(envoye, releve.current)
+        .then(() => { marquerEnregistre(); setPanne(null); brouillon.synchroniser({ texte: envoye }) })
+        .catch((e: unknown) => {
+          sale.current = true
+          setPanne(motifLisible(e))
+        })
     }, AUTO_MS)
     return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lectureSeule, onEnregistrer, marquerEnregistre])
 
   /** Le plan est complet quand chaque partie après la première a son mot qui lie. */
@@ -123,11 +149,15 @@ export function PlanAOrdonner({
     if (courant.current.trim() === '') return false
     setEnCours(true); setMessage(null)
     try {
-      await onEnregistrer(courant.current, releve.current)
-      sale.current = false; marquerEnregistre(); return true
+      const envoye = courant.current
+      sale.current = false
+      await onEnregistrer(envoye, releve.current)
+      marquerEnregistre(); setPanne(null); brouillon.synchroniser({ texte: envoye })
+      return true
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'L’enregistrement a échoué.'); return false
+      sale.current = true; setMessage(motifLisible(e)); return false
     } finally { setEnCours(false) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enCours, onEnregistrer, marquerEnregistre])
 
   useImperativeHandle(ref, () => ({ enregistrer: enregistrerMaintenant }), [enregistrerMaintenant])
@@ -226,7 +256,9 @@ export function PlanAOrdonner({
 
       <p className="text-xs text-muet">
         <span className="text-encre-douce">
-          {enregistreA ? `brouillon enregistré · ${enregistreA}` : 'enregistré tout seul'}
+          {panne
+            ? <span className="text-retard">pas enregistré{enregistreA ? ` depuis ${enregistreA}` : ''}{brouillon.disponible ? ' · ton plan est gardé sur cet appareil' : ''}</span>
+            : (enregistreA ? `brouillon enregistré · ${enregistreA}` : 'enregistré tout seul')}
         </span>
         {' · '}Tu écris au clavier : <strong>le collage est désactivé</strong>.
       </p>
@@ -246,6 +278,8 @@ export function PlanAOrdonner({
         </div>
       )}
       {message && <p className="text-sm text-retard">{message}</p>}
+      {restaure && <p className="text-sm text-encre-douce">Ton plan a été repris du brouillon gardé sur cet appareil.</p>}
+      {panne && !message && <p className="text-sm text-retard">{panne}</p>}
     </div>
   )
 }

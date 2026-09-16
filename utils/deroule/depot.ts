@@ -266,8 +266,18 @@ export async function enregistrerLeTexte(
   const maj: Record<string, unknown> = { [champ]: propre, updated_at: maintenant }
   if (telemetrie) maj.saisie_telemetrie = fusionnerEnBase(depot, version, telemetrie)
 
-  const { error } = await admin.from('exercices_depots').update(maj).eq('id', depot.id)
-  if (error) return refus(`L'enregistrement a échoué : ${error.message}`)
+  // ⭐ 15/09 — compare-and-swap comme `remettre` : un tic de 15 s parti juste avant la remise
+  //    ne réécrit pas le texte d'une version déjà remise. Et l'élève ne lit jamais le message
+  //    de Postgres : il va au journal.
+  const { data, error } = await admin.from('exercices_depots').update(maj).eq('id', depot.id)
+    .is(version === 'v1' ? 'v1_remis_at' : 'vf_remis_at', null).select('id')
+  if (error) {
+    console.error(`[deroule] enregistrement du brouillon refusé par la base (${depot.id}) : ${error.message}`)
+    return refus('L’enregistrement n’a pas abouti. Réessaie dans un instant.')
+  }
+  if (!data || data.length === 0) {
+    return refus(version === 'v1' ? 'Ta v1 est déjà remise.' : 'Ta version finale est déjà remise.')
+  }
   return ok({ blocs: blocs(propre).length })
 }
 

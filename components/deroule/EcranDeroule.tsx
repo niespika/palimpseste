@@ -78,6 +78,7 @@ import { suiteDeLaVue, estUnEcranDApres, LIBELLE_CONFIANCE, LIBELLE_CONDITION, t
 import { segmentsDuRenvoi } from '@/utils/deroule/renvoi'
 import { momentDeLaPaire, casDuMoment, versionDuCas, type MomentDeLaPaire } from '@/utils/deroule/paire'
 import { lireLaRepartition } from '@/utils/deroule/repartition'
+import { cleBrouillonDeroule } from '@/utils/deroule/brouillon'
 import {
   actionOuvrir, actionEnregistrerBrouillon, actionRemettre, actionMicroQuestion,
   actionCompterUneAide, actionEtatDeLAttente, actionDesignation,
@@ -100,11 +101,18 @@ type EtatDuChamp = { texte: string; t: TelemetrieSaisie | null }
  *    qui échoueraient.
  */
 const LectureSeule = createContext(false)
+/**
+ * ⭐ 15/09 — L'ÉLÈVE qui écrit, pour la clé du brouillon LOCAL des champs (`cleBrouillonDeroule`).
+ *    `null` en rejeu professeur et partout où l'on ne sait pas qui écrit : alors pas de brouillon.
+ */
+const IdentiteEleve = createContext<string | null>(null)
 
 export function EcranDeroule(
-  { vue, atelier = 'codex', lectureSeule = false, etapeForcee: ecranForce = null }:
+  { vue, atelier = 'codex', lectureSeule = false, etapeForcee: ecranForce = null, eleveId = null }:
   {
     vue: VueDuDeroule; atelier?: Atelier; lectureSeule?: boolean
+    /** ⭐ 15/09 — l'élève connecté (page élève seulement) : porte la clé du brouillon local. */
+    eleveId?: string | null
     /**
      * ⭐ 14/09 — LE SUIVI DU PROFESSEUR rejoue le déroulé écran par écran
      *    (`utils/deroule/rembobinage.ts`) : la page à montrer est IMPOSÉE, au
@@ -316,6 +324,7 @@ export function EcranDeroule(
 
   return (
     <LectureSeule.Provider value={lectureSeule}>
+    <IdentiteEleve.Provider value={lectureSeule ? null : eleveId}>
     <div inert={lectureSeule || undefined}
          className="-mx-4 overflow-hidden border-y border-bordure bg-fond-module
                     sm:mx-0 sm:rounded-2xl sm:border">
@@ -380,6 +389,7 @@ export function EcranDeroule(
         <SignalerUnProbleme depotId={vue.depotId} mien={vue.signalement.mien} />
       )}
     </div>
+    </IdentiteEleve.Provider>
     </LectureSeule.Provider>
   )
 }
@@ -983,6 +993,7 @@ function ColonneTravail({
   // ⭐ 14/09 — EN REJEU (le professeur), une réponse DÉJÀ DONNÉE se LIT : le
   //    formulaire vierge mentait sur ce que l'élève avait déclaré (audit).
   const rejoue = useContext(LectureSeule)
+  const eleveId = useContext(IdentiteEleve)
   const enRedactionV1 = vue.tempsCourant === 'ecrire' || vue.tempsCourant === 'preparer'
   const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
   const casCourant = casMontres[0] ?? null
@@ -1172,6 +1183,10 @@ function ColonneTravail({
   const surLaPageDuChamp = champDu && etape === 'ecrire'
   /** Le texte se modifie encore tant que la crédence n'est pas donnée (ou qu'aucune n'est demandée). */
   const modifiable = !casCourant?.credenceDonnee
+  // ⭐ 15/09 — la clé du brouillon local : l'élève, le dépôt, la version, et le cas d'une paire.
+  const cleBrouillon = eleveId
+    ? cleBrouillonDeroule(eleveId, vue.depotId, versionDuChamp, vue.estUnePaire ? casAffiche : null)
+    : null
   // ⛔⛔ 07/09 — NE PROMETS PAS UNE REMISE QUI N'EXISTE PAS. Sur une paire
   //    4(b)/4(b) il n'y a AUCUN bouton « Rendre » : l'exercice se clôt à la
   //    dernière crédence. La phrase disait « puis tu pourras rendre » sur les
@@ -1238,6 +1253,7 @@ function ColonneTravail({
             onEtat={surEtatDuChamp}
             apresEnregistrement={() => tournerLaPage(true)}
             suite={phraseDeSuite}
+            cleBrouillon={cleBrouillon}
           />
         ) : (
         <ChampDeRedaction
@@ -1253,6 +1269,7 @@ function ColonneTravail({
           onEtat={surEtatDuChamp}
           apresEnregistrement={() => tournerLaPage(true)}
           suite={phraseDeSuite}
+          cleBrouillon={cleBrouillon}
           forme={casCourant?.pieces ? 'trou' : 'page'}
           enveloppe={casCourant?.pieces
             ? (champ) => <TexteATrou pieces={casCourant.pieces!}>{champ}</TexteATrou>
@@ -1553,6 +1570,9 @@ function RetourDUnTexte({
 }) {
   const [ongletMobile, setOngletMobile] = useState<'texte' | 'retour'>('retour')
   const enRevision = vue.tempsCourant === 'reviser'
+  const eleveId = useContext(IdentiteEleve)
+  // ⭐ 15/09 — la version finale s'écrit ici : sa clé de brouillon local.
+  const cleBrouillon = eleveId ? cleBrouillonDeroule(eleveId, vue.depotId, 'vf') : null
   // ⚠️ Le retour qui se lit est LE PLUS RÉCENT ; l'autre, s'il existe, se replie
   //    sur la dernière page — deux retours empilés feraient deux fois la pile.
   const attendFinal = vue.piloteArgument?.vfRemise && !vue.retourFinal
@@ -1700,6 +1720,7 @@ function RetourDUnTexte({
                     onEtat={surEtatDuChamp}
                     apresEnregistrement={() => tournerLaPage(true)}
                     suite="Ensuite : rendre ta version finale."
+                    cleBrouillon={cleBrouillon}
                   />
                 ) : (
                 <ChampDeRedaction
@@ -1712,6 +1733,7 @@ function RetourDUnTexte({
                   onEtat={surEtatDuChamp}
                   apresEnregistrement={() => tournerLaPage(true)}
                   suite="Ensuite : rendre ta version finale."
+                  cleBrouillon={cleBrouillon}
                   /* ⭐ 06/09 — au cran 2, la version finale se récrit DANS LE TROU,
                      le devoir autour : le même texte à trou qu'à la v1. */
                   forme={vue.cas[0]?.pieces ? 'trou' : 'page'}
@@ -2116,6 +2138,8 @@ function Correction({
    *    texte même que la consigne venait de citer (« Le devoir a ce problème :
    *    "…" »). L'élève relisait la consigne au lieu de voir ce qu'il cherchait.
    *    *Relevé par Louis sur le smoke du 08/09.*
+   * ⭐ 15/09 — EN CONTEXTE : la phrase qui porte la cible, la cible marquée.
+   *    Nue, elle tenait parfois en un mot (« Les ») et un élève l'a signalé.
    */
   passage?: PassageAttendu | null
 }) {
@@ -2138,8 +2162,6 @@ function Correction({
           <p className={`mt-2 font-corps text-[15.5px] font-semibold ${juste ? 'text-ok' : 'text-attention'}`}>
             {juste ? 'C’est la bonne réponse.' : 'Ce n’est pas la bonne réponse.'}
           </p>
-   * ⭐ 15/09 — EN CONTEXTE : la phrase qui porte la cible, la cible marquée.
-   *    Nue, elle tenait parfois en un mot (« Les ») et un élève l'a signalé.
           {refutation && (
             <TexteBrut texte={refutation}
               className="mt-1.5 font-corps text-base leading-[1.55] text-encre" />

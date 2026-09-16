@@ -81,5 +81,6 @@ export async function PageDuDeroule(
   //    DANS LA BARRE DE CONTENU de l'écran, et il nomme sa destination :
   //    « ← Exercices », l'onglet, plutôt qu'un « ← Retour » flottant que rien ne
   //    rattachait à la page. L'atelier descend donc jusqu'à l'écran.
-  return <EcranDeroule vue={vue} atelier={atelier} />
+  // ⭐ 15/09 — l'élève descend jusqu'aux champs : la clé du brouillon local le porte.
+  return <EcranDeroule vue={vue} atelier={atelier} eleveId={userId} />
 }

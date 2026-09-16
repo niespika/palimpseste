@@ -70,6 +70,7 @@ import {
 } from '@/utils/deroule/telemetrie'
 import type { TelemetrieSaisie } from '@/utils/deroule/types'
 import { actionCollageBloque } from '@/app/deroule/actions'
+import { useBrouillonLocalParCle } from '@/app/eleve/brouillon/useBrouillonLocal'
 
 /** L'intervalle d'enregistrement du brouillon — assez lâche pour ne pas marteler. */
 const AUTO_MS = 15_000
@@ -98,7 +99,7 @@ export interface PoigneeDuChamp {
 export function ChampDeRedaction({
   depotId, valeurInitiale, telemetrieInitiale = null, lectureSeule, rows = 20,
   onEnregistrer, apresEnregistrement, onEtat, suite = null, pied = null, ref,
-  forme = 'page', enveloppe,
+  forme = 'page', enveloppe, cleBrouillon = null,
 }: {
   depotId: string
   valeurInitiale: string
@@ -121,6 +122,13 @@ export function ChampDeRedaction({
   forme?: 'page' | 'trou'
   /** En mode `trou`, ce qui entoure le champ — les morceaux du devoir (`TexteATrou`). */
   enveloppe?: (champ: React.ReactNode) => React.ReactNode
+  /**
+   * ⭐ 15/09 — LA CLÉ DU BROUILLON LOCAL (`cleBrouillonDeroule`), ou `null` : sans elle, le
+   *    texte ne vit qu'en mémoire et au serveur. Avec elle, ce que le serveur n'a pas encore
+   *    reste sur l'appareil : une porte qui renvoie ailleurs, une session expirée, un onglet
+   *    fermé ne l'emportent plus.
+   */
+  cleBrouillon?: string | null
 }) {
   const [texte, setTexte] = useState(valeurInitiale)
   const [enCours, setEnCours] = useState(false)
@@ -128,6 +136,12 @@ export function ChampDeRedaction({
   /** ⭐ « brouillon enregistré · 14:02 » — l'heure du DERNIER succès, pas une
    *     promesse : tant qu'aucun enregistrement n'a abouti, on ne dit rien. */
   const [enregistreA, setEnregistreA] = useState<string | null>(null)
+  /** ⭐ 15/09 — l'enregistrement automatique a ÉCHOUÉ, et le pied le dit. Avant, il avalait
+   *     l'erreur et l'écran continuait d'afficher « enregistré tout seul » : un élève bloqué par
+   *     un retour non lu a écrit vingt minutes sur un écran qui n'écrivait rien. */
+  const [panne, setPanne] = useState<string | null>(null)
+  /** Le texte vient du brouillon de l'appareil, pas de la base — l'élève doit le savoir. */
+  const [restaure, setRestaure] = useState(false)
 
   // La télémétrie s'accumule en `ref` : elle ne doit JAMAIS provoquer un rendu.
   // ⭐ Semée du relevé de la base, et jamais remise à zéro ensuite : chaque envoi
@@ -174,6 +188,19 @@ export function ChampDeRedaction({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [])
 
+  // ⭐ Le brouillon local — APRÈS l'état initial ci-dessus, pour que le texte restauré soit
+  //    celui que le parent tient pour la remise. Restauré ⇒ `sale` : le prochain tic le porte
+  //    au serveur, qui ne l'a pas.
+  const brouillon = useBrouillonLocalParCle(lectureSeule ? null : cleBrouillon, { texte }, (f) => {
+    if (f.texte === courant.current) return
+    courant.current = f.texte
+    dernier.current = { ...dernier.current, longueur: f.texte.length }
+    sale.current = true
+    setTexte(f.texte)
+    setRestaure(true)
+    onEtat?.(f.texte, releve.current)
+  })
+
   /**
    * ⚠️ `preventDefault` D'ABORD, journalisation ENSUITE — et jamais l'inverse :
    *    si la journalisation échoue, le collage doit rester refusé.
@@ -212,20 +239,29 @@ export function ChampDeRedaction({
   // L'enregistrement automatique. ⚠️ Il n'envoie QUE si quelque chose a bougé —
   // une écriture inutile est une écriture qui peut échouer, et supabase-js ne
   // lève pas.
+  // ⛔ 15/09 — il lit `courant`, PAS `texte`, et `texte` n'est PAS une dépendance :
+  //    avec `texte` en dépendance, le minuteur repartait à CHAQUE FRAPPE, et un
+  //    élève qui écrivait sans pause de quinze secondes n'était jamais enregistré.
   useEffect(() => {
     if (lectureSeule) return
     const id = setInterval(() => {
       if (!sale.current) return
       sale.current = false
+      const envoye = courant.current
       // ⭐ On envoie le CUMUL, sans remettre le relevé à zéro : un envoi perdu
       //    n'a rien à rattraper, le suivant porte tout. Et un envoi rejoué ne
       //    compte rien deux fois, la base ne garde que le plus avancé.
-      void onEnregistrer(texte, releve.current)
-        .then(marquerEnregistre)
-        .catch(() => { sale.current = true })
+      void onEnregistrer(envoye, releve.current)
+        .then(() => { marquerEnregistre(); setPanne(null); brouillon.synchroniser({ texte: envoye }) })
+        .catch((e: unknown) => {
+          sale.current = true
+          setPanne(motifLisible(e))
+        })
     }, AUTO_MS)
     return () => clearInterval(id)
-  }, [texte, lectureSeule, onEnregistrer, marquerEnregistre])
+    // `brouillon` est recréé à chaque rendu ; sa clé et ses refs, non.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lectureSeule, onEnregistrer, marquerEnregistre])
 
   /**
    * ⭐ « ENREGISTRER » — le geste explicite. Il fait ce que l'automatique fait,
@@ -238,16 +274,23 @@ export function ChampDeRedaction({
     setEnCours(true)
     setMessage(null)
     try {
-      await onEnregistrer(courant.current, releve.current)
+      const envoye = courant.current
+      // ⚠️ `sale` se baisse AVANT l'envoi (comme le tic) : une frappe pendant l'envoi le relève,
+      //    et le tic suivant la porte. Après l'`await`, elle serait effacée (revue du 15/09).
       sale.current = false
+      await onEnregistrer(envoye, releve.current)
       marquerEnregistre()
+      setPanne(null)
+      brouillon.synchroniser({ texte: envoye })
       return true
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'L’enregistrement a échoué.')
+      sale.current = true
+      setMessage(motifLisible(e))
       return false
     } finally {
       setEnCours(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enCours, onEnregistrer, marquerEnregistre])
 
   useImperativeHandle(ref, () => ({ enregistrer: enregistrerMaintenant }), [enregistrerMaintenant])
@@ -256,6 +299,32 @@ export function ChampDeRedaction({
     const ok = await enregistrerMaintenant()
     if (ok) apresEnregistrement?.()
   }
+
+  /**
+   * Le pied dit ce qui EST : l'heure du dernier succès, ou — ⭐ 15/09 — que le dernier
+   * enregistrement a échoué et que le texte tient sur l'appareil.
+   */
+  const etatDuBrouillon = panne
+    ? (
+      <span className="text-retard">
+        pas enregistré{enregistreA ? ` depuis ${enregistreA}` : ''}
+        {brouillon.disponible ? ' · ton texte est gardé sur cet appareil' : ''}
+      </span>
+    ) : (
+      <span className="text-encre-douce">
+        {enregistreA ? `brouillon enregistré · ${enregistreA}` : 'enregistré tout seul'}
+      </span>
+    )
+  const avis = (
+    <>
+      {restaure && (
+        <p className="text-sm text-encre-douce">
+          Ton texte a été repris du brouillon gardé sur cet appareil.
+        </p>
+      )}
+      {panne && !message && <p className="text-sm text-retard">{panne}</p>}
+    </>
+  )
 
   const champ = (
     <textarea
@@ -299,9 +368,7 @@ export function ChampDeRedaction({
               className="pointer-events-none fixed -left-[9999px] top-0 whitespace-pre font-corps text-[16.5px]" />
         {enveloppe ? enveloppe(champ) : champ}
         <p className="text-xs text-muet">
-          <span className="text-encre-douce">
-            {enregistreA ? `brouillon enregistré · ${enregistreA}` : 'enregistré tout seul'}
-          </span>
+          {etatDuBrouillon}
           {' · '}<span className="tabular-nums">{signes(texte)} signes</span>
           {' · '}Tu écris au clavier : <strong>le collage est désactivé</strong>, ce texte doit être le tien.
         </p>
@@ -320,6 +387,7 @@ export function ChampDeRedaction({
         )}
         {pied && <p className="text-center font-corps text-[13.5px] italic text-muet">{pied}</p>}
         {message && <p className="text-sm text-retard">{message}</p>}
+        {avis}
       </div>
     )
   }
@@ -339,9 +407,7 @@ export function ChampDeRedaction({
             a pas, et en afficher une inventerait une note. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-bordure
                         px-4 py-2.5 font-ui text-xs text-muet">
-          <span className="text-encre-douce">
-            {enregistreA ? `brouillon enregistré · ${enregistreA}` : 'enregistré tout seul'}
-          </span>
+          {etatDuBrouillon}
           <span className="ml-auto tabular-nums">{signes(texte)} signes</span>
         </div>
       </div>
@@ -381,8 +447,19 @@ export function ChampDeRedaction({
         <p className="text-center font-corps text-[13.5px] italic text-muet">{pied}</p>
       )}
       {message && <p className="text-sm text-retard">{message}</p>}
+      {avis}
     </div>
   )
+}
+
+/**
+ * ⭐ 15/09 — ce que l'élève lit quand un enregistrement échoue : la phrase du serveur quand elle
+ *    lui est adressée, « Pas de connexion » quand c'est le réseau — jamais un `TypeError`.
+ */
+export function motifLisible(e: unknown): string {
+  if (e instanceof TypeError) return 'Pas de connexion : l’enregistrement n’a pas pu partir.'
+  if (e instanceof Error && e.message) return e.message
+  return 'L’enregistrement a échoué.'
 }
 
 /**

@@ -72,8 +72,8 @@ function rafraichir(): void {
 }
 
 /**
- * Le portier commun. ⚠️ **Les deux gardes transverses jouent AVANT toute
- * écriture** : le blocage d'intégrité (« un type de signalement est un STRIKE,
+ * Le portier commun. ⚠️ **Les deux gardes transverses jouent AVANT tout
+ * RENDU** (et pas sur le brouillon ni l'ouverture — mode `'brouillon'`, ci-dessous) : le blocage d'intégrité (« un type de signalement est un STRIKE,
  * qui parle d'effort et **bloque les dépôts au seuil** ») et le gate de lecture
  * (« un retour non lu bloque tous les rendus »).
  *
@@ -81,7 +81,18 @@ function rafraichir(): void {
  *    doit pouvoir lire son écran et comprendre pourquoi, pas se heurter à un mur
  *    muet.
  */
-async function portier(depotId: string, ecriture = true): Promise<
+/**
+ * ⭐ 15/09 — `'brouillon'` : L'ENREGISTREMENT AUTOMATIQUE DU TEXTE. Les deux gardes
+ *    transverses ne jouent PAS sur lui : « un retour non lu bloque tous les
+ *    RENDUS », « un strike bloque les DÉPÔTS au seuil » — un brouillon n'est ni
+ *    l'un ni l'autre. Elles jouaient, et en silence : un élève bloqué par un
+ *    retour de fragment non lu a écrit sur un écran dont chaque enregistrement
+ *    échouait, puis est parti lire son retour ; l'onglet a emporté son texte
+ *    (cas décidé par Louis le 15/09, même scénario qu'Aletheia le 13/09). La
+ *    fermeture de la semaine comptée, elle, reste : un exercice fermé ne
+ *    s'écrit plus, brouillon compris.
+ */
+async function portier(depotId: string, ecriture: boolean | 'brouillon' = true): Promise<
   { erreur: Reponse } | { admin: Awaited<ReturnType<typeof garderEleveDeroule>>['admin']
     userId: string; depot: DepotMaison; delaiVfJours: number }> {
   const { admin, userId, ouvert, delaiVfJours } = await garderEleveDeroule(false)
@@ -100,10 +111,12 @@ async function portier(depotId: string, ecriture = true): Promise<
 
 
   if (ecriture) {
-    const blocage = await messageSiBloque(admin, userId)
-    if (blocage) return { erreur: echec(blocage) }
-    const gateLecture = await messageSiRetoursNonLus(admin, userId)
-    if (gateLecture) return { erreur: echec(gateLecture) }
+    if (ecriture !== 'brouillon') {
+      const blocage = await messageSiBloque(admin, userId)
+      if (blocage) return { erreur: echec(blocage) }
+      const gateLecture = await messageSiRetoursNonLus(admin, userId)
+      if (gateLecture) return { erreur: echec(gateLecture) }
+    }
     // ⭐⭐ C10 · L1 — LA SEMAINE COMPTÉE SE FERME, et la garde entre ICI, EN UNE
     //    FOIS, à côté des deux autres. Le portier est appelé par DIX-HUIT des
     //    vingt actions (mesuré) : la recopier dans chacune, ce serait dix-huit
@@ -167,7 +180,10 @@ export async function actionEtatDeLAttente(depotId: string): Promise<{
 // ── Temps 1 et 2 ────────────────────────────────────────────────────────────
 
 export async function actionOuvrir(depotId: string): Promise<Reponse> {
-  const p = await portier(depotId)
+  // ⭐ 15/09 — ouvrir n'est pas rendre : un élève bloqué par un retour non lu doit quand même
+  //    poser `ouvert_at`, sinon son brouillon s'écrit sur un dépôt jamais ouvert et la durée
+  //    mesurée à la remise (`reelMs`) est fausse — un faux signal « très courte ».
+  const p = await portier(depotId, 'brouillon')
   if ('erreur' in p) return p.erreur
   const r = await ouvrirLeDepot(p.admin, p.depot, new Date().toISOString())
   // ⭐ 01/09 — ON NE REVALIDE QUE SI L'OUVERTURE A ÉCRIT. L'écran appelle cette
@@ -181,7 +197,8 @@ export async function actionOuvrir(depotId: string): Promise<Reponse> {
 export async function actionEnregistrerBrouillon(
   depotId: string, version: Version, texte: string, telemetrie: TelemetrieSaisie | null,
 ): Promise<Reponse & { blocs?: number }> {
-  const p = await portier(depotId)
+  // ⭐ 15/09 — un brouillon n'est pas un rendu : les gardes strike et lecture ne jouent pas.
+  const p = await portier(depotId, 'brouillon')
   if ('erreur' in p) return p.erreur
   const r = await enregistrerLeTexte(
     p.admin, p.depot, version, texte, telemetrie, new Date().toISOString())
@@ -220,7 +237,8 @@ export async function actionCollageBloque(depotId: string, moyen: string): Promi
  * déclenchée ou pas répondue — cette action n'est appelée que sur une réponse.
  */
 export async function actionMicroQuestion(depotId: string, motif: string): Promise<Reponse> {
-  const p = await portier(depotId)
+  // ⭐ 15/09 — « jamais notée » : la porte des rendus ne la concerne pas.
+  const p = await portier(depotId, 'brouillon')
   if ('erreur' in p) return p.erreur
   if (!estMotifLicite(motif)) return echec('Deux réponses possibles : une pause, ou une difficulté.')
   const r = await repondreALaMicroQuestion(p.admin, depotId, motif, new Date().toISOString())

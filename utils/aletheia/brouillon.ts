@@ -78,3 +78,32 @@ export function fusionnerBrouillon<T extends ValeursBrouillon>(initial: T, broui
   }
   return resultat as T
 }
+
+// ── ⭐ 15/09 — la BASE du brouillon (revue adversariale du lot « sauvetage ») ─────────────────
+//
+// Un brouillon peut être plus VIEUX que la base : écrit sur le téléphone, jamais synchronisé,
+// puis l'élève a écrit davantage sur un autre appareil. Le restaurer écraserait le texte le plus
+// récent. Il porte donc, sous `CLE_BASE`, l'état serveur sérialisé sur lequel il a été pris ;
+// au montage, il n'est restaurable que si l'état serveur d'aujourd'hui est encore celui-là.
+// Un brouillon sans base (écrit avant le 15/09) reste restaurable.
+
+export const CLE_BASE = '__base'
+
+/** Le brouillon à écrire : les valeurs, et la base sur laquelle il est pris. */
+export function avecBase(valeurs: ValeursBrouillon, base: string | null): ValeursBrouillon {
+  return base === null ? valeurs : { ...valeurs, [CLE_BASE]: base }
+}
+
+/** Tout est vide, la base mise à part : un tel brouillon n'existe pas. */
+export function toutVideHorsBase(valeurs: ValeursBrouillon): boolean {
+  return Object.entries(valeurs).every(([k, v]) => k === CLE_BASE || !v || !v.trim())
+}
+
+/**
+ * Le brouillon peut-il se restaurer sur cet état serveur (`serialiseInitial` = `JSON.stringify`
+ * des valeurs venues de la base) ? Non si sa base est connue et différente : le serveur a bougé.
+ */
+export function estRestaurableSur(brouillon: ValeursBrouillon, serialiseInitial: string): boolean {
+  const base = brouillon[CLE_BASE]
+  return typeof base !== 'string' || base === serialiseInitial
+}
