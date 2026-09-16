@@ -54,7 +54,11 @@ export default function VueSuivi({ charge, eleveInitial, depotId, ecrans }: {
   }
 
   return (
-    <div className="space-y-5">
+    // ⭐ Louis, 15/09 : « des colonnes assez larges de chaque côté, complètement
+    //    perdues » — l'onglet sort du `max-w-6xl` du layout et prend la largeur de
+    //    la fenêtre, à 24 px des bords, pour que les écrans de l'élève tiennent à
+    //    DROITE, comme sur la maquette.
+    <div className="space-y-5 xl:mx-[calc(50%-50vw+24px)] xl:w-[calc(100vw-48px)]">
       {charge.incidents.length > 0 && (
         <ul className="rounded border border-retard/40 bg-retard-teinte/40 px-4 py-3 font-ui text-sm text-encre-douce space-y-1">
           {charge.incidents.map((i) => <li key={i}>⚠ {i}</li>)}
@@ -163,13 +167,14 @@ function Classe({ classe, eleveInitial, depotId, ecrans, lien }: {
   const exercice = eleve?.exercices.find((x) => x.depotId === depotId) ?? null
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
-      {/* GAUCHE — la liste des élèves */}
-      <section className="rounded border border-bordure bg-surface lg:max-h-[calc(100vh-150px)] lg:overflow-y-auto">
+    <div className="grid gap-5 xl:grid-cols-[400px_minmax(0,1fr)] xl:items-start">
+      {/* GAUCHE — la liste des élèves. ⚠️ Les noms composés ne se tronquent pas :
+          ils se replient (« Arthur Chaillet--Pr… » vu en prod le 15/09). */}
+      <section className="rounded border border-bordure bg-surface xl:sticky xl:top-[132px] xl:max-h-[calc(100vh-150px)] xl:overflow-y-auto">
         {/* ⛔ Une grille sans `minmax(0, …)` ni repli écrase la première colonne à
             12 px sur téléphone (mémoire `flex-wrap`/min-width) : ici les
             compétences passent SOUS la ligne au-dessous de `md`. */}
-        <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_32px_68px_84px] md:grid-cols-[minmax(0,1fr)_32px_68px_84px_96px] items-center gap-2 border-b border-bordure bg-surface px-3.5 py-2.5
+        <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_28px_64px_78px] md:grid-cols-[minmax(0,1fr)_28px_64px_78px_80px] items-center gap-2 border-b border-bordure bg-surface px-3 py-2.5
                         font-ui text-[11px] uppercase tracking-[.06em] text-muet-clair">
           <span>Élève</span><span className="text-right">Ex.</span><span className="text-right">Réussis / rendus</span>
           <span className="text-right">Prévu · passé</span><span className="hidden md:block">Compétences</span>
@@ -180,7 +185,7 @@ function Classe({ classe, eleveInitial, depotId, ecrans, lien }: {
         {classe.eleves.map((e) => <LigneEleve key={e.id} e={e} choisi={e.id === eleveId} choisir={() => setEleveId(e.id)} />)}
       </section>
 
-      {/* DROITE — deux fenêtres */}
+      {/* DROITE — deux fenêtres : les exercices de l'élève, puis ses écrans */}
       <div className="space-y-5 min-w-0">
         <section className="rounded border border-bordure bg-surface">
           {eleve ? (
@@ -216,22 +221,21 @@ function Classe({ classe, eleveInitial, depotId, ecrans, lien }: {
           )}
         </section>
 
-      </div>
 
-      {/* ⭐ LA FENÊTRE DU BAS PREND TOUTE LA LARGEUR — arbitrage du 14/09 : le
-          déroulé de l'élève est dessiné pour la colonne élève entière (deux
-          colonnes, marges négatives) ; à 640 px il se coupait à gauche et le
-          champ d'écriture tenait sur 40 px. La maquette le mettait sous la
-          fenêtre de droite ; la lisibilité l'emporte. */}
-      <section className="rounded border border-bordure bg-surface lg:col-span-2">
-        {exercice && eleve ? (
-          ecrans
-        ) : (
-          <p className="px-4 py-6 text-center font-corps text-encre-douce">
-            Cliquez un exercice pour revoir ses écrans, tels que l’élève les a vus.
-          </p>
-        )}
-      </section>
+        {/* ⭐ 15/09 — les écrans reviennent SOUS les exercices, à droite (maquette),
+            maintenant que l'onglet a la largeur de la fenêtre : à 1450 px la
+            colonne fait ~1000 px, assez pour les deux colonnes du déroulé. Sous
+            `xl`, tout s'empile. */}
+        <section className="rounded border border-bordure bg-surface">
+          {exercice && eleve ? (
+            ecrans
+          ) : (
+            <p className="px-4 py-6 text-center font-corps text-encre-douce">
+              Cliquez un exercice pour revoir ses écrans, tels que l’élève les a vus.
+            </p>
+          )}
+        </section>
+      </div>
     </div>
   )
 }
@@ -239,9 +243,9 @@ function Classe({ classe, eleveInitial, depotId, ecrans, lien }: {
 function LigneEleve({ e, choisi, choisir }: { e: EleveSuivi; choisi: boolean; choisir: () => void }) {
   return (
     <button type="button" onClick={choisir} aria-pressed={choisi}
-      className={`grid w-full grid-cols-[minmax(0,1fr)_32px_68px_84px] md:grid-cols-[minmax(0,1fr)_32px_68px_84px_96px] items-center gap-x-2 gap-y-1.5 border-t border-bordure/60 px-3.5 py-2.5 text-left font-ui text-sm
+      className={`grid w-full grid-cols-[minmax(0,1fr)_28px_64px_78px] md:grid-cols-[minmax(0,1fr)_28px_64px_78px_80px] items-center gap-x-2 gap-y-1.5 border-t border-bordure/60 px-3 py-2 text-left font-ui text-sm
                   ${choisi ? 'bg-pigment-teinte border-l-[3px] border-l-liseret' : 'hover:bg-parchemin'}`}>
-      <span className={`truncate ${choisi ? 'font-bold text-encre' : 'text-encre'}`}>{e.nom}</span>
+      <span className={`min-w-0 break-words leading-tight ${choisi ? 'font-bold text-encre' : 'text-encre'}`}>{e.nom}</span>
       <span className={`text-right ${e.assignes === 0 ? 'font-bold text-retard' : ''}`}>{e.assignes}</span>
       <span className="text-right" title={e.sansVerdict ? `${e.sansVerdict} rendu${e.sansVerdict > 1 ? 's' : ''} sans verdict` : undefined}>
         {e.rendus === 0 ? <span className="text-muet">— / 0</span>
@@ -257,7 +261,7 @@ function LigneEleve({ e, choisi, choisir }: { e: EleveSuivi; choisi: boolean; ch
         <span className="col-span-4 md:col-span-1 flex gap-1">
           {e.competences.map((c) => {
             const p = pastille(c)
-            return <span key={c} title={p.long} className={`flex h-[22px] w-[22px] items-center justify-center rounded-[3px] text-[11px] font-bold ${p.fond} ${p.texte}`}>{p.court}</span>
+            return <span key={c} title={p.long} className={`flex h-5 w-5 items-center justify-center rounded-[3px] text-[10px] font-bold ${p.fond} ${p.texte}`}>{p.court}</span>
           })}
         </span>
       )}
@@ -321,7 +325,7 @@ function LigneExercice({ x, choisi, href }: { x: ExerciceSuivi; choisi: boolean;
         {x.degrade && <span className="rounded bg-attention-teinte px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-attention"
           title="Aucun cran ne portait l’observable visé : l’exercice a été servi quand même, en retour mono-focal.">dégradé</span>}
         {x.sondes.some((s) => s.sonde_montee !== true) && (
-          <span title="mesurées en silence, sans retour">sondes : {x.sondes.filter((s) => s.sonde_montee !== true).map((s) => `${s.competence ?? '?'}${s.motif ? ` (${s.motif})` : ''}`).join(' · ')}</span>
+          <span title="mesurées en silence, sans retour">sondes : {x.sondes.filter((s) => s.sonde_montee !== true).map((s) => `${s.competence ?? '?'}${s.motif ? ` (${s.motif.replace(/_/g, ' ')})` : ''}`).join(' · ')}</span>
         )}
         {x.sondes.some((s) => s.sonde_montee === true) && (
           <span title="la cible servie au-dessus de sa bande ; elle reçoit un retour, elle ne compte pas">sonde de montée : {x.sondes.filter((s) => s.sonde_montee === true).map((s) => s.competence ?? '?').join(' · ')}</span>

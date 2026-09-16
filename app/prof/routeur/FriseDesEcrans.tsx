@@ -32,7 +32,7 @@ export default function FriseDesEcrans({ vue, nom, resume }: { vue: VueDuDeroule
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-bordure px-4 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-bordure px-3 py-2.5">
         <h3 className="font-titre text-xl text-encre">
           Les écrans de {nom}
           <span className="ml-2 font-ui text-[13px] text-muet" title={vue.titre}>{resume} · {suite.length} écrans · lecture seule{vue.fermee ? ' · semaine comptée' : ''}</span>
@@ -45,15 +45,16 @@ export default function FriseDesEcrans({ vue, nom, resume }: { vue: VueDuDeroule
         </span>
       </div>
 
-      <div className="border-b border-bordure px-4 py-3 space-y-2">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="border-b border-bordure px-3 py-2.5 space-y-2">
+        {/* Dix tuiles tiennent sur deux rangées plutôt que de défiler (prod, 15/09). */}
+        <div className="flex flex-wrap gap-1.5">
           {suite.map((s, i) => {
             const t = traces[i]
             const titre = s.etape === 'apres' ? 'Où il en est'
               : estUnEcranDApres(s.etape) ? titreDeLEcranDApres(s.etape) : titreDeLEtape(s.etape, forme)
             return (
               <button key={i} type="button" onClick={() => setK(i)} aria-current={i === k ? 'step' : undefined}
-                className={`flex min-w-[124px] flex-1 flex-col gap-0.5 rounded-[3px] border px-2.5 py-2 text-left font-ui
+                className={`flex min-w-[118px] max-w-[200px] flex-1 flex-col gap-0.5 rounded-[3px] border px-2 py-1.5 text-left font-ui
                   ${i === k ? 'border-liseret bg-pigment-teinte' : 'border-bordure bg-surface hover:bg-parchemin'}
                   ${t.faite ? '' : 'opacity-60'}`}>
                 <span className="text-[10px] uppercase tracking-[.06em] text-muet-clair">
@@ -71,8 +72,9 @@ export default function FriseDesEcrans({ vue, nom, resume }: { vue: VueDuDeroule
       </div>
 
       {/* ⚠️ Le déroulé porte des marges négatives pensées pour la colonne élève
-          (`-mx-4`) ; on l'enferme dans un cadre qui les absorbe. */}
-      <div className="bg-parchemin p-4 sm:p-5">
+          (`-mx-4`, absorbées sous `sm`) ; le cadre est réduit au minimum pour ne
+          pas perdre de largeur (Louis, 15/09). */}
+      <div className="bg-parchemin p-1.5 sm:p-2">
         <EcranDeroule key={k} vue={vueIci} atelier="codex" lectureSeule
           etapeForcee={ici.etape === 'apres' ? null : ici} />
       </div>
