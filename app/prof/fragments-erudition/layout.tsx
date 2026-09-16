@@ -8,7 +8,7 @@ import { TuileAccentModule } from '@/components/TuileAccent'
 // (≥ 1400 px) pour que la vue Semaine tienne 25 élèves sur deux colonnes à côté
 // du retour ouvert (1152 px ne suffisent pas, 1344 oui). ⭐ 15/09 : le shell
 // /prof est passé à 1440 px (`app/prof/layout.tsx`) — le débordement, cumulé,
-// faisait sortir la page de la fenêtre (1517 px sur 1451, frise coupée à gauche).
+// faisait sortir la page de la fenêtre (`scrollWidth` 1517 px mesuré à 1451, frise coupée à gauche).
 // Retiré : le gabarit suffit désormais.
 export default function FragmentsLayout({ children }: { children: React.ReactNode }) {
   return (

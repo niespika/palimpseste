@@ -185,7 +185,7 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
       <div className="border-b border-[#E4DBC9] bg-[#FBF8F1]">
         <div className={`relative ${largeur} mx-auto px-[28px] py-[11px] flex justify-center`}>
           <BarreNavigation tabs={tabs} />
-          {/* Zone d'actions ancrée à la colonne 1040px (alignée au sceau), pas au bord de l'écran. */}
+          {/* Zone d'actions ancrée à la colonne (1040 px élève, 1440 px prof) (alignée au sceau), pas au bord de l'écran. */}
           <div className="absolute right-[28px] top-0 bottom-0 flex items-center gap-[12px]">
             {role === 'eleve' && classe && (
               <SelecteurClasseEleve variant="chip" inscriptions={classe.inscriptions} activeId={classe.activeId ?? ''} />

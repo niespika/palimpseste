@@ -166,10 +166,12 @@ function Classe({ classe, eleveInitial, depotId, ecrans, lien }: {
   const exercice = eleve?.exercices.find((x) => x.depotId === depotId) ?? null
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[400px_minmax(0,1fr)] xl:items-start">
+    <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[440px_minmax(0,1fr)] lg:items-start">
       {/* GAUCHE — la liste des élèves. ⚠️ Les noms composés ne se tronquent pas :
           ils se replient (« Arthur Chaillet--Pr… » vu en prod le 15/09). */}
-      <section className="rounded border border-bordure bg-surface xl:sticky xl:top-[132px] xl:max-h-[calc(100vh-150px)] xl:overflow-y-auto">
+      {/* ⚠️ L'en-tête collant fait 194,5 px (mesuré le 15/09) : la liste se cale
+          sous lui, avec 16 px d'air — à 132 px, ses titres passaient DESSOUS. */}
+      <section className="rounded border border-bordure bg-surface lg:sticky lg:top-[211px] lg:max-h-[calc(100vh-227px)] lg:overflow-y-auto">
         {/* ⛔ Une grille sans `minmax(0, …)` ni repli écrase la première colonne à
             12 px sur téléphone (mémoire `flex-wrap`/min-width) : ici les
             compétences passent SOUS la ligne au-dessous de `md`. */}
@@ -222,9 +224,9 @@ function Classe({ classe, eleveInitial, depotId, ecrans, lien }: {
 
 
         {/* ⭐ 15/09 — les écrans reviennent SOUS les exercices, à droite (maquette),
-            maintenant que l'onglet a la largeur de la fenêtre : à 1450 px la
-            colonne fait ~1000 px, assez pour les deux colonnes du déroulé. Sous
-            `xl`, tout s'empile. */}
+            maintenant que le cadre fait 1440 px : à 1451 px de fenêtre la colonne
+            fait ~940 px, à 1280 ~800, assez pour les deux colonnes du déroulé.
+            Sous `lg` (1024), tout s'empile. */}
         <section className="rounded border border-bordure bg-surface">
           {exercice && eleve ? (
             ecrans
