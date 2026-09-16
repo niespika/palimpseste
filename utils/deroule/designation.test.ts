@@ -353,3 +353,80 @@ test('le journal est BORNÉ — c’est l’ancienneté qui sort, jamais la dern
   assert.equal(poses[0].at, 't5')
   assert.equal(poses[poses.length - 1].at, `t${POSES_JOURNALISEES_MAX + 4}`)
 })
+
+// ── ⭐⭐ 15/09 — LE PASSAGE QU'IL FALLAIT SURLIGNER, EN CONTEXTE ──────────────
+// Ce que ces tests GARDENT : la cible nue ne se montre jamais seule — elle vient
+// dans sa phrase, marquée ; la phrase se borne à la ponctuation forte, au
+// retour à la ligne, au début et à la fin du texte ; une cible qui FINIT la
+// phrase (« bacs. ») garde sa phrase ; une cible sur deux phrases rend les
+// deux ; une insertion montre la jointure et le dit ; et rien ne sort en
+// dehors de segments — jamais une position.
+
+import { passageAttendu, bornesDeLaPhrase } from './designation'
+
+const TX = 'Première phrase du texte. Les zoos recueillent des animaux blessés. Les zoos restent donc utiles pour les espèces menacées.'
+
+test('⭐ la cible d’un mot se montre dans SA phrase, marquée', () => {
+  // « Les » (2e « Les ») remplacé par « Ces » : le diff mot à mot tient en un mot.
+  const vc = TX.replace('Les zoos restent', 'Ces zoos restent')
+  const p = passageAttendu(TX, vc)
+  assert.ok(p)
+  assert.equal(p.jointure, false)
+  assert.deepEqual(p.segments, [
+    { texte: 'Les', marque: true },
+    { texte: ' zoos restent donc utiles pour les espèces menacées.', marque: false },
+  ])
+})
+
+test('⭐ une cible qui FINIT la phrase garde sa phrase entière, ponctuation comprise', () => {
+  const vc = TX.replace('espèces menacées.', 'espèces en danger.')
+  const p = passageAttendu(TX, vc)!
+  assert.equal(p.segments.map((s) => s.texte).join(''),
+    'Les zoos restent donc utiles pour les espèces menacées.')
+  // « espèces » est commun aux deux versions : la cible nue est « menacées. » — un mot.
+  assert.deepEqual(p.segments.filter((s) => s.marque).map((s) => s.texte), ['menacées.'])
+})
+
+test('⭐ une cible au tout début du texte, et une au milieu : bornes au début et à la ponctuation', () => {
+  const p = passageAttendu(TX, TX.replace('Première phrase', 'Seconde phrase'))!
+  assert.equal(p.segments.map((s) => s.texte).join(''), 'Première phrase du texte.')
+  const q = passageAttendu(TX, TX.replace('recueillent', 'soignent'))!
+  assert.equal(q.segments.map((s) => s.texte).join(''), 'Les zoos recueillent des animaux blessés.')
+  assert.equal(q.segments[0].texte, 'Les zoos ')
+  assert.equal(q.segments[1].texte, 'recueillent')
+  assert.equal(q.segments[1].marque, true)
+})
+
+test('⭐ une cible à cheval sur deux phrases rend les deux', () => {
+  const vc = TX.replace('blessés. Les zoos restent', 'blessés, et ils restent')
+  const p = passageAttendu(TX, vc)!
+  assert.equal(p.segments.map((s) => s.texte).join(''),
+    'Les zoos recueillent des animaux blessés. Les zoos restent donc utiles pour les espèces menacées.')
+})
+
+test('⭐ le retour à la ligne borne la phrase comme une ponctuation', () => {
+  const t = 'Un titre sans point\nUne ligne avec un mot faux dedans\nLa suite'
+  const p = passageAttendu(t, t.replace('faux', 'juste'))!
+  assert.equal(p.segments.map((s) => s.texte).join(''), 'Une ligne avec un mot faux dedans')
+})
+
+test('⭐ une INSERTION montre la jointure — les deux mots autour — et le dit', () => {
+  const vc = TX.replace('animaux blessés.', 'animaux sauvages blessés.')
+  const p = passageAttendu(TX, vc)!
+  assert.equal(p.jointure, true)
+  assert.equal(p.segments.map((s) => s.texte).join(''), 'Les zoos recueillent des animaux blessés.')
+  assert.deepEqual(p.segments.filter((s) => s.marque).map((s) => s.texte), ['animaux blessés.'])
+})
+
+test('⛔ sans matériau, ou sans aucune différence, il n’y a rien à montrer', () => {
+  assert.equal(passageAttendu('', 'x'), null)
+  assert.equal(passageAttendu(null, null), null)
+  assert.equal(passageAttendu(TX, TX), null)
+  assert.equal(passageAttendu(TX, null), null)
+})
+
+test('bornesDeLaPhrase — la ponctuation suivie de guillemets fermants reste dans la phrase', () => {
+  const t = 'Il a dit « non ! » Puis il est parti.'
+  assert.deepEqual(bornesDeLaPhrase(t, [9, 12]), [0, 18])
+  assert.deepEqual(bornesDeLaPhrase(t, [24, 26]), [19, t.length])
+})

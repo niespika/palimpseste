@@ -63,6 +63,7 @@ import { TexteATrou } from './TexteATrou'
 import { PlanAOrdonner } from './PlanAOrdonner'
 import { SignalerUnProbleme } from './SignalerUnProbleme'
 import type { CasServi, VueDuDeroule } from '@/utils/deroule/vue'
+import type { PassageAttendu } from '@/utils/deroule/designation'
 import { NOM_COMPETENCE, type TelemetrieSaisie, type Temps } from '@/utils/deroule/types'
 import type { Atelier } from '@/utils/codex-onglets/regles'
 import {
@@ -885,7 +886,13 @@ function ColonneMatiere({
                   zoneDonnee={c.zoneDonnee}
                   repondu={c.designationDonnee}
                   enregistrer={(zone, confirmee) => actionDesignation(vue.depotId, c.ordre, zone, confirmee)}
-                  gele={vue.tempsCourant !== 'ecrire' && vue.tempsCourant !== 'preparer'}
+                  /* ⛔ 15/09 — ET GELÉ DÈS LA CRÉDENCE DE CE CAS : sur une paire
+                     4(b)/4(b), l'écran de la correction du premier cas montre le
+                     passage attendu tandis que le temps est encore « ecrire » —
+                     sans ce gel, l'élève pouvait reposer sa zone sur la réponse.
+                     Le serveur refuse aussi (`enregistrerLaDesignation`). */
+                  gele={(vue.tempsCourant !== 'ecrire' && vue.tempsCourant !== 'preparer')
+                    || c.credenceDonnee !== null}
                   /* ⛔ Aux crans 7 et 9 la page ne doit PAS tourner sur la seule
                      zone : l'élève doit encore dire ce qui cloche. */
                   apresPose={c.sansEcriture ? apresPose : undefined}
@@ -994,7 +1001,15 @@ function ColonneTravail({
               bonne réponse expliquée » (Louis) : la correction PART de ce qu'il a
               choisi ou écrit. Sur une rédaction, c'est une comparaison — le
               jugement du texte appartient à la chaîne, à la remise. */}
-          {c1 ? <Correction correction={c1} reponse={reponseDeLEleve(vue, 1)} /> : (
+          {/* ⭐⭐ 15/09 — LE VERDICT DE ZONE ET LE PASSAGE, ICI AUSSI. Sur une paire
+              4(b)/4(b) cet écran ne recevait que la correction nue : l'élève lisait
+              « Ce qu'il fallait voir » — la `reponse_attendue`, une redite de
+              l'énoncé — et ne voyait jamais où était le passage. Signalé par deux
+              élèves le 14/09 : « la réponse reprend la consigne ». */}
+          {c1 ? <Correction correction={c1} reponse={reponseDeLEleve(vue, 1)}
+                  verdict={vue.verdictParCas[0] ?? null}
+                  precision={vue.precisionParCas[0] ?? null}
+                  passage={vue.passageParCas[0] ?? null} /> : (
             <p className="font-corps text-[15px] italic text-muet">
               Rien à corriger sur ce cas : passe au second.
             </p>
@@ -2102,7 +2117,7 @@ function Correction({
    *    "…" »). L'élève relisait la consigne au lieu de voir ce qu'il cherchait.
    *    *Relevé par Louis sur le smoke du 08/09.*
    */
-  passage?: string | null
+  passage?: PassageAttendu | null
 }) {
   const juste = reponse?.forme === 'candidat' ? reponse.juste : null
   const refutation = correction.refutation
@@ -2123,6 +2138,8 @@ function Correction({
           <p className={`mt-2 font-corps text-[15.5px] font-semibold ${juste ? 'text-ok' : 'text-attention'}`}>
             {juste ? 'C’est la bonne réponse.' : 'Ce n’est pas la bonne réponse.'}
           </p>
+   * ⭐ 15/09 — EN CONTEXTE : la phrase qui porte la cible, la cible marquée.
+   *    Nue, elle tenait parfois en un mot (« Les ») et un élève l'a signalé.
           {refutation && (
             <TexteBrut texte={refutation}
               className="mt-1.5 font-corps text-base leading-[1.55] text-encre" />
@@ -2185,11 +2202,20 @@ function Correction({
         </div>
       )}
 
-      {/* Ce qu'on tient pour vrai — sauf quand la réponse de l'élève l'EST déjà. */}
-      {juste !== true && passage && (
+      {/* Ce qu'on tient pour vrai — sauf quand la réponse de l'élève l'EST déjà.
+          ⭐ 15/09 — et pas non plus quand la ZONE est juste : « Ta réponse est
+          juste » suivi de « Le passage qu'il fallait surligner » disait deux fois
+          la même chose. */}
+      {juste !== true && verdict !== true && passage && (
         <div className="rounded-xl border border-ok/25 bg-ok-teinte p-4 sm:px-[18px]">
-          <p className={`${SUR_TITRE} text-ok`}>Le passage qu’il fallait surligner</p>
-          <TexteBrut texte={passage}
+          <p className={`${SUR_TITRE} text-ok`}>
+            {passage.jointure
+              ? 'L’endroit qu’il fallait surligner — il y manque quelque chose'
+              : 'Le passage qu’il fallait surligner'}
+          </p>
+          {/* La phrase entière, la cible en évidence — le même rendu que le
+              matériau marqué aux crans 3 et 5 : une seule grammaire. */}
+          <MateriauMarque segments={passage.segments}
             className="mt-1.5 font-corps text-[16px] leading-[1.55] text-encre" />
         </div>
       )}

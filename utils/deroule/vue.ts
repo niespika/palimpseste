@@ -64,7 +64,8 @@ import {
 } from '@/utils/gabarit/consigne'
 import { pointDInsertion } from './marquage'
 import { lireTelemetrie } from './telemetrie'
-import { demandeUneDesignation, cibleDansLeMateriau, verdictDeLaZone } from './designation'
+import { demandeUneDesignation, cibleDansLeMateriau, verdictDeLaZone, passageAttendu,
+  type Intervalle, type PassageAttendu } from './designation'
 import { marquerLeMateriau, regimeDeMarquage, type SegmentMateriau } from './marquage'
 import { attenteDuDepot, type AttenteLisible } from './mesure'
 import { pointsContestes, type PointDuRetour } from './contestation'
@@ -445,11 +446,14 @@ export interface VueDuDeroule {
   precisionParCas: Array<string | null>
   /**
    * ⭐⭐ LE PASSAGE QU'IL FALLAIT SURLIGNER, par cas — au 4(b) seulement, et
-   *    seulement après la remise. `null` partout ailleurs.
+   *    seulement une fois la correction de CE cas due (15/09 : plus « après la
+   *    remise », qui laissait le premier cas d'une paire sans réponse).
+   *    `null` partout ailleurs.
    * ⛔ Il REMPLACE « Ce qu'il fallait voir » sur ces cas : y resservir l'énoncé
    *    faisait relire à l'élève la consigne qu'il venait de lire.
+   * ⭐ 15/09 — EN CONTEXTE : la phrase, la cible marquée (`passageAttendu`).
    */
-  passageParCas: Array<string | null>
+  passageParCas: Array<PassageAttendu | null>
   fin: 'hors_cible' | 'non_fait' | 'sans_remise' | null
   /**
    * ⭐⭐ CET EXERCICE NE SE REMET JAMAIS — tous ses cas se surlignent (4(b)/4(b)).
@@ -714,11 +718,20 @@ export async function chargerLeDeroule(
   const consignesGabarit: string[] = []
 
   const cas: CasServi[] = []
-  /** ⭐ 07/09 — le jugement algorithmique du 4(b), par cas, et son explication. */
-  const verdictsDeZone: Array<boolean | null> = []
-  const precisionsDeZone: Array<string | null> = []
-  /** ⭐ Le passage que l'élève devait surligner — au 4(b), et après la remise. */
-  const passagesAttendus: Array<string | null> = []
+  /**
+   * ⭐ 15/09 — CE QU'IL FAUT POUR JUGER LA ZONE ET MONTRER LE PASSAGE, par cas.
+   *    Le jugement lui-même se fait PLUS BAS, une fois l'étape de la paire
+   *    connue : c'est elle qui dit si la correction de ce cas est due, et le
+   *    verdict de zone suit la correction — jamais la remise seule.
+   */
+  const zonesParCas: Array<{
+    /** Le cas surligne sans écrire — le 4(b), et lui seul. */
+    designe: boolean
+    materiau: string | null
+    versionCorrigee: string | null
+    cible: Intervalle | null
+    zone: [number, number] | null
+  }> = []
   for (let i = 0; i < Math.max(1, nbCas); i++) {
     const brut = casBruts.find((c) => c.ordre === i + 1)
     const mat = brut
@@ -752,53 +765,18 @@ export async function chargerLeDeroule(
       appui = { distracteurs: traduit.distracteurs, reponseAttendue: traduit.reponseAttendue,
         pourquoiJuste: traduit.pourquoiJuste }
     }
-    // ⭐⭐ 07/09/2026 — LE JUGEMENT ALGORITHMIQUE DU 4(b), CALCULÉ ICI ET RÉDUIT
-    //    À UN BOOLÉEN. Louis : « c'est important dans le cas d'un retour IA,
-    //    mais AUSSI pour les jugements algo ».
-    // ⛔⛔ `version_corrigee` N'EN SORT TOUJOURS PAS : ce fichier est
-    //    `server-only`, la cible se calcule ici, et **seul le verdict descend**.
-    //    Un intervalle qui descendrait dirait à l'élève où était la réponse.
-    // ⛔ LA MÊME RÈGLE QUE LE REGISTRE, pas une seconde : `issueDuDepot`
-    //    (`utils/registre/reussites.ts`) ne tient pour réussi que le verdict
-    //    `juste`. L'écran dit donc exactement ce que la mesure compte —
-    //    `mal_bornee`, `a_voir` et `probablement_faux` sont des échecs là-bas,
-    //    ils le sont ici. *La sévérité de ce choix est un arbitrage ouvert pour
-    //    Louis ; ce qui ne se discute pas, c'est que les deux disent la même
-    //    chose.*
+    // ⛔⛔ `version_corrigee` NE SORT PAS D'ICI : ce fichier est `server-only`,
+    //    la cible se calcule ici, et seuls le verdict et le passage montré
+    //    descendent (voir plus bas, « LE VERDICT DE ZONE ET LE PASSAGE »).
     // ⚠️ La cible peut être NULLE — le défaut est une ABSENCE, il n'y a rien à
-    //    désigner (4 cas sur 183 en prod) : on ne juge alors rien du tout.
+    //    désigner (4 cas sur 114 matériaux en prod) : on ne juge alors rien.
     const designation = lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1))
     const cibleDuCas = materiauBrut ? cibleDansLeMateriau(materiauBrut, mat?.version_corrigee) : null
-    // ⛔ ET SEULEMENT LÀ OÙ LE REGISTRE LE COMPTE — `gabarit.variante !== null`,
-    //    c'est-à-dire sur le GABARIT et lui seul. C'est la garde exacte
-    //    d'`issueDuDepot` (`utils/registre/reussites.ts`, branche cran 4), et
-    //    les deux doivent bouger ENSEMBLE : l'écran ne dit jamais réussi là où
-    //    la mesure compte raté.
-    // ⚠️ L'ancienne banque (variante NULLE) reste dehors : elle suit le `02-`
-    //    §5, « sélectionne PUIS dis ce qui cloche », où c'est le juge qui lit le
-    //    texte. 58 de ses 60 dépôts rendus portent pourtant une zone — la garde
-    //    n'est pas décorative.
-    const zoneJugee = gabarit.actif && designeSansEcrire(ctx.cran, vCas)
-      && gabarit.variante !== null
-      && depot.v1_remis_at && cibleDuCas && designation.zoneDonnee && materiauBrut
-      ? verdictDeLaZone(materiauBrut, cibleDuCas, designation.zoneDonnee)
-      : null
-    // ⭐⭐ 08/09/2026 — LE PASSAGE QU'IL FALLAIT SURLIGNER (Louis, sur le smoke :
-    //    « le "ce qu'il fallait voir" est simplement la redite de la consigne »).
-    //    Au 4(b) la consigne CITE déjà l'énoncé — « Le devoir a ce problème :
-    //    "…" » — et la correction resservait ce MÊME texte : l'élève relisait ce
-    //    qu'on venait de lui dire. Ce qu'il devait trouver, c'est LE PASSAGE.
-    // ⭐ La doctrine l'avait pressenti (`correction.ts`) : « la version corrigée
-    //    donne le texte réparé, JAMAIS LA ZONE que l'élève devait désigner ».
-    // ⛔ Après la remise SEULEMENT, comme le verdict : servi plus tôt, il
-    //    donnerait la réponse avant que l'élève n'ait cherché.
-    passagesAttendus.push(
-      cibleDuCas && materiauBrut && depot.v1_remis_at
-        && gabarit.actif && designeSansEcrire(ctx.cran, vCas)
-        ? materiauBrut.slice(cibleDuCas[0], cibleDuCas[1])
-        : null)
-    verdictsDeZone.push(zoneJugee ? zoneJugee.verdict === 'juste' : null)
-    precisionsDeZone.push(zoneJugee ? precisionDeLaZone(zoneJugee.verdict) : null)
+    zonesParCas.push({
+      designe: gabarit.actif && designeSansEcrire(ctx.cran, vCas),
+      materiau: materiauBrut, versionCorrigee: mat?.version_corrigee ?? null,
+      cible: cibleDuCas, zone: designation.zoneDonnee,
+    })
 
     // La consigne du gabarit se DÉRIVE (`10-` §3) ; l'insertion se lit sur le diff.
     const insertion = !!(mat?.version_corrigee && materiauBrut
@@ -953,6 +931,48 @@ export async function chargerLeDeroule(
       surDesCandidats,
       cas.map((c) => c.sansEcriture && c.designationDonnee))
     : null
+  // ── ⭐⭐ LE VERDICT DE ZONE ET LE PASSAGE QU'IL FALLAIT SURLIGNER, par cas ──
+  // ⭐⭐ 07/09/2026 — LE JUGEMENT ALGORITHMIQUE DU 4(b), RÉDUIT À UN BOOLÉEN.
+  //    Louis : « c'est important dans le cas d'un retour IA, mais AUSSI pour
+  //    les jugements algo ».
+  // ⛔ LA MÊME RÈGLE QUE LE REGISTRE, pas une seconde : `issueDuDepot`
+  //    (`utils/registre/reussites.ts`) ne tient pour réussi que le verdict
+  //    `juste`. L'écran dit donc exactement ce que la mesure compte —
+  //    `mal_bornee`, `a_voir` et `probablement_faux` sont des échecs là-bas,
+  //    ils le sont ici. *La sévérité de ce choix est un arbitrage ouvert pour
+  //    Louis ; ce qui ne se discute pas, c'est que les deux disent la même
+  //    chose.*
+  // ⛔ ET SEULEMENT LÀ OÙ LE REGISTRE LE COMPTE — `gabarit.variante !== null`,
+  //    c'est-à-dire sur le GABARIT et lui seul. C'est la garde exacte
+  //    d'`issueDuDepot` (branche cran 4), et les deux doivent bouger ENSEMBLE.
+  // ⭐⭐ 15/09/2026 — SERVIS AVEC LA CORRECTION DU CAS, PLUS SEULEMENT À LA
+  //    REMISE. Signalé par deux élèves les 14/09 (« la réponse reprend la
+  //    consigne ») : sur une paire 4(b)/4(b), la remise n'a lieu qu'à la
+  //    dernière crédence, et l'écran de la correction du PREMIER cas — servi
+  //    entre les deux, `02-` §2.3.1 a — ne recevait ni verdict ni passage. Il
+  //    retombait sur « Ce qu'il fallait voir », c'est-à-dire la
+  //    `reponse_attendue` — identique sur les deux cas des 266 exercices de
+  //    cran 4 en prod : une redite de l'énoncé. La règle est celle de
+  //    `correctionDue` : après la crédence DE CE CAS, et la remise y suffit
+  //    aussi. Le second cas porte un AUTRE matériau : rien ne fuit.
+  // ⭐⭐ ET LE PASSAGE SE MONTRE EN CONTEXTE (`passageAttendu`) : la phrase,
+  //    la cible en évidence — jamais la cible nue, qui tient parfois en un mot.
+  const zoneServieAuCas = (ordre: number): boolean =>
+    depot.v1_remis_at !== null
+    || correctionDue(ordre, { estUnePaire, etape, credenceDonnee: cas[ordre - 1]?.credenceDonnee ?? null })
+  const verdictsDeZone: Array<boolean | null> = []
+  const precisionsDeZone: Array<string | null> = []
+  const passagesAttendus: Array<PassageAttendu | null> = []
+  zonesParCas.forEach((z, i) => {
+    const servie = z.designe && zoneServieAuCas(i + 1)
+    const zoneJugee = servie && gabarit.variante !== null && z.materiau && z.cible && z.zone
+      ? verdictDeLaZone(z.materiau, z.cible, z.zone)
+      : null
+    verdictsDeZone.push(zoneJugee ? zoneJugee.verdict === 'juste' : null)
+    precisionsDeZone.push(zoneJugee ? precisionDeLaZone(zoneJugee.verdict) : null)
+    passagesAttendus.push(servie ? passageAttendu(z.materiau, z.versionCorrigee) : null)
+  })
+
   const sertUneCorrection = correctionServieAuCran(geste, ctx.cranCode)
   const corrections: Array<CorrectionServie | null> = cas.map((c) => {
     if (!sertUneCorrection) return null
@@ -1123,12 +1143,14 @@ export async function chargerLeDeroule(
     // ⭐ Le juge d'abord, la porte de zone À DÉFAUT — jamais les deux : au 4(b)
     //    le juge ne tourne pas (`chaine.ts`, « le verdict est la porte de zone »),
     //    et ailleurs il n'y a pas de zone à comparer.
-    verdictParCas: depot.v1_remis_at
-      ? cas.map((c, i) => verdictDeLaCopie(depot.verdicts_cran,
-        { estUnePaire, ordre: c.ordre, retourFinal: tempsCourant === 'retour_final',
-          texteVf: depot.texte_vf }, verdictsDeZone[i] ?? null))
-      : cas.map(() => null),
-    precisionParCas: depot.v1_remis_at ? precisionsDeZone : cas.map(() => null),
+    // ⭐ 15/09 — le verdict du JUGE reste gardé par la remise ; celui de la
+    //    ZONE suit la correction du cas (`verdictsDeZone` est déjà `null` tant
+    //    qu'elle n'est pas due).
+    verdictParCas: cas.map((c, i) => verdictDeLaCopie(
+      depot.v1_remis_at ? depot.verdicts_cran : null,
+      { estUnePaire, ordre: c.ordre, retourFinal: tempsCourant === 'retour_final',
+        texteVf: depot.texte_vf }, verdictsDeZone[i] ?? null)),
+    precisionParCas: precisionsDeZone,
     passageParCas: passagesAttendus,
 
     // ⭐ C7-L3 — au gabarit, la consigne de l'exercice est celle du premier cas, dérivée.

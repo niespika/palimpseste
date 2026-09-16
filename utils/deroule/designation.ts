@@ -39,7 +39,8 @@
 //    tout l'intérêt de la désignation.
 // ============================================================================
 
-import { intervalleDuPassageFautif, type RegimeMarquage } from './marquage'
+import { intervalleDuPassageFautif, intervalleDuPointDInsertion, type RegimeMarquage,
+  type SegmentMateriau } from './marquage'
 
 /** Base 0, fin EXCLUE — la convention de `materiau_source_localisation`. */
 export type Intervalle = readonly [number, number]
@@ -401,4 +402,87 @@ export const CREDENCE_HAUTE_SEUIL = 70
 
 export function credenceEstHaute(pourcentage: number | null | undefined): boolean | null {
   return typeof pourcentage === 'number' ? pourcentage >= CREDENCE_HAUTE_SEUIL : null
+}
+
+// ── LE PASSAGE QU'IL FALLAIT SURLIGNER, MONTRÉ EN CONTEXTE ──────────────────
+
+/**
+ * ⭐⭐ 15/09/2026 — CE QUE L'ÉLÈVE VOIT COMME RÉPONSE, aux cas où il surligne.
+ *
+ * ⛔ **La cible NUE ne se montre pas.** Elle est le diff mot à mot — et sur
+ *    28 des 114 matériaux de cran 4 en production (mesuré le 15/09) ce diff
+ *    tient en UN mot : « Les », « bacs. », « cela ». Servie seule, la « bonne
+ *    réponse » était illisible, et un élève l'a signalé le 13/09 : *« la
+ *    correction c'est "Les" mais c'est écrit "Les" à deux moments dans le
+ *    texte »*. **Le passage se montre dans sa phrase, la cible en évidence** —
+ *    ce que l'élève cherchait, là où il devait le trouver.
+ *
+ * ⭐ Deux formes, et le drapeau les sépare :
+ *    · `jointure: false` — la cible est un REMPLACEMENT : la phrase, la cible
+ *      marquée ;
+ *    · `jointure: true` — la version corrigée AJOUTE, il n'y a pas de cible :
+ *      la phrase, et les deux mots qui entourent l'endroit du manque
+ *      (`10-` §5, décision 4 : « le dernier mot avant et le premier après »).
+ *
+ * ⚠️ Ce n'est PAS la cible du jugement : `verdictDeLaZone` continue de se
+ *    comparer à l'intervalle nu. Montrer plus large que ce qu'on juge est
+ *    juste ; juger plus large que ce qu'on montre ne l'est pas — et c'est
+ *    pourquoi cette fonction ne rend que des SEGMENTS, jamais des positions.
+ *
+ * @returns `null` sans matériau, ou quand ni le diff ni l'insertion ne
+ *   désignent quoi que ce soit (les deux textes sont identiques).
+ */
+export interface PassageAttendu {
+  segments: SegmentMateriau[]
+  jointure: boolean
+}
+
+export function passageAttendu(
+  contenu: string | null | undefined, versionCorrigee: string | null | undefined,
+): PassageAttendu | null {
+  const texte = contenu ?? ''
+  if (texte.trim() === '') return null
+  const cible = cibleDansLeMateriau(texte, versionCorrigee)
+  const marque = cible ?? intervalleDuPointDInsertion(texte, versionCorrigee)
+  if (!marque) return null
+  const [debut, fin] = bornesDeLaPhrase(texte, marque)
+  const segments: SegmentMateriau[] = [
+    { texte: texte.slice(debut, marque[0]), marque: false },
+    { texte: texte.slice(marque[0], marque[1]), marque: true },
+    { texte: texte.slice(marque[1], fin), marque: false },
+  ].filter((s) => s.texte !== '')
+  return { segments, jointure: cible === null }
+}
+
+/** Ce qui clôt une phrase : la ponctuation forte, ses guillemets fermants, puis un blanc ou la fin. */
+const FIN_DE_PHRASE = /[.!?…]+(?:\s?[»"”’)])*(?=\s|$)/gu
+
+/**
+ * ⭐ LA PHRASE — ou les phrases — QUI PORTE UN INTERVALLE. Du premier
+ * caractère après la ponctuation forte qui précède (ou du début du texte,
+ * ou d'un retour à la ligne) à la ponctuation forte qui suit incluse (ou la
+ * fin du texte). Un intervalle qui chevauche deux phrases rend les deux.
+ *
+ * ⚠️ « M. Dupont » se couperait à « M. » : les copies d'élèves n'en portent
+ *    pas, et l'erreur ne coûterait qu'un contexte plus court — jamais une
+ *    cible tronquée, qui est TOUJOURS rendue entière.
+ */
+export function bornesDeLaPhrase(texte: string, [d, f]: Intervalle): Intervalle {
+  let debut = 0
+  const avant = texte.slice(0, d)
+  const saut = avant.lastIndexOf('\n')
+  for (const m of avant.matchAll(FIN_DE_PHRASE)) debut = m.index + m[0].length
+  debut = Math.max(debut, saut + 1)
+  while (debut < d && /\s/.test(texte[debut])) debut++
+
+  let fin = texte.length
+  // La cible peut ELLE-MÊME finir la phrase (« bacs. ») : on cherche à partir
+  // de son dernier caractère, jamais après.
+  const re = new RegExp(FIN_DE_PHRASE.source, 'gu')
+  re.lastIndex = Math.max(0, f - 1)
+  const m = re.exec(texte)
+  const sautApres = texte.indexOf('\n', f)
+  if (m) fin = m.index + m[0].length
+  if (sautApres !== -1 && sautApres < fin) fin = sautApres
+  return [debut, Math.max(fin, f)]
 }

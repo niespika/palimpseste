@@ -35,6 +35,7 @@ import { CONFIANCES, CONDITIONS, type Competence, type Condition, type Confiance
 import type { ComparaisonObservable, QuestionServie } from './types'
 import { refus, ok, type Issue, type DepotMaison } from './depot'
 import { apportDeLaDesignation } from './designation'
+import { credenceDonneeDe } from './credence'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -206,6 +207,8 @@ async function fusionnerDansLaCredence(
   //    poses s'y AJOUTE, il ne la remplace pas.
   apport: Record<string, unknown> | ((ancien: Record<string, unknown>) => Record<string, unknown>),
   maintenant: string, message: (m: string) => string,
+  /** ⭐ 15/09 — un refus qui se lit sur l'entrée DÉJÀ écrite de ce cas (une seule lecture). */
+  garde?: (ancien: Record<string, unknown>) => string | null,
 ): Promise<Issue<null>> {
   const { data } = await admin.from('exercices_metacognition')
     .select('credence').eq('depot_id', depot.id).maybeSingle()
@@ -213,6 +216,8 @@ async function fusionnerDansLaCredence(
   const estCeCas = (c: unknown) =>
     !!c && typeof c === 'object' && (c as Record<string, unknown>).cas === cas
   const ancien = (courant.find(estCeCas) ?? {}) as Record<string, unknown>
+  const motif = garde?.(ancien) ?? null
+  if (motif) return refus(motif)
   const autres = courant.filter((c) => !estCeCas(c))
   const neuf = typeof apport === 'function' ? apport(ancien) : apport
   const suite = [...autres, { ...ancien, ...neuf, cas }].sort(
@@ -260,9 +265,20 @@ export async function enregistrerLaDesignation(
   }
   // ⭐ Chaque pose entre au JOURNAL de l'entrée (`apportDeLaDesignation`) : la
   //    zone courante reste lisible où elle l'était, et l'historique s'y ajoute.
+  // ⛔⛔ 15/09 — ET PLUS APRÈS LA CRÉDENCE DE CE CAS. Trouvé par la revue
+  //    adversariale du lot « passage servi entre les deux cas » : sur une paire
+  //    4(b)/4(b), la remise n'arrive qu'à la dernière crédence, et l'écran de
+  //    la correction du premier cas montre désormais LE PASSAGE ATTENDU — la
+  //    zone du cas 1 restait pourtant modifiable, et le serveur l'acceptait.
+  //    L'élève pouvait recopier la réponse dans sa zone après l'avoir vue. La
+  //    crédence clôt la réponse du cas, comme elle clôt le texte au régime
+  //    (`regime.ts`) : la zone ne bouge plus après elle.
   return fusionnerDansLaCredence(admin, depot, cas,
     (ancien) => apportDeLaDesignation(ancien, zone ? [zone[0], zone[1]] : null, confirmee, maintenant),
-    maintenant, (m) => `La désignation n’a pas été enregistrée : ${m}`)
+    maintenant, (m) => `La désignation n’a pas été enregistrée : ${m}`,
+    (ancien) => (credenceDonneeDe(ancien)
+      ? 'Tu as déjà dit à quel point tu étais sûr de ce cas : le passage surligné ne se change plus.'
+      : null))
 }
 
 // ── Le temps 3 — « SE JUGER » ───────────────────────────────────────────────

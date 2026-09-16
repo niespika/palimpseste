@@ -142,6 +142,25 @@ export function pointDInsertion(
 }
 
 /**
+ * ⭐ 15/09 — LE POINT D'INSERTION, EN INTERVALLE DE CARACTÈRES : du début du
+ * dernier mot avant à la fin du premier mot après (`pointDInsertion` rend des
+ * RANGS de mots). C'est la jointure que l'écran montre à l'élève sur un cas où
+ * la version corrigée AJOUTE — « une zone qui contient la jointure est juste »
+ * (`10-` §5, décision 4). `null` quand ce n'est pas une insertion.
+ */
+export function intervalleDuPointDInsertion(
+  contenu: string | null | undefined, versionCorrigee: string | null | undefined,
+): [number, number] | null {
+  const rangs = pointDInsertion(contenu, versionCorrigee)
+  if (!rangs) return null
+  const situes = motsSitues(contenu ?? '')
+  const premier = situes[rangs[0]]
+  const dernier = situes[rangs[1] - 1]
+  if (!premier || !dernier) return null
+  return [premier.debut, dernier.fin]
+}
+
+/**
  * ⭐ L'EXPRESSION QUI RECONNAÎT UNE SUITE DE MOTS DANS LE MATÉRIAU — écrite
  * **UNE SEULE FOIS**, et employée aux deux bouts : par `estFragment`, qui décide
  * si un candidat se marque, et par `bornes`, qui le marque. ⛔ **C'est la
@@ -481,7 +500,7 @@ function tranchesDuDiff(
 }
 
 /** Les mots d'un texte AVEC leurs bornes — même découpe que `mots()`. */
-function motsSitues(texte: string): Array<{ debut: number; fin: number }> {
+export function motsSitues(texte: string): Array<{ debut: number; fin: number }> {
   const out: Array<{ debut: number; fin: number }> = []
   const re = /\S+/gu
   let m: RegExpExecArray | null
