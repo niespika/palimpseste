@@ -55,10 +55,9 @@ export default function VueSuivi({ charge, eleveInitial, depotId, ecrans }: {
 
   return (
     // ⭐ Louis, 15/09 : « des colonnes assez larges de chaque côté, complètement
-    //    perdues » — l'onglet sort du `max-w-6xl` du layout et prend la largeur de
-    //    la fenêtre, à 24 px des bords, pour que les écrans de l'élève tiennent à
-    //    DROITE, comme sur la maquette.
-    <div className="space-y-5 xl:mx-[calc(50%-50vw+24px)] xl:w-[calc(100vw-48px)]">
+    //    perdues » — le cadre professeur est passé à 1440 px (`app/prof/layout.tsx`),
+    //    pour que les écrans de l'élève tiennent à DROITE, comme sur la maquette.
+    <div className="space-y-5">
       {charge.incidents.length > 0 && (
         <ul className="rounded border border-retard/40 bg-retard-teinte/40 px-4 py-3 font-ui text-sm text-encre-douce space-y-1">
           {charge.incidents.map((i) => <li key={i}>⚠ {i}</li>)}

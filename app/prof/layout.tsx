@@ -27,7 +27,11 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
       {/* En-tête desktop (2 barres). Masqué < sm : sur mobile, chaque écran porte
           son <EnTeteMobileProf> et la navigation passe par la barre du bas. */}
       <EnTeteSite role="prof" tabs={NAV_PROF} deconnexionAction={deconnexion} />
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-20 sm:pb-8">
+      {/* ⭐ 15/09 (Louis) — le cadre professeur passe de 1152 à 1440 px : « des
+          colonnes larges perdues de chaque côté ». C'est un PLAFOND : sur
+          téléphone et tablette la page prend déjà toute la largeur, rien n'y
+          change ; les proses bornent elles-mêmes leur ligne (`max-w-3xl`). */}
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-8 pb-20 sm:pb-8">
         {/* Sous-nav du module SUR MOBILE (la Barre 2 desktop est cachée < sm). */}
         <SousNavModuleMobile role="prof" />
         {children}

@@ -162,6 +162,9 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
   const pathname = usePathname()
   const mod = moduleDepuisPathname(pathname)
   const dashHref = role === 'prof' ? '/prof' : '/eleve'
+  // ⭐ 15/09 — le cadre PROFESSEUR est passé à 1440 px (`app/prof/layout.tsx`) ;
+  //    l'en-tête suit, sinon le contenu déborde du bandeau. L'élève reste à 1040.
+  const largeur = role === 'prof' ? 'max-w-[1440px]' : 'max-w-[1040px]'
   // Liste du RÔLE courant : côté élève, seul Scriptorium en a (C2.2) — partout
   // ailleurs elle est vide et la Barre 2 garde la devise seule.
   const sousOnglets = mod ? sousOngletsPour(mod, role) : []
@@ -180,7 +183,7 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
     <header className="hidden sm:block sticky top-0 z-20 print:hidden">
       {/* ─── Barre 1 — navigation générale ─── */}
       <div className="border-b border-[#E4DBC9] bg-[#FBF8F1]">
-        <div className="relative max-w-[1040px] mx-auto px-[28px] py-[11px] flex justify-center">
+        <div className={`relative ${largeur} mx-auto px-[28px] py-[11px] flex justify-center`}>
           <BarreNavigation tabs={tabs} />
           {/* Zone d'actions ancrée à la colonne 1040px (alignée au sceau), pas au bord de l'écran. */}
           <div className="absolute right-[28px] top-0 bottom-0 flex items-center gap-[12px]">
@@ -208,7 +211,7 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
             className="absolute inset-x-0 bottom-0 pointer-events-none"
             style={{ height: 2, background: 'linear-gradient(90deg,rgba(184,137,59,0),rgba(184,137,59,.55),#B8893B)' }}
           />
-          <div className="max-w-[1040px] mx-auto" style={{ padding: '14px 28px 16px' }}>
+          <div className={`${largeur} mx-auto`} style={{ padding: '14px 28px 16px' }}>
             <div className="flex items-center" style={{ gap: 22 }}>
               <Marque href={dashHref} />
               <span className="w-px self-stretch" style={FILET_STYLE} />
@@ -284,7 +287,7 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
             className="absolute inset-x-0 bottom-0 pointer-events-none"
             style={{ height: 2, background: 'rgba(184,137,59,.32)' }}
           />
-          <div className="max-w-[1040px] mx-auto flex items-center" style={{ padding: '14px 28px 16px' }}>
+          <div className={`${largeur} mx-auto flex items-center`} style={{ padding: '14px 28px 16px' }}>
             <Marque href={dashHref} />
             <span className="w-px self-stretch" style={{ ...FILET_STYLE, marginLeft: 22 }} />
             <div className="flex-1 flex justify-center" style={{ padding: '0 22px' }}>
