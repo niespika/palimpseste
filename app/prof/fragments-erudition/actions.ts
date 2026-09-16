@@ -627,9 +627,18 @@ export async function tirerOrateur(semaineId: string, classeId: string, excluIds
     .eq('semaine_id', semaineId)
     .in('inscription_id', inscriptionIds)
 
+  // ⭐ 15/09 — la garde est le CODE : les orateurs déjà tirés cette semaine
+  // sont exclus ICI, pas seulement par la liste que le client envoie (deux
+  // onglets « tirage » ouverts tiraient deux fois le même élève).
+  const { data: dejaTires } = await admin
+    .from('fragments_presentations')
+    .select('eleve_id')
+    .eq('semaine_id', semaineId)
+    .in('inscription_id', inscriptionIds)
+  const exclus = new Set<string>([...excluIds, ...(dejaTires ?? []).map(p => p.eleve_id as string)])
   const eligibles = (depots ?? [])
     .map(d => d.eleve_id as string)
-    .filter(id => !excluIds.includes(id))
+    .filter(id => !exclus.has(id))
 
   if (eligibles.length === 0) return { error: 'Aucun élève éligible', data: null }
 

@@ -4,23 +4,24 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { creerUrlUploadAudio, confirmerUploadAudio } from '../../actions'
+import { formaterDuree } from '@/utils/fragments-oral'
+import { jouerCarillonFin } from '@/utils/carillon'
 
 interface Props {
   presentationId: string
   eleveId: string
+  /**
+   * ⭐ 15/09 — la durée réglementaire de la présentation (3 min en Première
+   * HLP, 4 en Terminale, `dureeOralSecondes`). L'enregistrement s'arrête SEUL
+   * à ce terme, et un carillon le dit à toute la classe.
+   */
+  dureeMaxSecondes: number
 }
 
 type Mode = 'choix' | 'enregistrement' | 'import' | 'apercu' | 'upload'
 
-function formaterDuree(s: number) {
-  const m = Math.floor(s / 60)
-  const sec = s % 60
-  return `${m}:${sec.toString().padStart(2, '0')}`
-}
-
-const MAX_SECONDES = 600 // 10 minutes
-
-export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
+export default function EnregistreurAudio({ presentationId, eleveId, dureeMaxSecondes }: Props) {
+  const MAX_SECONDES = dureeMaxSecondes
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('choix')
   const [, setEnregistrement] = useState(false)
@@ -47,15 +48,19 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
 
   function demarrerTimer() {
     timerRef.current = setInterval(() => {
-      setDuree(d => {
-        if (d + 1 >= MAX_SECONDES) {
-          arreterEnregistrement()
-          return d
-        }
-        return d + 1
-      })
+      setDuree(d => Math.min(MAX_SECONDES, d + 1))
     }, 1000)
   }
+
+  // Le terme : on coupe, et le carillon sonne la fin du temps. Dans un effet,
+  // jamais dans l'updater de `setDuree` (revue 15/09 : StrictMode le joue deux
+  // fois → second `stop()` sur un recorder inactif → InvalidStateError).
+  useEffect(() => {
+    if (mode !== 'enregistrement' || duree < MAX_SECONDES) return
+    arreterEnregistrement()
+    jouerCarillonFin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duree, mode, MAX_SECONDES])
 
   function arreterTimer() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
@@ -98,8 +103,9 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
   }
 
   function arreterEnregistrement() {
-    if (!mediaRecorderRef.current) return
-    mediaRecorderRef.current.stop()
+    const mr = mediaRecorderRef.current
+    if (!mr || mr.state === 'inactive') return
+    mr.stop()
     setEnregistrement(false)
     arreterTimer()
   }
@@ -225,14 +231,16 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
   }
 
   if (mode === 'enregistrement') {
-    const depasse = duree >= MAX_SECONDES - 60
+    const restant = MAX_SECONDES - duree
+    const depasse = restant <= 30
     return (
       <div className="bg-surface border border-bordure rounded-xl p-6 space-y-5 text-center">
         <div className={`text-5xl font-mono font-light ${depasse ? 'text-attention' : 'text-encre'}`}>
           {formaterDuree(duree)}
+          <span className="text-2xl text-muet"> / {formaterDuree(MAX_SECONDES)}</span>
         </div>
         {depasse && (
-          <p className="text-attention text-sm">Moins d'une minute restante (limite 10 min)</p>
+          <p className="text-attention text-sm">Plus que {restant} s — l'enregistrement s'arrêtera seul.</p>
         )}
         <div className="flex justify-center gap-3">
           <button
@@ -280,7 +288,7 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
       {mode === 'choix' && (
         <div className="space-y-3">
           <p className="text-sm text-muet">
-            L'enregistrement utilisera le microphone de cet appareil. Limite : 10 minutes / 25 Mo.
+            L'enregistrement utilisera le microphone de cet appareil. Il s'arrête seul au bout de {formaterDuree(MAX_SECONDES)}, avec un petit carillon.
           </p>
           <button
             onClick={demarrerEnregistrement}

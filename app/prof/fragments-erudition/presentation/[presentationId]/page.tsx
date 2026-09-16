@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import EnregistreurAudio from './EnregistreurAudio'
+import { dureeOralSecondes } from '@/utils/fragments-oral'
 import EditorAnalyseOrale from './EditorAnalyseOrale'
 
 export default async function PagePresentation({
@@ -23,11 +24,19 @@ export default async function PagePresentation({
   // Présentation
   const { data: presentation } = await admin
     .from('fragments_presentations')
-    .select('id, eleve_id, semaine_id, statut, created_at')
+    .select('id, eleve_id, semaine_id, statut, created_at, inscription_id')
     .eq('id', presentationId)
     .single()
 
   if (!presentation) notFound()
+
+  // La durée de l'oral suit le NIVEAU de la classe de l'inscription (3 min en
+  // Première, 4 en Terminale). Sans inscription (anciennes lignes) : 4 min.
+  const { data: inscription } = presentation.inscription_id
+    ? await admin.from('inscriptions').select('classe:classes(niveau)').eq('id', presentation.inscription_id).maybeSingle()
+    : { data: null }
+  const niveau = (inscription as unknown as { classe: { niveau: string | null } | null } | null)?.classe?.niveau ?? null
+  const dureeMaxSecondes = dureeOralSecondes(niveau)
 
   // Profil élève + semaine
   const [{ data: eleve }, { data: semaine }] = await Promise.all([
@@ -93,6 +102,7 @@ export default async function PagePresentation({
         <EnregistreurAudio
           presentationId={presentationId}
           eleveId={presentation.eleve_id}
+          dureeMaxSecondes={dureeMaxSecondes}
         />
       )}
 
