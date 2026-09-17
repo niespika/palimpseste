@@ -13,6 +13,7 @@ import { fsrs, createEmptyCard, date_diff, type Card, type Grade } from 'ts-fsrs
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { estEchue, seuilEcheanceDuJour } from '@/utils/quazian-echeance'
 import { lancer } from '@/utils/lancer'
+import { cache } from 'react'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -208,46 +209,99 @@ function cibleDeLaCarte(f: Record<string, unknown>): string {
   return (f.contenu_id as string | null) ?? (f.scriptorium_unite_id as string | null) ?? CIBLE_PERSO
 }
 
-// Charger la file de révision du jour
-export async function chargerFileRevision(): Promise<CarteRevision[]> {
+// ── ⭐⭐ 17/09 — LE SOCLE DES TROIS LECTEURS : UNE lecture, trois usages ────────
+//
+// La page Quazian appelle ensemble la file, la consultation et les compteurs, et
+// chacun refaisait la MÊME chaîne — session, rôle, garde d'intégrité, périmètre
+// « vu » (5 lectures), cartes partagées, cartes personnelles, états FSRS : 36
+// allers-retours pour 9 lectures distinctes, 12 de profondeur (mesuré le 17/09).
+// Les trois disaient déjà devoir appliquer « EXACTEMENT le même périmètre » ; ils
+// le font maintenant par construction, puisqu'ils lisent le même socle.
+//
+// ⚠️ `cache()` ne mémoïse que PENDANT UN RENDU : la page paie le socle une fois, et
+//    aucune donnée ne survit à la requête. Les trois lecteurs ne sont appelés
+//    aujourd'hui qu'en rendu (la page Quazian, et l'accueil pour les compteurs) ;
+//    ils restent des Server Actions exportées, où chacun referait sa lecture.
+// ⚠️ DEUX POIDS : l'accueil ne veut que des COMPTEURS. Lui faire porter le recto,
+//    le verso et les deux jointures de chaque carte alourdirait sa charge de
+//    plusieurs centaines de Ko pour gagner un seul aller-retour — il lit donc le
+//    socle LÉGER (les colonnes dont `carteVisible` a besoin, et elles seules).
+//    La clé du cache est ce choix : sur la page Quazian, les trois lecteurs
+//    demandent le socle complet et tombent sur la même lecture.
+// ⚠️ Les ÉTATS se lisent désormais par ÉLÈVE, plus par liste de cartes : la liste
+//    passait dans l'URL (~37 caractères par carte — 400 cartes, 15 Ko), et elle
+//    obligeait à attendre les cartes. Lus par élève, ils partent EN MÊME TEMPS
+//    qu'elles, par pages de 1000 (le plafond muet de PostgREST). Un état dont la
+//    carte n'est plus visible est écarté ci-dessous, comme le faisait le `.in()`.
+interface EtatFsrs {
+  id: string; flashcard_id: string; state: number; due: string
+  difficulty: number; stability: number; reps: number; lapses: number; last_review: string | null
+}
+interface SocleDesCartes {
+  userId: string
+  /** Le gel de l'intégrité : les trois lecteurs rendent alors du vide. */
+  bloque: boolean
+  seuil: number
+  flashcards: Record<string, unknown>[]
+  etats: Map<string, EtatFsrs>
+}
+
+/** Ce que `carteVisible` lit, plus l'id : de quoi COMPTER, rien de plus. */
+const SELECT_COMPTE = 'id, scriptorium_unite_id, contenu_id, section_id, semaine'
+
+const lireLeSocleDesCartes = cache(async function lireLeSocleDesCartes(
+  poids: 'complet' | 'leger',
+): Promise<SocleDesCartes> {
+  const select = poids === 'leger' ? SELECT_COMPTE : SELECT_CARTE
   const { supabase, userId } = await verifierEleve()
-  const maintenant = new Date().toISOString()
-  const seuil = await seuilDuJour()
-
-  // Périmètre « vu » des classes en contexte — admin pour contourner RLS.
   const admin = createAdminClient()
+
+  const pSeuil = lancer(seuilDuJour())
   // Blocage « petit malin » : la révision de flashcards est gelée (le quizz reste ouvert).
-  if (await messageSiBloque(admin, userId)) return []
-  const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
-
-  const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
-
+  const pBlocage = lancer(messageSiBloque(admin, userId))
+  // Périmètre « vu » des classes en contexte — admin pour contourner RLS.
+  const pPartagees = lancer((async () => {
+    const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
+    return cartesPartageesVisibles(admin, perimetre, select)
+  })())
   // Cartes personnelles de l'élève (ex. Codex) — toujours révisables par lui.
   // Elles ne passent PAS par le périmètre « vu » : elles sont à lui (C7·L3).
-  const perso = await lireCartes(admin, SELECT_CARTE, { eleveId: userId })
+  const pPerso = lancer(lireCartes(admin, poids === 'leger' ? 'id' : select, { eleveId: userId }))
+  const pEtats = lancer((async () => {
+    const lus: EtatFsrs[] = []
+    for (let debut = 0; ; debut += 1000) {
+      const { data } = await supabase
+        .from('quazian_card_states')
+        .select('id, flashcard_id, state, due, difficulty, stability, reps, lapses, last_review')
+        .eq('eleve_id', userId)
+        .order('id')
+        .range(debut, debut + 999)
+      lus.push(...((data ?? []) as EtatFsrs[]))
+      if ((data ?? []).length < 1000) return lus
+    }
+  })())
 
-  const flashcards = [...partagees, ...perso] as unknown as Record<string, unknown>[]
-  if (flashcards.length === 0) return []
+  const seuil = await pSeuil
+  if (await pBlocage) return { userId, bloque: true, seuil, flashcards: [], etats: new Map() }
 
-  const flashcardIds = flashcards.map((f) => f.id as string)
+  const flashcards = [...await pPartagees, ...await pPerso] as unknown as Record<string, unknown>[]
+  const visibles = new Set(flashcards.map((f) => f.id as string))
+  const etats = new Map<string, EtatFsrs>()
+  for (const e of await pEtats) if (visibles.has(e.flashcard_id)) etats.set(e.flashcard_id, e)
+  return { userId, bloque: false, seuil, flashcards, etats }
+})
 
-  // États FSRS existants pour cet élève
-  const { data: etats } = await supabase
-    .from('quazian_card_states')
-    .select('id, flashcard_id, state, due, difficulty, stability, reps, lapses, last_review')
-    .eq('eleve_id', userId)
-    .in('flashcard_id', flashcardIds)
-
-  const etatsMap: Record<string, typeof etats extends (infer T)[] | null ? T : never> = {}
-  for (const e of etats ?? []) {
-    etatsMap[e.flashcard_id] = e
-  }
+// Charger la file de révision du jour
+export async function chargerFileRevision(): Promise<CarteRevision[]> {
+  const { bloque, seuil, flashcards, etats: etatsMap } = await lireLeSocleDesCartes('complet')
+  const maintenant = new Date().toISOString()
+  if (bloque || flashcards.length === 0) return []
 
   // File = nouvelles cartes (sans état) + cartes dues aujourd'hui (fin de journée comprise)
   const file: CarteRevision[] = []
 
   for (const f of flashcards) {
-    const etat = etatsMap[f.id as string]
+    const etat = etatsMap.get(f.id as string)
     const labelUnite = labelDeLaCarte(f)
     const commun = {
       flashcard_id: f.id as string,
@@ -301,33 +355,16 @@ export interface CarteConsultation {
 // Mode « consultation » (Lot 11) : TOUTES les cartes visibles avec leur réponse,
 // sans impact sur la répétition espacée. Même visibilité que la file de révision.
 export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
-  const { supabase, userId } = await verifierEleve()
-  const admin = createAdminClient()
-
   // Gel de l'intégrité : même garde que `chargerFileRevision`. Une Server Action
   // exportée est un point d'entrée HTTP à part entière — la page ne l'appelle pas
   // quand l'élève est bloqué, mais elle ne peut pas être la seule barrière
-  // (§5 du RAPPORT_Diagnostic_C7_quazian.md).
-  if (await messageSiBloque(admin, userId)) return []
-
-  // Périmètre « vu » — MÊME périmètre que la file de révision.
-  const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
-  const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
-
-  const perso = await lireCartes(admin, SELECT_CARTE, { eleveId: userId })
-
-  const flashcards = [...partagees, ...perso] as unknown as Record<string, unknown>[]
-  if (flashcards.length === 0) return []
+  // (§5 du RAPPORT_Diagnostic_C7_quazian.md). ⭐ 17/09 — elle vit dans le socle.
+  const { bloque, seuil, flashcards, etats } = await lireLeSocleDesCartes('complet')
+  if (bloque || flashcards.length === 0) return []
 
   // `due` en plus de l'id : les tuiles par cours annoncent « N à réviser », et
   // ce compte doit sortir du MÊME prédicat que la file (jamais vue, ou échue).
-  const seuil = await seuilDuJour()
-  const { data: etats } = await supabase
-    .from('quazian_card_states')
-    .select('flashcard_id, due')
-    .eq('eleve_id', userId)
-    .in('flashcard_id', flashcards.map((f) => f.id as string))
-  const echeance = new Map((etats ?? []).map((e) => [e.flashcard_id as string, e.due as string]))
+  const echeance = new Map([...etats].map(([flashcardId, e]) => [flashcardId, e.due]))
 
   return flashcards
     .map((f) => {
@@ -356,10 +393,36 @@ export async function soumettreNote(
   cardStateId: string | null,
   rating: 1 | 2 | 3 | 4
 ): Promise<{ error: string } | { due: string; state: number; cardStateId: string; avertissement?: string }> {
-  const { supabase, userId } = await verifierEleve()
+  // ⭐⭐ 17/09 — NOTER UNE CARTE EST LE CLIC LE PLUS FRÉQUENT DU SITE, et il
+  //    enchaînait 7 à 9 lectures et écritures l'une derrière l'autre : plus d'une
+  //    seconde par carte, trente fois par séance. Les LECTURES (rôle, garde
+  //    d'intégrité, état FSRS, garde de la carte) ne dépendent que de la session :
+  //    elles partent ensemble, et leurs refus sont lus ci-dessous DANS L'ORDRE où
+  //    ils tombaient. ⛔ Les ÉCRITURES restent où elles étaient, après toutes les gardes.
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+  const userId = user.id
+  const admin = createAdminClient()
+
+  const idValide = cardStateId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cardStateId)
+    ? cardStateId : null
+  const CHAMPS_ETAT = 'id, difficulty, stability, state, due, reps, lapses, last_review'
+  const pRole = lancer(supabase.from('profiles').select('role').eq('id', userId).single())
+  const pBlocage = lancer(messageSiBloque(admin, userId))
+  const pEtatParId = idValide
+    ? lancer(supabase.from('quazian_card_states').select(CHAMPS_ETAT)
+      .eq('id', idValide).eq('eleve_id', userId).eq('flashcard_id', flashcardId).maybeSingle())
+    : null
+  const pEtatParCarte = lancer(supabase.from('quazian_card_states').select(CHAMPS_ETAT)
+    .eq('eleve_id', userId).eq('flashcard_id', flashcardId).maybeSingle())
+  const pCarte = lancer(admin
+    .from('quazian_flashcards').select('eleve_id, statut').eq('id', flashcardId).maybeSingle())
+
+  if ((await pRole).data?.role !== 'eleve') throw new Error('Accès refusé')
 
   // Garde-fou : élève bloqué → aucune mise à jour FSRS (la révision est gelée).
-  if (await messageSiBloque(createAdminClient(), userId)) {
+  if (await pBlocage) {
     return { error: 'La révision est suspendue. Reviens au tableau de bord.' }
   }
   if (![1, 2, 3, 4].includes(rating)) return { error: 'Note de révision invalide.' }
@@ -376,23 +439,15 @@ export async function soumettreNote(
   // Reconstruire la carte FSRS depuis l'état RÉEL en base (jamais l'état du client).
   // Résolution tolérante : par id si fourni ET valide, sinon par (élève, flashcard) — le
   // client peut renvoyer un id factice « pending » pour une carte neuve re-enfilée (raté).
-  const idValide = cardStateId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cardStateId)
-    ? cardStateId : null
   type EtatCarte = { id: string; difficulty: number; stability: number; state: number; due: string; reps: number; lapses: number; last_review: string | null }
   let etat: EtatCarte | null = null
-  if (idValide) {
-    const { data, error } = await supabase
-      .from('quazian_card_states')
-      .select('id, difficulty, stability, state, due, reps, lapses, last_review')
-      .eq('id', idValide).eq('eleve_id', userId).eq('flashcard_id', flashcardId).maybeSingle()
+  if (pEtatParId) {
+    const { data, error } = await pEtatParId
     if (error) return { error: 'Lecture de ta révision impossible. Réessaie.' }
     etat = (data as EtatCarte | null) ?? null
   }
   if (!etat) {
-    const { data, error } = await supabase
-      .from('quazian_card_states')
-      .select('id, difficulty, stability, state, due, reps, lapses, last_review')
-      .eq('eleve_id', userId).eq('flashcard_id', flashcardId).maybeSingle()
+    const { data, error } = await pEtatParCarte
     if (error) return { error: 'Lecture de ta révision impossible. Réessaie.' }
     etat = (data as EtatCarte | null) ?? null
   }
@@ -424,8 +479,7 @@ export async function soumettreNote(
   // carte personnelle de l'élève — sans rien resserrer. Y ajouter `carteVisible`
   // serait une décision de conception (R7), notée en fin de session.
   if (!etat) {
-    const { data: fc, error } = await createAdminClient()
-      .from('quazian_flashcards').select('eleve_id, statut').eq('id', flashcardId).maybeSingle()
+    const { data: fc, error } = await pCarte
     if (error) return { error: 'Lecture de la carte impossible. Réessaie.' }
     if (!fc || (fc.eleve_id === null ? fc.statut !== 'valide' : fc.eleve_id !== userId)) {
       return { error: 'Cette carte n’est plus disponible pour la révision.' }
@@ -520,52 +574,23 @@ export async function soumettreNote(
 }
 
 // Stats pour la page d'accueil
-export async function chargerStatsRevision() {
-  const { supabase, userId } = await verifierEleve()
-  const admin = createAdminClient()
-
-  // ⭐ 17/09 — ce compteur est sur le chemin de l'ACCUEIL, et il enchaînait 13
-  //    lectures. Le seuil, la garde d'intégrité, les cartes partagées et les
-  //    cartes personnelles ne dépendent que de l'élève : ils partent ensemble.
-  //    La garde est lue EN PREMIER, comme avant — un élève bloqué ne reçoit rien.
-  const pSeuil = lancer(seuilDuJour())
-  const pBlocage = lancer(messageSiBloque(admin, userId))
-  // Périmètre « vu » — MÊME périmètre que la file de révision,
-  // sinon les compteurs annoncent des cartes que l'élève ne verra jamais. Sur le
-  // tableau de bord en état « Toutes », le contexte rend les deux classes : les
-  // compteurs agrègent, ce que l'écran annonce.
-  const pPartagees = lancer((async () => {
-    const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
-    return cartesPartageesVisibles(
-      admin, perimetre, 'id, scriptorium_unite_id, contenu_id, section_id, semaine',
-    )
-  })())
-  const pPerso = lancer(lireCartes(admin, 'id', { eleveId: userId }))
-
+export async function chargerStatsRevision(poids: 'complet' | 'leger' = 'complet') {
+  // ⭐ 17/09 — le socle : les compteurs sortent des MÊMES cartes et des MÊMES états
+  //    que la file et les tuiles, lus une fois.
   // Gel de l'intégrité : les compteurs annoncent la file, et la file est vide
   // quand l'élève est bloqué — sans cette garde ils promettraient un travail
   // inaccessible (et l'action reste un point d'entrée HTTP, cf. §5 du rapport).
-  if (await pBlocage) {
+  // ⛔ Une Server Action reçoit ce que le client veut bien envoyer : tout ce qui
+  //    n'est pas « leger » est « complet ».
+  const { bloque, seuil, flashcards, etats: etatsDuSocle } = await lireLeSocleDesCartes(poids === 'leger' ? 'leger' : 'complet')
+  if (bloque) {
     return { totalCartes: 0, connues: 0, dues: 0, nouvelles: 0, mures: 0, aFaire: 0 }
   }
-  const seuil = await pSeuil
-  const partagees = await pPartagees
-  const perso = await pPerso
-
-  const flashcards = [...partagees, ...perso] as unknown as Record<string, unknown>[]
   const totalCartes = flashcards.length
-  const ids = flashcards.map((f) => f.id as string)
+  const etats = [...etatsDuSocle.values()]
 
-  const { data: etats } = ids.length > 0
-    ? await supabase
-        .from('quazian_card_states')
-        .select('state, due')
-        .eq('eleve_id', userId)
-        .in('flashcard_id', ids)
-    : { data: [] }
-
-  const connues = etats?.length ?? 0
-  const dues = etats?.filter((e) => estEchue(e.due, seuil)).length ?? 0
+  const connues = etats.length
+  const dues = etats.filter((e) => estEchue(e.due, seuil)).length
   const nouvelles = totalCartes - connues
 
   // Deux nombres, deux sens — et c'est le correctif du 14/08 (recette C7·L3) :

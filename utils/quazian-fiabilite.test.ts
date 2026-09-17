@@ -57,6 +57,8 @@ function dependances(db: ReturnType<typeof base>) {
     'next/cache': { revalidatePath: () => {} },
     '@/utils/acces': { classeIdsActives: async () => ['classe-test'] },
     '@/utils/brier': {},
+    // 17/09 — hors rendu, `cache` ne mémoïse pas : ici, un simple passe-plat.
+    'react': { cache: <F>(f: F) => f },
     // 17/09 — le départ groupé des lectures : ici, la vraie mécanique, sans le module.
     '@/utils/lancer': { lancer: <T>(l: PromiseLike<T>) => { const p = Promise.resolve(l); p.catch(() => {}); return p } },
   }

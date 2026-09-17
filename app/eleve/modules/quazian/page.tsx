@@ -10,6 +10,7 @@ import { QuazianDashboard } from './QuazianDashboard'
 import BanniereIntegrite from '@/components/BanniereIntegrite'
 import Tuile from '@/components/Tuile'
 import { seuilModule } from '@/app/eleve/seuil-module'
+import { lancer } from '@/utils/lancer'
 
 type QuizListItem = { id: string; statut: string; lance_at: string | null; nb_questions: number }
 
@@ -29,6 +30,17 @@ export default async function QuazianElevePage({
   const vue = vueParam === 'quizz' ? 'quizz' : 'flashcards'
   // Le cours ouvert ne vaut que sur l'onglet Flashcards (le Quizz l'ignore).
   const coursOuvert = vue === 'flashcards' ? (coursParam ?? null) : null
+
+  // ⭐ 17/09 — CE QUI NE DÉPEND QUE DE L'ÉLÈVE PART ICI : la garde d'intégrité et,
+  //    sur l'onglet Flashcards, les trois lecteurs (qui partagent UN socle — voir
+  //    `actions.ts`). La page enchaînait neuf lectures avant même de les appeler.
+  //    Chacun est attendu plus bas, à sa place ; un écran de refus (module inactif,
+  //    classe sans Quazian, élève bloqué) n'en montre rien — des lectures perdues,
+  //    jamais une donnée servie.
+  const pBlocage = lancer(messageSiBloque(createAdminClient(), user.id))
+  const pRevision = vue === 'flashcards'
+    ? lancer(Promise.all([chargerFileRevision(), chargerStatsRevision(), chargerToutesLesCartes()]))
+    : null
 
   // Vérifier que le module est actif et assigné
   const { data: module } = await supabase
@@ -65,6 +77,11 @@ export default async function QuazianElevePage({
 
   // État de soumission de l'élève par quizz
   const quizIds = quizList.map(q => q.id)
+  // 17/09 — les notes partent en même temps que les sessions : deux lectures sœurs.
+  const fermeIds = quizList.filter(q => q.statut === 'ferme').map(q => q.id)
+  const pScores = fermeIds.length > 0
+    ? lancer(supabase.from('quazian_quiz_scores').select('quiz_id, note_formative_20').eq('eleve_id', user.id).in('quiz_id', fermeIds))
+    : null
   const { data: sessions } = quizIds.length > 0
     ? await supabase.from('quazian_sessions').select('quiz_id, submitted_at').eq('eleve_id', user.id).in('quiz_id', quizIds)
     : { data: [] }
@@ -77,10 +94,7 @@ export default async function QuazianElevePage({
   // étiqueté « /10 » : ce champ est le score de Brier moyen, une valeur centrée
   // sur 0 (la note en est dérivée par `10 + score`), donc ni sur 10 ni comparable
   // au reste de l'app, qui note sur 20.
-  const fermeIds = quizList.filter(q => q.statut === 'ferme').map(q => q.id)
-  const { data: scores } = fermeIds.length > 0
-    ? await supabase.from('quazian_quiz_scores').select('quiz_id, note_formative_20').eq('eleve_id', user.id).in('quiz_id', fermeIds)
-    : { data: [] }
+  const { data: scores } = pScores ? await pScores : { data: [] }
   const noteMap = new Map<string, number>()
   for (const s of scores ?? []) {
     if (s.note_formative_20 != null) noteMap.set(s.quiz_id as string, s.note_formative_20 as number)
@@ -90,15 +104,15 @@ export default async function QuazianElevePage({
   const quizzActif = quizList.find(q => q.statut === 'lance' && !soumisMap.get(q.id))
 
   // Blocage « petit malin » : la révision est gelée, mais le quizz reste accessible.
-  const blocage = await messageSiBloque(createAdminClient(), user.id)
+  const blocage = await pBlocage
 
   // Données de révision (FSRS + consultation) — inutile de les charger si bloqué,
   // ni quand l'élève est sur l'onglet Quizz.
   let file: Awaited<ReturnType<typeof chargerFileRevision>> = []
   let stats: Awaited<ReturnType<typeof chargerStatsRevision>> | null = null
   let toutesCartes: Awaited<ReturnType<typeof chargerToutesLesCartes>> = []
-  if (!blocage && vue === 'flashcards') {
-    const [f, s, t] = await Promise.all([chargerFileRevision(), chargerStatsRevision(), chargerToutesLesCartes()])
+  if (!blocage && pRevision) {
+    const [f, s, t] = await pRevision
     file = f; stats = s; toutesCartes = t
   }
 

@@ -242,7 +242,8 @@ export default async function TableauDeBordEleve() {
     // (sinon on comptait des cartes d'unités non publiées / non assignées à l'élève).
     // `chargerStatsRevision` lit le contexte de classe : il agrège de lui-même en
     // état « Toutes », d'où un seul appel ici et un compteur unique.
-    const pStats = uneClasseA('quazian') ? lancer(chargerStatsRevision()) : null
+    // L'accueil ne veut que des compteurs : le socle LÉGER (voir `quazian/actions.ts`).
+    const pStats = uneClasseA('quazian') ? lancer(chargerStatsRevision('leger')) : null
 
     // Semaine calendaire en cours (depuis le semestre actif + vacances).
     const pSemaineCourante = lancer((async (): Promise<SemaineCourante> => {

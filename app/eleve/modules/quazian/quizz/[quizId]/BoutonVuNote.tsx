@@ -1,14 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { marquerNoteVue } from './actions'
 
 // Validation de lecture de la note de quizz (source transversale, sans case par
 // tuile : juste « J'ai vu ma note »). Tant que non validé, l'élève ne peut rien
 // rendre dans les autres modules — mais Quazian lui-même reste ouvert.
 export default function BoutonVuNote({ quizId, dejaVu }: { quizId: string; dejaVu: boolean }) {
-  const router = useRouter()
   const [vu, setVu] = useState(dejaVu)
   const [pending, setPending] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -30,8 +28,9 @@ export default function BoutonVuNote({ quizId, dejaVu }: { quizId: string; dejaV
         setErreur(res.error)
         return
       }
+      // 17/09 — pas de `router.refresh()` : l'action a revalidé, sa réponse porte déjà la
+      // page fraîche ; le second rendu repayait toute la page pour un bouton déjà passé à « vu ».
       setVu(true)
-      router.refresh()
     } finally {
       setPending(false)
     }

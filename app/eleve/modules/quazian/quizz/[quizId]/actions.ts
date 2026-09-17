@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classeIdsActives } from '@/utils/acces'
 import { calculerScoreBrier, JETONS_NEUTRE, shuffleArray } from '@/utils/brier'
+import { lancer } from '@/utils/lancer'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -26,13 +27,17 @@ async function chargerQuizAccessible(
   userId: string,
   quizId: string
 ) {
-  const { data: quizz } = await supabase
-    .from('quazian_quizzes')
-    .select('statut, ferme_at, classe_id, moyenne_cohorte, ecart_type_cohorte')
-    .eq('id', quizId)
-    .single()
+  // 17/09 — le quizz et les inscriptions ne dépendent pas l'un de l'autre : cette
+  // garde joue à chaque réponse enregistrée, les deux lectures partent ensemble.
+  const [{ data: quizz }, classeIds] = await Promise.all([
+    supabase
+      .from('quazian_quizzes')
+      .select('statut, ferme_at, classe_id, moyenne_cohorte, ecart_type_cohorte')
+      .eq('id', quizId)
+      .single(),
+    classeIdsActives(supabase, userId),
+  ])
   if (!quizz) return null
-  const classeIds = await classeIdsActives(supabase, userId)
   if (!quizz.classe_id || !classeIds.includes(quizz.classe_id as string)) return null
   return quizz
 }
@@ -239,6 +244,12 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
 
   // Stats cohorte (figées si quizz déjà fermé), chargées une fois et réutilisées plus bas.
   // Garde de classe (C1) incluse : un quizz hors-classe → refus avant toute écriture.
+  // 17/09 — les questions partent en même temps que la garde : deux LECTURES, toutes
+  // deux avant le verrou, et leurs refus sont lus dans l'ordre d'avant.
+  const pQuestions = lancer(admin
+    .from('quazian_questions')
+    .select('id, index_correct')
+    .eq('quiz_id', quizId))
   const quizz = await chargerQuizAccessible(supabase, userId, quizId)
   if (!quizz) return { error: 'Quizz introuvable' }
 
@@ -251,10 +262,7 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
   // ⭐ Aucune course : les questions d'un quizz ne bougent pas pendant la
   //    passation, contrairement aux réponses, dont l'instantané a besoin du
   //    verrou (`sauvegarderReponse` refuse dès que `submitted_at` est posé).
-  const { data: questions, error: eQuestions } = await admin
-    .from('quazian_questions')
-    .select('id, index_correct')
-    .eq('quiz_id', quizId)
+  const { data: questions, error: eQuestions } = await pQuestions
 
   if (eQuestions) return { error: `Lecture des questions impossible : ${eQuestions.message}` }
   // ⚠️ `length === 0` autant que `null` : `scoreMoyen /= questions.length`
@@ -313,7 +321,7 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
   for (const r of reponses ?? []) repMap[r.question_id] = r
 
   let scoreMoyen = 0
-  const answersToInsert = []
+  const answersToInsert: Record<string, unknown>[] = []
   const answersToUpdate = []
 
   for (const q of questions) {
@@ -345,14 +353,28 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
 
   // Écritures serveur (C1) : la session vient d'être verrouillée au nom de
   // l'élève — les scores s'écrivent en admin (plus de policy d'écriture élève).
-  if (answersToInsert.length > 0) {
-    await admin.from('quazian_answers').insert(answersToInsert)
-  }
-  for (const a of answersToUpdate) {
-    await admin.from('quazian_answers')
+  // 17/09 — les MÊMES écritures, par paquets : chacune porte sur sa propre ligne
+  // (`session_id`, `question_id`), aucune ne dépend d'une autre. En série, c'était
+  // un aller-retour par question répondue avant que l'élève voie « soumis ».
+  // ⚠️ Par SIX, pas toutes à la fois : une classe entière soumet dans la même minute,
+  //    et trente élèves × vingt questions d'un coup, c'est une rafale que la base
+  //    n'a pas à encaisser.
+  // ⚠️ supabase-js NE LÈVE PAS, et ces écritures n'ont jamais été contrôlées : un
+  //    score par réponse resté à NULL ne se voyait nulle part. On le dit au journal —
+  //    la NOTE, elle, se calcule en mémoire ci-dessous et n'en dépend pas.
+  const ecritures = [
+    ...(answersToInsert.length > 0
+      ? [() => admin.from('quazian_answers').insert(answersToInsert)] : []),
+    ...answersToUpdate.map((a) => () => admin.from('quazian_answers')
       .update({ brier_brut: a.brier_brut, score: a.score })
       .eq('session_id', sessionId)
-      .eq('question_id', a.question_id)
+      .eq('question_id', a.question_id)),
+  ]
+  for (let i = 0; i < ecritures.length; i += 6) {
+    const resultats = await Promise.all(ecritures.slice(i, i + 6).map((ecrire) => ecrire()))
+    for (const r of resultats) {
+      if (r.error) console.error(`[quazian] score par réponse NON ÉCRIT (session ${sessionId}) — ${r.error.code} ${r.error.message}`)
+    }
   }
 
   // submitted_at est déjà posé par le verrou one-shot en début de fonction.
