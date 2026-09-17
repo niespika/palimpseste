@@ -483,6 +483,22 @@ function competencesVisees(
 }
 
 /**
+ * ⭐ 17/09 — FAIRE PARTIR UNE LECTURE SANS L'ATTENDRE (jumeau de celui de
+ * `../chaine/contexte`). Le chargeur enchaînait ~38 lectures en série, et il est
+ * rejoué à chaque rendu ET dans six actions : c'était 1,5 à 3 s par écran et par
+ * geste. Les lectures indépendantes partent ensemble ; chacune est ATTENDUE à
+ * l'endroit, et dans l'ordre, où le code la lisait — la vue rendue est la même.
+ * ⚠️ `Promise.resolve` déclenche un constructeur de requête supabase, qui est
+ *    paresseux. Le `catch` muet évite le rejet non géré d'une lecture partie en
+ *    avance puis jamais attendue ; qui l'attend reçoit toujours son rejet.
+ */
+function lancer<T>(lecture: PromiseLike<T>): Promise<T> {
+  const p = Promise.resolve(lecture)
+  p.catch(() => {})
+  return p
+}
+
+/**
  * ⭐ LE CHARGEUR. Il lit, il assemble, il ne décide de rien.
  * @returns `null` quand le dépôt n'est pas à cet élève, n'est pas de la maison,
  *          ou est `retire` — trois refus qui se ressemblent volontairement à
@@ -505,12 +521,16 @@ export async function chargerLeDeroule(
   //    atelier ; les ACTIONS partagées ne le font pas, et ne le peuvent pas :
   //    « un dossier sans `page.tsx` […] le jeu d'actions PARTAGÉ par les écrans
   //    du déroulé, où qu'ils vivent ».
+  // ⭐ 17/09 — le contexte part EN MÊME TEMPS que le dépôt : c'est la plus longue
+  //    chaîne du chargeur, et elle ne lit que par `depotId`. ⛔ Rien n'en sort tant
+  //    que `lireDepotMaison` — la garde de propriété — n'a pas dit oui.
+  const pCtx = lancer(lireContexte(admin, depotId))
   const depot = await lireDepotMaison(admin, depotId, eleveId, { atelier: a.atelier })
   if (!depot) return null
 
   let ctx: ContexteDepot
   try {
-    ctx = await lireContexte(admin, depotId)
+    ctx = await pCtx
   } catch (e) {
     if (e instanceof DepotIllisible) {
       console.error(`[deroule] contexte illisible ${depotId} — ${e.message}`)
@@ -522,6 +542,44 @@ export async function chargerLeDeroule(
   const avertissements: string[] = []
   const maintenant = new Date()
 
+  // ── ⭐ 17/09 — LE DÉPART GROUPÉ : tout ce qui ne dépend que du dépôt et du
+  //    contexte part ICI ; chaque lecture est attendue plus bas, à sa place.
+  //    ⚠️ La démonstration ÉCRIT dans les avertissements : elle reçoit les siens,
+  //    reversés à l'endroit où elle était appelée — l'ordre du journal ne bouge pas.
+  const cibleDuDepart = ((ctx.decision?.cibleRetenue ?? ctx.ciblePrimaire) ?? null) as Competence | null
+  const avertissementsDeLaDemonstration: string[] = []
+  const pCran = ctx.cran == null
+    ? null
+    : lancer(admin.from('exercices_crans')
+      .select('geste, regime_v1vf, guide, marquage').eq('cran', ctx.cran).maybeSingle())
+  const pEscalade = lancer(escaladePesante(admin, depot))
+  const pCasLus = lancer(admin.from('exercices_cas')
+    .select('ordre, defaut, distracteurs, reponse_attendue, pourquoi_juste, '
+      + 'exercices_materiaux(contenu, version_corrigee)')
+    .eq('exercice_id', depot.exercice_id).order('ordre'))
+  const pMetacog = lancer(admin.from('exercices_metacognition')
+    .select('credence, contestation_points').eq('depot_id', depotId).maybeSingle())
+  const pRappel = lancer(construireLeRappel(admin, depot, ctx, cibleDuDepart))
+  const pDemonstration = lancer(construireLaDemonstration(
+    admin, depot, ctx, cibleDuDepart, avertissementsDeLaDemonstration))
+  const pFoisCiblee = cibleDuDepart
+    ? lancer(compterLesCiblages(admin, depot.eleve_id, cibleDuDepart)) : null
+  const pDuree = lancer(dureeDeLInstance(admin, depot, ctx))
+  const pTemps4 = lancer(Promise.all([
+    attenteDuDepot(admin, depotId),
+    lireLesRetours(admin, depotId),
+    construireLEncartLangue(admin, depotId, ctx.productionV1),
+  ]))
+  const pComparaisonEcrite = lancer(admin.from('exercices_metacognition')
+    .select('comparaison_squelette').eq('depot_id', depotId).maybeSingle())
+  const pSignalement = lancer(Promise.all([
+    lireLaPorteDuSignalement(admin),
+    lireLeSignalementDuDepot(admin, depotId),
+  ]))
+  const pSujet = lancer(sujetDeLExercice(admin, depot))
+  const pCycles = lancer(cyclesComptesDeLEleve(eleveId))
+  const pFuseau = lancer(lireFuseau())
+
   // ── Le cran : son geste, et le libellé de régime que la doctrine porte ──
   // ⭐ C4-L11 — LU PAR LE NUMÉRO, comme partout ailleurs. Cet écran lisait
   //    `exercices_crans` PAR LE CODE tandis que la chaîne le lisait par le
@@ -531,18 +589,23 @@ export async function chargerLeDeroule(
   //    ⚠️ `ctx.cran` est NULL sur un examen diagnostique, qui n'a pas de cran :
   //    la lecture ne part pas, et `geste` reste null. C'est le comportement
   //    voulu, pas un trou.
-  const { data: cran } = ctx.cran == null
-    ? { data: null }
-    : await admin.from('exercices_crans')
-      // ⭐ C4-L15 — `marquage` entre ici, et `guide` cesse d'être chargé pour
-      //    rien : c'est LUI qui décide si le bloc « De quoi t'aider » se sert
-      //    (la doctrine y met `léger` au cran 6, et à lui seul — `02-` §2.2).
-      //    ⭐ On lit une CONDITION DÉRIVÉE, jamais un numéro de cran en dur.
-      .select('geste, regime_v1vf, guide, marquage').eq('cran', ctx.cran).maybeSingle()
+  // ⭐ C4-L15 — `marquage` entre ici, et `guide` cesse d'être chargé pour
+  //    rien : c'est LUI qui décide si le bloc « De quoi t'aider » se sert
+  //    (la doctrine y met `léger` au cran 6, et à lui seul — `02-` §2.2).
+  //    ⭐ On lit une CONDITION DÉRIVÉE, jamais un numéro de cran en dur.
+  const { data: cran, error: eCran } = pCran ? await pCran : { data: null, error: null }
+  // ⚠️ supabase-js NE LÈVE PAS. Ces lectures partent désormais en rafale : si l'une
+  //    tombe, l'écran se composerait sur du vide SANS RIEN DIRE. On le dit au journal.
+  //    (Éprouvé le 17/09 à 90 chargements simultanés au bac à sable : 0 erreur.)
+  if (eCran) console.error(`[deroule] cran illisible ${depotId} — ${eCran.code} ${eCran.message}`)
   const geste = (cran?.geste as string | null) ?? null
+  // ⭐ 17/09 — « se juger » n'attend que le geste : il part ici, et s'attend à sa place.
+  const pSeJuger = ctx.piloteArgument
+    ? null
+    : lancer(construireSeJuger(admin, depot, ctx, geste, competencesDeLExercice(ctx).mesurees))
 
   // ── L'escalade qui pèse sur CET exercice (`01-` §8.5) ──
-  const escalade = await escaladePesante(admin, depot)
+  const escalade = await pEscalade
 
   // ⭐ Le régime : le CRAN, PLUS L'ESCALADE. Jamais gravé en dur.
   const { regime, vfRequiseParEscalade } = regimeDuDeroule(
@@ -561,20 +624,20 @@ export async function chargerLeDeroule(
   // Le dépôt n'a pas de types générés : les `select` concaténés ne s'infèrent
   // pas, et le patron est le TRANSTYPAGE EXPLICITE (`utils/chaine/contexte.ts`,
   // `utils/acces.ts`). La forme ci-dessous dit CE QU'ON LIT, colonne par colonne.
-  const { data: casLus } = await admin.from('exercices_cas')
-    // ⛔⛔ `version_corrigee` ENTRE ICI, ET ELLE N'EN SORT PAS. C4-L15 : aux
-    //    crans 3 et 5, le passage fautif est « celui, et celui-là seul, où la
-    //    `version_corrigee` du matériau diffère de son `contenu` » (`02-` §5).
-    //    Le diff se calcule DANS CE FICHIER, qui est `server-only`, et **seules
-    //    les positions descendent** — la version corrigée n'entre à AUCUN
-    //    moment dans `VueDuDeroule`. ⚠️ C'est LA RÉPONSE : « la
-    //    `reponse_attendue` est la version corrigée à la transformation »
-    //    (`02-` §2.3.4). Le même raisonnement que la crédence — « sans quoi
-    //    l'élève déclarerait sa sûreté en connaissant la réponse, et la porte 2
-    //    ne mesurerait plus rien ».
-    .select('ordre, defaut, distracteurs, reponse_attendue, pourquoi_juste, '
-      + 'exercices_materiaux(contenu, version_corrigee)')
-    .eq('exercice_id', depot.exercice_id).order('ordre')
+  // ⭐ 17/09 — la requête est écrite au DÉPART GROUPÉ (`pCasLus`) ; ce qui suit dit
+  //    toujours pourquoi elle lit ce qu'elle lit.
+  // ⛔⛔ `version_corrigee` ENTRE ICI, ET ELLE N'EN SORT PAS. C4-L15 : aux
+  //    crans 3 et 5, le passage fautif est « celui, et celui-là seul, où la
+  //    `version_corrigee` du matériau diffère de son `contenu` » (`02-` §5).
+  //    Le diff se calcule DANS CE FICHIER, qui est `server-only`, et **seules
+  //    les positions descendent** — la version corrigée n'entre à AUCUN
+  //    moment dans `VueDuDeroule`. ⚠️ C'est LA RÉPONSE : « la
+  //    `reponse_attendue` est la version corrigée à la transformation »
+  //    (`02-` §2.3.4). Le même raisonnement que la crédence — « sans quoi
+  //    l'élève déclarerait sa sûreté en connaissant la réponse, et la porte 2
+  //    ne mesurerait plus rien ».
+  const { data: casLus, error: eCas } = await pCasLus
+  if (eCas) console.error(`[deroule] cas illisibles ${depotId} — ${eCas.code} ${eCas.message}`)
   const casBruts = (casLus ?? []) as unknown as Array<{
     ordre: number
     defaut: string | null
@@ -681,8 +744,8 @@ export async function chargerLeDeroule(
     ctx.cran, !!depot.vf_remis_at,
     casBruts.find((c) => c.ordre === 1)?.reponse_attendue)
 
-  const { data: metacog } = await admin.from('exercices_metacognition')
-    .select('credence, contestation_points').eq('depot_id', depotId).maybeSingle()
+  const { data: metacog, error: eMetacog } = await pMetacog
+  if (eMetacog) console.error(`[deroule] métacognition illisible ${depotId} — ${eMetacog.code} ${eMetacog.message}`)
   const credencesDonnees = Array.isArray(metacog?.credence)
     ? (metacog.credence as Array<Record<string, unknown>>) : []
 
@@ -695,14 +758,16 @@ export async function chargerLeDeroule(
       + "qu'il attend le gabarit, il ne compose pas un exercice qu'il ne sait pas servir")
   }
   // ── ⭐ C7-L5 — LA FICHE DE L'OBJET, pour la semaine de méthode ─────────────
+  // ⭐ 17/09 — la fiche et le cran 2 ne dépendent que de la porte : ils partent ensemble.
+  const pCran2 = gabarit.actif && ctx.cran === 2
+    ? lancer(lireLeCran2(admin, { exerciceId: depot.exercice_id, typeId: depot.exercice.type_id,
+      objet: ctx.objet, genre: depot.exercice.genre ?? null }))
+    : null
   const fiche = gabarit.actif ? await lireLaFicheDeLObjet(admin, depot, avertissements) : null
   // ── ⭐ 06/09 — LE CRAN 2 : les pièces et le geste, la porte ouverte seulement ──
   //    Le geste vient de `exercices_pieces` (dérivée du `09-`), jamais du code ;
   //    sans lui, la consigne dérivée n'existe pas et celle du dépôt est servie.
-  const cran2 = gabarit.actif && ctx.cran === 2
-    ? await lireLeCran2(admin, { exerciceId: depot.exercice_id, typeId: depot.exercice.type_id,
-      objet: ctx.objet, genre: depot.exercice.genre ?? null })
-    : null
+  const cran2 = pCran2 ? await pCran2 : null
   if (cran2) avertissements.push(...cran2.incidents)
   // ⭐ 06/09 (Louis) — le plan a TROIS thèses : au-delà, les cartes deviennent longues à déplacer au pouce.
   if (cran2 && formeDuTrou(ctx.objet) === 'ordre') {
@@ -1024,17 +1089,18 @@ export async function chargerLeDeroule(
   //    DÉMONSTRATION, et les servir sur une compétence tirée d'un ordre de
   //    tableau vaut moins que ne rien servir. La chaîne, elle, doit trancher —
   //    elle a un retour à écrire — et son repli est dit en alerte.
-  const cible = ((ctx.decision?.cibleRetenue ?? ctx.ciblePrimaire) ?? null) as Competence | null
-  const rappel = await construireLeRappel(admin, depot, ctx, cible)
+  // ⭐ 17/09 — cette cible se calcule désormais au DÉPART GROUPÉ (`cibleDuDepart`), même règle.
+  const rappel = await pRappel
 
   // ── Temps 1 : la démonstration ──
-  const demonstration = await construireLaDemonstration(admin, depot, ctx, cible, avertissements)
+  const demonstration = await pDemonstration
+  avertissements.push(...avertissementsDeLaDemonstration)
   if (demonstration.avertissement) avertissements.push(demonstration.avertissement)
 
-  const foisCiblee = cible ? await compterLesCiblages(admin, depot.eleve_id, cible) : 0
+  const foisCiblee = pFoisCiblee ? await pFoisCiblee : 0
 
   // ── Temps 2 : la durée ──
-  const dureeMin = dureeIndicativeLisible(await dureeDeLInstance(admin, depot, ctx))
+  const dureeMin = dureeIndicativeLisible(await pDuree)
   // ⚠️ Le temps ÉCOULÉ, pas le temps réel : la micro-question se déclenche
   //    PENDANT l'exercice. Le temps réel (ouverture → dépôt) sert le TAG DE
   //    DURÉE, qui se pose à la remise — dans l'action, jamais à l'affichage.
@@ -1054,19 +1120,14 @@ export async function chargerLeDeroule(
     competencesVisees(ctx, depot, mesurees), ctx.statutsRecette)
 
   // ── Temps 3 : « se juger » ──
-  const seJuger = ctx.piloteArgument ? { servie: false, motif: null, offre: null } : await construireSeJuger(admin, depot, ctx, geste, mesurees)
+  const seJuger = pSeJuger ? await pSeJuger : { servie: false, motif: null, offre: null }
 
   // ── Temps 4 : le retour, l'attente, la langue ──
-  const [attente, retours, langue] = await Promise.all([
-    attenteDuDepot(admin, depotId),
-    lireLesRetours(admin, depotId),
-    construireLEncartLangue(admin, depotId, ctx.productionV1),
-  ])
+  const [attente, retours, langue] = await pTemps4
 
   // Le verdict de calibration se lit sur la comparaison DÉJÀ ÉCRITE au temps 3 :
   // rien ne se recalcule ici — « la comparaison est du code », et elle a eu lieu.
-  const { data: comparaisonEcrite } = await admin.from('exercices_metacognition')
-    .select('comparaison_squelette').eq('depot_id', depotId).maybeSingle()
+  const { data: comparaisonEcrite } = await pComparaisonEcrite
   const formulations: Record<string, string> = {}
   for (const [comp, lignes] of Object.entries(ctx.correspondance)) {
     for (const l of lignes) formulations[`${comp}|${l.observable_code}`] = l.dimension_eleve
@@ -1084,15 +1145,12 @@ export async function chargerLeDeroule(
   // ⚠️ Les deux lectures sont GROUPÉES : à OFF, celle du signalement ne sert à
   //   rien, mais elle coûte un aller-retour qu'un `if` séquentiel paierait de
   //   toute façon en latence sur le chemin ouvert.
-  const [porteSignalement, mienSignalement] = await Promise.all([
-    lireLaPorteDuSignalement(admin),
-    lireLeSignalementDuDepot(admin, depotId),
-  ])
+  const [porteSignalement, mienSignalement] = await pSignalement
   const signalement = { ouvert: porteSignalement, mien: mienSignalement }
 
   // ── Temps 5 : l'échéance de la version finale ──
   const echeanceVf = await construireLEcheance(depot, a.delaiVfJours, regime)
-  const sujet = await sujetDeLExercice(admin, depot)
+  const sujet = await pSujet
 
   const temps = tempsServis(regime).filter(t => !ctx.piloteArgument || t !== 'preparer')
 
@@ -1102,11 +1160,11 @@ export async function chargerLeDeroule(
   //    zéro ligne SANS erreur, et plus rien ne se fermerait jamais, en silence.
   // ⚠️ Une lecture en ERREUR ne ferme pas (`cycles: null` ⇒ `estFermee` refuse) :
   //    fermer sur une panne priverait un élève d'un travail qui compte encore.
-  const { cycles } = await cyclesComptesDeLEleve(eleveId)
+  const { cycles } = await pCycles
   const fermee = estFermee({
     assigneAt: depot.assigne_at,
     routeurDecisionId: depot.routeur_decision_id,
-    fuseau: await lireFuseau(),
+    fuseau: await pFuseau,
     cyclesComptes: cycles,
   })
 

@@ -426,6 +426,27 @@ interface LigneExercice {
 
 export class DepotIllisible extends Error {}
 
+/**
+ * ⭐ 17/09 — FAIRE PARTIR UNE LECTURE SANS L'ATTENDRE. `lireContexte` enchaînait
+ * une quinzaine de lectures dont presque aucune ne dépend d'une autre ; chacune
+ * coûte un aller-retour, et ce chargeur est sur le trajet de CHAQUE rendu du
+ * déroulé et de CHAQUE geste de l'élève (mesuré : ~38 sauts en série par écran).
+ * Les lectures indépendantes partent donc ensemble, dès que le dépôt et
+ * l'exercice sont connus ; le code les ATTEND ensuite à l'endroit, et dans
+ * l'ordre, où il les lisait — mêmes refus, mêmes messages, même résultat.
+ *
+ * ⚠️ Un constructeur de requête supabase est PARESSEUX : il ne part qu'au `then`.
+ *    `Promise.resolve` le déclenche.
+ * ⚠️ Le `catch` muet ne cache rien : il évite qu'une lecture partie en avance,
+ *    puis jamais attendue parce qu'un refus est tombé avant elle, ne remonte en
+ *    rejet non géré. Qui l'attend reçoit toujours son rejet.
+ */
+function lancer<T>(lecture: PromiseLike<T>): Promise<T> {
+  const p = Promise.resolve(lecture)
+  p.catch(() => {})
+  return p
+}
+
 export async function lireContexte(admin: Admin, depotId: string): Promise<ContexteDepot> {
   const { data: depotBrut, error: eDepot } = await admin
     .from('exercices_depots')
@@ -459,6 +480,48 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     .eq('id', depot.exercice_id).maybeSingle()
   if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
   const exercice = exerciceBrut as unknown as LigneExercice
+
+  // ── ⭐ 17/09 — LE DÉPART GROUPÉ : tout ce qui ne dépend que du dépôt et de
+  //    l'exercice part ICI. Chaque lecture est attendue plus bas, à sa place.
+  const pType = lancer(admin
+    .from('exercices_types').select('code, grain').eq('id', exercice.type_id).maybeSingle())
+  const pPlan = exercice.exercice_planifie_id
+    ? lancer(admin
+      .from('scriptorium_exercices_planifies').select('nature, type_exercice')
+      .eq('id', exercice.exercice_planifie_id).maybeSingle())
+    : null
+  const pReference = exercice.reference_id
+    ? lancer(admin
+      .from('exercices_references')
+      .select('contenu, validee_at, source_contenu_id')
+      .eq('id', exercice.reference_id).maybeSingle())
+    : null
+  const pTexteSupport = exercice.materiau_source_texte_id
+    ? lancer(admin
+      .from('exercices_textes')
+      .select('id, auteur, titre, reference, scriptorium_contenus(texte_extrait)')
+      .eq('id', exercice.materiau_source_texte_id).maybeSingle())
+    : null
+  const pCoTexte = exercice.cotexte_materiau_id
+    ? lancer(admin
+      .from('exercices_materiaux').select('contenu')
+      .eq('id', exercice.cotexte_materiau_id).maybeSingle())
+    : null
+  const competencesEnJeu = Object.keys((exercice.modes_par_competence ?? {}) as Record<string, string[]>)
+  const pCorrespondance = lancer(admin
+    .from('competences_correspondance')
+    .select('competence, observable_code, dimension_eleve, ordre')
+    .in('competence', competencesEnJeu.length ? competencesEnJeu : ['__aucune__'])
+    .order('ordre', { ascending: true }))
+  const pStatutsRecette = lancer(lireStatutsRecette(admin))
+  const pProfil = lancer(admin
+    .from('profiles').select('exception_orthographe').eq('id', depot.eleve_id).maybeSingle())
+  const pDecision = depot.routeur_decision_id
+    ? lancer(admin
+      .from('routeur_decisions').select('cible_retenue, sondes_retenues, bonus')
+      .eq('id', depot.routeur_decision_id).maybeSingle())
+    : null
+
   const piloteArgument = await lireContratPilote(admin, exercice.id, (exerciceBrut as unknown as { id_import: string | null }).id_import)
     .catch(e => { throw new DepotIllisible(e instanceof Error ? e.message : 'Pilote indisponible') })
   if (piloteArgument) {
@@ -467,18 +530,15 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     if (error || !inscription) throw new DepotIllisible('Inscription du pilote inactive')
   }
 
-  const { data: typeBrut } = await admin
-    .from('exercices_types').select('code, grain').eq('id', exercice.type_id).maybeSingle()
+  const { data: typeBrut } = await pType
   if (!typeBrut) throw new DepotIllisible(`type de l'exercice ${exercice.id} : ${NUL}`)
   const type = typeBrut as unknown as { code: string; grain: Grain | null }
 
   // ── La `forme` de la mesure, dérivée de la ligne de plan (voir `modele.ts`) ──
   let nature: string | null = null
   let typeExercice: string | null = null
-  if (exercice.exercice_planifie_id) {
-    const { data: planBrut } = await admin
-      .from('scriptorium_exercices_planifies').select('nature, type_exercice')
-      .eq('id', exercice.exercice_planifie_id).maybeSingle()
+  if (pPlan) {
+    const { data: planBrut } = await pPlan
     const plan = planBrut as unknown as { nature: string | null; type_exercice: string | null } | null
     nature = plan?.nature ?? null
     typeExercice = plan?.type_exercice ?? null
@@ -510,6 +570,21 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     regimeV1vf = c?.regime_v1vf ?? null
   }
 
+  // ⭐ 06/09 — au cran 2 du gabarit, chaque cas porte ses pièces ; au 5, le devoir réassemblé.
+  // Chantier ③ : le cran 5 reçoit le même observable que l'écran. Les autres
+  // crans et les cas sans problème du gabarit gardent leur lecture existante.
+  // ⭐ 17/09 — cette chaîne (porte, cas, pièces, réassemblage) ne dépend que du
+  //    cran et du type : elle PART ici, et s'attend à la fin, où elle était.
+  const observableDuCran5 = cran === 5 ? exercice.observable_isole_code : null
+  const cranDesCas = cran
+  const pCas = lancer((async () => {
+    const porteDuCran5 = cranDesCas === 5 && await lireLaPorteGabarit(admin)
+    return avecLeReassemblage(admin,
+      await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id, observableDuCran5, porteDuCran5),
+        { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran: cranDesCas }),
+      { cran: cranDesCas, exerciceId: exercice.id, observable: observableDuCran5, porteOuverte: porteDuCran5 })
+  })())
+
   // ── LA RÉFÉRENCE DÉCOMPOSÉE, ET SON MATÉRIAU ──────────────────────────────
   //
   // ⭐ UNE SEULE JOINTURE FERME DEUX MANQUES : `exercices_references` porte le
@@ -525,11 +600,8 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   //    manque, contre une exception de base qui emporte la trace.
   let reference: unknown | null = null
   let materiau: string | null = null
-  if (exercice.reference_id) {
-    const { data: refBrut } = await admin
-      .from('exercices_references')
-      .select('contenu, validee_at, source_contenu_id')
-      .eq('id', exercice.reference_id).maybeSingle()
+  if (pReference) {
+    const { data: refBrut } = await pReference
     const ref = refBrut as unknown as
       { contenu: unknown; validee_at: string | null; source_contenu_id: string | null } | null
     if (ref?.validee_at) {
@@ -561,11 +633,8 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   //    instances qui n'en posent pas (« il n'y a pas d'explication de texte sans
   //    le texte entier », C4-L9).
   let texteSupport: TexteSupportServi | null = null
-  if (exercice.materiau_source_texte_id) {
-    const { data: txBrut, error: eTx } = await admin
-      .from('exercices_textes')
-      .select('id, auteur, titre, reference, scriptorium_contenus(texte_extrait)')
-      .eq('id', exercice.materiau_source_texte_id).maybeSingle()
+  if (pTexteSupport) {
+    const { data: txBrut, error: eTx } = await pTexteSupport
     if (eTx) {
       // supabase-js NE LÈVE PAS : sans ce test, un texte illisible passerait pour
       // un exercice sans texte — et le contrôle RR3 se croirait sans objet.
@@ -609,10 +678,8 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   //    pour un exercice qui n'en a pas — et on servirait de nouveau la consigne
   //    toute seule, ce que ce lot répare.
   let coTexte: string | null = null
-  if (exercice.cotexte_materiau_id) {
-    const { data: ct, error: eCt } = await admin
-      .from('exercices_materiaux').select('contenu')
-      .eq('id', exercice.cotexte_materiau_id).maybeSingle()
+  if (pCoTexte) {
+    const { data: ct, error: eCt } = await pCoTexte
     if (eCt) {
       console.error(`[chaine] co-texte illisible (${exercice.cotexte_materiau_id}) — `
         + `${eCt.code} ${eCt.message}`)
@@ -658,12 +725,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   }
 
   // ── La couche compétence : la correspondance, lue EN BASE (piège 30) ────────
-  const competencesEnJeu = Object.keys(modesParCompetence)
-  const { data: corr } = await admin
-    .from('competences_correspondance')
-    .select('competence, observable_code, dimension_eleve, ordre')
-    .in('competence', competencesEnJeu.length ? competencesEnJeu : ['__aucune__'])
-    .order('ordre', { ascending: true })
+  const { data: corr } = await pCorrespondance
   const correspondance: ContexteDepot['correspondance'] = {}
   for (const l of (corr ?? []) as unknown as Array<{ competence: string; observable_code: string; dimension_eleve: string }>) {
     ;(correspondance[l.competence] ??= []).push({
@@ -671,17 +733,14 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     })
   }
 
-  const statutsRecette = await lireStatutsRecette(admin)
+  const statutsRecette = await pStatutsRecette
 
-  const { data: profilBrut } = await admin
-    .from('profiles').select('exception_orthographe').eq('id', depot.eleve_id).maybeSingle()
+  const { data: profilBrut } = await pProfil
   const profil = profilBrut as unknown as { exception_orthographe: boolean | null } | null
 
   let decision: ContexteDepot['decision'] = null
-  if (depot.routeur_decision_id) {
-    const { data: dBrut } = await admin
-      .from('routeur_decisions').select('cible_retenue, sondes_retenues, bonus')
-      .eq('id', depot.routeur_decision_id).maybeSingle()
+  if (pDecision) {
+    const { data: dBrut } = await pDecision
     const d = dBrut as unknown as {
       cible_retenue: string | null; sondes_retenues: unknown; bonus: boolean | null
     } | null
@@ -711,15 +770,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     }
   }
 
-  // ⭐ 06/09 — au cran 2 du gabarit, chaque cas porte ses pièces ; au 5, le devoir réassemblé.
-  // Chantier ③ : le cran 5 reçoit le même observable que l'écran. Les autres
-  // crans et les cas sans problème du gabarit gardent leur lecture existante.
-  const observableDuCran5 = cran === 5 ? exercice.observable_isole_code : null
-  const porteDuCran5 = cran === 5 && await lireLaPorteGabarit(admin)
-  const cas = await avecLeReassemblage(admin,
-    await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id, observableDuCran5, porteDuCran5),
-      { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
-    { cran, exerciceId: exercice.id, observable: observableDuCran5, porteOuverte: porteDuCran5 })
+  const cas = await pCas
 
   return {
     depotId,

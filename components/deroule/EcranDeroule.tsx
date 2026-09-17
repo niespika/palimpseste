@@ -125,7 +125,6 @@ export function EcranDeroule(
   // rembobinée ; seule une étape de TRAVAIL impose sa page.
   const etapeForcee: EtapeServie | null = ecranForce && !estUnEcranDApres(ecranForce.etape)
     ? (ecranForce as EtapeServie) : null
-  const router = useRouter()
 
   // L'ouverture est idempotente côté serveur : `ouvert_at` ne se réécrit jamais.
   useEffect(() => { if (!lectureSeule) void actionOuvrir(vue.depotId) }, [vue.depotId, lectureSeule])
@@ -265,12 +264,14 @@ export function EcranDeroule(
         }
         const r = await actionRemettre(vue.depotId, 'v1', vue.texteV1 ?? '', null)
         if (!r.ok) throw new Error(r.message)
-        router.refresh()
+        // ⭐ 17/09 — pas de `router.refresh()` : l'action a revalidé, et sa réponse PORTE déjà
+        //    la page fraîche. Le second rendu coûtait ~50 lectures de plus par geste.
         return
       }
       const r = await actionRemettre(vue.depotId, version, etat.texte, etat.t)
       if (!r.ok) throw new Error(r.message)
-      router.refresh()
+      // ⭐ 17/09 — pas de `router.refresh()` : l'action a revalidé, et sa réponse PORTE déjà
+      //    la page fraîche. Le second rendu coûtait ~50 lectures de plus par geste.
     }
   }
 

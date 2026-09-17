@@ -51,7 +51,6 @@
 // ============================================================================
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { CONFIANCES, CONDITIONS, NOM_COMPETENCE } from '@/utils/deroule/types'
 import type { Competence, Condition, Confiance } from '@/utils/deroule/types'
 import type { VueDuDeroule } from '@/utils/deroule/vue'
@@ -119,7 +118,6 @@ export function GestesDeLaRemise({ vue }: { vue: VueDuDeroule }) {
 function LaConfiance(
   { depotId, competences }: { depotId: string; competences: Competence[] },
 ) {
-  const router = useRouter()
   const [choix, setChoix] = useState<Partial<Record<Competence, Confiance>>>({})
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -139,7 +137,8 @@ function LaConfiance(
       }
       const r = await actionConfiance(depotId, valeurs)
       if (!r.ok) { setMessage(r.message); return }
-      router.refresh()
+      // ⭐ 17/09 — pas de `router.refresh()` : l'action a revalidé, et sa réponse PORTE déjà
+      //    la page fraîche. Le second rendu coûtait ~50 lectures de plus par geste.
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'La confiance n’a pas été enregistrée.')
     } finally {
@@ -209,7 +208,6 @@ function LaConfiance(
  * ⚠️ Un geste UNIQUE, TROIS VALEURS : un clic suffit, et il vaut envoi.
  */
 function LesConditions({ depotId }: { depotId: string }) {
-  const router = useRouter()
   const [enCours, setEnCours] = useState<Condition | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -220,7 +218,8 @@ function LesConditions({ depotId }: { depotId: string }) {
     try {
       const r = await actionConditions(depotId, valeur)
       if (!r.ok) { setMessage(r.message); return }
-      router.refresh()
+      // ⭐ 17/09 — pas de `router.refresh()` : l'action a revalidé, et sa réponse PORTE déjà
+      //    la page fraîche. Le second rendu coûtait ~50 lectures de plus par geste.
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Les conditions n’ont pas été enregistrées.')
     } finally {
@@ -263,7 +262,6 @@ function LesConditions({ depotId }: { depotId: string }) {
  *    est un signal du faisceau qui se lit **en aval** (`01-` §9).
  */
 function LaRestitution({ depotId }: { depotId: string }) {
-  const router = useRouter()
   const [texte, setTexte] = useState('')
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -275,7 +273,8 @@ function LaRestitution({ depotId }: { depotId: string }) {
     try {
       const r = await actionRestitution(depotId, texte)
       if (!r.ok) { setMessage(r.message); return }
-      router.refresh()
+      // ⭐ 17/09 — pas de `router.refresh()` : l'action a revalidé, et sa réponse PORTE déjà
+      //    la page fraîche. Le second rendu coûtait ~50 lectures de plus par geste.
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'La restitution n’a pas été enregistrée.')
     } finally {

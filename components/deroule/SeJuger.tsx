@@ -50,7 +50,6 @@
 // ============================================================================
 
 import { useEffect, useId, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { actionOuvrirSeJuger, actionSeJuger } from '@/app/deroule/actions'
 import type { OffreSeJuger } from '@/utils/deroule/juger'
 import type { QuestionServie } from '@/utils/deroule/types'
@@ -86,7 +85,6 @@ const COMBIEN: Record<number, string> = {
 export function SeJuger({
   depotId, offre, texteRendu = null, lectureSeule = false,
 }: { depotId: string; offre: OffreSeJuger; texteRendu?: string | null; lectureSeule?: boolean }) {
-  const router = useRouter()
   const [reponses, setReponses] = useState<Record<string, string>>({})
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -130,7 +128,8 @@ export function SeJuger({
       }
       // Le temps suivant s'ouvre côté serveur : on relit, on n'invente pas
       // l'état d'après à l'écran.
-      router.refresh()
+      // ⭐ 17/09 — pas de `router.refresh()` : l'action a revalidé, et sa réponse PORTE déjà
+      //    la page fraîche. Le second rendu coûtait ~50 lectures de plus par geste.
     } catch {
       setMessage('L’enregistrement n’a pas abouti. Réessaie.')
       setEnCours(false)

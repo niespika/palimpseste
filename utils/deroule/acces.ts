@@ -82,22 +82,49 @@ export interface AccesEleveDeroule {
  *    par (élève × exercice) et qu'un exercice porte sa classe.
  */
 export async function garderEleveDeroule(redirection = true): Promise<AccesEleveDeroule> {
+  const session = await sessionEleveDeroule(redirection)
+  return verifierEleveDeroule(session, redirection)
+}
+
+/**
+ * ⭐ 17/09 — LA GARDE EN DEUX TEMPS, pour qui veut lancer ses lectures plus tôt.
+ * `sessionEleveDeroule` dit QUI appelle (un `getUser`, vérifié par le serveur) ;
+ * `verifierEleveDeroule` dit s'il en a le droit (le rôle, la porte). Entre les
+ * deux, l'appelant connaît déjà l'`userId` : il peut faire PARTIR les lectures
+ * qui ne dépendent que de lui, en même temps que le rôle et la porte.
+ * ⛔ Rien ne doit SORTIR avant que `verifierEleveDeroule` ait rendu : un rôle
+ *    refusé lève, et la levée emporte tout ce qui était parti en avance.
+ */
+export interface SessionEleveDeroule {
+  supabase: Awaited<ReturnType<typeof createClient>>
+  userId: string
+}
+
+export async function sessionEleveDeroule(redirection = true): Promise<SessionEleveDeroule> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     if (redirection) redirect('/login')
     throw new Error('Non authentifié')
   }
-  const { data: moi } = await supabase
-    .from('profiles').select('role').eq('id', user.id).maybeSingle()
+  return { supabase, userId: user.id }
+}
+
+export async function verifierEleveDeroule(
+  { supabase, userId }: SessionEleveDeroule, redirection = true,
+): Promise<AccesEleveDeroule> {
+  const admin = createAdminClient()
+  // Le rôle et la porte ne dépendent pas l'un de l'autre : ils partent ensemble.
+  const [{ data: moi }, porte] = await Promise.all([
+    supabase.from('profiles').select('role').eq('id', userId).maybeSingle(),
+    lireLaPorte(admin),
+  ])
   if (moi?.role !== 'eleve') {
     if (redirection) redirect('/')
     throw new Error('Accès refusé')
   }
-  const admin = createAdminClient()
-  const porte = await lireLaPorte(admin)
   return {
-    admin, userId: user.id,
+    admin, userId,
     ouvert: porte.exercicesActifs,
     delaiVfJours: porte.delaiVfJours,
   }

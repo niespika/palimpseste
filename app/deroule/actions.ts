@@ -23,7 +23,8 @@ import { PREFIXE_PILOTE } from '@/utils/pilote-argument/contrat'
 
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
-import { garderEleveDeroule } from '@/utils/deroule/acces'
+import { garderEleveDeroule, sessionEleveDeroule, verifierEleveDeroule } from '@/utils/deroule/acces'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { chargerLeDeroule, tagALaRemise, type VueDuDeroule } from '@/utils/deroule/vue'
 import {
   lireDepotMaison, ouvrirLeDepot, enregistrerLeTexte, remettre, cloturerLeCranGuide,
@@ -95,10 +96,30 @@ function rafraichir(): void {
 async function portier(depotId: string, ecriture: boolean | 'brouillon' = true): Promise<
   { erreur: Reponse } | { admin: Awaited<ReturnType<typeof garderEleveDeroule>>['admin']
     userId: string; depot: DepotMaison; delaiVfJours: number }> {
-  const { admin, userId, ouvert, delaiVfJours } = await garderEleveDeroule(false)
+  // ⭐⭐ 17/09 — LES MÊMES GARDES, EN MÊME TEMPS. Ce portier enchaînait sept à
+  //    vingt lectures l'une derrière l'autre (session, rôle, porte, dépôt, strike,
+  //    lecture des retours, cycles, fuseau) — et il joue à CHAQUE geste, à chaque
+  //    enregistrement du brouillon (toutes les 15 s) et à chaque sondage de
+  //    l'attente (toutes les 5 s). Mesuré en prod : cette route fait à elle seule
+  //    109 000 appels à la base en 7 jours. AUCUNE garde n'est retirée : dès que
+  //    la session dit QUI appelle, elles partent ensemble, et leurs refus sont lus
+  //    ci-dessous DANS L'ORDRE où ils tombaient — mêmes messages, même priorité.
+  // ⛔ Rien ne sort avant `verifierEleveDeroule` : un rôle refusé lève, et la
+  //    levée emporte ce qui était parti en avance (des lectures, jamais une écriture).
+  const session = await sessionEleveDeroule(false)
+  const { userId } = session
+  const lecteur = createAdminClient()
+  const rendu = ecriture === true
+  const pDepot = lancer(lireDepotMaison(lecteur, depotId, userId))
+  const pBlocage = rendu ? lancer(messageSiBloque(lecteur, userId)) : null
+  const pGateLecture = rendu ? lancer(messageSiRetoursNonLus(lecteur, userId)) : null
+  const pCycles = ecriture ? lancer(cyclesComptesDeLEleve(userId)) : null
+  const pFuseau = ecriture ? lancer(lireFuseau()) : null
+
+  const { admin, ouvert, delaiVfJours } = await verifierEleveDeroule(session, false)
   if (!ouvert) return { erreur: echec('Les exercices ne sont pas ouverts.') }
 
-  const depot = await lireDepotMaison(admin, depotId, userId)
+  const depot = await pDepot
   if (!depot) return { erreur: echec('Exercice introuvable.') }
   try {
     const pilote = await lireContratPilote(admin,depot.exercice_id,depot.exercice.id_import ?? null)
@@ -111,10 +132,10 @@ async function portier(depotId: string, ecriture: boolean | 'brouillon' = true):
 
 
   if (ecriture) {
-    if (ecriture !== 'brouillon') {
-      const blocage = await messageSiBloque(admin, userId)
+    if (pBlocage && pGateLecture) {
+      const blocage = await pBlocage
       if (blocage) return { erreur: echec(blocage) }
-      const gateLecture = await messageSiRetoursNonLus(admin, userId)
+      const gateLecture = await pGateLecture
       if (gateLecture) return { erreur: echec(gateLecture) }
     }
     // ⭐⭐ C10 · L1 — LA SEMAINE COMPTÉE SE FERME, et la garde entre ICI, EN UNE
@@ -133,15 +154,22 @@ async function portier(depotId: string, ecriture: boolean | 'brouillon' = true):
     //    depuis la VUE (`vue.fermee`). Cette garde est celle de dernier ressort —
     //    l'onglet resté ouvert depuis dimanche soir, qu'il faut refuser à 18:01
     //    et non à la prochaine navigation.
-    const { cycles } = await cyclesComptesDeLEleve(userId)
+    const { cycles } = await pCycles!
     if (estFermee({
       assigneAt: depot.assigne_at,
       routeurDecisionId: depot.routeur_decision_id,
-      fuseau: await lireFuseau(),
+      fuseau: await pFuseau!,
       cyclesComptes: cycles,
     })) return { erreur: echec(MESSAGE_SEMAINE_FERMEE) }
   }
   return { admin, userId, depot, delaiVfJours }
+}
+
+/** Faire partir une lecture sans l'attendre — voir `utils/deroule/vue.ts`. */
+function lancer<T>(lecture: PromiseLike<T>): Promise<T> {
+  const p = Promise.resolve(lecture)
+  p.catch(() => {})
+  return p
 }
 
 // ── La vue ──────────────────────────────────────────────────────────────────
@@ -165,9 +193,12 @@ export async function actionEtatDeLAttente(depotId: string): Promise<{
 } | null> {
   const p = await portier(depotId, false)
   if ('erreur' in p) return null
-  const attente = await attenteDuDepot(p.admin, depotId)
-  const { data } = await p.admin.from('exercices_retours')
-    .select('moment').eq('depot_id', depotId).not('published_at', 'is', null)
+  // Les deux lectures ne dépendent pas l'une de l'autre, et ce sondage joue toutes les 5 s.
+  const [attente, { data }] = await Promise.all([
+    attenteDuDepot(p.admin, depotId),
+    p.admin.from('exercices_retours')
+      .select('moment').eq('depot_id', depotId).not('published_at', 'is', null),
+  ])
   return {
     enCours: attente.enCours,
     echecDefinitif: attente.echecDefinitif,

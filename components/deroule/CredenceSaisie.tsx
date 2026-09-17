@@ -58,7 +58,6 @@
 // ============================================================================
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { actionCredence } from '@/app/deroule/actions'
 import { CANDIDATS_SERVIS, type OffreCredence } from '@/utils/deroule/credence'
 
@@ -89,8 +88,6 @@ const DEFAUT_POURCENTAGE = 50
 export function CredenceSaisie({
   depotId, cas, offre, nu = false,
 }: { depotId: string; cas: number; offre: OffreCredence; nu?: boolean }) {
-  const router = useRouter()
-
   // ⚠️ Les jetons partent de ZÉRO, pas de 25 chacun : un défaut déjà valide
   //    (4 × 25 = 100) laisserait envoyer sans avoir rien décidé, et une crédence
   //    non décidée est du bruit versé dans la chaîne. À zéro, le geste est
@@ -144,7 +141,8 @@ export function CredenceSaisie({
       //    prise, le parent va retirer ce composant au rafraîchissement, et d'ici
       //    là le bouton ne doit pas pouvoir repartir — « UNE PAR DIAGNOSTIC »
       //    (`07-` §1.2).
-      router.refresh()
+      // ⭐ 17/09 — pas de `router.refresh()` : l'action a revalidé, et sa réponse PORTE déjà
+      //    la page fraîche. Le second rendu coûtait ~50 lectures de plus par geste.
     } catch {
       setRefus('L’envoi n’a pas abouti. Réessaie dans un instant — rien n’est perdu.')
       setEnCours(false)
