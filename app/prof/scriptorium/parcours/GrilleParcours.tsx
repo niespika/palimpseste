@@ -29,7 +29,13 @@ function badgeClasse(c: CreneauResolu): string {
 
 function LigneCreneau({
   c, premier, dernier, nbSemaines, chargement, onMonter, onDescendre, onDeplacer, onRetirer,
+  glisse, onGlisse, onPoser,
 }: {
+  // Glisser-déposer (17/09) : la poignée ⠿ était là depuis le début, et ne faisait rien.
+  // `glisse` = le créneau en vol DANS CETTE SEMAINE (null sinon : on ne dépose qu'entre frères).
+  glisse: string | null
+  onGlisse: (id: string | null) => void
+  onPoser: (avant: boolean) => void
   c: CreneauResolu
   premier: boolean
   dernier: boolean
@@ -41,9 +47,50 @@ function LigneCreneau({
   onRetirer: () => void
 }) {
   const retire = c.etat === 'contenu_retire' || c.etat === 'livre_retire'
+  const [avant, setAvant] = useState<boolean | null>(null)
+  const cible = glisse != null && glisse !== c.id
+  const seul = premier && dernier
+  const moitie = (e: React.DragEvent<HTMLElement>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    return e.clientY < r.top + r.height / 2
+  }
   return (
-    <div className="flex items-center gap-2.5 border border-bordure rounded-lg bg-white px-3.5 py-2.5">
-      <span className="text-puce select-none" title="Réordonner">⠿</span>
+    <div
+      data-depot
+      onDragOver={e => {
+        if (!cible) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        const a = moitie(e)
+        if (a !== avant) setAvant(a)
+      }}
+      // Entrer dans un enfant de la ligne n'est pas la quitter (sinon le trait clignote).
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAvant(null) }}
+      onDrop={e => {
+        if (!cible) return
+        e.preventDefault()
+        setAvant(null)
+        onPoser(moitie(e))
+      }}
+      style={cible && avant != null
+        ? { boxShadow: `0 ${avant ? '-2px' : '2px'} 0 var(--color-pigment)` }
+        : glisse === c.id ? { opacity: 0.4 } : undefined}
+      className="flex items-center gap-2.5 border border-bordure rounded-lg bg-white px-3.5 py-2.5"
+    >
+      <span
+        draggable={!chargement && !seul}
+        onDragStart={e => {
+          e.dataTransfer.effectAllowed = 'move'
+          e.dataTransfer.setData('text/plain', c.id)
+          const ligne = e.currentTarget.closest('[data-depot]')
+          if (ligne) e.dataTransfer.setDragImage(ligne, 12, 12)
+          onGlisse(c.id)
+        }}
+        onDragEnd={() => onGlisse(null)}
+        className={`text-puce select-none ${seul ? 'opacity-30' : 'cursor-grab active:cursor-grabbing hover:text-encre'}`}
+        title={seul ? undefined : 'Glisser pour réordonner dans la semaine'}
+        aria-hidden
+      >⠿</span>
       <span className={`font-ui text-[10px] font-semibold uppercase tracking-[0.05em] px-2 py-0.5 rounded flex-none ${badgeClasse(c)}`}>{c.badge}</span>
       <span className={`font-corps text-[15px] min-w-0 truncate ${retire ? 'text-muet line-through' : 'text-encre-douce'}`}>
         {c.titre}
@@ -174,6 +221,20 @@ export default function GrilleParcours({
       return { error: res.error }
     })
     return ok
+  }
+  // Le créneau en vol, et la semaine d'où il part : on ne dépose que dans celle-là.
+  const [glisse, setGlisse] = useState<{ semaine: number; id: string } | null>(null)
+  async function poser(semaine: number, cibleId: string, avant: boolean) {
+    const g = glisse
+    setGlisse(null)
+    if (!g || g.semaine !== semaine || g.id === cibleId) return
+    const ids = parSemaine(semaine).map(c => c.id)
+    const de = ids.indexOf(g.id)
+    if (de < 0 || !ids.includes(cibleId)) return
+    ids.splice(de, 1)
+    ids.splice(ids.indexOf(cibleId) + (avant ? 0 : 1), 0, g.id)
+    if (ids[de] === g.id) return
+    await reordonner(semaine, ids)
   }
   async function monter(semaine: number, id: string) {
     const ids = parSemaine(semaine).map(c => c.id)
@@ -326,6 +387,9 @@ export default function GrilleParcours({
                         onDescendre={() => descendre(s, c.id)}
                         onDeplacer={(ns) => { void deplacer(c, ns) }}
                         onRetirer={() => { void retirer(c) }}
+                        glisse={glisse?.semaine === s ? glisse.id : null}
+                        onGlisse={id => setGlisse(id ? { semaine: s, id } : null)}
+                        onPoser={avant => { void poser(s, c.id, avant) }}
                       />
                     ))}
                     {pickerSemaine === s && (

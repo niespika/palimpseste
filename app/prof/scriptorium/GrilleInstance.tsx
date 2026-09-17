@@ -163,13 +163,77 @@ export default function GrilleInstance({ instance, cibles }: {
 
   // Réordonne au sein de la FRATRIE (même créneau, même semaine réelle) — l'ordre
   // est unique par (créneau, semaine), on ne permute donc qu'entre frères.
-  function monterDescendre(el: ElementInstance, freres: ElementInstance[], dir: -1 | 1) {
-    const idx = freres.findIndex(f => f.id === el.id)
-    const cible = idx + dir
-    if (idx < 0 || cible < 0 || cible >= freres.length) return
-    const ids = freres.map(f => f.id)
-    ;[ids[idx], ids[cible]] = [ids[cible], ids[idx]]
+  // ⭐ On déplace un NŒUD (le chapitre ET ses sous-chapitres), pas une ligne (17/09) : la
+  // fratrie à plat contient les sous-chapitres, et monter « 5 » l'échangeait avec « 4.3 » —
+  // un geste écrit en base que l'écran, qui range par numéro, ne montrait pas.
+  function poserNoeud(el: ElementInstance, noeuds: NoeudChapitre[], de: number, vers: number) {
+    if (de < 0 || vers < 0 || vers >= noeuds.length || de === vers) return
+    const ns = [...noeuds]
+    const [n] = ns.splice(de, 1)
+    ns.splice(vers, 0, n)
+    const ids = ns.flatMap(x => [x.el.id, ...x.enfants.map(e => e.id)])
     void lancer(`ord-${el.id}`, () => reordonnerElements(el.creneauId, el.semaineReelle, ids))
+  }
+
+  // ── Glisser-déposer ──────────────────────────────────────────────────────
+  // `groupe` borne le geste : on ne dépose que parmi les frères (même cours et même
+  // semaine pour un chapitre, même semaine pour un cours). La poignée ⠿ porte le
+  // `draggable` ; la ligne entière est la cible, moitié haute = avant, moitié basse = après.
+  const [glisse, setGlisse] = useState<{ groupe: string; id: string } | null>(null)
+  const [survol, setSurvol] = useState<{ id: string; avant: boolean } | null>(null)
+
+  function poignee(groupe: string, id: string, libelle: string) {
+    return (
+      <span
+        draggable={!chargement}
+        onDragStart={e => {
+          e.dataTransfer.effectAllowed = 'move'
+          e.dataTransfer.setData('text/plain', id)
+          const ligne = e.currentTarget.closest('[data-depot]')
+          if (ligne) e.dataTransfer.setDragImage(ligne, 12, 12)
+          setGlisse({ groupe, id })
+        }}
+        onDragEnd={() => { setGlisse(null); setSurvol(null) }}
+        title={`Glisser pour réordonner ${libelle}`}
+        aria-hidden
+        className="hidden sm:block font-ui text-xs text-muet-clair hover:text-encre cursor-grab active:cursor-grabbing select-none flex-shrink-0 px-0.5"
+      >⠿</span>
+    )
+  }
+
+  function depot(groupe: string, id: string, ids: string[], poser: (de: number, vers: number) => void) {
+    const actif = glisse != null && glisse.groupe === groupe && glisse.id !== id
+    const marque = actif && survol?.id === id
+    return {
+      'data-depot': true,
+      onDragOver: (e: React.DragEvent<HTMLElement>) => {
+        if (!actif) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        const r = e.currentTarget.getBoundingClientRect()
+        const avant = e.clientY < r.top + r.height / 2
+        if (survol?.id !== id || survol.avant !== avant) setSurvol({ id, avant })
+      },
+      // Sortir de la ligne (et non entrer dans un de ses enfants) efface le trait : sans cela
+      // il restait sur la dernière ligne survolée pendant qu'on glissait hors du groupe.
+      onDragLeave: (e: React.DragEvent<HTMLElement>) => {
+        if (survol?.id === id && !e.currentTarget.contains(e.relatedTarget as Node | null)) setSurvol(null)
+      },
+      onDrop: (e: React.DragEvent<HTMLElement>) => {
+        if (!actif || !glisse) return
+        e.preventDefault()
+        const r = e.currentTarget.getBoundingClientRect()
+        const avant = e.clientY < r.top + r.height / 2
+        const de = ids.indexOf(glisse.id)
+        let vers = ids.indexOf(id) + (avant ? 0 : 1)
+        if (de < vers) vers -= 1
+        setGlisse(null); setSurvol(null)
+        poser(de, vers)
+      },
+      style: marque
+        ? { boxShadow: `0 ${survol!.avant ? '-2px' : '2px'} 0 var(--color-pigment)` }
+        : glisse?.id === id ? { opacity: 0.4 } : undefined,
+    }
   }
 
   // Ouvrir/couper la synthèse d'un cours. Couper une synthèse PRÉPARÉE se confirme :
@@ -255,13 +319,22 @@ export default function GrilleInstance({ instance, cibles }: {
   // L'ORDRE PROPRE d'une classe : permute deux créneaux qui vivent dans la même semaine
   // (tous ses éléments suivent, visibles ou déplacés ailleurs). Le modèle respectera cet
   // ordre : sa propagation ne redescend que là où la classe suivait encore.
-  function monterDescendreCreneau(sem: SemaineInstance, creneauId: string, dir: -1 | 1) {
+  function poserCreneau(sem: SemaineInstance, de: number, vers: number) {
     const ids = sem.creneaux.map(c => c.id)
-    const i = ids.indexOf(creneauId)
-    const j = i + dir
-    if (i < 0 || j < 0 || j >= ids.length) return
-    ;[ids[i], ids[j]] = [ids[j], ids[i]]
-    void lancer(`ordc-${creneauId}`, () => reordonnerCreneauxInstance(instance.pcId, sem.semaine, ids))
+    if (de < 0 || vers < 0 || vers >= ids.length || de === vers) return
+    const [id] = ids.splice(de, 1)
+    ids.splice(vers, 0, id)
+    void lancer(`ordc-${id}`, () => reordonnerCreneauxInstance(instance.pcId, sem.semaine, ids))
+  }
+  function monterDescendreCreneau(sem: SemaineInstance, creneauId: string, dir: -1 | 1) {
+    const i = sem.creneaux.findIndex(c => c.id === creneauId)
+    poserCreneau(sem, i, i + dir)
+  }
+  // Les props de dépôt d'un bloc de cours — vides si le créneau n'est pas de cette semaine.
+  function depotCreneau(sem: SemaineInstance, creneauId: string) {
+    const ids = sem.creneaux.map(c => c.id)
+    if (ids.length < 2 || !ids.includes(creneauId)) return {}
+    return depot(`cren:${sem.semaine}`, creneauId, ids, (de, vers) => poserCreneau(sem, de, vers))
   }
 
   // Reprendre du modèle ce que cette classe n'a pas (un créneau, ou tous).
@@ -648,11 +721,19 @@ export default function GrilleInstance({ instance, cibles }: {
         })()
       : null
     const freres = sem.elements.filter(f => f.creneauId === el.creneauId && f.semaineReelle === el.semaineReelle)
-    const idxFrere = freres.findIndex(f => f.id === el.id)
+    const noeuds = arbreChapitres(freres)
+    const idxNoeud = noeuds.findIndex(n => n.el.id === el.id)
+    const ordonnable = noeuds.length > 1 && !sousUnChapitre && idxNoeud >= 0
+    const groupeGlisse = `chap:${el.creneauId}:${el.semaineReelle}`
     const enCours = enCoursSem && el.vuAt == null
     const sousVus = pli ? pli.enfants.filter(e => e.vuAt != null).length : 0
     return (
-      <li key={el.id} className="flex items-center gap-2 rounded px-1.5 py-1 min-h-[44px] sm:min-h-0 hover:bg-parchemin-fonce/60">
+      <li
+        key={el.id}
+        className="flex items-center gap-2 rounded px-1.5 py-1 min-h-[44px] sm:min-h-0 hover:bg-parchemin-fonce/60"
+        {...(ordonnable ? depot(groupeGlisse, el.id, noeuds.map(n => n.el.id), (de, vers) => poserNoeud(el, noeuds, de, vers)) : {})}
+      >
+        {ordonnable && poignee(groupeGlisse, el.id, `« ${el.sectionTitre ?? el.titre} »`)}
         {pli ? (
           <button
             type="button"
@@ -711,11 +792,11 @@ export default function GrilleInstance({ instance, cibles }: {
           </span>
         )}
         <span className="flex-1" />
-        {freres.length > 1 && !sousUnChapitre && (
+        {ordonnable && (
           <span className="flex gap-0.5 flex-shrink-0">
-            <button onClick={() => monterDescendre(el, freres, -1)} disabled={occupe || idxFrere <= 0}
+            <button onClick={() => poserNoeud(el, noeuds, idxNoeud, idxNoeud - 1)} disabled={occupe || idxNoeud <= 0}
               className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-2 py-2 sm:px-0.5 sm:py-0" aria-label="Monter">↑</button>
-            <button onClick={() => monterDescendre(el, freres, 1)} disabled={occupe || idxFrere >= freres.length - 1}
+            <button onClick={() => poserNoeud(el, noeuds, idxNoeud, idxNoeud + 1)} disabled={occupe || idxNoeud >= noeuds.length - 1}
               className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-2 py-2 sm:px-0.5 sm:py-0" aria-label="Descendre">↓</button>
           </span>
         )}
@@ -741,7 +822,8 @@ export default function GrilleInstance({ instance, cibles }: {
     return (
       <>
         {sem.creneaux.length > 1 && rangCreneau.has(creneauId) && (
-          <span className="flex gap-0.5 flex-shrink-0" title={`Ordre de « ${creneauTitre} » dans la semaine, pour ${instance.classeNom} seulement`}>
+          <span className="flex items-center gap-0.5 flex-shrink-0" title={`Ordre de « ${creneauTitre} » dans la semaine, pour ${instance.classeNom} seulement`}>
+            {poignee(`cren:${sem.semaine}`, creneauId, `« ${creneauTitre} » (le cours entier)`)}
             <button onClick={() => monterDescendreCreneau(sem, creneauId, -1)}
               disabled={occupe || rangCreneau.get(creneauId) === 0}
               className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-2 py-2 sm:px-0.5 sm:py-0"
@@ -994,7 +1076,7 @@ export default function GrilleInstance({ instance, cibles }: {
                             if (g.els.length === 1) {
                               return (
                                 <Fragment key={g.creneauId}>
-                                  <ul className="rounded-md border border-bordure bg-surface px-1.5 py-0.5">
+                                  <ul className="rounded-md border border-bordure bg-surface px-1.5 py-0.5" {...depotCreneau(sem, g.creneauId)}>
                                     <li className="flex items-center gap-2 rounded px-1.5 py-1 min-h-[44px] sm:min-h-0">
                                       <input
                                         type="checkbox"
@@ -1044,7 +1126,7 @@ export default function GrilleInstance({ instance, cibles }: {
                             const ouvertC = coursOuvert(sem.semaine, g.creneauId)
                             const pct = Math.round((nbVus / g.els.length) * 100)
                             return (
-                              <div key={g.creneauId} className="rounded-md border border-bordure bg-surface">
+                              <div key={g.creneauId} className="rounded-md border border-bordure bg-surface" {...depotCreneau(sem, g.creneauId)}>
                                 <div className="flex items-center gap-2 px-2 py-1.5 flex-wrap">
                                   <button
                                     type="button"
