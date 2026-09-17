@@ -35,6 +35,7 @@ import {
   type Arbitrage, type BilanDuRetrait, type ExerciceSignale, type FenetreDArbitrage,
   type Signalement, estATraiter,
 } from './regles'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -51,8 +52,7 @@ type Admin = ReturnType<typeof createAdminClient>
  *    le DIT au journal, sans quoi une panne ressemblerait à un réglage.
  */
 export async function lireLaPorteDuSignalement(admin: Admin): Promise<boolean> {
-  const { data, error } = await admin
-    .from('scriptorium_params').select('signalement_exercice_actif').limit(1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) {
     console.error(`[signalement] porte ILLISIBLE — ${error.code} ${error.message} : `
       + 'elle est tenue pour FERMÉE.')

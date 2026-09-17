@@ -8,10 +8,10 @@ import 'server-only'
 //    illisible ⇒ OFF. « Une porte illisible se ferme, jamais l'inverse. »
 // ============================================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export async function lireLaPorteCopieAnnotee(admin: SupabaseClient): Promise<boolean> {
-  const { data, error } = await admin
-    .from('scriptorium_params').select('copie_annotee_actif').eq('id', 1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) return false
   return !!(data as { copie_annotee_actif?: boolean } | null)?.copie_annotee_actif
 }

@@ -10,7 +10,8 @@ function baseParametres(resultat) {
     lectures.push(table)
     assert.equal(table, 'scriptorium_params', 'Un pilote fermé ne lit pas les contrats')
     return { select(champs) {
-      assert.equal(champs, 'pilote_argument_actif')
+      // 17/09 — la ligne des réglages se lit entière, une fois (`utils/scriptorium-params.ts`).
+      assert.equal(champs, '*')
       return { eq(cle, valeur) {
         assert.equal(cle, 'id'); assert.equal(valeur, 1)
         return { async maybeSingle() { return resultat } }

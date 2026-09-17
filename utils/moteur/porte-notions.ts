@@ -16,10 +16,10 @@ import 'server-only'
 // tient cette frontière, pas le générique.
 // ============================================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export async function lireLaPorteNotions(admin: SupabaseClient): Promise<boolean> {
-  const { data, error } = await admin
-    .from('scriptorium_params').select('notions_actif').eq('id', 1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) return false
   return !!(data as { notions_actif?: boolean } | null)?.notions_actif
 }

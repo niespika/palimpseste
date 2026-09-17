@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // ----------------------------------------------------------------------------
@@ -86,17 +87,50 @@ export async function eleveIdsInscritsClasse(
 // contexte, ou toutes celles de l'élève en état « Toutes »).
 // ----------------------------------------------------------------------------
 
+/**
+ * Les liens classe → module que CE client voit, avec le slug du module, en UNE
+ * requête embarquée. Mémoïsé par rendu : le layout élève, le tableau de bord et
+ * ses signaux relisaient chacun `classe_modules` puis `modules` — six
+ * allers-retours pour une seule réponse (mesuré le 17/09).
+ *
+ * La requête ne filtre pas par classe : pour un élève, la policy
+ * `classe_modules_eleve_read` borne déjà la lecture à ses inscriptions actives,
+ * et elle peut ainsi partir SANS attendre les inscriptions. Le périmètre
+ * demandé reste appliqué ci-dessous, en mémoire, classe par classe — un client
+ * qui verrait plus large (prof, service-role) ne rend donc rien de plus.
+ */
+const liensClasseModule = cache(async function liensClasseModule(
+  supabase: SupabaseClient
+): Promise<{ classe_id: string; module_id: string; slug: string | null }[]> {
+  const { data, error } = await supabase
+    .from('classe_modules')
+    .select('classe_id, module_id, module:modules(slug)')
+  // supabase-js NE LÈVE PAS. Une lecture ratée vide TOUTE la navigation de
+  // l'élève : sans cette ligne, la panne passerait pour un élève sans module.
+  if (error) console.error(`[acces] modules des classes ILLISIBLES — ${error.code} ${error.message}`)
+  return (data ?? []).map((r) => {
+    const m = r.module as { slug: string } | { slug: string }[] | null
+    const slug = Array.isArray(m) ? m[0]?.slug : m?.slug
+    return { classe_id: r.classe_id as string, module_id: r.module_id as string, slug: slug ?? null }
+  })
+})
+
+/** À lancer tôt : la lecture part, et les lecteurs ci-dessous la retrouvent. */
+export function prechargerModulesDesClasses(supabase: SupabaseClient): void {
+  // Le rejet éventuel appartient à qui ATTEND la lecture, pas à ce départ anticipé :
+  // sans ce `catch`, il remonterait en rejet non géré.
+  liensClasseModule(supabase).catch(() => {})
+}
+
 /** Ids des modules donnés à ces classes (périmètre d'un contexte de classe). */
 export async function moduleIdsDesClasses(
   supabase: SupabaseClient,
   classeIds: string[]
 ): Promise<Set<string>> {
   if (classeIds.length === 0) return new Set()
-  const { data } = await supabase
-    .from('classe_modules')
-    .select('module_id')
-    .in('classe_id', classeIds)
-  return new Set((data ?? []).map((r) => r.module_id as string))
+  const voulues = new Set(classeIds)
+  const liens = await liensClasseModule(supabase)
+  return new Set(liens.filter((l) => voulues.has(l.classe_id)).map((l) => l.module_id))
 }
 
 /** Slugs des modules donnés à ces classes. */
@@ -104,10 +138,10 @@ export async function slugsModulesDesClasses(
   supabase: SupabaseClient,
   classeIds: string[]
 ): Promise<Set<string>> {
-  const ids = await moduleIdsDesClasses(supabase, classeIds)
-  if (ids.size === 0) return new Set()
-  const { data } = await supabase.from('modules').select('slug').in('id', [...ids])
-  return new Set((data ?? []).map((m) => m.slug as string))
+  if (classeIds.length === 0) return new Set()
+  const voulues = new Set(classeIds)
+  const liens = await liensClasseModule(supabase)
+  return new Set(liens.filter((l) => voulues.has(l.classe_id) && l.slug).map((l) => l.slug as string))
 }
 
 /**
@@ -123,18 +157,8 @@ export async function slugsModulesParClasse(
 ): Promise<Map<string, Set<string>>> {
   const parClasse = new Map<string, Set<string>>(classeIds.map((id) => [id, new Set<string>()]))
   if (classeIds.length === 0) return parClasse
-  const { data: cm } = await supabase
-    .from('classe_modules')
-    .select('classe_id, module_id')
-    .in('classe_id', classeIds)
-  const liens = cm ?? []
-  const moduleIds = [...new Set(liens.map((r) => r.module_id as string))]
-  if (moduleIds.length === 0) return parClasse
-  const { data: mods } = await supabase.from('modules').select('id, slug').in('id', moduleIds)
-  const slugParId = new Map((mods ?? []).map((m) => [m.id as string, m.slug as string]))
-  for (const l of liens) {
-    const slug = slugParId.get(l.module_id as string)
-    if (slug) parClasse.get(l.classe_id as string)?.add(slug)
+  for (const l of await liensClasseModule(supabase)) {
+    if (l.slug) parClasse.get(l.classe_id)?.add(l.slug)
   }
   return parClasse
 }

@@ -28,6 +28,7 @@ import 'server-only'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -46,11 +47,7 @@ export interface EtatDuDeroule {
 export const DELAI_VF_DEFAUT = 3
 
 export async function lireLaPorte(admin: Admin): Promise<EtatDuDeroule> {
-  const { data, error } = await admin
-    .from('scriptorium_params')
-    .select('exercices_actif, vf_delai_jours')
-    .limit(1)
-    .maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) {
     console.error(`[deroule] porte ILLISIBLE — ${error.code} ${error.message} : `
       + 'elle est tenue pour FERMÉE.')

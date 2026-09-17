@@ -8,9 +8,10 @@ import { portePilote, sujetsAdmissibles } from './serveur'
 import { parcoursDeClasse } from './admissibilite'
 import { identifiantOffre, instanceArgument, contratDeDecision } from './distribution'
 import type { ContratServi } from './contrat'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export async function porteBanqueArgument(admin: SupabaseClient): Promise<boolean> {
-  const { data, error } = await admin.from('scriptorium_params').select('pilote_argument_banque_actif').eq('id', 1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error && !['42703', 'PGRST204'].includes(error.code)) throw new Error(`Porte banque argument illisible : ${error.message}`)
   return !error && data?.pilote_argument_banque_actif === true && await portePilote(admin)
 }

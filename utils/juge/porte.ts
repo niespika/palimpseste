@@ -14,10 +14,10 @@ import 'server-only'
 //    (`07-` §5). Un lot lit LE SIEN, jamais celui d'un voisin.
 // ============================================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export async function lireLaPorteJugeDocuments(admin: SupabaseClient): Promise<boolean> {
-  const { data, error } = await admin
-    .from('scriptorium_params').select('juge_documents_actif').eq('id', 1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) return false
   return !!(data as { juge_documents_actif?: boolean } | null)?.juge_documents_actif
 }

@@ -24,6 +24,7 @@ import 'server-only'
 // ============================================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 type Admin = SupabaseClient
 
@@ -35,11 +36,7 @@ export interface EtatDesPortes {
 }
 
 export async function lireLesPortes(admin: Admin): Promise<EtatDesPortes> {
-  const { data, error } = await admin
-    .from('scriptorium_params')
-    .select('passation_classe_actif, exercices_actif')
-    .limit(1)
-    .maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) {
     // supabase-js NE LÈVE PAS : il rend `{ error }`. Une porte illisible se
     // ferme — jamais l'inverse (leçon C11a).

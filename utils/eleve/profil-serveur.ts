@@ -43,6 +43,7 @@ import {
   type DimensionDite, type GesteConcret, type MesurePourLEleve, type Progression,
   type VerdictDeLettre,
 } from './profil'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 type Admin = SupabaseClient
 const PAGE = 1000
@@ -280,8 +281,7 @@ async function lireLaCorrespondance(
  *    porte qu'on affirme ouverte parce qu'on n'a pas su lire n'est pas une porte.
  */
 async function lireLaPorteDesLettres(admin: Admin, incidents: string[]): Promise<boolean> {
-  const { data, error } = await admin
-    .from('scriptorium_params').select('competences_affichage_actif').limit(1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) {
     incidents.push(`l’affichage des lettres : ${error.code} ${error.message} — tenu pour fermé.`)
     return false

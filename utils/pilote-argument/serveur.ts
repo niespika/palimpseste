@@ -7,10 +7,11 @@ import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { admissibiliteSujet, parcoursDeClasse } from './admissibilite'
 import { PREFIXE_PILOTE, validerReponses, type ContratServi, type ReponseRelecture, type TraceRelecture } from './contrat'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export const empreinteTexte = (t: string) => createHash('sha256').update(t).digest('hex')
 export async function portePilote(admin: SupabaseClient): Promise<boolean> {
-  const { data, error } = await admin.from('scriptorium_params').select('pilote_argument_actif').eq('id', 1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error && !['42703', 'PGRST204'].includes(error.code)) throw new Error(`Porte pilote illisible : ${error.message}`)
   return !error && data?.pilote_argument_actif === true
 }

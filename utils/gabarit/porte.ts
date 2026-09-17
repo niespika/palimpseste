@@ -11,10 +11,10 @@ import 'server-only'
 // ⛔ Le juge du cran a LE SIEN (`juge_documents_actif`) : ce lot-ci ne le lit pas.
 // ============================================================================
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export async function lireLaPorteGabarit(admin: SupabaseClient): Promise<boolean> {
-  const { data, error } = await admin
-    .from('scriptorium_params').select('gabarit_actif').eq('id', 1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error) return false
   return !!(data as { gabarit_actif?: boolean } | null)?.gabarit_actif
 }

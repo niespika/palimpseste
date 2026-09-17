@@ -19,6 +19,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { IDENTITE, REGISTRE, injecter } from '@/utils/ia-commun'
 import { assemblerPromptTuteur, PROMPT_RAG_DEFAUT } from '@/utils/scriptorium-prompt-tuteur'
 import type { LivreRefCorpus } from '@/utils/scriptorium-corpus'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 // Ré-export : le banc de calibration L8 et l'écran prof importent le défaut
 // depuis ce module historique (`@/utils/scriptorium-rag`) — inchangé pour eux.
@@ -57,8 +58,7 @@ export async function lireReglagesRag(admin: SupabaseClient): Promise<ReglagesRa
     prompt: injecter(PROMPT_RAG_DEFAUT, { identite: IDENTITE, registre: REGISTRE }),
     promptSyntheseBrut: null,
   }
-  const { data, error } = await admin
-    .from('scriptorium_params').select('*').eq('id', 1).maybeSingle()
+  const { data, error } = await lireLesReglages(admin)
   if (error || !data) return defauts
   const params = data as Record<string, unknown>
   const texte = (col: string): string | null => {
