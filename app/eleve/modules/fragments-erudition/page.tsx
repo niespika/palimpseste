@@ -28,6 +28,7 @@ import { formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale, EssaiDepotAnalyse, FragmentSynthese } from '@/types/fragments'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
+import { lancer } from '@/utils/lancer'
 
 // `date_limite` est un INSTANT (fin de journée dans le fuseau de l'école) : on le
 // nomme dans CE fuseau. Le lire en UTC ferait tomber l'échéance du dimanche un lundi.
@@ -102,6 +103,79 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const inscriptionActive = cible ?? ici ?? inscriptions[0]
   const inscriptionId = inscriptionActive.id
 
+  // ⭐⭐ 17/09 — LES CHAÎNES DE CETTE PAGE PARTENT ENSEMBLE. Elle enchaînait une
+  //    trentaine de lectures l'une derrière l'autre (4,6 s mesurées en prod au
+  //    départ, 1,6 s après le rapprochement du serveur) alors qu'elle est faite de
+  //    chaînes qui ne se doivent rien : la semaine en cours, l'historique, l'oral,
+  //    l'essai, la synthèse, le parcours, le gate de lecture. Chacune garde ses
+  //    requêtes et son ordre interne ; chaque résultat est ATTENDU à sa place.
+  const pHistorique = lancer(supabase
+    .from('fragments_depots')
+    .select(`
+      id, statut, commentaire_eleve, created_at, updated_at, eleve_id, semaine_id,
+      semaine:fragments_semaines(id, numero, titre, date_debut, date_limite, ouverte, created_at),
+      photos:fragments_photos(id, depot_id, storage_path, ordre, created_at)
+    `)
+    .eq('inscription_id', inscriptionId)
+    .order('created_at', { ascending: false }))
+  // Présentations de cet élève avec oral publié : présentations → oraux → analyses orales.
+  const pOral = lancer((async () => {
+    const { data: presentationsAvecOral } = await admin
+      .from('fragments_presentations')
+      .select('id, semaine_id, statut')
+      .eq('inscription_id', inscriptionId)
+    const presentationIds = (presentationsAvecOral ?? []).map(p => p.id)
+    const { data: oraux } = presentationIds.length > 0
+      ? await admin
+          .from('fragments_oraux')
+          .select('*')
+          .in('presentation_id', presentationIds)
+      : { data: [] }
+    const oralIds = (oraux ?? []).map(o => o.id)
+    const { data: analysesOrales } = oralIds.length > 0
+      ? await admin
+          .from('fragments_analyses_orales')
+          .select('*')
+          .not('publiee_at', 'is', null)
+          .in('oral_id', oralIds)
+      : { data: [] }
+    return { presentationsAvecOral, oraux, analysesOrales }
+  })())
+  // La plus récente synthèse publiée pour cet élève
+  const pSynthese = lancer(admin
+    .from('fragments_syntheses')
+    .select('*')
+    .eq('inscription_id', inscriptionId)
+    .eq('statut', 'publiee')
+    .order('publiee_at', { ascending: false })
+    .limit(1)
+    .maybeSingle())
+  // Tous les dépôts de cet élève, puis leurs analyses publiées (« Ton parcours »).
+  const pParcours = lancer((async () => {
+    const { data: tousDepots } = await admin
+      .from('fragments_depots')
+      .select('id, semaine_id, statut')
+      .eq('inscription_id', inscriptionId)
+    const tousDepotIds = (tousDepots ?? []).map(d => d.id)
+    const { data: toutesAnalyses } = tousDepotIds.length > 0
+      ? await admin
+          .from('fragments_analyses')
+          .select('id, depot_id, note_decouvertes, note_sources, note_reflexions')
+          .eq('statut', 'publiee')
+          .in('depot_id', tousDepotIds)
+      : { data: [] }
+    return { tousDepots, toutesAnalyses }
+  })())
+  // Gate de lecture TRANSVERSAL — calculé uniquement sur la vue écrite (voir plus bas).
+  const pRetoursALire = vue === 'ecrit' ? lancer(retoursNonLus(admin, user.id)) : null
+  // C6-L4 — la chaîne de mesure, PAR SON MODULE (voir plus bas).
+  const pChaine = vue === 'essai'
+    ? lancer(Promise.all([
+        signauxDeLancement(admin, user.id, 'fragments'),
+        examensEnClasseDeLEleve(admin, user.id, inscriptionActive.classe_id, 'fragments'),
+      ]))
+    : null
+
   // Thème du semestre courant (un thème par inscription × semestre). L'élève
   // n'a pas de sélecteur : il voit toujours le semestre marqué « courant ».
   const { data: semCourant } = await admin
@@ -114,7 +188,14 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     .select('theme, description, essai_actif, propose_at, valide_at, commentaire_prof, commente_at')
     .eq('inscription_id', inscriptionId)
   if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
-  const { data: theme } = await themeQuery.maybeSingle()
+  const pTheme = lancer(themeQuery.maybeSingle())
+  // C8-L4 — les semaines DU SEMESTRE ACTIF (« Ton parcours », commenté plus bas).
+  let reqToutes = admin
+    .from('fragments_semaines')
+    .select('id, numero, is_vacation')
+    .order('numero')
+  if (semCourant?.id) reqToutes = reqToutes.eq('semestre_id', semCourant.id)
+  const pToutesLesSemaines = lancer(reqToutes)
 
   // Semaine ouverte (scopée au semestre actif : sinon une semaine restée ouverte
   // d'un semestre précédent pourrait s'afficher / être déposable).
@@ -130,6 +211,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     .order('numero', { ascending: false })
     .limit(1)
     .maybeSingle()
+  const { data: theme } = await pTheme
 
   // C8-L4 — le professeur peut ouvrir une semaine que Fragments ne réclame pas
   // (présentation, choix des sujets). L'élève ne doit alors pas lire « à rendre » :
@@ -137,6 +219,67 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const semaineReclamee = semaine
     ? estSemaineComptee(semaine, semCourant?.fragments_premiere_semaine ?? 1)
     : true
+
+  // ── Essai final : la chaîne part ICI (elle n'attend que le thème), s'attend plus bas.
+  const essaiActif = !!(theme as unknown as { essai_actif?: boolean })?.essai_actif
+  const pEssai = lancer((async () => {
+    const [{ data: lienOuvert }, { data: essaisInscription }] = await Promise.all([
+      // Essai ouvert aux dépôts pour LA CLASSE de l'élève (date + état propres à
+      // la classe, portés par la liaison essai × classe). Le plus récent ouvert.
+      essaiActif
+        ? admin
+            .from('fragments_essais_classes')
+            .select('date_essai, fragments_essais_epreuves(id, titre, duree_minutes, consignes)')
+            .eq('classe_id', inscriptionActive.classe_id)
+            .eq('depots_ouverts', true)
+            .order('date_essai', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : { data: null },
+      // Dépôts de cette inscription (pour scoper les analyses par parent)
+      essaiActif
+        ? admin.from('fragments_essai_depots').select('id').eq('inscription_id', inscriptionId)
+        : { data: [] },
+    ])
+    const epreuveLiee = lienOuvert?.fragments_essais_epreuves as unknown as
+      { id: string; titre: string; duree_minutes: number; consignes: string | null } | null
+    const epreuveOuverte = epreuveLiee
+      ? { ...epreuveLiee, date_essai: lienOuvert!.date_essai as string }
+      : null
+    const essaiIdsInscription = (essaisInscription ?? []).map(e => e.id)
+    const [{ data: essaiEleve }, { data: analyseEssaiPubliee }] = await Promise.all([
+      // Dépôt de l'élève pour cet essai
+      epreuveOuverte
+        ? admin
+            .from('fragments_essai_depots')
+            .select('id')
+            .eq('essai_id', epreuveOuverte.id)
+            .eq('inscription_id', inscriptionId)
+            .maybeSingle()
+        : { data: null },
+      // Analyse publiée de l'essai (la plus récente publiée de cette inscription)
+      essaiActif && essaiIdsInscription.length > 0
+        ? admin
+            .from('fragments_essai_depot_analyses')
+            .select('*')
+            .in('depot_id', essaiIdsInscription)
+            .eq('statut', 'publiee')
+            .order('publiee_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : { data: null },
+    ])
+    // Analyse en cours pour le dépôt actuel
+    const { data: analyseEssaiEnCours } = essaiEleve
+      ? await admin
+          .from('fragments_essai_depot_analyses')
+          .select('statut')
+          .eq('depot_id', essaiEleve.id)
+          .in('statut', ['en_cours'])
+          .maybeSingle()
+      : { data: null }
+    return { epreuveOuverte, essaiEleve, analyseEssaiPubliee, analyseEssaiEnCours }
+  })())
 
   // Dépôt de la semaine en cours
   const { data: depotActuel } = semaine
@@ -168,15 +311,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     : { data: [] }
 
   // Historique des dépôts passés
-  const { data: historique } = await supabase
-    .from('fragments_depots')
-    .select(`
-      id, statut, commentaire_eleve, created_at, updated_at, eleve_id, semaine_id,
-      semaine:fragments_semaines(id, numero, titre, date_debut, date_limite, ouverte, created_at),
-      photos:fragments_photos(id, depot_id, storage_path, ordre, created_at)
-    `)
-    .eq('inscription_id', inscriptionId)
-    .order('created_at', { ascending: false })
+  const { data: historique } = await pHistorique
 
   const depotsPasses = (historique ?? []).filter(d =>
     semaine ? d.semaine_id !== semaine.id : true
@@ -214,32 +349,11 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
 
   const depotEnRetard = semaine && depotActuel?.statut === 'en_retard'
 
-  // Présentations de cet élève avec oral publié
-  const { data: presentationsAvecOral } = await admin
-    .from('fragments_presentations')
-    .select('id, semaine_id, statut')
-    .eq('inscription_id', inscriptionId)
-
-  const presentationIds = (presentationsAvecOral ?? []).map(p => p.id)
-  const { data: oraux } = presentationIds.length > 0
-    ? await admin
-        .from('fragments_oraux')
-        .select('*')
-        .in('presentation_id', presentationIds)
-    : { data: [] }
+  const { presentationsAvecOral, oraux, analysesOrales } = await pOral
 
   const oralParPresentation = Object.fromEntries(
     (oraux ?? []).map(o => [o.presentation_id, o])
   )
-
-  const oralIds = (oraux ?? []).map(o => o.id)
-  const { data: analysesOrales } = oralIds.length > 0
-    ? await admin
-        .from('fragments_analyses_orales')
-        .select('*')
-        .not('publiee_at', 'is', null)
-        .in('oral_id', oralIds)
-    : { data: [] }
 
   const analyseOraleParOral = Object.fromEntries(
     (analysesOrales ?? []).map(a => [a.oral_id, a])
@@ -259,85 +373,15 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   }
 
   // ── Essai final ──────────────────────────────────────────────────────────
-  const essaiActif = !!(theme as unknown as { essai_actif?: boolean })?.essai_actif
-
   // C6-L4 — la chaîne de mesure, PAR SON MODULE : le signal du lancement
   // (`ouvert_par_prof_at`, C4-L9) et l'inventaire des copies passées avec leur
   // retour (C5-L4). Les deux naissent derrière leurs portes, lues dans ces
   // fonctions, jamais ici.
-  const [signauxChaine, retoursChaine] = vue === 'essai'
-    ? await Promise.all([
-        signauxDeLancement(admin, user.id, 'fragments'),
-        examensEnClasseDeLEleve(admin, user.id, inscriptionActive.classe_id, 'fragments'),
-      ])
-    : [[], []]
-
-  // Essai ouvert aux dépôts pour LA CLASSE de l'élève (date + état propres à
-  // la classe, portés par la liaison essai × classe). Le plus récent ouvert.
-  const { data: lienOuvert } = essaiActif
-    ? await admin
-        .from('fragments_essais_classes')
-        .select('date_essai, fragments_essais_epreuves(id, titre, duree_minutes, consignes)')
-        .eq('classe_id', inscriptionActive.classe_id)
-        .eq('depots_ouverts', true)
-        .order('date_essai', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null }
-  const epreuveLiee = lienOuvert?.fragments_essais_epreuves as unknown as
-    { id: string; titre: string; duree_minutes: number; consignes: string | null } | null
-  const epreuveOuverte = epreuveLiee
-    ? { ...epreuveLiee, date_essai: lienOuvert!.date_essai as string }
-    : null
-
-  // Dépôt de l'élève pour cet essai
-  const { data: essaiEleve } = epreuveOuverte
-    ? await admin
-        .from('fragments_essai_depots')
-        .select('id')
-        .eq('essai_id', epreuveOuverte.id)
-        .eq('inscription_id', inscriptionId)
-        .maybeSingle()
-    : { data: null }
-
-  // Dépôts de cette inscription (pour scoper les analyses par parent)
-  const { data: essaisInscription } = essaiActif
-    ? await admin.from('fragments_essai_depots').select('id').eq('inscription_id', inscriptionId)
-    : { data: [] }
-  const essaiIdsInscription = (essaisInscription ?? []).map(e => e.id)
-
-  // Analyse publiée de l'essai (la plus récente publiée de cette inscription)
-  const { data: analyseEssaiPubliee } = essaiActif && essaiIdsInscription.length > 0
-    ? await admin
-        .from('fragments_essai_depot_analyses')
-        .select('*')
-        .in('depot_id', essaiIdsInscription)
-        .eq('statut', 'publiee')
-        .order('publiee_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null }
-
-  // Analyse en cours pour le dépôt actuel
-  const { data: analyseEssaiEnCours } = essaiEleve
-    ? await admin
-        .from('fragments_essai_depot_analyses')
-        .select('statut')
-        .eq('depot_id', essaiEleve.id)
-        .in('statut', ['en_cours'])
-        .maybeSingle()
-    : { data: null }
+  const [signauxChaine, retoursChaine] = pChaine ? await pChaine : [[], []]
+  const { epreuveOuverte, essaiEleve, analyseEssaiPubliee, analyseEssaiEnCours } = await pEssai
 
   // ── Synthèse de semestre ─────────────────────────────────────────────────
-  // La plus récente synthèse publiée pour cet élève
-  const { data: synthesePubliee } = await admin
-    .from('fragments_syntheses')
-    .select('*')
-    .eq('inscription_id', inscriptionId)
-    .eq('statut', 'publiee')
-    .order('publiee_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const { data: synthesePubliee } = await pSynthese
 
   // ---- Données pour "Ton parcours" ----
   // C8-L4 — les semaines DU SEMESTRE ACTIF, pas toutes celles de la base.
@@ -346,32 +390,12 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // semaines de TOUS les semestres jamais créés (71 lignes / 4 semestres au
   // 25/08), semestres de test compris. Le pourcentage affiché était donc faux
   // pour tout le monde, et d'autant plus faux que l'année avançait.
-  let reqToutes = admin
-    .from('fragments_semaines')
-    .select('id, numero, is_vacation')
-    .order('numero')
-  if (semCourant?.id) reqToutes = reqToutes.eq('semestre_id', semCourant.id)
-  const { data: toutesLessemaines } = await reqToutes
-
-  // Tous les dépôts de cet élève
-  const { data: tousDepots } = await admin
-    .from('fragments_depots')
-    .select('id, semaine_id, statut')
-    .eq('inscription_id', inscriptionId)
+  const { data: toutesLessemaines } = await pToutesLesSemaines
+  const { tousDepots, toutesAnalyses } = await pParcours
 
   const tousDepotParSemaine = Object.fromEntries(
     (tousDepots ?? []).map(d => [d.semaine_id, d])
   )
-
-  // Analyses publiées pour tous les dépôts
-  const tousDepotIds = (tousDepots ?? []).map(d => d.id)
-  const { data: toutesAnalyses } = tousDepotIds.length > 0
-    ? await admin
-        .from('fragments_analyses')
-        .select('id, depot_id, note_decouvertes, note_sources, note_reflexions')
-        .eq('statut', 'publiee')
-        .in('depot_id', tousDepotIds)
-    : { data: [] }
 
   const toutesAnalyseParDepot = Object.fromEntries(
     (toutesAnalyses ?? []).map(a => [a.depot_id, a])
@@ -449,7 +473,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // Gate de lecture TRANSVERSAL : tout retour non lu (n'importe quel module) bloque
   // le dépôt écrit. Le dépôt d'ESSAI, lui, reste ouvert (travail noté) → non gaté ici.
   // Calculé uniquement sur la vue écrite (seule consommatrice ; ~10 requêtes évitées ailleurs).
-  const retoursALire = vue === 'ecrit' ? await retoursNonLus(admin, user.id) : []
+  const retoursALire = pRetoursALire ? await pRetoursALire : []
 
   const aOral = Object.keys(oralParSemaine).length > 0
 

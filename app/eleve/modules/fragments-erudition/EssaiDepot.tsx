@@ -112,6 +112,11 @@ export default function EssaiDepot({ epreuveId, inscriptionId, essaiExistantId, 
 
       images.forEach(img => libererPreview(img.previewUrl))
       setImages([])
+      // ⚠️ CE `router.refresh()` RESTE (passe adversariale du 17/09). L'action revalide,
+      //    mais elle crée la ligne « analyse en cours » DANS `after()`, donc APRÈS le
+      //    rendu que sa réponse transporte : sans ce second rendu, l'élève verrait
+      //    « Remplacer mon dépôt » au lieu de « Analyse en cours… », et remplacer à ce
+      //    moment-là supprime photos et analyse sous l'analyse en vol.
       router.refresh()
     } catch (e) {
       setErreur(`Erreur lors de l'envoi : ${e instanceof Error ? e.message : 'inconnue'}`)

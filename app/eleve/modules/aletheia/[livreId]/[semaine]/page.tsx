@@ -24,6 +24,7 @@ import { StepperNomme } from '@/components/aletheia/Steppers'
 import { contexteGabarit, rangDeSeance } from '@/utils/aletheia/gabarit-serveur'
 import ReponsesRelancesFil from '../../ReponsesRelancesFil'
 import type { TravailAletheia } from '../../types'
+import { lancer } from '@/utils/lancer'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
@@ -210,6 +211,13 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
   // inscription active oui, on résout sur celle-là — au lieu d'un notFound() sec (le
   // gate « retours non lus » peut pointer un livre de l'autre classe de l'élève). Tout
   // le pilotage aval (mode C, dates, séquentiel) utilise cette classe résolue.
+  // ⭐ 17/09 — CE QUI NE DÉPEND QUE DE L'ÉLÈVE ET DU LIVRE PART ICI. Cette page
+  //    enchaînait 23 à 34 lectures l'une derrière l'autre ; chacune est toujours
+  //    attendue à sa place, plus bas — mêmes `notFound()`, même ordre des refus.
+  const pLivre = lancer(admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle())
+  const pReglages = lancer(lireReglages(admin))
+  const pTravaux = lancer(travauxParSemaine(admin, user.id, livreId))
+
   const { moduleActif, resolue: active } = await resoudreInscriptionLivre(admin, supabase, user.id, livreId)
   if (!moduleActif || !active) notFound()
 
@@ -220,18 +228,24 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
   if (!dansExtrait(exposees, semaine)) notFound()
   const numeroSeance = mode === 'C' ? numeroAffiche(exposees, semaine) : semaine
 
-  const sem = await semaineLivre(admin, livreId, semaine)
+  // Seconde vague : ce qui attendait la classe résolue et l'extrait exposé.
+  const pSem = lancer(semaineLivre(admin, livreId, semaine))
+  const pDate = lancer(resoudreDateSeance(admin, livreId, active.classe_id, semaine))
+  const pAcces = lancer(peutAccederSemaine(admin, user.id, livreId, semaine, active.classe_id, exposees))
+  const pGabarit = lancer(contexteGabarit(admin, livreId, semaine, exposees))
+
+  const sem = await pSem
   if (!sem) notFound()
   // Date « mode b » de cette séance (échéance dimanche via le parcours), vide en mode a.
-  sem.dateIndicative = formatEcheanceFr((await resoudreDateSeance(admin, livreId, active.classe_id, semaine)).valeur)
+  sem.dateIndicative = formatEcheanceFr((await pDate).valeur)
   // Anti-fuite (#1) : neutralise le titre par défaut « Séance {origine} » en mode C.
   const titreAffiche = titreSeanceAffiche(sem.titre, semaine, numeroSeance, mode === 'C')
 
-  const { data: livre } = await admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle()
+  const { data: livre } = await pLivre
 
   // Déblocage séquentiel (Lot 6 D) : semaine verrouillée tant que la précédente n'est pas DONE.
   // (perf #3) On réutilise `exposees` déjà calculé ci-dessus au lieu d'un 2ᵉ modeExposition.
-  if (!(await peutAccederSemaine(admin, user.id, livreId, semaine, active.classe_id, exposees))) {
+  if (!(await pAcces)) {
     return (
       <div className="space-y-5 pb-8">
         <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
@@ -242,10 +256,10 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
     )
   }
 
-  const { evalQuestions, aides } = await lireReglages(admin)
+  const { evalQuestions, aides } = await pReglages
   // (E3) Le gabarit de lecture de la séance. Porte fermée ⇒ `libelles` n'est PAS passé
   // aux formulaires : ils rendent les libellés d'avant, à l'octet près.
-  const gab = await contexteGabarit(admin, livreId, semaine, exposees)
+  const gab = await pGabarit
   const libelles = gab.etayage ? gab.libelles : undefined
   const titresRetour = gab.etayage ? gab.libelles.bulles : undefined
   // (E5) Rappel d'ouverture à partir de la deuxième séance exposée, porte ouverte.
@@ -266,7 +280,7 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
     propositions = propositionsChamp1(typeof fE8?.these_eleve === 'string' ? fE8.these_eleve : '', Array.isArray(fE8?.distracteurs) ? fE8.distracteurs.filter((d): d is string => typeof d === 'string') : [], hasard(`${user.id}:${livreId}:${semaine}`))
     rolesPassages = Object.fromEntries(parsePassages(fE8?.passages_cles).map(p => [p.id, p.role]))
   }
-  const travaux = await travauxParSemaine(admin, user.id, livreId)
+  const travaux = await pTravaux
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
   // (Refonte 04/09) La présentation du module, une fois (ou sur demande), et le temps réel d'une séance.
@@ -323,7 +337,10 @@ export default async function PageSemaineAletheia({ params, searchParams }: { pa
   return (
     <div className="space-y-5 pb-8">
       <PollStatut actif={enAttenteRetour1 || enAttenteRetour2} livreId={livreId} semaine={semaine} />
-      {gab.etayage && statut === 'DRAFT' && <OuvertureSeance livreId={livreId} semaine={semaine} />}
+      {/* 17/09 — l'ouverture ne se pose qu'UNE fois : une séance déjà ouverte ne rappelle plus
+          l'action à chaque visite (11 lectures en série pour ne rien écrire). */}
+      {gab.etayage && statut === 'DRAFT' && !(t as { ouvert_at?: string | null } | null)?.ouvert_at
+        && <OuvertureSeance livreId={livreId} semaine={semaine} />}
       <div className="flex items-center justify-between gap-3">
         <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
         {gab.etayage && <Link href={`/eleve/modules/aletheia/${livreId}/${semaine}?presentation=1`} className="text-xs text-muet hover:text-encre-douce underline">Revoir la présentation</Link>}

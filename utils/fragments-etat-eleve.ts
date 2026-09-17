@@ -70,98 +70,116 @@ export async function etatOngletsFragmentsEleve(
   const { data: semCourant } = await admin
     .from('semesters').select('id').eq('is_active', true).maybeSingle()
 
-  // ── Écrit : semaine ouverte, dépôt de l'élève, dernier retour lu ou non ──
-  // C8-L4 — `is_vacation = false` explicitement : cf. `app/eleve/page.tsx`.
-  let reqSemaine = supabase
-    .from('fragments_semaines').select('id').eq('ouverte', true).eq('is_vacation', false)
-  if (semCourant?.id) reqSemaine = reqSemaine.eq('semestre_id', semCourant.id)
-  const { data: semaine } = await reqSemaine.order('numero', { ascending: false }).limit(1).maybeSingle()
+  // ⭐ 17/09 — LES QUATRE ONGLETS SE LISENT ENSEMBLE. Cet état repart après CHAQUE
+  //    affichage du module (le fournisseur l'appelle au montage) : 14 à 19 lectures
+  //    l'une derrière l'autre, pendant lesquelles tout clic de l'élève attendait son
+  //    tour. Écrit, oral, essai et synthèse ne se doivent rien : chaque bloc garde ses
+  //    requêtes et son ordre interne, seul le départ est commun.
+  const pEcrit = (async () => {
+    // ── Écrit : semaine ouverte, dépôt de l'élève, dernier retour lu ou non ──
+    // C8-L4 — `is_vacation = false` explicitement : cf. `app/eleve/page.tsx`.
+    let reqSemaine = supabase
+      .from('fragments_semaines').select('id').eq('ouverte', true).eq('is_vacation', false)
+    if (semCourant?.id) reqSemaine = reqSemaine.eq('semestre_id', semCourant.id)
+    const { data: semaine } = await reqSemaine.order('numero', { ascending: false }).limit(1).maybeSingle()
 
-  const { data: depotActuel } = semaine
-    ? await supabase
-        .from('fragments_depots').select('id')
-        .eq('inscription_id', inscriptionId).eq('semaine_id', semaine.id).maybeSingle()
-    : { data: null }
-
-  const { data: tousDepots } = await supabase
-    .from('fragments_depots').select('id').eq('inscription_id', inscriptionId)
-  const depotIds = (tousDepots ?? []).map(d => d.id as string)
-
-  const { data: dernierRetour } = depotIds.length > 0
-    ? await admin
-        .from('fragments_analyses').select('id, retour_lu_at')
-        .in('depot_id', depotIds).eq('statut', 'publiee')
-        .order('publiee_at', { ascending: false }).limit(1).maybeSingle()
-    : { data: null }
-  const gateActif = !!dernierRetour && !dernierRetour.retour_lu_at
-
-  const ecrit: EtatOnglet = !semaine
-    ? RIEN
-    : !depotActuel
-      ? { couleur: 'rouge', libelle: 'À déposer' }
-      : gateActif
-        ? { couleur: 'rouge', libelle: 'Retour à lire' }
-        : { couleur: 'vert', libelle: 'À jour' }
-
-  // ── Oral : un retour d'oral publié suffit ──────────────────────────────────
-  const { data: presentations } = await admin
-    .from('fragments_presentations').select('id').eq('inscription_id', inscriptionId)
-  const presentationIds = (presentations ?? []).map(p => p.id as string)
-  const { data: oraux } = presentationIds.length > 0
-    ? await admin.from('fragments_oraux').select('id').in('presentation_id', presentationIds)
-    : { data: [] }
-  const oralIds = (oraux ?? []).map(o => o.id as string)
-  const { data: analysesOrales } = oralIds.length > 0
-    ? await admin
-        .from('fragments_analyses_orales').select('id')
-        .not('publiee_at', 'is', null).in('oral_id', oralIds).limit(1)
-    : { data: [] }
-  const oral: EtatOnglet = (analysesOrales ?? []).length > 0
-    ? { couleur: 'vert', libelle: 'Retour disponible' }
-    : RIEN
-
-  // ── Essai : épreuve ouverte pour la classe, dépôt, retour publié ───────────
-  let themeQuery = supabase
-    .from('fragments_themes').select('essai_actif').eq('inscription_id', inscriptionId)
-  if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
-  const { data: theme } = await themeQuery.maybeSingle()
-  const essaiActif = !!theme?.essai_actif
-
-  let essai: EtatOnglet = RIEN
-  if (essaiActif) {
-    const { data: lienOuvert } = await admin
-      .from('fragments_essais_classes')
-      .select('fragments_essais_epreuves(id)')
-      .eq('classe_id', inscription.classe_id).eq('depots_ouverts', true)
-      .order('date_essai', { ascending: false }).limit(1).maybeSingle()
-    const epreuveOuverte = (lienOuvert?.fragments_essais_epreuves as unknown as { id: string } | null) ?? null
-
-    const { data: essaisInscription } = await admin
-      .from('fragments_essai_depots').select('id, essai_id').eq('inscription_id', inscriptionId)
-    const essaiIds = (essaisInscription ?? []).map(e => e.id as string)
-    const depotPourEpreuve = epreuveOuverte
-      ? (essaisInscription ?? []).some(e => e.essai_id === epreuveOuverte.id)
-      : false
-
-    const { data: analysePubliee } = essaiIds.length > 0
-      ? await admin
-          .from('fragments_essai_depot_analyses').select('id')
-          .in('depot_id', essaiIds).eq('statut', 'publiee').limit(1).maybeSingle()
+    const { data: depotActuel } = semaine
+      ? await supabase
+          .from('fragments_depots').select('id')
+          .eq('inscription_id', inscriptionId).eq('semaine_id', semaine.id).maybeSingle()
       : { data: null }
 
-    essai = analysePubliee
+    const { data: tousDepots } = await supabase
+      .from('fragments_depots').select('id').eq('inscription_id', inscriptionId)
+    const depotIds = (tousDepots ?? []).map(d => d.id as string)
+
+    const { data: dernierRetour } = depotIds.length > 0
+      ? await admin
+          .from('fragments_analyses').select('id, retour_lu_at')
+          .in('depot_id', depotIds).eq('statut', 'publiee')
+          .order('publiee_at', { ascending: false }).limit(1).maybeSingle()
+      : { data: null }
+    const gateActif = !!dernierRetour && !dernierRetour.retour_lu_at
+
+    const ecrit: EtatOnglet = !semaine
+      ? RIEN
+      : !depotActuel
+        ? { couleur: 'rouge', libelle: 'À déposer' }
+        : gateActif
+          ? { couleur: 'rouge', libelle: 'Retour à lire' }
+          : { couleur: 'vert', libelle: 'À jour' }
+    return ecrit
+  })()
+
+  const pOral = (async () => {
+    // ── Oral : un retour d'oral publié suffit ──────────────────────────────────
+    const { data: presentations } = await admin
+      .from('fragments_presentations').select('id').eq('inscription_id', inscriptionId)
+    const presentationIds = (presentations ?? []).map(p => p.id as string)
+    const { data: oraux } = presentationIds.length > 0
+      ? await admin.from('fragments_oraux').select('id').in('presentation_id', presentationIds)
+      : { data: [] }
+    const oralIds = (oraux ?? []).map(o => o.id as string)
+    const { data: analysesOrales } = oralIds.length > 0
+      ? await admin
+          .from('fragments_analyses_orales').select('id')
+          .not('publiee_at', 'is', null).in('oral_id', oralIds).limit(1)
+      : { data: [] }
+    const oral: EtatOnglet = (analysesOrales ?? []).length > 0
       ? { couleur: 'vert', libelle: 'Retour disponible' }
-      : depotPourEpreuve || (!epreuveOuverte && essaiIds.length > 0)
-        ? { couleur: 'vert', libelle: 'Déposé' }
-        : epreuveOuverte
-          ? { couleur: 'rouge', libelle: 'À déposer' }
-          : RIEN
-  }
+      : RIEN
+    return oral
+  })()
 
-  // ── Synthèse : l'onglet n'existe que si un bilan est publié ────────────────
-  const { data: synthese } = await admin
-    .from('fragments_syntheses').select('id')
-    .eq('inscription_id', inscriptionId).eq('statut', 'publiee').limit(1).maybeSingle()
+  const pEssai = (async () => {
+    // ── Essai : épreuve ouverte pour la classe, dépôt, retour publié ───────────
+    let themeQuery = supabase
+      .from('fragments_themes').select('essai_actif').eq('inscription_id', inscriptionId)
+    if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
+    const { data: theme } = await themeQuery.maybeSingle()
+    const essaiActif = !!theme?.essai_actif
 
+    let essai: EtatOnglet = RIEN
+    if (essaiActif) {
+      const { data: lienOuvert } = await admin
+        .from('fragments_essais_classes')
+        .select('fragments_essais_epreuves(id)')
+        .eq('classe_id', inscription.classe_id).eq('depots_ouverts', true)
+        .order('date_essai', { ascending: false }).limit(1).maybeSingle()
+      const epreuveOuverte = (lienOuvert?.fragments_essais_epreuves as unknown as { id: string } | null) ?? null
+
+      const { data: essaisInscription } = await admin
+        .from('fragments_essai_depots').select('id, essai_id').eq('inscription_id', inscriptionId)
+      const essaiIds = (essaisInscription ?? []).map(e => e.id as string)
+      const depotPourEpreuve = epreuveOuverte
+        ? (essaisInscription ?? []).some(e => e.essai_id === epreuveOuverte.id)
+        : false
+
+      const { data: analysePubliee } = essaiIds.length > 0
+        ? await admin
+            .from('fragments_essai_depot_analyses').select('id')
+            .in('depot_id', essaiIds).eq('statut', 'publiee').limit(1).maybeSingle()
+        : { data: null }
+
+      essai = analysePubliee
+        ? { couleur: 'vert', libelle: 'Retour disponible' }
+        : depotPourEpreuve || (!epreuveOuverte && essaiIds.length > 0)
+          ? { couleur: 'vert', libelle: 'Déposé' }
+          : epreuveOuverte
+            ? { couleur: 'rouge', libelle: 'À déposer' }
+            : RIEN
+    }
+    return essai
+  })()
+
+  const pSynthese = (async () => {
+    // ── Synthèse : l'onglet n'existe que si un bilan est publié ────────────────
+    const { data: synthese } = await admin
+      .from('fragments_syntheses').select('id')
+      .eq('inscription_id', inscriptionId).eq('statut', 'publiee').limit(1).maybeSingle()
+    return synthese
+  })()
+
+  const [ecrit, oral, essai, synthese] = await Promise.all([pEcrit, pOral, pEssai, pSynthese])
   return { ecrit, oral, essai, synthese: !!synthese }
 }

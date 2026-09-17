@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { soumettreVf } from './actions'
 import { useBrouillonLocal } from './useBrouillonLocal'
 import type { LibellesSeance } from '@/utils/aletheia/gabarits'
@@ -26,7 +25,6 @@ const champClasse =
 // accord (+ la question fixe du dialogué, E3). Les questions et le vocabulaire ne se
 // réécrivent pas. Pré-rempli avec la V1.
 export default function FormulaireVfClassique({ eleveId, livreId, semaine, theseInitial = '', argumentsInitial = '', accordInitial = '', champFixeInitial = '', libelles }: Props) {
-  const router = useRouter()
   const [these, setThese] = useState(theseInitial)
   const [args, setArgs] = useState(argumentsInitial)
   const [accord, setAccord] = useState(accordInitial)
@@ -60,7 +58,7 @@ export default function FormulaireVfClassique({ eleveId, livreId, semaine, these
       if (res?.error) { setErreur(res.error); return }
       purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
-      router.refresh()
+      // 17/09 — pas de `router.refresh()` : l'action a revalidé, sa réponse porte déjà la page fraîche.
     } catch {
       // (B2) La Server Action a REJETÉ (réseau coupé, session expirée, déploiement en
       // cours). Sans ce catch, échec silencieux ; le texte réécrit reste dans le

@@ -562,6 +562,27 @@ export async function ouvrirSeanceAction(livreId: string, semaine: number) {
   return { success: true }
 }
 
+/**
+ * ⭐ 17/09 — LE SONDAGE DE L'ATTENTE, EN UNE LECTURE. `PollStatut` faisait un
+ * `router.refresh()` toutes les 4 s tant que l'IA préparait le retour : chaque tic
+ * re-rendait TOUTE la page de séance — 34 lectures, 24 de profondeur, 465 par minute
+ * d'attente (mesuré le 17/09) — pour ne lire qu'un champ, `statut`. Et comme un rendu
+ * pouvait durer plus de 4 s, les tics se chevauchaient.
+ * Cette action ne lit QUE ce champ, sur le travail DE CET ÉLÈVE (`eleve_id` filtre :
+ * elle ne dit rien d'un autre). La page ne se re-rend plus qu'UNE fois, quand
+ * l'attente est finie — retour prêt, ou échec (le statut retombe alors, et la page
+ * montre son message de relance).
+ */
+export async function etatDuRetourAletheia(livreId: string, semaine: number): Promise<{ enAttente: boolean }> {
+  const { userId } = await verifierEleve()
+  const { data, error } = await createAdminClient()
+    .from('aletheia_travaux').select('statut')
+    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine).maybeSingle()
+  // Une lecture ratée ne conclut rien : on attend encore, le tic suivant relira.
+  if (error) return { enAttente: true }
+  return { enAttente: data?.statut === 'V1_SUBMITTED' || data?.statut === 'VF_SUBMITTED' }
+}
+
 /** La présentation du module a été lue jusqu'au bout : on ne la remontre plus (jusqu'à la version suivante). */
 export async function marquerPresentationVueAction() {
   const { userId } = await verifierEleve()

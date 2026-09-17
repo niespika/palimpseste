@@ -16,7 +16,6 @@
 // ============================================================================
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { proposerTheme } from './actions'
 import { libelleEleve, type StatutDuTheme } from '@/utils/fragments-theme'
 
@@ -40,7 +39,6 @@ function Commentaire({ texte }: { texte: string }) {
 }
 
 export default function ThemeEleve({ inscriptionId, semestreId, theme, description, statut, commentaire = null }: Props) {
-  const router = useRouter()
   const [edition, setEdition] = useState(statut === 'vide')
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -56,7 +54,7 @@ export default function ThemeEleve({ inscriptionId, semestreId, theme, descripti
     setChargement(false)
     if ('error' in r && r.error) { setErreur(r.error); return }
     setEdition(false)
-    router.refresh()
+    // 17/09 — pas de `router.refresh()` : l'action a revalidé, sa réponse porte déjà la page fraîche.
   }
 
   const couleur = statut === 'a_valider' || statut === 'commente' ? 'text-attention' : statut === 'valide' ? 'text-ok' : 'text-muet'

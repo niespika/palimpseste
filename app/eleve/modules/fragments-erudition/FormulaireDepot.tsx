@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { traiterImage, libererPreview, type ImageTraitee } from '@/utils/imageProcessing'
 import { deposerCompteRendu } from './actions'
@@ -17,7 +16,6 @@ interface Props {
 
 export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, depotExistant, seuilHeures }: Props) {
   const seuilMs = seuilHeures * 60 * 60 * 1000
-  const router = useRouter()
   const [images, setImages] = useState<ImageTraitee[]>([])
   const [traitement, setTraitement] = useState(false)
   const [upload, setUpload] = useState(false)
@@ -130,7 +128,7 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
         setCommentaire('')
         // Dépôt accepté mais signalé « petit malin » : message cheeky (le dépôt est bien pris).
         setAvertissement(resultat.avertissement ?? null)
-        router.refresh()
+        // 17/09 — pas de `router.refresh()` : l'action a revalidé, sa réponse porte déjà la page fraîche.
       }
     } catch (e: unknown) {
       setErreur(`Erreur lors de l'envoi : ${e instanceof Error ? e.message : 'inconnue'}`)

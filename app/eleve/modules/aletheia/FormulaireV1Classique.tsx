@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { soumettreV1 } from './actions'
 import { useBrouillonLocal } from './useBrouillonLocal'
 import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
@@ -56,7 +55,6 @@ export default function FormulaireV1Classique({
   theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
   aides = AIDES_V1_DEFAUT, libelles, avecRappel = false, rappelInitial = '', jeNeSaisPas = false, propositions = [],
 }: Props) {
-  const router = useRouter()
   const [rappel, setRappel] = useState(rappelInitial)
   const [these, setThese] = useState(theseInitial)
   const [args, setArgs] = useState(argumentsInitial)
@@ -122,7 +120,7 @@ export default function FormulaireV1Classique({
       // Rendu accepté mais signalé « petit malin » : on montre le message avant de continuer.
       purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
-      router.refresh()
+      // 17/09 — pas de `router.refresh()` : l'action a revalidé, sa réponse porte déjà la page fraîche.
     } catch {
       // (B2) La Server Action a REJETÉ (réseau coupé, session expirée, déploiement en
       // cours). Sans ce catch, rien ne s'affichait : le spinner s'arrêtait (finally) et

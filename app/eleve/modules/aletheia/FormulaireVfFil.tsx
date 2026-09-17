@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { soumettreVf } from './actions'
 import { useBrouillonLocal } from './useBrouillonLocal'
 import type { RetourV1 } from './types'
@@ -43,7 +42,6 @@ function Bulle({ titre, accent, children }: { titre: string; accent: 'liseret' |
 }
 
 export default function FormulaireVfFil({ eleveId, livreId, semaine, numeroSeance, libelles: g, retour: rv, reponses, rolesPassages, v1, initial }: Props) {
-  const router = useRouter()
   const [index, setIndex] = useState(0)
   const [vues, setVues] = useState<Record<string, 0 | 1>>({})
   const [these, setThese] = useState(initial.these)
@@ -101,7 +99,7 @@ export default function FormulaireVfFil({ eleveId, livreId, semaine, numeroSeanc
       if (res?.error) { setErreur(res.error); return }
       purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
-      router.refresh()
+      // 17/09 — pas de `router.refresh()` : l'action a revalidé, sa réponse porte déjà la page fraîche.
     } catch { setErreur('L’envoi a échoué — ton texte est toujours là. Vérifie ta connexion et réessaie.') }
     finally { setChargement(false) }
   }

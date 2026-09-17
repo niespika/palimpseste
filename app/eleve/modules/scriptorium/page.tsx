@@ -9,6 +9,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import ChatScriptorium from './ChatScriptorium'
 import PlanCours, { type PlanEleve } from './PlanCours'
+import { lancer } from '@/utils/lancer'
 
 // Face ÉLÈVE de Scriptorium (RAG L5, SPEC §7.1) : espace de dialogue ancré sur
 // le parcours de SA classe (contexte cookie existant). GATÉ rag_actif : OFF →
@@ -47,15 +48,24 @@ export default async function ScriptoriumElevePage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  // ⭐ 17/09 — ce qui ne dépend que de l'élève part ensemble : le rôle, les réglages,
+  //    le module, le fuseau, et la liste de SES conversations (pour le quota). La page
+  //    enchaînait treize lectures sans un seul départ groupé. Chaque `notFound()` est
+  //    lu plus bas, dans l'ordre d'avant.
+  const admin = createAdminClient()
+  const pProfil = lancer(supabase.from('profiles').select('role').eq('id', user.id).single())
+  const pReglages = lancer(lireReglagesRag(admin))
+  const pModule = lancer(admin.from('modules').select('id').eq('slug', 'scriptorium').maybeSingle())
+  const pFuseau = lancer(lireFuseau())
+  const pToutesConvs = lancer(admin.from('scriptorium_conversations').select('id').eq('eleve_id', user.id))
+
+  const { data: profil } = await pProfil
   if (profil?.role !== 'eleve') notFound()
 
-  const admin = createAdminClient()
-  const reglages = await lireReglagesRag(admin)
+  const reglages = await pReglages
   if (!reglages.actif) notFound()
 
-  const { data: moduleData } = await admin
-    .from('modules').select('id').eq('slug', 'scriptorium').maybeSingle()
+  const { data: moduleData } = await pModule
   if (!moduleData) notFound()
 
   // Seuil du module (C7·L2 pour l'état « Toutes » ; Accès & classes · L1 pour la
@@ -68,8 +78,10 @@ export default async function ScriptoriumElevePage({
   const { conv: convSel, vue = 'discussion' } = await searchParams
 
   // Fuseau du prof : gouverne le jour courant (quota) ET la datation des lettres.
-  const fuseau = await lireFuseau()
+  const fuseau = await pFuseau
   const aujourdHui = jourDansFuseau(new Date().toISOString(), fuseau)
+  // Le plan du cours ne dépend que de la classe : il part ici, et s'attend à sa place.
+  const pMatiere = lancer(chargerMatiereClasse(admin, classe.classe_id, aujourdHui))
 
   // Conversations vivantes de l'élève pour SA classe (RLS eleve_own).
   const { data: convs } = await supabase
@@ -117,8 +129,7 @@ export default async function ScriptoriumElevePage({
   }
 
   // Quota restant du jour (fuseau prof, toutes conversations confondues).
-  const { data: toutesConvs } = await admin
-    .from('scriptorium_conversations').select('id').eq('eleve_id', user.id)
+  const { data: toutesConvs } = await pToutesConvs
   const convIds = (toutesConvs ?? []).map(c => c.id as string)
   let envoyes = 0
   if (convIds.length) {
@@ -134,7 +145,7 @@ export default async function ScriptoriumElevePage({
   // ── Plan du cours (L6) : la même donnée que le squelette du corpus, rendue à
   // l'élève — TITRES ET STATUTS SEULS (aucun texte ne franchit ce DTO, c'est la
   // règle anti-spoiler ; le contenu des semaines à venir n'existe que côté IA).
-  const matiere = await chargerMatiereClasse(admin, classe.classe_id, aujourdHui)
+  const matiere = await pMatiere
   const plan: PlanEleve = {
     parcours: (matiere?.instances ?? []).map(inst => {
       const parSemaine = new Map<number, { libelle: string; statut: 'vu' | 'en_cours' | 'a_venir' }[]>()

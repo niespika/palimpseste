@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { soumettreV1 } from './actions'
 import { useBrouillonLocal } from './useBrouillonLocal'
 import type { LibellesSeance } from '@/utils/aletheia/gabarits'
@@ -44,7 +43,6 @@ export default function FormulaireV1Fil({
   eleveId, livreId, semaine, libelles: g, theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
   avecRappel = false, rappelInitial = '', propositions = [], numeroSeance,
 }: Props) {
-  const router = useRouter()
   const [index, setIndex] = useState(0)
   const [rappel, setRappel] = useState(rappelInitial)
   const [these, setThese] = useState(theseInitial)
@@ -191,7 +189,7 @@ export default function FormulaireV1Fil({
       if (res?.error) { setErreur(res.error); return }
       purger()
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
-      router.refresh()
+      // 17/09 — pas de `router.refresh()` : l'action a revalidé, sa réponse porte déjà la page fraîche.
     } catch {
       setErreur('L’envoi a échoué — ton texte est toujours là. Vérifie ta connexion et réessaie.')
     } finally {

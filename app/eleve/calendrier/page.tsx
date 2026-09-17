@@ -9,6 +9,7 @@ import { jourDansFuseau, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { assemblerEvenements } from '@/utils/calendrier-evenements'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
+import { lancer } from '@/utils/lancer'
 
 // (perf) Le bloc Aletheia du calendrier résout des dates de parcours (requêtes DB) → marge de temps.
 export const maxDuration = 60
@@ -61,24 +62,6 @@ export default async function CalendrierEleve({
   const classeIds = new Set(
     toutes ? inscriptions.map((i) => i.classe_id) : active ? [active.classe_id] : []
   )
-  const slugs = await slugsModulesAccessibles(supabase, user!.id)
-
-  const admin = createAdminClient()
-  const { data: sem } = await admin.from('semesters').select('id, name, start_date, end_date, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
-  const { data: hols } = sem ? await admin.from('holidays').select('label, start_date, end_date').eq('semester_id', sem.id) : { data: [] }
-  const holidays = hols ?? []
-  const grille = sem ? calculerGrilleSemaines(sem, holidays) : []
-  const infoSemaine = new Map(grille.map((w) => [w.start, w]))
-  const estVacance = (jour: string) => holidays.some((h) => h.start_date <= jour && jour <= h.end_date)
-
-  // Couleurs des classes de l'élève (code couleur, indépendant du toggle).
-  const { data: classes } = classeIds.size > 0
-    ? await admin.from('classes').select('id, nom, couleur').in('id', [...classeIds])
-    : { data: [] }
-  const cls = classes ?? []
-  const couleurs = couleursParClasse(cls)
-  const multiClasse = cls.length > 1
-
   // Bornes de la grille mois (lundi→dimanche couvrant le mois de `anchor`).
   const debutMois = toISODate(lundiOnOrBefore(firstOfMonth(anchor)))
   const finMois = toISODate(addDaysUTC(lundiOnOrBefore(lastOfMonth(anchor)), 6))
@@ -98,9 +81,36 @@ export default async function CalendrierEleve({
     debut = anchor; fin = anchor
   }
 
+  // ⭐ 17/09 — LES LECTURES DU CALENDRIER PARTENT ENSEMBLE. Les modules de l'élève,
+  //    le semestre et ses vacances, les couleurs des classes et l'agrégation des
+  //    événements (la plus longue) ne se doivent rien : la page les enchaînait
+  //    (4,1 s mesurées en prod au départ, 1,6 s après le rapprochement du serveur).
+  //    Les bornes de la fenêtre, ci-dessus, ne dépendent d'aucune lecture : elles
+  //    sont remontées pour que l'agrégation puisse partir tout de suite.
+  const admin = createAdminClient()
+  const pSlugs = lancer(slugsModulesAccessibles(supabase, user!.id))
+  const pClasses = classeIds.size > 0
+    ? lancer(admin.from('classes').select('id, nom, couleur').in('id', [...classeIds]))
+    : null
+  const pPartages = lancer(assemblerEvenements({ debut, fin, classeIds: [...classeIds] }))
+
+  const { data: sem } = await admin.from('semesters').select('id, name, start_date, end_date, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
+  const { data: hols } = sem ? await admin.from('holidays').select('label, start_date, end_date').eq('semester_id', sem.id) : { data: [] }
+  const slugs = await pSlugs
+  const holidays = hols ?? []
+  const grille = sem ? calculerGrilleSemaines(sem, holidays) : []
+  const infoSemaine = new Map(grille.map((w) => [w.start, w]))
+  const estVacance = (jour: string) => holidays.some((h) => h.start_date <= jour && jour <= h.end_date)
+
+  // Couleurs des classes de l'élève (code couleur, indépendant du toggle).
+  const { data: classes } = pClasses ? await pClasses : { data: [] }
+  const cls = classes ?? []
+  const couleurs = couleursParClasse(cls)
+  const multiClasse = cls.length > 1
+
   // 1. Événements partagés (essais, quizz, Codex, lectures) → classes de l'élève
   //    (+ événements sans classe, visibles de tous). Color-codés par classe.
-  const partages = (await assemblerEvenements({ debut, fin, classeIds: [...classeIds] }))
+  const partages = (await pPartages)
     .filter((e) => (e.classe_id === null || classeIds.has(e.classe_id)) && slugs.has(SLUG_PAR_SOURCE[e.source_module]))
     .map((e): Evt => ({
       date: e.date,
