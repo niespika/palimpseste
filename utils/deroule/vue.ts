@@ -73,6 +73,7 @@ import { gestesRestants, competencesQuiDemandentLaConfiance } from './gestes'
 import { titreDeLaConsigne, type Atelier } from '../codex-onglets/regles'
 import type { TexteSupportServi } from '../chaine/contexte'
 import type { ActeContestation, Competence, Grain, Palier, RegimeV1vf, Temps } from './types'
+import { lancer } from '@/utils/lancer'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -480,22 +481,6 @@ function competencesVisees(
   const cible = (ctx.decision?.cibleRetenue ?? ctx.ciblePrimaire
     ?? depot.exercice.observable_isole_competence ?? null) as Competence | null
   return cible !== null && mesurees.includes(cible) ? [cible] : []
-}
-
-/**
- * ⭐ 17/09 — FAIRE PARTIR UNE LECTURE SANS L'ATTENDRE (jumeau de celui de
- * `../chaine/contexte`). Le chargeur enchaînait ~38 lectures en série, et il est
- * rejoué à chaque rendu ET dans six actions : c'était 1,5 à 3 s par écran et par
- * geste. Les lectures indépendantes partent ensemble ; chacune est ATTENDUE à
- * l'endroit, et dans l'ordre, où le code la lisait — la vue rendue est la même.
- * ⚠️ `Promise.resolve` déclenche un constructeur de requête supabase, qui est
- *    paresseux. Le `catch` muet évite le rejet non géré d'une lecture partie en
- *    avance puis jamais attendue ; qui l'attend reçoit toujours son rejet.
- */
-function lancer<T>(lecture: PromiseLike<T>): Promise<T> {
-  const p = Promise.resolve(lecture)
-  p.catch(() => {})
-  return p
 }
 
 /**

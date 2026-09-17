@@ -12,6 +12,7 @@ import {
 import { fsrs, createEmptyCard, date_diff, type Card, type Grade } from 'ts-fsrs'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { estEchue, seuilEcheanceDuJour } from '@/utils/quazian-echeance'
+import { lancer } from '@/utils/lancer'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -54,6 +55,13 @@ async function contexteVisibiliteCartes(
   admin: ReturnType<typeof createAdminClient>,
   classeIds: string[],
 ): Promise<PerimetreCartes> {
+  // ⭐ 17/09 — les trois bras ne dépendent pas l'un de l'autre : ils partent ensemble
+  //    (cette fonction est sur le chemin de l'accueil, de la file et des tuiles).
+  const pVu = classeIds.length > 0 ? lancer(perimetreVuClasses(admin, classeIds)) : null
+  const pLiens = classeIds.length > 0
+    ? lancer(admin.from('scriptorium_document_classes').select('document_id').in('classe_id', classeIds))
+    : null
+
   // Bras hérité — publications d'UNITÉS seulement (le bras contenu n'en a plus).
   const { data: publis } = await admin
     .from('quazian_publications')
@@ -64,15 +72,14 @@ async function contexteVisibiliteCartes(
     .map((p) => p.scriptorium_unite_id as string | null)
     .filter((v): v is string => !!v)
 
-  if (classeIds.length === 0) return { ...perimetreVide(), unitesPubliees }
+  if (!pVu || !pLiens) return { ...perimetreVide(), unitesPubliees }
 
   // Bras contenu — LE « vu » des instances de parcours ACTIVES de ses classes.
-  const { contenusEntames, sectionsVues } = await perimetreVuClasses(admin, classeIds)
+  const { contenusEntames, sectionsVues } = await pVu
 
   // Bras hérité — inchangé.
   const tuplesVisibles = new Set<string>()
-  const { data: liens } = await admin
-    .from('scriptorium_document_classes').select('document_id').in('classe_id', classeIds)
+  const { data: liens } = await pLiens
   const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
   if (docIds.length > 0) {
     const { data: documents } = await admin
@@ -515,26 +522,35 @@ export async function soumettreNote(
 // Stats pour la page d'accueil
 export async function chargerStatsRevision() {
   const { supabase, userId } = await verifierEleve()
-  const seuil = await seuilDuJour()
   const admin = createAdminClient()
 
-  // Gel de l'intégrité : les compteurs annoncent la file, et la file est vide
-  // quand l'élève est bloqué — sans cette garde ils promettraient un travail
-  // inaccessible (et l'action reste un point d'entrée HTTP, cf. §5 du rapport).
-  if (await messageSiBloque(admin, userId)) {
-    return { totalCartes: 0, connues: 0, dues: 0, nouvelles: 0, mures: 0, aFaire: 0 }
-  }
-
+  // ⭐ 17/09 — ce compteur est sur le chemin de l'ACCUEIL, et il enchaînait 13
+  //    lectures. Le seuil, la garde d'intégrité, les cartes partagées et les
+  //    cartes personnelles ne dépendent que de l'élève : ils partent ensemble.
+  //    La garde est lue EN PREMIER, comme avant — un élève bloqué ne reçoit rien.
+  const pSeuil = lancer(seuilDuJour())
+  const pBlocage = lancer(messageSiBloque(admin, userId))
   // Périmètre « vu » — MÊME périmètre que la file de révision,
   // sinon les compteurs annoncent des cartes que l'élève ne verra jamais. Sur le
   // tableau de bord en état « Toutes », le contexte rend les deux classes : les
   // compteurs agrègent, ce que l'écran annonce.
-  const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
-  const partagees = await cartesPartageesVisibles(
-    admin, perimetre, 'id, scriptorium_unite_id, contenu_id, section_id, semaine',
-  )
+  const pPartagees = lancer((async () => {
+    const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
+    return cartesPartageesVisibles(
+      admin, perimetre, 'id, scriptorium_unite_id, contenu_id, section_id, semaine',
+    )
+  })())
+  const pPerso = lancer(lireCartes(admin, 'id', { eleveId: userId }))
 
-  const perso = await lireCartes(admin, 'id', { eleveId: userId })
+  // Gel de l'intégrité : les compteurs annoncent la file, et la file est vide
+  // quand l'élève est bloqué — sans cette garde ils promettraient un travail
+  // inaccessible (et l'action reste un point d'entrée HTTP, cf. §5 du rapport).
+  if (await pBlocage) {
+    return { totalCartes: 0, connues: 0, dues: 0, nouvelles: 0, mures: 0, aFaire: 0 }
+  }
+  const seuil = await pSeuil
+  const partagees = await pPartagees
+  const perso = await pPerso
 
   const flashcards = [...partagees, ...perso] as unknown as Record<string, unknown>[]
   const totalCartes = flashcards.length

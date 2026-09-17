@@ -14,6 +14,8 @@ import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
 import { chargerSignauxTableau } from '@/utils/eleve/signaux-tableau'
 import { statutDuTheme } from '@/utils/fragments-theme'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
+import { lancer } from '@/utils/lancer'
+import { NAV_ELEVE } from '@/components/nav/configNavigation'
 
 // Dates PURES (bornes de semaine) → UTC, agnostique au fuseau.
 const fmtJourCourt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
@@ -98,59 +100,107 @@ export default async function TableauDeBordEleve() {
   const codexEnCours: { id: string; classe: string }[] = []
   const quizzEnCours: { id: string; classe: string }[] = []
   const aletheiaAFaire: { classe: string }[] = []
-  let semaineCourante: { label: string; debut: string; fin: string; vacances: boolean } | null = null
+  type SemaineCourante = { label: string; debut: string; fin: string; vacances: boolean } | null
+  let semaineCourante = null as SemaineCourante
+
+  // ⭐⭐ 17/09 — LES BLOCS DE L'ACCUEIL PARTENT ENSEMBLE. Cette page enchaînait
+  //    ~40 lectures l'une derrière l'autre (Vestigia, puis Codex, puis le quizz,
+  //    puis Aletheia, puis les pistes, puis Quazian, puis le calendrier, puis les
+  //    signaux) alors qu'aucun bloc ne dépend d'un autre : mesurée à 6-8 s en
+  //    prod, encore 2,6 s après le rapprochement du serveur. Chaque bloc garde
+  //    SES lectures, SES gardes et SON ordre interne ; seul le départ est commun.
+  // ⚠️ L'ordre des tâches ne dépend pas de l'ordre d'arrivée : chaque bloc rend
+  //    ses résultats PAR INSCRIPTION, reversés dans l'ordre d'`enContexte`.
+
+  // Les signaux de semaine, suggestions, fiches, examens et modules sont des
+  // lectures indépendantes. Leurs gardes et périmètres vivent dans leurs lecteurs.
+  const pSignaux = lancer(chargerSignauxTableau(admin, supabase, user.id, enContexte))
 
   if (enContexte.length > 0) {
-    // Semaine ouverte scopée au semestre actif (évite une semaine restée ouverte
-    // d'un semestre précédent). Globale au semestre : une seule lecture.
-    const { data: semActif } = await supabase
-      .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
-    // C8-L4 — `is_vacation = false` explicitement : une semaine ouverte AVANT de
-    // devenir vacance gardait son drapeau, et `order by numero desc` classe les
-    // `NULL` EN PREMIER sous PostgreSQL — elle gagnerait donc la sélection.
-    let reqSemaine = supabase
-      .from('fragments_semaines')
-      .select('id, numero, date_limite, is_vacation')
-      .eq('ouverte', true)
-      .eq('is_vacation', false)
-    if (semActif?.id) reqSemaine = reqSemaine.eq('semestre_id', semActif.id)
-    const { data: semaine } = await reqSemaine
-      .order('numero', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // ── Vestigia : la semaine ouverte, puis par inscription le dépôt et le thème,
+    //    puis les pistes du dernier retour.
+    const pFragments = lancer((async () => {
+      // Semaine ouverte scopée au semestre actif (évite une semaine restée ouverte
+      // d'un semestre précédent). Globale au semestre : une seule lecture.
+      const { data: semActif } = await supabase
+        .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
+      // C8-L4 — `is_vacation = false` explicitement : une semaine ouverte AVANT de
+      // devenir vacance gardait son drapeau, et `order by numero desc` classe les
+      // `NULL` EN PREMIER sous PostgreSQL — elle gagnerait donc la sélection.
+      let reqSemaine = supabase
+        .from('fragments_semaines')
+        .select('id, numero, date_limite, is_vacation')
+        .eq('ouverte', true)
+        .eq('is_vacation', false)
+      if (semActif?.id) reqSemaine = reqSemaine.eq('semestre_id', semActif.id)
+      const { data: semaine } = await reqSemaine
+        .order('numero', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const fuseau = await lireFuseau()
 
-    for (const insc of enContexte) {
-      if (semaine && aModule(insc.classe_id, 'fragments-erudition')) {
-        const { data: depot } = await supabase
-          .from('fragments_depots')
-          .select('id, statut')
-          .eq('inscription_id', insc.id)
-          .eq('semaine_id', semaine.id)
-          .maybeSingle()
-        // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : on
-        // nomme le JOUR dans ce fuseau — en UTC, l'échéance du dimanche dirait lundi.
-        const limite = formatInstant(semaine.date_limite as string, await lireFuseau(), { weekday: 'long', day: 'numeric', month: 'long' })
-        // C8-L4 — une semaine que Fragments ne réclame pas ne met personne en
-        // retard, et ne s'annonce pas comme un travail dû. Le professeur peut
-        // l'avoir ouverte à dessein : le dépôt reste offert, jamais exigé.
-        const reclamee = estSemaineComptee(semaine, semActif?.fragments_premiere_semaine ?? 1)
-        const enRetard = reclamee && !depot && new Date(semaine.date_limite) < new Date()
-        const texte = depot
-          ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`
-          : reclamee
-            ? `Semaine ${semaine.numero} — à déposer avant ${limite}`
-            : `Semaine ${semaine.numero} — dépôt libre, rien n’est réclamé`
-        fragmentTaches.push({ texte, depose: !!depot, enRetard, pistes: [], classe: insc.classe_nom, inscriptionId: insc.id })
-      }
-      // Le thème du semestre courant, et son commentaire s'il attend une réponse.
-      // Indépendant de la semaine ouverte : un commentaire se lit même sans dépôt dû.
-      if (semActif?.id && aModule(insc.classe_id, 'fragments-erudition')) {
-        const { data: t } = await supabase
-          .from('fragments_themes')
-          .select('theme, propose_at, valide_at, commentaire_prof, commente_at')
-          .eq('inscription_id', insc.id)
-          .eq('semestre_id', semActif.id)
-          .maybeSingle()
+      return Promise.all(enContexte.map(async (insc) => {
+        let tache: FragmentTache | null = null
+        let theme: { inscriptionId: string; classe: string; commentaire: string } | null = null
+        if (!aModule(insc.classe_id, 'fragments-erudition')) return { tache, theme }
+
+        const [depotLu, themeLu] = await Promise.all([
+          semaine
+            ? supabase
+              .from('fragments_depots')
+              .select('id, statut')
+              .eq('inscription_id', insc.id)
+              .eq('semaine_id', semaine.id)
+              .maybeSingle()
+            : null,
+          // Le thème du semestre courant, et son commentaire s'il attend une réponse.
+          // Indépendant de la semaine ouverte : un commentaire se lit même sans dépôt dû.
+          semActif?.id
+            ? supabase
+              .from('fragments_themes')
+              .select('theme, propose_at, valide_at, commentaire_prof, commente_at')
+              .eq('inscription_id', insc.id)
+              .eq('semestre_id', semActif.id)
+              .maybeSingle()
+            : null,
+        ])
+
+        if (semaine) {
+          const depot = depotLu?.data ?? null
+          // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : on
+          // nomme le JOUR dans ce fuseau — en UTC, l'échéance du dimanche dirait lundi.
+          const limite = formatInstant(semaine.date_limite as string, fuseau, { weekday: 'long', day: 'numeric', month: 'long' })
+          // C8-L4 — une semaine que Fragments ne réclame pas ne met personne en
+          // retard, et ne s'annonce pas comme un travail dû. Le professeur peut
+          // l'avoir ouverte à dessein : le dépôt reste offert, jamais exigé.
+          const reclamee = estSemaineComptee(semaine, semActif?.fragments_premiere_semaine ?? 1)
+          const enRetard = reclamee && !depot && new Date(semaine.date_limite) < new Date()
+          const texte = depot
+            ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`
+            : reclamee
+              ? `Semaine ${semaine.numero} — à déposer avant ${limite}`
+              : `Semaine ${semaine.numero} — dépôt libre, rien n’est réclamé`
+          tache = { texte, depose: !!depot, enRetard, pistes: [], classe: insc.classe_nom, inscriptionId: insc.id }
+
+          // Pistes du dernier retour (analyse publiée la plus récente de cette inscription).
+          const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', insc.id)
+          const depotIds = (depots ?? []).map((d) => d.id as string)
+          const { data: derniere } = depotIds.length > 0
+            ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
+            : { data: null }
+          if (derniere) {
+            const { data: ps } = await admin
+              .from('fragments_pistes')
+              .select('contenu')
+              .eq('analyse_id', derniere.id)
+              .eq('statut', 'proposee')
+              .order('created_at')
+              .limit(3)
+            tache.pistes = (ps ?? []).map((p) => p.contenu as string)
+          }
+        }
+
+        const t = themeLu?.data ?? null
         const etat = t ? {
           theme: t.theme as string | null,
           propose_at: (t.propose_at as string | null) ?? null,
@@ -159,77 +209,75 @@ export default async function TableauDeBordEleve() {
           commente_at: (t.commente_at as string | null) ?? null,
         } : null
         if (etat && statutDuTheme(etat) === 'commente') {
-          themesCommentes.push({ inscriptionId: insc.id, classe: insc.classe_nom, commentaire: etat.commentaire_prof as string })
+          theme = { inscriptionId: insc.id, classe: insc.classe_nom, commentaire: etat.commentaire_prof as string }
         }
-      }
+        return { tache, theme }
+      }))
+    })())
 
-      if (aModule(insc.classe_id, 'codex')) {
-        const { data: codex } = await admin.from('codex_sessions').select('id').eq('classe_id', insc.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
-        if (codex?.id) codexEnCours.push({ id: codex.id as string, classe: insc.classe_nom })
-      }
-      if (aModule(insc.classe_id, 'quazian')) {
-        const { data: quizz } = await admin.from('quazian_quizzes').select('id').eq('classe_id', insc.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
-        if (quizz?.id) quizzEnCours.push({ id: quizz.id as string, classe: insc.classe_nom })
-      }
-
-      // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
-      if (aModule(insc.classe_id, 'aletheia')) {
-        const livres = (await livresPourClasse(admin, insc.classe_id)).filter((l) => l.semaines.length > 0)
-        // (perf #2) livresPourClasse a déjà les séances exposées → on les passe pour éviter un
-        // modeExposition redondant par livre.
-        const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user.id, l.id, insc.classe_id, l.semaines.map((s) => s.semaine))))
-        if (done.some((d) => !d)) aletheiaAFaire.push({ classe: insc.classe_nom })
-      }
-    }
-
-    // Pistes du dernier retour (analyse publiée la plus récente de cette inscription).
-    // `fragmentTaches` ne contient déjà que des inscriptions dont la classe a le
-    // module : la boucle porte son propre périmètre.
-    for (const ft of fragmentTaches) {
-      const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', ft.inscriptionId)
-      const depotIds = (depots ?? []).map((d) => d.id as string)
-      const { data: derniere } = depotIds.length > 0
-        ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
-        : { data: null }
-      if (derniere) {
-        const { data: ps } = await admin
-          .from('fragments_pistes')
-          .select('contenu')
-          .eq('analyse_id', derniere.id)
-          .eq('statut', 'proposee')
-          .order('created_at')
-          .limit(3)
-        ft.pistes = (ps ?? []).map((p) => p.contenu as string)
-      }
-    }
+    // ── Codex, quizz, Aletheia : une passe par inscription, les trois ensemble.
+    const pSeances = lancer(Promise.all(enContexte.map(async (insc) => {
+      const [codex, quizz, aletheia] = await Promise.all([
+        aModule(insc.classe_id, 'codex')
+          ? admin.from('codex_sessions').select('id').eq('classe_id', insc.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
+          : null,
+        aModule(insc.classe_id, 'quazian')
+          ? admin.from('quazian_quizzes').select('id').eq('classe_id', insc.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
+          : null,
+        // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
+        aModule(insc.classe_id, 'aletheia')
+          ? (async () => {
+            const livres = (await livresPourClasse(admin, insc.classe_id)).filter((l) => l.semaines.length > 0)
+            // (perf #2) livresPourClasse a déjà les séances exposées → on les passe pour éviter un
+            // modeExposition redondant par livre.
+            const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user.id, l.id, insc.classe_id, l.semaines.map((s) => s.semaine))))
+            return done.some((d) => !d)
+          })()
+          : false,
+      ])
+      return { insc, codexId: (codex?.data?.id as string | undefined) ?? null, quizzId: (quizz?.data?.id as string | undefined) ?? null, aletheia }
+    })))
 
     // Flashcards dues — via la même dérivation de visibilité que la file de révision
     // (sinon on comptait des cartes d'unités non publiées / non assignées à l'élève).
     // `chargerStatsRevision` lit le contexte de classe : il agrège de lui-même en
     // état « Toutes », d'où un seul appel ici et un compteur unique.
-    if (uneClasseA('quazian')) cartesDues = (await chargerStatsRevision()).dues
+    const pStats = uneClasseA('quazian') ? lancer(chargerStatsRevision()) : null
 
     // Semaine calendaire en cours (depuis le semestre actif + vacances).
-    const { data: semCal } = await admin.from('semesters').select('id, start_date, end_date').eq('is_active', true).maybeSingle()
-    if (semCal) {
-      const { data: hols } = await admin.from('holidays').select('label, start_date, end_date').eq('semester_id', semCal.id)
-      const today = jourDansFuseau(new Date(), await lireFuseau())
+    const pSemaineCourante = lancer((async (): Promise<SemaineCourante> => {
+      const { data: semCal } = await admin.from('semesters').select('id, start_date, end_date').eq('is_active', true).maybeSingle()
+      if (!semCal) return null
+      const [{ data: hols }, fuseau] = await Promise.all([
+        admin.from('holidays').select('label, start_date, end_date').eq('semester_id', semCal.id),
+        lireFuseau(),
+      ])
+      const today = jourDansFuseau(new Date(), fuseau)
       const wk = calculerGrilleSemaines(semCal, hols ?? []).find((w) => w.start <= today && today <= w.end)
-      if (wk) {
-        semaineCourante = {
-          label: wk.isVacation ? `Vacances${wk.vacanceLabel ? ` — ${wk.vacanceLabel}` : ''}` : `Semaine ${wk.pedagogicalNumber}`,
-          debut: wk.start,
-          fin: wk.end,
-          vacances: wk.isVacation,
-        }
+      if (!wk) return null
+      return {
+        label: wk.isVacation ? `Vacances${wk.vacanceLabel ? ` — ${wk.vacanceLabel}` : ''}` : `Semaine ${wk.pedagogicalNumber}`,
+        debut: wk.start,
+        fin: wk.end,
+        vacances: wk.isVacation,
       }
+    })())
+
+    // ── Le reversement, dans l'ordre des inscriptions.
+    for (const f of await pFragments) {
+      if (f.tache) fragmentTaches.push(f.tache)
+      if (f.theme) themesCommentes.push(f.theme)
     }
+    for (const s of await pSeances) {
+      if (s.codexId) codexEnCours.push({ id: s.codexId, classe: s.insc.classe_nom })
+      if (s.quizzId) quizzEnCours.push({ id: s.quizzId, classe: s.insc.classe_nom })
+      if (s.aletheia) aletheiaAFaire.push({ classe: s.insc.classe_nom })
+    }
+    if (pStats) cartesDues = (await pStats).dues
+    semaineCourante = await pSemaineCourante
   }
 
-  // Les signaux de semaine, suggestions, fiches, examens et modules sont des
-  // lectures indépendantes. Leurs gardes et périmètres vivent dans leurs lecteurs.
-  const { semaines, push, fichesVues, examensALire, modulesActifs } =
-    await chargerSignauxTableau(admin, supabase, user.id, enContexte)
+  const { semaines, push, fichesVues, examensALire, modulesActifs } = await pSignaux
 
   // ── Construction des tâches priorisées ──────────────────────────────────────
   // En état « Toutes », chaque tâche porte sa classe (`classe`) et une clé qui la
@@ -378,7 +426,21 @@ export default async function TableauDeBordEleve() {
 
   // « Mes mondes » : état dérivé (a-t-il une tâche en cours ?).
   const modulesAvecTache = new Set(taches.map((t) => t.module))
-  const mondes = modulesActifs.map((m) => ({
+  // ⭐ 17/09 — « Mes mondes » SUIT L'ORDRE DU MENU. La lecture des modules n'a jamais
+  //    porté d'`order` : l'ordre des tuiles était celui que la base voulait bien
+  //    rendre, et il changeait d'un chargement à l'autre (mesuré : 2 accueils sur 30
+  //    sous rafale avec l'ancien code, 20 sur 30 une fois les lectures groupées). Le
+  //    menu « Modules » porte le seul ordre écrit quelque part ; un module qu'il ne
+  //    connaît pas passe après, par slug.
+  const ordreDuMenu = (NAV_ELEVE.find((t) => t.label === 'Modules')?.items ?? [])
+    .map((it) => it.href.split('/').pop() ?? '')
+  const rangDuMenu = (slug: string) => {
+    const i = ordreDuMenu.indexOf(slug)
+    return i === -1 ? ordreDuMenu.length : i
+  }
+  const mondes = [...modulesActifs]
+    .sort((a, b) => rangDuMenu(a.slug) - rangDuMenu(b.slug) || a.slug.localeCompare(b.slug))
+    .map((m) => ({
     slug: m.slug,
     nom: nomDuModule(m.slug, m.nom),
     sceau: SCEAU[m.slug] as ModuleSceau | undefined,

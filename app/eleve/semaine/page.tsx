@@ -18,6 +18,7 @@ import { COMPETENCES, type Competence } from '@/utils/chaine/types'
 import { NOM_COMPETENCE } from '@/utils/competences-classe'
 import OffreDEnFairePlus from './OffreDEnFairePlus'
 import Pastille from '@/components/Pastille'
+import { lancer } from '@/utils/lancer'
 
 // ============================================================================
 // C6 · L2 — L'ÉCRAN DE LA SEMAINE. Un écran, DEUX TEMPS, jamais les deux.
@@ -157,6 +158,13 @@ export default async function SemaineDeLEleve({
   //    EN DOUBLE — « 0 sur 8 » pour quatre exercices, et le bloc des compétences
   //    rendu deux fois. Le dédoublonnage se fait par `depotId`, dans le
   //    chargeur, AVANT que la frise, le récapitulatif et le bilan soient comptés.
+  // ⭐ 17/09 — la semaine et le quota ne dépendent pas l'un de l'autre : ils partent
+  //    ensemble (le quota, plus bas, ne fait plus que s'attendre). Deux lectures,
+  //    aucune écriture ; chacun garde ses propres incidents.
+  const incidentsDuQuota: string[] = []
+  const pQuota = enContexte.length > 0 && estLaSemaineEnCours
+    ? lancer(lireLeQuotaDuCycle(admin, user.id, cycleLundi, incidentsDuQuota))
+    : null
   const semaine = await chargerLaSemaineDeLEleve(
     admin, user.id, enContexte.map((i) => i.classe_id), cycleLundi, fuseau)
 
@@ -168,10 +176,7 @@ export default async function SemaineDeLEleve({
   // ⚠️ Et il ne se lit QUE sur la semaine EN COURS : « les minutes non utilisées
   //    sont perdues, sans report » — une semaine passée n'a plus de quota à
   //    offrir, et le pull, lui, écrit toujours sur le cycle courant.
-  const incidentsDuQuota: string[] = []
-  const quota = enContexte.length > 0 && estLaSemaineEnCours
-    ? await lireLeQuotaDuCycle(admin, user.id, cycleLundi, incidentsDuQuota)
-    : null
+  const quota = pQuota ? await pQuota : null
 
   // ⛔ DEUX VIDES À DISTINGUER, PAS UN (`07-` §5). La porte fermée n'est pas
   //    « tu n'as rien à faire », et l'élève n'a JAMAIS à connaître le nom d'un

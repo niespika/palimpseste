@@ -35,6 +35,7 @@ import { formeDuTrou, morceauxDuPassage, separerLeTrou } from '@/utils/gabarit/p
 import { marquerLeMateriau, pointDInsertion } from '@/utils/deroule/marquage'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
+import { lancer } from '@/utils/lancer'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -425,27 +426,6 @@ interface LigneExercice {
 }
 
 export class DepotIllisible extends Error {}
-
-/**
- * ⭐ 17/09 — FAIRE PARTIR UNE LECTURE SANS L'ATTENDRE. `lireContexte` enchaînait
- * une quinzaine de lectures dont presque aucune ne dépend d'une autre ; chacune
- * coûte un aller-retour, et ce chargeur est sur le trajet de CHAQUE rendu du
- * déroulé et de CHAQUE geste de l'élève (mesuré : ~38 sauts en série par écran).
- * Les lectures indépendantes partent donc ensemble, dès que le dépôt et
- * l'exercice sont connus ; le code les ATTEND ensuite à l'endroit, et dans
- * l'ordre, où il les lisait — mêmes refus, mêmes messages, même résultat.
- *
- * ⚠️ Un constructeur de requête supabase est PARESSEUX : il ne part qu'au `then`.
- *    `Promise.resolve` le déclenche.
- * ⚠️ Le `catch` muet ne cache rien : il évite qu'une lecture partie en avance,
- *    puis jamais attendue parce qu'un refus est tombé avant elle, ne remonte en
- *    rejet non géré. Qui l'attend reçoit toujours son rejet.
- */
-function lancer<T>(lecture: PromiseLike<T>): Promise<T> {
-  const p = Promise.resolve(lecture)
-  p.catch(() => {})
-  return p
-}
 
 export async function lireContexte(admin: Admin, depotId: string): Promise<ContexteDepot> {
   const { data: depotBrut, error: eDepot } = await admin

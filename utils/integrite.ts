@@ -99,9 +99,13 @@ export async function lireParamsIntegrite(admin: Admin): Promise<ParamsIntegrite
 // Message de blocage à montrer à l'élève s'il est bloqué (et le système actif),
 // sinon null. Sert de garde-fou serveur (rendus, révision) ET de bannière UI.
 export async function messageSiBloque(admin: Admin, eleveId: string): Promise<string | null> {
-  const params = await lireParamsIntegrite(admin)
+  // 17/09 — les deux lectures partent ensemble : cette garde joue à chaque geste
+  // de l'élève, et le réglage est presque toujours actif.
+  const [params, { data }] = await Promise.all([
+    lireParamsIntegrite(admin),
+    admin.from('profiles').select('integrite_bloque').eq('id', eleveId).maybeSingle(),
+  ])
   if (!params.actif) return null
-  const { data } = await admin.from('profiles').select('integrite_bloque').eq('id', eleveId).maybeSingle()
   return data?.integrite_bloque ? params.messageBloque : null
 }
 

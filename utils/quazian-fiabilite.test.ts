@@ -57,6 +57,8 @@ function dependances(db: ReturnType<typeof base>) {
     'next/cache': { revalidatePath: () => {} },
     '@/utils/acces': { classeIdsActives: async () => ['classe-test'] },
     '@/utils/brier': {},
+    // 17/09 — le départ groupé des lectures : ici, la vraie mécanique, sans le module.
+    '@/utils/lancer': { lancer: <T>(l: PromiseLike<T>) => { const p = Promise.resolve(l); p.catch(() => {}); return p } },
   }
 }
 const etat = { id: '11111111-1111-1111-1111-111111111111', difficulty: 5, stability: 3, state: 2, due: '2026-09-01T12:00:00Z', last_review: '2026-08-29T12:00:00Z', reps: 2, lapses: 0 }

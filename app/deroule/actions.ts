@@ -62,6 +62,7 @@ import {
   lireLaPorteDuSignalement, poserLeSignalement, retirerLeSignalement,
 } from '@/utils/signalements/serveur'
 import type { TelemetrieSaisie, Version } from '@/utils/deroule/types'
+import { lancer } from '@/utils/lancer'
 
 export interface Reponse { ok: boolean; message: string }
 const echec = (message: string): Reponse => ({ ok: false, message })
@@ -163,13 +164,6 @@ async function portier(depotId: string, ecriture: boolean | 'brouillon' = true):
     })) return { erreur: echec(MESSAGE_SEMAINE_FERMEE) }
   }
   return { admin, userId, depot, delaiVfJours }
-}
-
-/** Faire partir une lecture sans l'attendre — voir `utils/deroule/vue.ts`. */
-function lancer<T>(lecture: PromiseLike<T>): Promise<T> {
-  const p = Promise.resolve(lecture)
-  p.catch(() => {})
-  return p
 }
 
 // ── La vue ──────────────────────────────────────────────────────────────────
