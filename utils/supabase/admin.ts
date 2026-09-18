@@ -24,7 +24,8 @@ function fabriquer() {
 //    Hors rendu, `cache` ne mémoïse pas : un client neuf par appel, comme
 //    avant. MESURÉ le 17/09 (sonde jetée) : route, Server Action, et leurs
 //    `after()` → deux appels, deux clients. Hors de Next (scripts, tests),
-//    `cache` n'existe pas : même repli.
+//    `cache` est un passe-plat qui ne mémoïse pas — et la garde `memo ?` couvre
+//    un React qui ne l'exporterait pas.
 // ⛔ SEULE EXCEPTION, mesurée aussi : un `after()` lancé DEPUIS UN RENDU de page
 //    garde la mémoire de ce rendu — même client, mêmes réglages mémoïsés, aussi
 //    longtemps qu'il tourne. Aucun n'existe aujourd'hui (les 24 `after()` du

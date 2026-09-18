@@ -19,6 +19,7 @@
 // formatEcheanceFr) testées dans aletheia-dates.test.ts. Les fonctions à I/O prennent
 // le client `admin` en paramètre (scriptorium_parcours* est en RLS prof-only).
 
+import * as React from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addDaysUTC, toISODate } from './calendrier-grille'
 import { construireApercuAssign, type AssignParcours, type ApercuSemaine } from './parcours-apercu'
@@ -211,7 +212,17 @@ interface CreneauLivre {
 // (scriptorium_parcours_classe_creneaux) — le couple (livre, classe) est natif, plus de
 // jointure créneaux modèle × assignations. Même précédence, mêmes verdicts (l'instance
 // est une copie conforme du modèle à l'assignation, divergente ensuite PAR CLASSE).
-async function chargerCreneauxEtAssignations(
+// ⭐ 17/09 — MÉMOÏSÉ PAR RENDU. La page de séance appelait cette lecture DEUX fois
+//    (mode d'exposition, puis date de la séance), la liste des livres une fois par
+//    livre : trois allers-retours rejoués pour la même paire (livre, classe). Le
+//    client admin est un par rendu, donc la clé (admin, livre, classe) tombe juste ;
+//    hors rendu (action, route, script), `cache` ne mémoïse pas — comme avant.
+//    Lecture seule : rien n'y écrit.
+const memo = (React as { cache?: <T extends (...a: never[]) => unknown>(f: T) => T }).cache
+const chargerCreneauxEtAssignations: typeof chargerCreneauxEtAssignationsBrut =
+  memo ? memo(chargerCreneauxEtAssignationsBrut) : chargerCreneauxEtAssignationsBrut
+
+async function chargerCreneauxEtAssignationsBrut(
   admin: SupabaseClient, livreId: string, classeId: string,
 ): Promise<{ creneaux: CreneauLivre[]; assignParParcours: Map<string, AssignParcours> }> {
   const vide = { creneaux: [] as CreneauLivre[], assignParParcours: new Map<string, AssignParcours>() }
@@ -234,17 +245,19 @@ async function chargerCreneauxEtAssignations(
 
   // Créneaux-livre de l'INSTANCE de ces assignations pour CE livre.
   const pcIds = assignData.map(a => a.id as string)
-  const { data: creneauxRaw } = await admin.from('scriptorium_parcours_classe_creneaux')
-    .select('id, parcours_classe_id, semaine, livre_semaine_debut, livre_semaine_fin')
-    .eq('ref_type', 'livre').eq('livre_id', livreId).in('parcours_classe_id', pcIds)
-  if (!creneauxRaw || creneauxRaw.length === 0) return vide
-
   // Parcours VIVANTS (nb_semaines pour l'aperçu) ; un parcours soft-deleté sort
   // d'assignParParcours → ses créneaux d'instance sont filtrés en aval (inchangé).
+  // 17/09 — les créneaux et les parcours ne dépendent que des assignations : ensemble.
   const parcoursParPc = new Map(assignData.map(a => [a.id as string, a.parcours_id as string]))
   const parcoursIds = [...new Set(assignData.map(a => a.parcours_id as string))]
-  const { data: parcours } = await admin.from('scriptorium_parcours')
-    .select('id, nb_semaines, supprime_at').in('id', parcoursIds)
+  const [{ data: creneauxRaw }, { data: parcours }] = await Promise.all([
+    admin.from('scriptorium_parcours_classe_creneaux')
+      .select('id, parcours_classe_id, semaine, livre_semaine_debut, livre_semaine_fin')
+      .eq('ref_type', 'livre').eq('livre_id', livreId).in('parcours_classe_id', pcIds),
+    admin.from('scriptorium_parcours')
+      .select('id, nb_semaines, supprime_at').in('id', parcoursIds),
+  ])
+  if (!creneauxRaw || creneauxRaw.length === 0) return vide
   const nbParParcours = new Map<string, number>()
   for (const p of parcours ?? []) {
     if ((p.supprime_at as string | null) == null) nbParParcours.set(p.id as string, (p.nb_semaines as number) ?? 0)
@@ -407,14 +420,20 @@ export async function livresGouvernesPourClasses(admin: SupabaseClient, classeId
   const rows = assigns ?? []
   if (rows.length === 0) return []
   const parcoursIds = [...new Set(rows.map(a => a.parcours_id as string))]
-  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
+  // 17/09 — les parcours et les créneaux partent ensemble ; les créneaux se lisent sur
+  // TOUTES les assignations, puis se filtrent en mémoire sur les parcours vivants —
+  // même résultat qu'en lisant après, un aller-retour de moins en série.
+  const [{ data: parcours }, { data: creneauxTous }] = await Promise.all([
+    admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds),
+    admin.from('scriptorium_parcours_classe_creneaux')
+      .select('livre_id, parcours_classe_id').eq('ref_type', 'livre').in('parcours_classe_id', rows.map(a => a.id as string)),
+  ])
   const vivants = new Set((parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string))
-  const pcIds = rows.filter(a => vivants.has(a.parcours_id as string)).map(a => a.id as string)
-  if (pcIds.length === 0) return []
+  const pcIds = new Set(rows.filter(a => vivants.has(a.parcours_id as string)).map(a => a.id as string))
+  if (pcIds.size === 0) return []
   // Créneaux-livre d'INSTANCE des assignations vivantes (RAG L1).
-  const { data: creneaux } = await admin.from('scriptorium_parcours_classe_creneaux')
-    .select('livre_id').eq('ref_type', 'livre').in('parcours_classe_id', pcIds)
-  return [...new Set((creneaux ?? []).map(c => c.livre_id as string))]
+  const creneaux = (creneauxTous ?? []).filter(c => pcIds.has(c.parcours_classe_id as string))
+  return [...new Set(creneaux.map(c => c.livre_id as string))]
 }
 
 /**

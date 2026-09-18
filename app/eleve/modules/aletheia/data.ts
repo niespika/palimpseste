@@ -26,11 +26,16 @@ export interface InscriptionAletheia { id: string; classe_id: string; classe_nom
 export async function contexteAletheia(
   supabase: SupabaseClient, userId: string,
 ): Promise<{ moduleActif: boolean; inscriptions: InscriptionAletheia[]; active: InscriptionAletheia | null; toutes: boolean; horsClasse: string | null }> {
-  const { data: moduleData } = await supabase.from('modules').select('id, actif').eq('slug', 'aletheia').maybeSingle()
+  // 17/09 — le module et le contexte de classe ne se doivent rien : ensemble. Les
+  //    inscriptions du module attendent l'id du module, comme avant.
+  const [{ data: moduleData }, contexte] = await Promise.all([
+    supabase.from('modules').select('id, actif').eq('slug', 'aletheia').maybeSingle(),
+    contexteClasseEleve(supabase, userId),
+  ])
   if (!moduleData?.actif) return { moduleActif: false, inscriptions: [], active: null, toutes: false, horsClasse: null }
   const inscriptions = await inscriptionsModuleEleve(supabase, userId, moduleData.id as string)
   if (inscriptions.length === 0) return { moduleActif: true, inscriptions: [], active: null, toutes: false, horsClasse: null }
-  const { active, toutes } = await contexteClasseEleve(supabase, userId)
+  const { active, toutes } = contexte
   const ici = inscriptions.find(i => i.id === active?.id)
   const inscriptionActive = ici ?? inscriptions[0]
   const horsClasse = !toutes && active && !ici ? active.classe_nom : null
@@ -169,19 +174,23 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
 // devrait contenir que des livres, mais on ne s'appuie pas dessus pour la garde).
 export async function livreAccessible(admin: SupabaseClient, classeIds: string[], livreId: string): Promise<boolean> {
   if (classeIds.length === 0) return false
-  const { data: lien } = await admin
-    .from('scriptorium_unite_classes')
-    .select('unite_id')
-    .eq('unite_id', livreId)
-    .in('classe_id', classeIds)
-    .limit(1)
+  // 17/09 — le lien direct et la nature du livre ne se doivent rien : ensemble. Le
+  //    repli par parcours ne part que si le lien direct manque, comme avant.
+  const [{ data: lien }, { data: u }] = await Promise.all([
+    admin
+      .from('scriptorium_unite_classes')
+      .select('unite_id')
+      .eq('unite_id', livreId)
+      .in('classe_id', classeIds)
+      .limit(1),
+    // defense-in-depth : c'est bien un livre ET non supprimé (un créneau pointant un
+    // livre soft-deleté ne doit pas le ré-exposer).
+    admin.from('scriptorium_unites').select('type, supprime_at').eq('id', livreId).maybeSingle(),
+  ])
   // (L4) Exposition UNION : direct OU via un parcours assigné actif (supersède décision 9).
   let expose = (lien ?? []).length > 0
   if (!expose) expose = (await livresGouvernesPourClasses(admin, classeIds)).includes(livreId)
   if (!expose) return false
-  // defense-in-depth : c'est bien un livre ET non supprimé (un créneau pointant un
-  // livre soft-deleté ne doit pas le ré-exposer).
-  const { data: u } = await admin.from('scriptorium_unites').select('type, supprime_at').eq('id', livreId).maybeSingle()
   return u?.type === 'livre' && (u?.supprime_at as string | null) == null
 }
 
