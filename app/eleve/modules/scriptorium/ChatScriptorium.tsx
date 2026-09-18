@@ -82,13 +82,15 @@ function Fleuron() {
 // La marque du Scriptorium en tête de conversation : sceau N&B en `multiply`
 // (même technique que Pastille.tsx), l'adresse, la ligne de transparence.
 // En bureau, la rangée se complète à droite du TITRE de la conversation et de
-// la pastille de quota (handoff, chantier 4). ⚠️ Mesuré le 18/09 : les titres
+// la pastille de quota (handoff, chantier 4) ; elle reste ÉPINGLÉE en haut
+// pendant que la correspondance défile (`sticky` dans la boîte défilante —
+// sinon le quota disparaissait dès qu'on lisait). ⚠️ Mesuré le 18/09 : les titres
 // font 60 caractères en médiane (tronqués à 60 à la création), pas 31 comme sur
 // la maquette — le titre se coupe donc avec des points de suspension, le texte
 // entier reste dans le `title`.
 function EnTeteLettre({ titre, restant }: { titre?: string; restant?: number }) {
   return (
-    <div className="flex items-center justify-between gap-3 pb-5 lg:pb-4 border-b border-bordure">
+    <div className="flex items-center justify-between gap-3 pb-5 lg:pb-4 border-b border-bordure lg:sticky lg:top-0 lg:z-10 lg:bg-surface-retrait">
       <div className="flex items-center gap-3 flex-none">
         <span className="relative inline-flex overflow-hidden flex-none w-[38px] h-[38px] rounded-full bg-pigment-teinte border border-bordure-bouton">
           <Image
@@ -253,6 +255,19 @@ export default function ChatScriptorium({
     abortRef.current?.abort()
   }
 
+  // Le ＋ du ruban est, en bureau, le SEUL chemin vers une conversation neuve.
+  // Quand on est déjà sur `/eleve/modules/scriptorium` (envoi échoué, ou réponse
+  // en cours d'une conversation pas encore adressée), Next ne remonte rien : la
+  // `key` reste 'nouvelle'. On remet donc l'état local à zéro nous-mêmes.
+  function nouvelleConversation() {
+    if (convActive) return // la navigation remonte le composant (`key`)
+    abortRef.current?.abort()
+    convIdRef.current = null
+    setMessages([])
+    setSaisie('')
+    setErreur(null)
+  }
+
   async function renommer(c: ConvResume) {
     const titre = prompt('Nouveau titre de la conversation :', c.titre)
     if (titre == null) return
@@ -300,16 +315,19 @@ export default function ChatScriptorium({
           href="/eleve"
           title="Retour à Palimpseste"
           aria-label="Retour à Palimpseste"
-          className={`relative inline-flex flex-none w-10 h-10 rounded-full overflow-hidden border border-bordure ${ANNEAU_FOCUS}`}
-          style={{ background: FOND_MEDAILLON }}
+          className={`relative inline-flex flex-none w-10 h-10 rounded-full ${ANNEAU_FOCUS}`}
         >
-          <Image
-            src="/sceaux/palimpseste_medaillon.png"
-            alt=""
-            fill
-            sizes="40px"
-            style={{ objectFit: 'cover', filter: 'brightness(1.05) contrast(1.05)', mixBlendMode: 'multiply' }}
-          />
+          {/* Le disque recadre l'image ; le chevron est son FRÈRE, hors du clip
+              (dans le disque, le cercle le rognait en croissant). */}
+          <span className="relative inline-flex w-10 h-10 rounded-full overflow-hidden border border-bordure" style={{ background: FOND_MEDAILLON }}>
+            <Image
+              src="/sceaux/palimpseste_medaillon.png"
+              alt=""
+              fill
+              sizes="40px"
+              style={{ objectFit: 'cover', filter: 'brightness(1.05) contrast(1.05)', mixBlendMode: 'multiply' }}
+            />
+          </span>
           <span
             aria-hidden
             className="absolute -left-px top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-pigment text-bouton-parcours-texte font-ui font-bold text-[11px] leading-4 text-center"
@@ -321,6 +339,7 @@ export default function ChatScriptorium({
         {/* Le sceau du module, anneau ocre = « tu es ici » (repris de la bande seuil). */}
         <span title="Scriptorium" className="inline-flex flex-none">
           <SceauModule cle="scriptorium" size={40} epaisseurAnneau={2} />
+          <span className="sr-only">Scriptorium</span>
         </span>
 
         <span aria-hidden className="w-7 h-px flex-none" style={FILET_RUBAN} />
@@ -329,6 +348,7 @@ export default function ChatScriptorium({
           href="/eleve/modules/scriptorium"
           title="Nouvelle conversation"
           aria-label="Nouvelle conversation"
+          onClick={nouvelleConversation}
           className={`inline-flex flex-none items-center justify-center w-10 h-10 rounded-[10px] bg-bouton-parcours text-bouton-parcours-texte font-ui font-medium text-[22px] leading-none hover:opacity-90 ${ANNEAU_FOCUS}`}
         >
           ＋
@@ -375,12 +395,13 @@ export default function ChatScriptorium({
           voile, pas d'ombre ; absent tant que le ≡ ne l'a pas ouvert. */}
       <aside
         id="tiroir-conversations"
+        aria-label="Conversations"
         className={`w-full flex-none px-4 py-5 flex flex-col gap-3.5 ${
           railOuvert ? 'lg:flex' : 'lg:hidden'
         } lg:w-[360px] lg:min-h-0 lg:px-0 lg:py-0 lg:gap-0 lg:bg-surface lg:border-r lg:border-bordure`}
       >
         {/* En-tête du tiroir (bureau). */}
-        <div className="hidden lg:flex items-start justify-between gap-3 px-5 pt-[18px] pb-3.5 border-b border-bordure">
+        <div className="hidden lg:flex lg:flex-none items-start justify-between gap-3 px-5 pt-[18px] pb-3.5 border-b border-bordure">
           <div className="min-w-0">
             <div className="font-marque font-semibold text-[16px] tracking-[.04em] text-pigment">Conversations</div>
             <div className="font-corps text-[13px] text-muet mt-0.5">Tes échanges avec le tuteur — {classeNom}.</div>
@@ -404,7 +425,7 @@ export default function ChatScriptorium({
           ＋ Nouvelle conversation
         </Link>
 
-        <p className="hidden lg:block font-ui text-[11px] font-bold uppercase tracking-[.11em] text-muet-clair px-5 pt-4 pb-2">
+        <p className="hidden lg:block lg:flex-none font-ui text-[11px] font-bold uppercase tracking-[.11em] text-muet-clair px-5 pt-4 pb-2">
           Récentes
         </p>
         <button
@@ -419,7 +440,7 @@ export default function ChatScriptorium({
 
         <div
           id="rail-conversations"
-          className={`${railOuvert ? '' : 'hidden lg:block'} lg:min-h-0 lg:overflow-y-auto lg:px-3.5 lg:pb-4`}
+          className={`${railOuvert ? '' : 'hidden lg:block'} lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:px-3.5 lg:pb-4`}
         >
           <ul className="flex flex-col gap-0.5 lg:gap-[7px]">
             {conversations.map(c => {
@@ -439,7 +460,9 @@ export default function ChatScriptorium({
                   <Link
                     href={`/eleve/modules/scriptorium?conv=${c.id}`}
                     aria-current={actif ? 'page' : undefined}
-                    onClick={() => setRailOuvert(false)}
+                    // Le tiroir se ferme au choix (bureau). Sous lg on ne touche
+                    // à rien : la liste restait ouverte jusqu'au remontage.
+                    onClick={() => { if (window.matchMedia('(min-width: 64rem)').matches) setRailOuvert(false) }}
                     className={`relative block font-corps text-[15px] truncate rounded-sm ${ANNEAU_FOCUS} ${
                       actif ? 'font-medium text-encre' : 'text-encre-douce hover:text-encre'
                     }`}

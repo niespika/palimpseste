@@ -129,8 +129,13 @@
    (`app/eleve/layout.tsx`, `data-coquille="eleve"`) retire alors l'en-tête à deux
    barres et le cadre du <main> — SUR lg SEULEMENT (sous 1024 px, rien ne change).
    `:has()` évite de faire relire `?vue=` à l'en-tête. Le ruban de 64 px du chat
-   porte le retour, le sceau et le Plan de cours à la place. */
-@media (min-width: 1024px) {
+   porte le retour, le sceau et le Plan de cours à la place.
+   ⚠️ 64rem, PAS 1024px : le `lg:` de Tailwind v4 est en rem. En px, une police
+   par défaut agrandie (accessibilité) ouvrait une bande sans AUCUNE navigation
+   (en-tête masqué ici, ruban pas encore rendu là). Trouvé par la passe adversariale.
+   Sans `:has()` (Firefox < 121) la règle est ignorée : en-tête ET ruban, dégradé
+   mais navigable. */
+@media (min-width: 64rem) {
   [data-coquille="eleve"]:has([data-sans-en-tete]) > header { display: none; }
   [data-coquille="eleve"]:has([data-sans-en-tete]) > main   { max-width: none; padding: 0; }
 }
