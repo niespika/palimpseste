@@ -6,7 +6,49 @@
 > `pg_stat_statements` de la prod en session lecture seule, comptes de lignes par PostgREST.
 > Les comptes d'allers-retours viennent de la lecture du code, pas de l'exécution.
 
-## 0 quater. Lot P2 — la passation lit ses copies ensemble : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+## 0 sexies. Lot P3 — la grille des compétences cesse de répéter les fiches : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+
+**Ce qui change**
+
+- **`utils/competences-grille.ts`** (neuf, module pur, sans `server-only` — le composant client
+  l'importe) : les formes que l'écran lit, et `observablesDeLaCellule`, qui recompose au champ près
+  l'`ObservableEleve` d'avant à partir de la colonne et de la cellule.
+- **`chargerGrilleCompetences`** : la fiche de chaque observable (`code`, `nom`, `ditALEleve`,
+  `telemetriePure`, `sens`, `famille`, `ordre`) est portée **une fois par colonne**, dans l'ordre
+  d'avant. Une cellule ne porte que ses nombres, **par code, et seulement si elle a au moins une
+  mesure** (une cellule sans mesure envoie `{}`, ses observables valent tous le même « rien ») ; la
+  date et la provenance de chaque mesure sont portées une fois par cellule, pas par observable.
+- **`GrilleCompetences.tsx`** recompose les observables de la seule cellule ouverte.
+- **Page de classe** : la liste de tous les élèves part avec la matrice ; la porte d'affichage, les
+  seuils de l'attention et la porte des retours à relire passent par `lireLesReglages` (une lecture
+  de `scriptorium_params` par rendu au lieu de quatre).
+
+**Mesuré.** Charge RSC de la grille au bac à sable (4 classes × 2 opt-out) : **1 578 → 303 Ko**.
+En prod, la vue Compétences de 1HLP pesait 847 Ko de grille sur 1 074 Ko de page.
+
+**Éprouvé**
+
+- `tsc` et `eslint` propres, 2 685 tests verts.
+- **336 cellules sur 336 identiques** (4 classes du bac à sable, deux variantes d'opt-out) : la
+  cellule recomposée par `observablesDeLaCellule` égale, champ par champ et dans l'ordre, la cellule
+  de l'ancien chargeur ; colonnes et comptes identiques.
+- **7 écrans identiques** ancien/nouveau (4 classes en vue Compétences, 2 en vue Activité, un
+  identifiant inconnu) avec la session prof du bac à sable.
+- **Vu à l'œil, sur les trois tailles** (1280, 768, 375) sur le bac à sable, classe T5 : la grille,
+  la cellule « Elo · Expression » ouverte (25 mesures, lettre B), ses observables avec dernière
+  valeur, acquisition et série de 12 points bornée (« + »).
+- **Passe adversariale** : rien de bloquant. Repris : la porte d'affichage passe aussi par
+  `lireLesReglages` ; l'ordre des imports ; un commentaire sur la branche 42703 devenue morte.
+  Notée, non reprise : le cast `as EntreeObservableMesure` (une construction l'interdit).
+
+**Piège payé.** Un composant client qui importe une **valeur** d'un module `server-only` entraîne tout
+le module dans le bundle client : la page rendait 500 en local. D'où le module pur, séparé.
+
+**Non éprouvé** : la prod (avant : 3,0 s et 1 074 Ko, `load` 6,3 s).
+
+## 0 quinquies. Lot P2 remesuré en prod (18/09) — Codex 23 copies 2,4 → **0,97 s**, 16 copies 1,9 → **0,89 s**, Aletheia 22 copies 2,35 → **0,97 s**
+
+## 0 quater. Lot P2 — la passation lit ses copies ensemble : codé, éprouvé, DÉPLOYÉ (18/09) — ⚠️ état dépassé, voir 0 quinquies
 
 **Ce qui change**
 

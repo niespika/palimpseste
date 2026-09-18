@@ -33,9 +33,10 @@ import { useId, useState } from 'react'
 import Link from 'next/link'
 import { formatInstant } from '@/utils/fuseau'
 import { COULEUR_LETTRE, type LettreSection } from '@/utils/notation'
-import type {
-  ColonneCompetence, CelluleCompetence, ObservableEleve, PointObservable,
-} from '@/utils/competences-classe'
+import {
+  observablesDeLaCellule,
+  type ColonneCompetence, type CelluleCompetence, type ObservableEleve, type PointObservable,
+} from '@/utils/competences-grille'
 
 type StatutObs = PointObservable['statut']
 
@@ -222,6 +223,10 @@ export default function GrilleCompetences({
   const eleveChoisi = choix ? eleves.find((e) => e.eleveId === choix.eleveId) ?? null : null
   const colonneChoisie = choix ? colonnes.find((c) => c.code === choix.competence) ?? null : null
   const celluleChoisie = choix ? cellules[choix.eleveId]?.[choix.competence] ?? null : null
+  // ⭐ 18/09 — la fiche vit sur la colonne, les nombres sur la cellule : on
+  //    recompose ici, pour la seule cellule ouverte, ce que l'écran lisait avant.
+  const observablesChoisis = colonneChoisie && celluleChoisie
+    ? observablesDeLaCellule(colonneChoisie, celluleChoisie) : []
 
   return (
     <section className="rounded-xl border border-bordure bg-surface overflow-hidden">
@@ -417,7 +422,7 @@ export default function GrilleCompetences({
               </div>
             </div>
 
-            {celluleChoisie.observables.length === 0 ? (
+            {observablesChoisis.length === 0 ? (
               <p className="font-corps text-sm text-encre-douce">
                 La fiche de cette compétence ne déclare aucun observable de mesure.
               </p>
@@ -434,7 +439,7 @@ export default function GrilleCompetences({
                     </tr>
                   </thead>
                   <tbody>
-                    {celluleChoisie.observables.map((o) => (
+                    {observablesChoisis.map((o) => (
                       <LigneObservable key={o.code} o={o} tz={tz} />
                     ))}
                   </tbody>

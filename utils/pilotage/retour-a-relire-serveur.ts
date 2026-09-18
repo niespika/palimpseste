@@ -1,4 +1,5 @@
 import 'server-only'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 import type { createAdminClient } from '../supabase/admin'
 import { lireContexte } from '../chaine/contexte'
 import { codesDeLInstrument } from '../chaine/chaine'
@@ -21,9 +22,15 @@ interface RetourLu {
 export async function drapeauxDeRetourARelire(
   admin: Admin, eleveIds: string[], nomDe: Map<string, string>, incidents: string[],
 ): Promise<Drapeau[]> {
-  const porte = await admin.from('scriptorium_params')
-    .select('retours_a_relire_depuis').eq('id', 1).maybeSingle()
+  // ⭐ 18/09 — la même ligne que les autres réglages, lue une fois par rendu.
+  //    Une colonne absente ne fait plus d'erreur : elle est absente de la ligne,
+  //    et la porte se lit fermée — le même résultat qu'avant.
+  const porte = await lireLesReglages(admin)
   // Une migration absente ferme sa porte sans casser le panneau existant.
+  // ⚠️ Depuis le 18/09 la ligne se lit en `select('*')` : une colonne absente ne
+  //    fait plus d'erreur, elle manque simplement à la ligne (`!depuis` ⇒ `[]`).
+  //    La branche 42703/PGRST204 ne joue donc plus ; elle reste pour une base où
+  //    la table elle-même manquerait.
   if (porte.error) {
     if (!['42703', 'PGRST204'].includes(porte.error.code)) {
       incidents.push(`l’ouverture des retours à relire : ${porte.error.message}`)

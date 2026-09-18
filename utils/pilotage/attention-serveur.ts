@@ -1,4 +1,5 @@
 import 'server-only'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 // ============================================================================
 // C6 · L1 — LES QUATRE DRAPEAUX, CHARGÉS. Un lot de COUTURE, pas d'écran.
 // ----------------------------------------------------------------------------
@@ -1034,9 +1035,9 @@ export async function chargerLAttentionDeLaClasse(
   const incidents: string[] = []
 
   const [rParams, cycles, pondere] = await Promise.all([
-    Promise.resolve(admin.from('scriptorium_params')
-      .select('contestations_repetees_seuil, faisceau_convergence_seuil')
-      .limit(1).maybeSingle()),
+    // ⭐ 18/09 — la ligne des réglages se lit UNE fois par rendu (`lireLesReglages`,
+    //    `cache()`), au lieu de trois lectures de la même ligne dans ce seul chargeur.
+    lireLesReglages(admin),
     lireLesCycles(admin, incidents),
     // ⭐ C7-L9 — le taux pondéré par cran, la porte du lot ouverte seulement (lue une fois, tolérante).
     lireLaPorteJugeMesure(admin as never),

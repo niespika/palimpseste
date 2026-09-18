@@ -14,6 +14,8 @@ import MatricePilotage from '@/components/pilotage/MatricePilotage'
 import MatriceCompetences from '@/components/pilotage/MatriceCompetences'
 import { chargerGrilleCompetences, type GrilleCompetencesClasse } from '@/utils/competences-classe'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { lancer } from '@/utils/lancer'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 import { FUSEAU_DEFAUT, jourDansFuseau } from '@/utils/fuseau'
 import {
   chargerLAttentionDeLaClasse, type AttentionDeLaClasse,
@@ -62,7 +64,9 @@ export default async function PilotageClasse({
     const [rActives, rParams] = await Promise.all([
       admin.from('competences_actives_par_classe')
         .select('competence, active').eq('classe_id', classeId),
-      admin.from('scriptorium_params').select('competences_affichage_actif').limit(1).maybeSingle(),
+      // ⭐ 18/09 — la ligne des réglages, lue une fois par rendu : l'attention, les
+      //    retours à relire, la porte du juge et la grille la reçoivent gratuitement.
+      lireLesReglages(admin),
     ])
     for (const a of (rActives.data ?? []) as Array<{ competence: string; active: boolean }>) {
       optOut[a.competence] = a.active
@@ -76,6 +80,10 @@ export default async function PilotageClasse({
   //    DE L'ÉCOLE. `lireFuseau` est mis en cache par requête — la seconde lecture,
   //    plus bas, ne coûte rien.
   const fuseauEcole = await lireFuseau()
+  // ⭐ 18/09 — la liste de tous les élèves (pour l'ajout) ne dépend pas de la
+  //    matrice : elle part avec elle (patron `utils/lancer.ts`), attendue plus bas.
+  const tousElevesQ = lancer(admin
+    .from('profiles').select('id, display_name').eq('role', 'eleve').order('display_name'))
   const matrice = await chargerMatricePilotage(admin, classeId, fuseauEcole)
   const lignesTriees = trierLignes(matrice.lignes, tri)
   const nbEleves = matrice.lignes.length
@@ -98,8 +106,7 @@ export default async function PilotageClasse({
 
   // Gestion des élèves : inscrits (depuis la matrice) + tous les élèves (pour l'ajout).
   const inscrits = matrice.lignes.map((l) => ({ id: l.eleveId, display_name: l.nom }))
-  const { data: tousEleves } = await admin
-    .from('profiles').select('id, display_name').eq('role', 'eleve').order('display_name')
+  const { data: tousEleves } = await tousElevesQ
 
   // ── La grille des lettres — seulement pour l'onglet qui la montre ────────
   // Elle réutilise les inscrits de la matrice : aucune seconde lecture de

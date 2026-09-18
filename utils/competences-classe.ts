@@ -59,7 +59,7 @@
 // ============================================================================
 
 import type { createAdminClient } from '@/utils/supabase/admin'
-import { COMPETENCES, type Competence, type StatutRecette } from '@/utils/chaine/types'
+import { COMPETENCES, type Competence } from '@/utils/chaine/types'
 import {
   etatCompetence,
   valeursDesParametres,
@@ -68,7 +68,6 @@ import {
 import {
   statutDeLaMesure,
   tauxDeReussite,
-  type Statut,
   type ValeurObservable,
 } from '@/utils/chaine/observables'
 import { mesuresQuiComptent } from '@/utils/routeur/mesure'
@@ -85,6 +84,19 @@ function cranDuDepotJoint(depot: unknown): number | null {
 }
 import { lireLesStatutsAvecDate, STATUT_PAR_DEFAUT } from '@/utils/statut-recette'
 import { LETTRES_SECTIONS, type LettreSection } from '@/utils/notation'
+
+import {
+  observablesDeLaCellule,
+  type DescripteurObservable, type PointMesureObservable, type MesureObservable,
+  type PointCellule, type PointObservable, type ObservableEleve,
+  type CelluleCompetence, type ColonneCompetence,
+} from '@/utils/competences-grille'
+export {
+  observablesDeLaCellule,
+  type DescripteurObservable, type PointMesureObservable, type MesureObservable,
+  type PointCellule, type PointObservable, type ObservableEleve,
+  type CelluleCompetence, type ColonneCompetence,
+}
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -108,102 +120,6 @@ export const NOM_COMPETENCE: Record<Competence, string> = {
  *    « voilà tout l'historique ».
  */
 export const SERIE_MAX = 12
-
-/** Un point de la série d'un observable — une mesure, à sa date. */
-export interface PointObservable {
-  /** `mesure_at`, en ISO — un INSTANT : il se formate dans le fuseau de l'école. */
-  date: string
-  valeur: ValeurObservable | null
-  statut: Statut
-  /** `true` quand la mesure vient d'un AUTRE cours que celui qu'on regarde. */
-  ailleurs: boolean
-}
-
-export interface ObservableEleve {
-  code: string
-  /** `competences_correspondance.dimension_eleve` — le nom DIT À L'ÉLÈVE. */
-  nom: string
-  /** `false` quand la fiche ne pose aucune question à l'élève sur cet observable. */
-  ditALEleve: boolean
-  /**
-   * ⚠️ LA TÉLÉMÉTRIE PURE SE DÉCLARE À LA FICHE (`reussie: 'sans_objet'`), elle
-   *    NE SE DÉDUIT PAS de l'absence d'une ligne de correspondance. Les deux ne
-   *    coïncident pas : `contresens_partiel` de la Synthèse est absent de la
-   *    correspondance et pourtant `reussie: 'au_plus'` — il JUGE l'élève.
-   *    L'étiqueter « télémétrie » aurait fait écarter un signal qui compte.
-   *    *Trouvé à la revue du 26/08.*
-   */
-  telemetriePure: boolean
-  /** Ce que la fiche appelle « réussi » — son `sens`, pour que le seuil se montre. */
-  sens: string | null
-  famille: string
-  ordre: number
-  derniere: ValeurObservable | null
-  statutDernier: Statut
-  /**
-   * L'ACQUISITION AU SENS DU ROUTEUR : taux sur la fenêtre d'évidence > 2/3.
-   * `null` quand la fenêtre ne porte aucune mesure ayant un objet — « un
-   * observable sans taux ne se classe pas ».
-   */
-  acquis: boolean | null
-  tauxFenetre: number | null
-  reussiesFenetre: number
-  denominateurFenetre: number
-  /** L'historique complet des mesures qui comptent — pour l'évolution, pas pour le verdict. */
-  reussies: number
-  denominateur: number
-  taux: number | null
-  serie: PointObservable[]
-  /** `true` quand la série affichée a été bornée à `SERIE_MAX`. */
-  serieTronquee: boolean
-}
-
-export interface CelluleCompetence {
-  /**
-   * LA LETTRE POSÉE — `competences_niveaux.lettre` (`07-` §1.3). C'est elle que
-   * le routeur lit et que l'élève voit.
-   *
-   * ⚠️ ELLE N'EST PAS `lettre_equivalente`, et les confondre serait inventer un
-   *    fait. Une mesure porte ce qu'ELLE valait ; la lettre posée est ce que la
-   *    compétence VAUT. Les deux se séparent réellement : au 26/08, le bac à
-   *    sable porte 102 niveaux à `lettre` NULLE sous des mesures qui, elles,
-   *    portent leur lettre-équivalente.
-   */
-  lettre: LettreSection | null
-  /** La PREMIÈRE lettre posée (`lettre_initiale`) — l'évolution de la lettre elle-même. */
-  lettreInitiale: LettreSection | null
-  /** Ce que valait la DERNIÈRE mesure qui compte. Un contexte, jamais la lettre. */
-  lettreEquivalenteDerniere: LettreSection | null
-  provisoire: boolean
-  /** Les mesures QUI COMPTENT — sondes de montée et pré-recette déjà retirées. */
-  nbMesures: number
-  /** Combien ont été écartées, et pourquoi il ne faut pas les chercher à l'écran. */
-  nbEcartees: number
-  /** Combien de ces mesures viennent d'un autre cours — 0 le plus souvent. */
-  nbAilleurs: number
-  derniereMesure: string | null
-  observables: ObservableEleve[]
-}
-
-export interface ColonneCompetence {
-  code: Competence
-  nom: string
-  /** Fiche dérivée ET chaîne branchée — sinon la colonne ne peut rien porter. */
-  ouverte: boolean
-  motif: string | null
-  statutRecette: StatutRecette
-  /** La borne basse des mesures qui comptent. `null` ⇒ aucune borne. */
-  statutPoseLe: string | null
-  /** L'opt-out de CETTE classe : `false` = ce cours ne travaille pas la compétence. */
-  active: boolean
-  /**
-   * Les mesures QUI COMPTENT pour LES ÉLÈVES de cette classe, TOUS COURS
-   * CONFONDUS — c'est ce qui est compté, et l'écran le dit ainsi. (Compter par
-   * `classe_id` mentirait dans l'autre sens : `classe_id` est NULL sur les
-   * mesures maison, qui sont la majorité.)
-   */
-  nbMesures: number
-}
 
 export interface GrilleCompetencesClasse {
   colonnes: ColonneCompetence[]
@@ -402,6 +318,7 @@ export async function chargerGrilleCompetences(
   let nbMesuresQuiComptent = 0
   let nbLettres = 0
 
+  const descripteursParCompetence = new Map<string, DescripteurObservable[]>()
   for (const code of COMPETENCES) {
     const etat = etatCompetence(code)
     const instrument = etat.instrument
@@ -411,6 +328,26 @@ export async function chargerGrilleCompetences(
     const parametres = instrument ? valeursDesParametres(instrument) : {}
     const poseLe = statutDe.get(code)?.poseLe ?? null
 
+    // ── La fiche, une fois pour la colonne ─────────────────────────────────
+    // L'ordre de la fiche telle qu'elle est dite à l'élève ; les observables
+    // qu'aucune question ne porte ferment la marche. Rien ici ne dépend de
+    // l'élève : l'ordre est le même dans toutes les cellules de la colonne.
+    const descripteurs: DescripteurObservable[] = declares.map(([obsCode, entree]) => {
+      const dit = libelle.get(`${code}|${obsCode}`)
+      return {
+        code: obsCode,
+        nom: dit?.nom ?? obsCode,
+        ditALEleve: !!dit,
+        telemetriePure: entree.reussie === 'sans_objet',
+        sens: entree.sens ?? null,
+        famille: entree.famille,
+        ordre: dit?.ordre ?? 999,
+      }
+    })
+    descripteurs.sort((a, b) => (a.ordre - b.ordre) || a.nom.localeCompare(b.nom, 'fr'))
+    descripteursParCompetence.set(code, descripteurs)
+    const entreeDe = new Map(declares)
+
     for (const eleveId of eleveIds) {
       const k = `${eleveId}|${code}`
       const toutes = parCellule.get(k) ?? []
@@ -419,47 +356,44 @@ export async function chargerGrilleCompetences(
       const fenetre = fenetreDEvidence(comptent)
       const niv = niveaux.get(k)
 
-      const observables: ObservableEleve[] = declares.map(([obsCode, entree]) => {
-        const valeurs = comptent.map((m) => m.observables?.[obsCode])
-        // ⭐ C7-L9 — le taux est PONDÉRÉ par le cran du dépôt (`01-` §8.2, 07/09) —
-        //    la même règle que le routeur, appelée, pas recopiée (`poidsDe`).
-        const tout = tauxDeReussite(valeurs, entree, parametres, pondere ? poidsDe(comptent) : undefined)
-        const surFenetre = tauxDeReussite(
-          fenetre.map((m) => m.observables?.[obsCode]), entree, parametres, pondere ? poidsDe(fenetre) : undefined)
-
-        const serieComplete: PointObservable[] = comptent.map((m, i) => ({
-          date: m.mesureAt,
-          valeur: valeurs[i] ?? null,
-          statut: statutDeLaMesure(valeurs[i], entree, parametres),
-          ailleurs: m.classeId !== null && m.classeId !== classeId,
-        }))
-        const serie = serieComplete.slice(-SERIE_MAX)
-        const dernier = serie.length ? serie[serie.length - 1] : null
-        const dit = libelle.get(`${code}|${obsCode}`)
-        return {
-          code: obsCode,
-          nom: dit?.nom ?? obsCode,
-          ditALEleve: !!dit,
-          telemetriePure: entree.reussie === 'sans_objet',
-          sens: entree.sens ?? null,
-          famille: entree.famille,
-          ordre: dit?.ordre ?? 999,
-          derniere: dernier?.valeur ?? null,
-          statutDernier: dernier?.statut ?? 'sans_objet',
-          acquis: surFenetre.taux === null ? null : estAcquis(surFenetre.taux),
-          tauxFenetre: surFenetre.taux,
-          reussiesFenetre: surFenetre.reussies,
-          denominateurFenetre: surFenetre.denominateur,
-          reussies: tout.reussies,
-          denominateur: tout.denominateur,
-          taux: tout.taux,
-          serie,
-          serieTronquee: serieComplete.length > serie.length,
+      // ── Les mesures de l'élève, par observable — seulement s'il en a ──────
+      // Une cellule sans mesure vaut `SANS_MESURE` pour chacun de ses observables :
+      // elle n'envoie rien, l'écran le recompose (`observablesDeLaCellule`).
+      const mesures: Record<string, MesureObservable> = {}
+      if (comptent.length > 0) {
+        for (const d of descripteurs) {
+          const entree = entreeDe.get(d.code) as EntreeObservableMesure
+          const valeurs = comptent.map((m) => m.observables?.[d.code])
+          // ⭐ C7-L9 — le taux est PONDÉRÉ par le cran du dépôt (`01-` §8.2, 07/09) —
+          //    la même règle que le routeur, appelée, pas recopiée (`poidsDe`).
+          const tout = tauxDeReussite(valeurs, entree, parametres, pondere ? poidsDe(comptent) : undefined)
+          const surFenetre = tauxDeReussite(
+            fenetre.map((m) => m.observables?.[d.code]), entree, parametres, pondere ? poidsDe(fenetre) : undefined)
+          const serieComplete: PointMesureObservable[] = comptent.map((m, i) => ({
+            valeur: valeurs[i] ?? null,
+            statut: statutDeLaMesure(valeurs[i], entree, parametres),
+          }))
+          const serie = serieComplete.slice(-SERIE_MAX)
+          const dernier = serie.length ? serie[serie.length - 1] : null
+          mesures[d.code] = {
+            derniere: dernier?.valeur ?? null,
+            statutDernier: dernier?.statut ?? 'sans_objet',
+            acquis: surFenetre.taux === null ? null : estAcquis(surFenetre.taux),
+            tauxFenetre: surFenetre.taux,
+            reussiesFenetre: surFenetre.reussies,
+            denominateurFenetre: surFenetre.denominateur,
+            reussies: tout.reussies,
+            denominateur: tout.denominateur,
+            taux: tout.taux,
+            serie,
+          }
         }
-      })
-      // L'ordre de la fiche telle qu'elle est dite à l'élève ; les observables
-      // qu'aucune question ne porte ferment la marche.
-      observables.sort((a, b) => (a.ordre - b.ordre) || a.nom.localeCompare(b.nom, 'fr'))
+      }
+      // La date et la provenance de chaque mesure, une fois pour la cellule.
+      const serieCellule: PointCellule[] = comptent.map((m) => ({
+        date: m.mesureAt,
+        ailleurs: m.classeId !== null && m.classeId !== classeId,
+      })).slice(-SERIE_MAX)
 
       const derniere = comptent.length ? comptent[comptent.length - 1] : null
       const lettre = niv?.lettre ?? null
@@ -476,7 +410,9 @@ export async function chargerGrilleCompetences(
         nbEcartees: toutes.length - comptent.length,
         nbAilleurs: comptent.filter((m) => m.classeId !== null && m.classeId !== classeId).length,
         derniereMesure: derniere?.mesureAt ?? null,
-        observables,
+        mesures,
+        serie: serieCellule,
+        serieTronquee: comptent.length > serieCellule.length,
       }
     }
   }
@@ -495,6 +431,7 @@ export async function chargerGrilleCompetences(
       // l'est pour toutes les classes » (`07-` §1.3). Seules les `false` retirent.
       active: optOut[code] !== false,
       nbMesures: nbParCompetence.get(code) ?? 0,
+      observables: descripteursParCompetence.get(code) ?? [],
     }
   })
 

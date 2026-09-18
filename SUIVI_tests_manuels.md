@@ -1,5 +1,9 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Vitesse côté prof — lot P3 (la grille des compétences allégée), éprouvé au bac à sable, NON déployé (18/09/2026)
+
+`tsc`, `eslint`, 2 685 tests verts. 336 cellules sur 336 identiques entre l'ancien chargeur et la cellule recomposée (4 classes du bac à sable, deux opt-out) ; charge 1 578 → 303 Ko. Sept écrans identiques ancien/nouveau avec la session prof du bac à sable. Vu à l'œil aux trois tailles sur T5, cellule « Elo · Expression » ouverte. Passe adversariale : rien de bloquant, trois points repris. P2 remesuré en prod : passation 2,4 → 0,97 s (23 copies). Détail au §0 sexies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
+
 ## Vitesse côté prof — lot P2 (la passation lit ses copies ensemble), éprouvé au bac à sable, NON déployé (18/09/2026)
 
 `tsc` propre, 2 685 tests verts. `chargerVueProf` JSON-identique ancien/nouveau sur les 16 instances du bac à sable qui ont des dépôts (8,2 → 4,0 s). Neuf écrans de passation identiques (Codex, Aletheia, Vestigia, identifiant inconnu) avec la session prof du bac à sable, 1,4 → 0,75 s en local. Repli sur troncature joué contre une doublure PostgREST (décompte exact, réponses plafonnées). Passe adversariale : rien de bloquant, deux points repris. P1 remesuré en prod après déploiement : signalement 2,9 → 2,5 s, conception 1,7 → 1,4 s — le volume de la doctrine (1,42 Mo) borne le gain, le cache entre requêtes reste à décider. Détail au §0 quater et §0 ter de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
