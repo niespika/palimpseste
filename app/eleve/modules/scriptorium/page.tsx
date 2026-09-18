@@ -83,7 +83,7 @@ export default async function ScriptoriumElevePage({
   const fuseau = await pFuseau
   const aujourdHui = jourDansFuseau(new Date().toISOString(), fuseau)
   // Le plan du cours ne dépend que de la classe : il part ici, et s'attend à sa place.
-  const pMatiere = lancer(chargerMatiereClasse(admin, classe.classe_id, aujourdHui))
+  const pMatiere = lancer(chargerMatiereClasse(admin, classe.classe_id, aujourdHui, { annee: true }))
 
   // Conversations vivantes de l'élève pour SA classe (RLS eleve_own).
   const { data: convs } = await supabase

@@ -327,7 +327,11 @@ export interface LivreRefCorpus { cle: string; titre: string; totalSeances: numb
  */
 export async function chargerMatiereClasse(
   admin: SupabaseClient, classeId: string, aujourdHui: string,
-): Promise<{ instances: InstanceCorpus[]; livres: LivreCorpus[]; annee: AnneeCorpus } | null> {
+  // `annee: true` (vue Année élève seulement) : lit la frise de l'année d'aujourd'hui pour
+  // rendre `annee` et `semainesAnnee`. Sans lui, aucune lecture de plus qu'avant : le
+  // corpus IA et le vivier du routeur n'en ont pas besoin (constat 5 de la passe adversariale).
+  opts: { annee?: boolean } = {},
+): Promise<{ instances: InstanceCorpus[]; livres: LivreCorpus[]; annee?: AnneeCorpus } | null> {
   // 1. Assignations ACTIVES de la classe (tolérant si colonnes snapshot absentes).
   let assignData: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
@@ -355,7 +359,7 @@ export async function chargerMatiereClasse(
   // avec celles des aperçus. La semaine d'année d'un lundi se lit par sa DATE, pas par
   // son rang : un snapshot publié garde ses dates même si la frise vivante a bougé.
   const ay = anneeScolaireDe(aujourdHui)
-  const friseAnnee = (await socleDe(ay)).frise
+  const friseAnnee = opts.annee ? (await socleDe(ay)).frise : []
   const indexParLundi = new Map(friseAnnee.map(w => [w.dateDebutLundi, w.indexContinu]))
   const semaineAnneeDe = (lundi: string): number | undefined => {
     const exact = indexParLundi.get(lundi)
@@ -366,7 +370,9 @@ export async function chargerMatiereClasse(
   }
   let couranteAnnee = 0
   for (const w of friseAnnee) if (w.dateDebutLundi <= aujourdHui && w.indexContinu > couranteAnnee) couranteAnnee = w.indexContinu
-  const annee: AnneeCorpus = { ay, nbSemaines: friseAnnee.length, semaineCourante: couranteAnnee, lundis: friseAnnee.map(w => w.dateDebutLundi) }
+  const annee: AnneeCorpus | undefined = opts.annee
+    ? { ay, nbSemaines: friseAnnee.length, semaineCourante: couranteAnnee, lundis: friseAnnee.map(w => w.dateDebutLundi) }
+    : undefined
   const brutes: {
     pcId: string; titre: string; nb: number; courante: number
     lundis: Record<number, string>; lundisISO: Record<number, string>; semainesAnnee: Record<number, number>
@@ -562,7 +568,7 @@ export async function chargerMatiereClasse(
         .map(f => ({ seance: f.semaine, texte: formaterFiche(f, chapParSeance.get(`${id}|${f.semaine}`) ?? null) })),
     }))
 
-  return { instances, livres: livresCorpus, annee }
+  return annee ? { instances, livres: livresCorpus, annee } : { instances, livres: livresCorpus }
 }
 
 /**

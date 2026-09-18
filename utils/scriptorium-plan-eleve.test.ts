@@ -131,7 +131,39 @@ test('construirePlanEleve : T5 — un parcours d’une semaine sans élément es
   assert.ok(!JSON.stringify(plan).includes('SECRET'), 'aucun texte de contenu ne franchit le DTO')
 })
 
-test('construirePlanEleve : matière nulle → plan vide', () => {
+test('etatParcours : un parcours d’une autre année scolaire, tout vu, est terminé — pas « à venir »', () => {
+  assert.equal(etatParcours(0, 0, 4, true), 'termine')
+  assert.equal(etatParcours(0, 0, 4, false), 'a_venir')
+  const ancien: InstanceCorpus = { ...INTRO, parcoursTitre: 'Ancien', nbSemaines: 3, semaineCourante: 3, semainesAnnee: {}, lundisISO: {}, lundis: {} }
+  const plan = construirePlanEleve({ instances: [ancien], annee: ANNEE })
+  assert.equal(plan.parcours[0].etat, 'termine')
+  assert.equal(plan.parcours[0].semaineDebut, 0)
+})
+
+test('construirePlanEleve : deux semaines de parcours sur la même semaine d’année ne font qu’un segment', () => {
+  const doublon: InstanceCorpus = { ...IDENTITE, semainesAnnee: { 1: 5, 2: 5, 3: 6, 4: 6 } }
+  const plan = construirePlanEleve({ instances: [doublon], annee: ANNEE })
+  assert.deepEqual(plan.parcours[0].semainesAnnee, [5, 6])
+  assert.deepEqual(segmentsDe(plan.parcours[0].semainesAnnee), [[5, 6]])
+})
+
+test('pistesDuRail : deux enjambées identiques prennent deux pistes ; repères des petites années', () => {
+  assert.deepEqual(pistesDuRail([{ semaineDebut: 3, semaineFin: 6 }, { semaineDebut: 3, semaineFin: 6 }]), [0, 1])
+  assert.deepEqual(reperesDuRail(1), [1])
+  assert.deepEqual(reperesDuRail(4), [1, 4])
+  assert.deepEqual(moisDuRail(['2026-09-07', '2026-09-14']).map(m => m.libelle), ['septembre'])
+})
+
+test('construirePlanEleve : une queue non datée ne borne pas la fin — semaineFin suit la dernière semaine DATÉE', () => {
+  const queue: InstanceCorpus = { ...IDENTITE, nbSemaines: 6 } // semaines 5 et 6 sans date
+  const plan = construirePlanEleve({ instances: [queue], annee: ANNEE })
+  assert.equal(plan.parcours[0].semaineFin, 6)
+  assert.equal(plan.parcours[0].nbSemaines, 6)
+  assert.equal(plan.parcours[0].lundiFin, '28 septembre') // le dernier lundi DÉFINI (semaine d'année 6), pas la 6e semaine du parcours
+})
+
+test('construirePlanEleve : matière nulle ou sans année → plan vide', () => {
+  assert.equal(construirePlanEleve({ instances: [IDENTITE] }).parcours.length, 0)
   const plan = construirePlanEleve(null)
   assert.equal(plan.parcours.length, 0)
   assert.equal(plan.annee.nbSemaines, 0)

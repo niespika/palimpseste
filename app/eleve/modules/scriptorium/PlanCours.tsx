@@ -171,8 +171,12 @@ function MentionDerniere() {
 // ── La frise d'un parcours (le volet) ────────────────────────────────────────
 
 function FriseParcours({ p }: { p: ParcoursPlan }) {
+  // Deux cas où la semaine « courante » de l'instance (la dernière COMMENCÉE, §5.2) n'est
+  // pas « cette semaine » : le parcours est TERMINÉ (tout est vu), ou il est en PAUSE
+  // d'alternance (`reprise`) — la dernière semaine commencée rejoint alors le passé.
+  const sansCourante = p.etat === 'termine' || p.reprise != null
   const etatDe = (s: SemainePlan): 'vu' | 'courante' | 'a_venir' =>
-    s.courante ? 'courante' : s.k < p.semaineCourante ? 'vu' : s.k > p.semaineCourante ? 'a_venir' : 'vu'
+    s.courante ? (sansCourante ? 'vu' : 'courante') : s.k < p.semaineCourante ? 'vu' : s.k > p.semaineCourante ? 'a_venir' : 'vu'
 
   const vues = p.semaines.filter(s => etatDe(s) === 'vu')
   const aVenir = p.semaines.filter(s => etatDe(s) === 'a_venir')
@@ -203,13 +207,16 @@ function FriseParcours({ p }: { p: ParcoursPlan }) {
           <p className="font-corps text-[15px] mt-1 m-0" style={{ color: ENCRE_META }}>
             {p.nbSemaines} semaine{p.nbSemaines > 1 ? 's' : ''}
             {p.semaineDebut > 0 ? ` · S${p.semaineDebut} → S${p.semaineFin}` : ''}
-            {p.lundiDebut ? ` · commencé le ${p.lundiDebut}` : ''}
+            {p.lundiDebut ? ` · ${p.etat === 'a_venir' ? 'commence' : 'commencé'} le ${p.lundiDebut}` : ''}
             {p.etat === 'termine' ? (
               <> · terminé</>
             ) : p.etat === 'a_venir' ? (
               <> · pas encore commencé</>
             ) : (
-              <>{' · tu es en '}<strong className="font-semibold" style={{ color: OCRE_AA }}>semaine {p.semaineCourante}</strong></>
+              <>
+                {' · tu es en '}<strong className="font-semibold" style={{ color: OCRE_AA }}>semaine {p.semaineCourante}</strong>
+                {p.reprise ? ` · reprend le ${p.reprise}` : ''}
+              </>
             )}
           </p>
         </div>
@@ -228,8 +235,8 @@ function FriseParcours({ p }: { p: ParcoursPlan }) {
         {Array.from({ length: p.nbSemaines }, (_, i) => i + 1).map(k => (
           <span
             key={k}
-            className={`h-[7px] flex-1 rounded-[2px] ${k < p.semaineCourante ? 'bg-ok' : k === p.semaineCourante ? 'bg-attention' : 'bg-parchemin-fonce'}`}
-            style={k === p.semaineCourante ? { boxShadow: '0 0 0 2px var(--attention-teinte)' } : undefined}
+            className={`h-[7px] flex-1 rounded-[2px] ${k < p.semaineCourante || (k === p.semaineCourante && sansCourante) ? 'bg-ok' : k === p.semaineCourante ? 'bg-attention' : 'bg-parchemin-fonce'}`}
+            style={k === p.semaineCourante && !sansCourante ? { boxShadow: '0 0 0 2px var(--attention-teinte)' } : undefined}
           />
         ))}
       </div>
@@ -247,6 +254,7 @@ function FriseParcours({ p }: { p: ParcoursPlan }) {
               premiereK={vues[0].k}
               derniereK={vues[vues.length - 1].k}
               libelles={groupesVus}
+              dernier={visibles.length === 0 && !derniereRepliee}
             >
               {vues.map(rangee)}
             </PasseReplie>

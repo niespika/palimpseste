@@ -127,8 +127,13 @@ export function pistesDuRail(parcours: { semaineDebut: number; semaineFin: numbe
   return out
 }
 
-export function etatParcours(semaineDebut: number, semaineFin: number, couranteAnnee: number): EtatParcours {
-  if (semaineDebut <= 0) return 'a_venir'
+/**
+ * `toutVu` : l'instance a atteint sa dernière semaine (`semaineCourante === nbSemaines`, §5.2)
+ * — sert au parcours daté dans une AUTRE année scolaire (aucune de ses semaines n'est
+ * dans la frise d'aujourd'hui, `semaineDebut` 0) : il est terminé, pas « à venir ».
+ */
+export function etatParcours(semaineDebut: number, semaineFin: number, couranteAnnee: number, toutVu = false): EtatParcours {
+  if (semaineDebut <= 0) return toutVu ? 'termine' : 'a_venir'
   if (couranteAnnee < semaineDebut) return 'a_venir'
   if (couranteAnnee > semaineFin) return 'termine'
   return 'en_cours'
@@ -139,9 +144,9 @@ export function etatParcours(semaineDebut: number, semaineFin: number, couranteA
  * (aucune instance active datée) → plan vide, année à zéro.
  */
 export function construirePlanEleve(
-  matiere: { instances: InstanceCorpus[]; annee: AnneeCorpus } | null,
+  matiere: { instances: InstanceCorpus[]; annee?: AnneeCorpus } | null,
 ): PlanEleve {
-  if (!matiere) {
+  if (!matiere?.annee) {
     return { annee: { libelle: '', nbSemaines: 0, semaineCourante: 0, lundiCourant: null, reperes: [], mois: [] }, parcours: [] }
   }
   const { annee } = matiere
@@ -160,10 +165,13 @@ export function construirePlanEleve(
       if (!g.includes(e.groupeLibelle)) g.push(e.groupeLibelle)
       groupesParSemaine.set(e.semaine, g)
     }
-    const semainesAnnee = Object.values(inst.semainesAnnee ?? {}).sort((a, b) => a - b)
+    // Dédoublonnées : le repli « dernier lundi ≤ » de `semaineAnneeDe` peut poser deux
+    // semaines de parcours sur la même semaine d'année (snapshot devenu vacances).
+    const semainesAnnee = [...new Set(Object.values(inst.semainesAnnee ?? {}))].sort((a, b) => a - b)
     const semaineDebut = semainesAnnee[0] ?? 0
     const semaineFin = semainesAnnee[semainesAnnee.length - 1] ?? 0
-    const etat = etatParcours(semaineDebut, semaineFin, courante)
+    const toutVu = inst.nbSemaines > 0 && inst.semaineCourante >= inst.nbSemaines
+    const etat = etatParcours(semaineDebut, semaineFin, courante, toutVu)
     const iso = inst.lundisISO ?? {}
     const ks = Object.keys(iso).map(Number).sort((a, b) => a - b)
     const lundiDebut = ks.length ? jourMois(iso[ks[0]]) : null

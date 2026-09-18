@@ -152,7 +152,9 @@ function BarreSegments({ p }: { p: ParcoursPlan }) {
 }
 
 function CarteEnCours({ p, compact, ouvert }: { p: ParcoursPlan; compact: boolean; ouvert: boolean }) {
-  const semaine = p.semaines.find(s => s.courante)
+  // En pause d'alternance (`reprise`), la semaine « courante » de l'instance est la
+  // dernière commencée, pas celle-ci : la carte ne la présente pas comme « cette semaine ».
+  const semaine = p.reprise ? undefined : p.semaines.find(s => s.courante)
   const groupes = semaine?.groupes ?? []
   const bord = ouvert ? 'border-attention' : 'border-attention/40'
   return (
@@ -225,7 +227,7 @@ function CarteSansTitre({ n, debut, fin, compact }: { n: number; debut: number; 
       <p className="font-corps text-[14px] italic m-0" style={{ color: ENCRE_META }}>
         {compact
           ? `${n} autre${n > 1 ? 's' : ''} parcours jusqu’en fin d’année`
-          : `${n} autre${n > 1 ? 's' : ''} parcours, de S${debut} à S${fin} — leurs titres seront dévoilés par ton professeur le moment venu.`}
+          : `${n} autre${n > 1 ? 's' : ''} parcours${debut > 0 ? `, de S${debut} à S${fin}` : ''} — leurs titres seront dévoilés par ton professeur le moment venu.`}
       </p>
     </article>
   )
@@ -274,8 +276,9 @@ export default function VueAnnee({ plan, compact = false, ouvertId = null }: { p
   const sansTitre = parcours.filter(p => p.etat === 'a_venir' && p.titre == null)
   const termines = parcours.filter(p => p.etat === 'termine')
   const ouverts = enCours.length
-  const debutSansTitre = Math.min(...sansTitre.map(p => p.semaineDebut).filter(s => s > 0))
-  const finSansTitre = Math.max(...sansTitre.map(p => p.semaineFin))
+  const datesSansTitre = sansTitre.map(p => p.semaineDebut).filter(s => s > 0)
+  const debutSansTitre = datesSansTitre.length ? Math.min(...datesSansTitre) : 0
+  const finSansTitre = datesSansTitre.length ? Math.max(...sansTitre.map(p => p.semaineFin)) : 0
 
   return (
     <section className={compact ? 'space-y-4' : 'space-y-6'}>

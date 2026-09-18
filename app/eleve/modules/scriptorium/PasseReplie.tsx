@@ -13,13 +13,14 @@ import { useState, type ReactNode } from 'react'
 const ENCRE_META = '#6E5A3E'
 
 export default function PasseReplie({
-  nbSemaines, nbElements, premiereK, derniereK, libelles, children,
+  nbSemaines, nbElements, premiereK, derniereK, libelles, dernier, children,
 }: {
   nbSemaines: number
   nbElements: number
   premiereK: number
   derniereK: number
   libelles: string[]
+  dernier: boolean            // rien ne suit : l'axe s'arrête sous la pastille
   children: ReactNode
 }) {
   const [ouvert, setOuvert] = useState(false)
@@ -38,9 +39,12 @@ export default function PasseReplie({
     return (
       <div>
         {children}
-        <div className="flex items-center pb-3">
+        <div className="flex items-stretch pb-3">
           <div className="w-[72px] sm:w-[104px] flex-none" />
-          <div className="w-6 flex-none" />
+          {/* l'axe continue jusqu'à la semaine suivante */}
+          <div className="w-6 flex-none relative">
+            {!dernier && <span aria-hidden className="absolute left-1/2 -translate-x-1/2 -top-3 bottom-0 w-0.5 bg-bordure" />}
+          </div>
           <div className="flex-1">{bouton('replier ⌃')}</div>
         </div>
       </div>
@@ -57,7 +61,7 @@ export default function PasseReplie({
       </div>
       {/* axe */}
       <div className="w-6 flex-none relative flex justify-center">
-        <span aria-hidden className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-bordure" />
+        <span aria-hidden className="absolute left-1/2 -translate-x-1/2 top-0 w-0.5 bg-bordure" style={{ bottom: dernier ? 16 : 0 }} />
         <span aria-hidden className="relative mt-[3px] w-3 h-3 rounded-full bg-ok border-2 border-parchemin" />
       </div>
       {/* carte de repli */}
