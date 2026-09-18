@@ -6,7 +6,63 @@
 > `pg_stat_statements` de la prod en session lecture seule, comptes de lignes par PostgREST.
 > Les comptes d'allers-retours viennent de la lecture du code, pas de l'exécution.
 
-## 0 sexies. Lot P3 — la grille des compétences cesse de répéter les fiches : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+## 0 octies. Lot P4 — l'accueil : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+
+**Ce qui change** (patron `utils/lancer.ts` partout : des lectures, attendues à leur place d'avant)
+
+- **`app/prof/page.tsx`** : les analyses ouvertes et les semaines de Vestigia, les quatre lectures de
+  l'intégrité et le compte des exercices signalés partent avant le premier `Promise.all` ; les noms
+  des inscrits partent dès que les inscriptions sont connues, et seuls les élèves « à valider » non
+  inscrits se lisent après (même carte de noms).
+- **`calculerSante`** (`utils/sante.ts`, servi aussi par « À risque » et la fiche élève) : quatre
+  lectures indépendantes partent ensemble, les dépôts et les états FSRS dès que leurs entrées sont
+  connues. 8 sauts → 3.
+- **`tachesDeriveesDuCalendrier`** (`utils/calendrier-a-faire.ts`) : les têtes des cinq blocs partent
+  au début ; les quatre lectures du plan ensemble ; les aperçus d'assignation en `Promise.all` (le
+  socle de frise partage sa promesse) ; les noms des classes avec les créneaux. **L'ordre des tâches
+  poussées est inchangé** (le tri final est stable).
+- **`chargerLaFileDExamenHumain`** : les lots de 200 dépôts partent ensemble et s'attendent dans
+  l'ordre ; les classes partent tôt. **`compterLesExercicesATraiter`** : ses deux lectures ensemble
+  (la table des cas traités se lit entière : une ligne par exercice traité).
+
+**Éprouvé**
+
+- `tsc` propre, 2 685 tests verts. (`eslint` signale une règle `react-hooks/purity` sur `Date.now()`
+  dans `page.tsx` : elle était déjà là sur HEAD, non touchée.)
+- **Chargeurs JSON-identiques** ancien/nouveau : `calculerSante` (3 tirs, bac à sable ET prod en
+  lecture seule — 14,6 Ko de résultat en prod, 2,5 → 0,8 s à froid), `chargerLaFileDExamenHumain`,
+  `compterLesExercicesATraiter`. ⚠️ La file d'examen humain est **vide** des deux côtés : la voie
+  des lots parallèles n'a pas été exercée par des données.
+- **Écrans identiques** ancien/nouveau avec la session prof du bac à sable : l'accueil (3 tirs,
+  montants « Coût API » masqués — voir ci-dessous), « À risque », deux fiches élève, le calendrier.
+  Accueil en local : 2,7 → 1,4 s ; « À risque » 0,78 → 0,48 s ; fiche élève 1,3 → 0,85 s.
+- **Passe adversariale** : rien de bloquant, rien à reprendre. Notés : la lecture entière des cas
+  traités ne peut dépasser 1 000 lignes qu'après 1 000 exercices traités ; une lecture des classes
+  part une fois de plus quand aucun élément non vu n'existe (lecture seule).
+
+**⚠️ Trouvé en route, préexistant, hors lot — la tuile « Coût API » de l'accueil ment.**
+`app/prof/CoutApi.tsx` lit `api_couts` du mois sans pagination ni tri ; la table porte **1 407
+lignes ce mois-ci en prod** (1 621 au bac à sable). PostgREST en rend 1 000 sans le dire : le total
+affiché est **partiel et varie d'un tir à l'autre** (7,84 $ puis 8,61 $ mesurés sur la même base).
+Une ligne dans `IDEES_post_rentree.md` ; la réparation est une agrégation côté base ou une pagination
+sur le décompte. Même risque, plus lointain, sur `exercices_signalements_eleve` (une ligne par dépôt signalé).
+
+**Non éprouvé** : la prod (avant : accueil 2,0 s, « À risque » 0,7 s, fiche élève 1,1 s).
+
+## 0 septies. Lot P3 remesuré en prod (18/09) — le POIDS baisse, le TEMPS presque pas
+
+| Écran | Avant | Après |
+|---|---|---|
+| Classe 1HLP › Compétences | 3,0 s, **1 074 Ko** | **2,8 s, 451 Ko** |
+| Classe T5 › Compétences | 2,8 s, 706 Ko | 2,6 s, 314 Ko |
+| Classe 1HLP › Activité | 1,3 s | 1,3 s |
+
+La sérialisation n'était pas le temps de cette page : ce qui reste est sa chaîne de lectures
+(matrice de pilotage à cinq agrégateurs sériels, attention par lots de 200 en série, mesures
+paginées). C'est un lot à part, « P3 bis », à mettre en file après P6. Le gain acquis est celui du
+navigateur (moins à analyser, à hydrater) et du réseau mobile.
+
+## 0 sexies. Lot P3 — la grille des compétences : codé, éprouvé, DÉPLOYÉ (18/09) — ⚠️ état dépassé, voir 0 septies
 
 **Ce qui change**
 

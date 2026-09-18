@@ -30,6 +30,7 @@ import 'server-only'
 
 import type { createAdminClient } from '@/utils/supabase/admin'
 import { fileDExamenHumain, lireLesActes, type ActeLu } from './attention'
+import { lancer } from '@/utils/lancer'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -72,9 +73,18 @@ export async function chargerLaFileDExamenHumain(admin: Admin): Promise<FileDExa
   // ── À qui appartiennent ces dépôts ────────────────────────────────────────
   const ids = brutes.map((b) => b.depot_id)
   const eleveDuDepot = new Map<string, string>()
+  // ⭐ 18/09 — les lots de 200 partent ensemble (patron `utils/lancer.ts`) et
+  //    s'attendent dans l'ordre : mêmes incidents, dans le même ordre.
+  const lots: Array<Promise<{ data: unknown; error: { message: string } | null }>> = []
   for (let debut = 0; debut < ids.length; debut += 200) {
-    const { data, error } = await admin.from('exercices_depots')
-      .select('id, eleve_id').in('id', ids.slice(debut, debut + 200))
+    lots.push(lancer(admin.from('exercices_depots')
+      .select('id, eleve_id').in('id', ids.slice(debut, debut + 200))))
+  }
+  // Les inscriptions et les classes ne dépendent pas des dépôts : les classes
+  // partent maintenant ; les inscriptions attendent la liste des élèves.
+  const classesQ = lancer(admin.from('classes').select('id, nom'))
+  for (const lot of lots) {
+    const { data, error } = await lot
     if (error) { incidents.push(`les dépôts contestés : ${error.message}`); continue }
     for (const d of (data ?? []) as Array<{ id: string; eleve_id: string }>) {
       eleveDuDepot.set(d.id, d.eleve_id)
@@ -93,7 +103,7 @@ export async function chargerLaFileDExamenHumain(admin: Admin): Promise<FileDExa
   const { data: inscriptions, error: eInsc } = await admin
     .from('inscriptions').select('eleve_id, classe_id').eq('statut', 'active').in('eleve_id', eleveIds)
   if (eInsc) incidents.push(`les inscriptions : ${eInsc.message}`)
-  const { data: classes, error: eCl } = await admin.from('classes').select('id, nom')
+  const { data: classes, error: eCl } = await classesQ
   if (eCl) incidents.push(`les classes : ${eCl.message}`)
   const nomDeLaClasse = new Map(((classes ?? []) as Array<{ id: string; nom: string }>)
     .map((c) => [c.id, c.nom]))

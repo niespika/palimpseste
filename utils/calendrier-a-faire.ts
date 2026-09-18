@@ -12,6 +12,7 @@ import { moduleDuType, estUnModuleExamen } from '@/utils/examens/types'
 import { construireApercuAssign, memoSocleFrise, type ApercuSemaine } from '@/utils/parcours-apercu'
 import { semaineCourante } from '@/utils/scriptorium-corpus'
 import { statutDuTheme } from '@/utils/fragments-theme'
+import { lancer } from '@/utils/lancer'
 
 // Dérivation calendrier → « à faire » (famille 2 de la spec §7) : une échéance
 // proche ENGENDRE une tâche. On n'affiche jamais l'événement nu ici (il est sur
@@ -42,8 +43,33 @@ function un<T>(x: T | T[] | null | undefined): T | null {
  */
 export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<TacheCalendrier[]> {
   const supabase = await createClient()
+  // ⭐ 18/09 — LES BLOCS INDÉPENDANTS PARTENT ENSEMBLE (patron `utils/lancer.ts`).
+  //    Ce dérivateur enchaînait seize lectures en série et fixait à lui seul la
+  //    durée de l'accueil du professeur. Les têtes de chaque bloc (thèmes, essais,
+  //    porte du plan, assignations, synthèses) partent ici ; chaque bloc s'attend à
+  //    sa place d'avant et pousse ses tâches dans le même ordre — le tri final est
+  //    stable, l'ordre d'insertion compte.
+  const admin = createAdminClient()
+  const themesQ = lancer(admin
+    .from('fragments_themes')
+    .select('id, theme, propose_at, valide_at, commentaire_prof, commente_at, eleve_id, inscriptions!inner(classe_id, statut, classes(nom)), semesters!inner(is_active)')
+    .not('propose_at', 'is', null)
+    .eq('inscriptions.statut', 'active')
+    .eq('semesters.is_active', true))
+  const gateQ = lancer(lireGatePlanActif(admin))
+  const avecDecQ = lancer(admin.from('scriptorium_parcours_classes')
+    .select('id, parcours_id, classe_id, date_debut, horaire_snapshot, decalages').eq('statut', 'active'))
+  const syQ = lancer(admin
+    .from('scriptorium_rag_syntheses')
+    .select('id, classe_id, semaine_lundi')
+    .eq('statut', 'READY').is('vue_at', null))
   const today = jourDansFuseau(new Date(), await lireFuseau())
   const fin = toISODate(addDaysUTC(new Date(today + 'T00:00:00Z'), joursAvant))
+  const epsQ = lancer(supabase
+    .from('fragments_essais_classes')
+    .select('essai_id, classe_id, date_essai, depots_ouverts, fragments_essais_epreuves(titre), classes(nom)')
+    .gte('date_essai', today)
+    .lte('date_essai', fin))
   const taches: TacheCalendrier[] = []
 
   // C8 (Louis, 02/09) — un thème PROPOSÉ par un élève attend d'être relu et validé :
@@ -53,13 +79,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   //    chez l'élève (statut `commente`), il sort de cette liste jusqu'à la
   //    prochaine proposition.
   {
-    const admin = createAdminClient()
-    const { data: themes } = await admin
-      .from('fragments_themes')
-      .select('id, theme, propose_at, valide_at, commentaire_prof, commente_at, eleve_id, inscriptions!inner(classe_id, statut, classes(nom)), semesters!inner(is_active)')
-      .not('propose_at', 'is', null)
-      .eq('inscriptions.statut', 'active')
-      .eq('semesters.is_active', true)
+    const { data: themes } = await themesQ
     const aValider = (themes ?? []).filter((t) => statutDuTheme({
       theme: t.theme as string | null, propose_at: t.propose_at as string | null, valide_at: t.valide_at as string | null,
       commentaire_prof: t.commentaire_prof as string | null, commente_at: t.commente_at as string | null,
@@ -84,11 +104,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   }
 
   // Essais Fragments proches, dépôts non ouverts → action « ouvrir les dépôts ».
-  const { data: eps } = await supabase
-    .from('fragments_essais_classes')
-    .select('essai_id, classe_id, date_essai, depots_ouverts, fragments_essais_epreuves(titre), classes(nom)')
-    .gte('date_essai', today)
-    .lte('date_essai', fin)
+  const { data: eps } = await epsQ
   for (const e of eps ?? []) {
     if (e.depots_ouverts) continue
     const titre = un<{ titre: string }>(e.fragments_essais_epreuves)?.titre ?? 'Essai'
@@ -107,24 +123,43 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   // « en retard » (urgence, triée en tête ci-dessous). Gate OFF/absent → bloc inerte
   // (aucune tâche de plan). Lecture via `admin` (tables du plan en RLS prof-only) ;
   // labels GÉNÉRIQUES par type (jamais titre/note — anti-spoiler, §8bis).
-  const admin = createAdminClient()
-  if (await lireGatePlanActif(admin)) {
+  if (await gateQ) {
     // Plan COURANT par classe (max AY) — même référentiel que la grille panoptique
     // (sinon un vieux plan 'valide' engendrerait des tâches pointant vers un plan
     // inatteignable depuis ?vue=evaluations&classe=X).
     const plans = await plansValidesCourants(admin)
     if (plans.length > 0) {
       const classeParPlan = new Map(plans.map((p) => [p.id, p.classeId]))
-      const { data: classesRows } = await admin
-        .from('classes').select('id, nom').in('id', plans.map((p) => p.classeId))
-      const nomParClasse = new Map((classesRows ?? []).map((c) => [c.id as string, c.nom as string]))
-      const { data: exos } = await admin
+      // Les quatre lectures du plan ne dépendent que des plans : elles partent ensemble.
+      const planIds = plans.map((p) => p.id)
+      const classesRowsQ = lancer(admin
+        .from('classes').select('id, nom').in('id', plans.map((p) => p.classeId)))
+      const exosQ = lancer(admin
         .from('scriptorium_exercices_planifies')
         .select('id, plan_id, type_exercice, diagnostique, lieu, semaine_lundi, jour_prevu')
-        .in('plan_id', plans.map((p) => p.id))
+        .in('plan_id', planIds)
         .eq('ancrage', 'semaine')
         .eq('statut', 'a_concevoir')
-        .is('supprime_at', null)
+        .is('supprime_at', null))
+      const aCalerQ = lancer(admin
+        .from('scriptorium_exercices_planifies')
+        .select('id, plan_id, type_exercice, diagnostique, semaine_lundi, quiz_id')
+        .in('plan_id', planIds)
+        .eq('ancrage', 'semaine')
+        .eq('lieu', 'classe')
+        .eq('statut', 'concu')
+        .is('jour_prevu', null)
+        .is('supprime_at', null))
+      const synthsQ = lancer(admin
+        .from('scriptorium_exercices_planifies')
+        .select('id, plan_id, parcours_id, contenu_id')
+        .in('plan_id', planIds)
+        .eq('ancrage', 'parcours')
+        .eq('statut', 'a_concevoir')
+        .is('supprime_at', null))
+      const { data: classesRows } = await classesRowsQ
+      const nomParClasse = new Map((classesRows ?? []).map((c) => [c.id as string, c.nom as string]))
+      const { data: exos } = await exosQ
       for (const e of exos ?? []) {
         // Échéance figée (§4.6) : jour_prevu sinon dimanche (maison) / lundi (classe).
         const echeance = dateEffectiveSemaine(e.semaine_lundi as string, (e.jour_prevu as string | null) ?? null, e.lieu as 'classe' | 'maison')
@@ -179,15 +214,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
       //    (SPEC §Statuts) ; sans ça un quiz surprise lancé sans jour posé nourrirait un
       //    « à caler » perpétuel + un « Retirer » destructif (élèves déjà passés). Même
       //    exclusion que l'émission calendrier (dédup E3, calendrier-evenements.ts).
-      const { data: aCaler } = await admin
-        .from('scriptorium_exercices_planifies')
-        .select('id, plan_id, type_exercice, diagnostique, semaine_lundi, quiz_id')
-        .in('plan_id', plans.map((p) => p.id))
-        .eq('ancrage', 'semaine')
-        .eq('lieu', 'classe')
-        .eq('statut', 'concu')
-        .is('jour_prevu', null)
-        .is('supprime_at', null)
+      const { data: aCaler } = await aCalerQ
       const aCalerRows = aCaler ?? []
       const quizIds = aCalerRows.map((e) => e.quiz_id as string | null).filter((q): q is string => !!q)
       const quizLances = new Set<string>()
@@ -219,13 +246,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
       // stockée : elle est résolue EN LOT (coût constant — une résolution par ligne
       // saturerait cette page, qui n'a pas de maxDuration). L'action est « préparer »
       // (S4), pas « concevoir » : elle mène à l'entrée dédiée de /prof/codex.
-      const { data: synths } = await admin
-        .from('scriptorium_exercices_planifies')
-        .select('id, plan_id, parcours_id, contenu_id')
-        .in('plan_id', plans.map((p) => p.id))
-        .eq('ancrage', 'parcours')
-        .eq('statut', 'a_concevoir')
-        .is('supprime_at', null)
+      const { data: synths } = await synthsQ
       // SOURDINE (01/09) — un cours COUPÉ dans l'instance de sa classe n'engendre plus
       // de tâche. La ligne reste en base : rouvrir le cours la ramène ici telle quelle.
       const demandesSynth = (synths ?? []).map((s) => ({
@@ -275,8 +296,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   {
     // Repli si `decalages` n'existe pas encore (migration parcours_decalages.sql
     // non jouée) : le signal « non vus passés » continue, sur mapping consécutif.
-    const avecDec = await admin.from('scriptorium_parcours_classes')
-      .select('id, parcours_id, classe_id, date_debut, horaire_snapshot, decalages').eq('statut', 'active')
+    const avecDec = await avecDecQ
     const assigns = avecDec.error
       ? (await admin.from('scriptorium_parcours_classes')
           .select('id, parcours_id, classe_id, date_debut, horaire_snapshot').eq('statut', 'active')).data
@@ -293,23 +313,32 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
       // Semaine courante par assignation (aperçu snapshot/frise, socle mémoïsé par AY).
       const socleDe = memoSocleFrise(admin)
       const concernees: { pcId: string; classeId: string; titre: string; courante: number }[] = []
-      for (const a of rows) {
+      // Les aperçus des assignations partent ensemble (le socle est mémoïsé par
+      // année, sa promesse partagée) et se lisent dans l'ordre des lignes.
+      const apercus = await Promise.all(rows.map((a) => {
         const meta = metaParcours.get(a.parcours_id as string)
-        if (!meta) continue
+        if (!meta) return null
         const snap = a.horaire_snapshot as ApercuSemaine[] | null | undefined
-        const res = await construireApercuAssign(admin, {
+        return construireApercuAssign(admin, {
           parcoursId: a.parcours_id as string,
           nbSemaines: meta.nb,
           dateDebut: (a.date_debut as string | null) ?? null,
           snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
           decalages: (a.decalages as Record<string, number> | null) ?? null,
         }, socleDe)
-        const courante = semaineCourante(res?.apercu ?? null, today)
-        if (courante == null || courante <= 1) continue // rien de « passé » avant la semaine 2
+      }))
+      rows.forEach((a, i) => {
+        const meta = metaParcours.get(a.parcours_id as string)
+        if (!meta) return
+        const courante = semaineCourante(apercus[i]?.apercu ?? null, today)
+        if (courante == null || courante <= 1) return // rien de « passé » avant la semaine 2
         concernees.push({ pcId: a.id as string, classeId: a.classe_id as string, titre: meta.titre, courante })
-      }
+      })
 
       if (concernees.length > 0) {
+        // Les noms des classes ne dépendent que des assignations concernées : ils partent avec les créneaux.
+        const clsQ = lancer(admin.from('classes').select('id, nom')
+          .in('id', [...new Set(concernees.map((c) => c.classeId))]))
         const { data: crens } = await admin.from('scriptorium_parcours_classe_creneaux')
           .select('id, parcours_classe_id').in('parcours_classe_id', concernees.map((c) => c.pcId))
         const pcParCreneau = new Map((crens ?? []).map((c) => [c.id as string, c.parcours_classe_id as string]))
@@ -328,8 +357,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
             }
           }
           if (nbParPc.size > 0) {
-            const classeIds = [...new Set(concernees.map((c) => c.classeId))]
-            const { data: cls } = await admin.from('classes').select('id, nom').in('id', classeIds)
+            const { data: cls } = await clsQ
             const nomClasse = new Map((cls ?? []).map((c) => [c.id as string, c.nom as string]))
             for (const c of concernees) {
               const nb = nbParPc.get(c.pcId) ?? 0
@@ -353,10 +381,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   // lundi — s'éteint quand le prof ouvre la synthèse (vue_at posé à l'ouverture).
   // Tolérant si la table n'existe pas encore (migration L7 non jouée → data null).
   {
-    const { data: sy } = await admin
-      .from('scriptorium_rag_syntheses')
-      .select('id, classe_id, semaine_lundi')
-      .eq('statut', 'READY').is('vue_at', null)
+    const { data: sy } = await syQ
     const rows = sy ?? []
     if (rows.length > 0) {
       const classeIds = [...new Set(rows.map((r) => r.classe_id as string))]

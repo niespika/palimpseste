@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { semainesComptees } from './fragments-semaines'
 import { noteVersLettre } from './notation'
+import { lancer } from '@/utils/lancer'
 
 // ----------------------------------------------------------------------------
 // Santé des élèves pour le tableau de bord (Lot 3). Calcul PAR INSCRIPTION
@@ -74,27 +75,47 @@ export function motifsSante(s: SanteInscription): MotifSante[] {
 export async function calculerSante(admin: SupabaseClient): Promise<Map<string, SanteInscription>> {
   const resultat = new Map<string, SanteInscription>()
 
-  const { data: modules } = await admin
-    .from('modules').select('id, slug').in('slug', ['fragments-erudition', 'quazian'])
+  // ⭐ 18/09 — LES LECTURES INDÉPENDANTES PARTENT ENSEMBLE (patron `utils/lancer.ts`).
+  //    Ce calcul enchaînait huit lectures en série, et il sert trois écrans
+  //    (accueil, « À risque », fiche élève). Les quatre premières ne dépendent de
+  //    rien ; chacune est attendue à sa place d'avant, avec les mêmes sorties.
+  const modulesQ = lancer(admin
+    .from('modules').select('id, slug').in('slug', ['fragments-erudition', 'quazian']))
+  const cmQ = lancer(admin.from('classe_modules').select('classe_id, module_id'))
+  const inscriptionsQ = lancer(admin
+    .from('inscriptions').select('id, eleve_id, classe_id').eq('statut', 'active'))
+  const semestreQ = lancer(admin
+    .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle())
+
+  const { data: modules } = await modulesQ
   const moduleFragments = modules?.find((m) => m.slug === 'fragments-erudition')?.id
   const moduleQuazian = modules?.find((m) => m.slug === 'quazian')?.id
   if (!moduleFragments) return resultat
 
-  const { data: cm } = await admin.from('classe_modules').select('classe_id, module_id')
+  const { data: cm } = await cmQ
   const classesFragments = new Set((cm ?? []).filter((r) => r.module_id === moduleFragments).map((r) => r.classe_id))
   const classesQuazian = new Set((cm ?? []).filter((r) => r.module_id === moduleQuazian).map((r) => r.classe_id))
 
-  const { data: inscriptions } = await admin
-    .from('inscriptions').select('id, eleve_id, classe_id').eq('statut', 'active')
+  const { data: inscriptions } = await inscriptionsQ
   const inscFragments = (inscriptions ?? []).filter((i) => classesFragments.has(i.classe_id))
   if (inscFragments.length === 0) return resultat
   const inscIds = inscFragments.map((i) => i.id as string)
 
+  // Les dépôts ne dépendent que des inscriptions : ils partent avant les semaines.
+  const depotsQ = lancer(admin
+    .from('fragments_depots').select('id, inscription_id, semaine_id, statut').in('inscription_id', inscIds))
+  // Le retard de révision ne dépend que des inscriptions et des modules : il part ici aussi.
+  const eleveIdsQuazian = [...new Set(
+    inscFragments.filter((i) => classesQuazian.has(i.classe_id)).map((i) => i.eleve_id as string)
+  )]
+  const cardStatesQ = moduleQuazian && eleveIdsQuazian.length > 0
+    ? lancer(admin.from('quazian_card_states').select('eleve_id, due').in('eleve_id', eleveIdsQuazian))
+    : null
+
   // Semaines passées (date limite dépassée) — scopées au semestre courant, sinon les
   // semaines des semestres précédents comptent à tort comme « dépôts manquants ».
   const maintenant = new Date()
-  const { data: semestreCourant } = await admin
-    .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
+  const { data: semestreCourant } = await semestreQ
   let reqSemaines = admin.from('fragments_semaines').select('id, date_limite, numero, is_vacation')
   if (semestreCourant) reqSemaines = reqSemaines.eq('semestre_id', semestreCourant.id)
   const { data: semaines } = await reqSemaines
@@ -112,8 +133,7 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
   const nbSemainesPassees = idsSemainesPassees.size
 
   // Dépôts des inscriptions
-  const { data: depots } = await admin
-    .from('fragments_depots').select('id, inscription_id, semaine_id, statut').in('inscription_id', inscIds)
+  const { data: depots } = await depotsQ
   const depotsParInsc = new Map<string, { id: string; semaine_id: string; statut: string }[]>()
   for (const d of depots ?? []) {
     const arr = depotsParInsc.get(d.inscription_id as string) ?? []
@@ -137,13 +157,9 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
   // Backlog révision (cartes dues dépassées) — classes Quazian uniquement.
   // quazian_card_states est scopé par eleve_id (inscription_id jamais peuplé), donc on
   // compte par élève puis on rattache à l'inscription.
-  const eleveIdsQuazian = [...new Set(
-    inscFragments.filter((i) => classesQuazian.has(i.classe_id)).map((i) => i.eleve_id as string)
-  )]
   const backlogParEleve = new Map<string, number>()
-  if (moduleQuazian && eleveIdsQuazian.length > 0) {
-    const { data: cs } = await admin
-      .from('quazian_card_states').select('eleve_id, due').in('eleve_id', eleveIdsQuazian)
+  if (cardStatesQ) {
+    const { data: cs } = await cardStatesQ
     for (const c of cs ?? []) {
       if (c.due && new Date(c.due as string) < maintenant) {
         backlogParEleve.set(c.eleve_id as string, (backlogParEleve.get(c.eleve_id as string) ?? 0) + 1)

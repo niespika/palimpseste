@@ -1,5 +1,9 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Vitesse côté prof — lot P4 (l'accueil), éprouvé au bac à sable, NON déployé (18/09/2026)
+
+`tsc` propre, 2 685 tests verts. Trois chargeurs JSON-identiques ancien/nouveau au bac à sable et en prod (lecture seule) : `calculerSante`, `chargerLaFileDExamenHumain` (vide des deux côtés), `compterLesExercicesATraiter`. Écrans identiques avec la session prof du bac à sable : accueil ×3 (montants « Coût API » masqués), « À risque », deux fiches élève, calendrier ; accueil 2,7 → 1,4 s en local. Passe adversariale : rien de bloquant. P3 remesuré en prod : 1HLP Compétences 1 074 → 451 Ko, 3,0 → 2,8 s seulement — la chaîne de lectures de cette page reste (« P3 bis »). ⚠️ Trouvé en route, préexistant : la tuile « Coût API » de l'accueil lit `api_couts` plafonnée à 1 000 lignes sur 1 407 ce mois-ci en prod — total partiel, variable (noté dans `IDEES_post_rentree.md`). Détail au §0 octies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
+
 ## Vitesse côté prof — lot P3 (la grille des compétences allégée), éprouvé au bac à sable, NON déployé (18/09/2026)
 
 `tsc`, `eslint`, 2 685 tests verts. 336 cellules sur 336 identiques entre l'ancien chargeur et la cellule recomposée (4 classes du bac à sable, deux opt-out) ; charge 1 578 → 303 Ko. Sept écrans identiques ancien/nouveau avec la session prof du bac à sable. Vu à l'œil aux trois tailles sur T5, cellule « Elo · Expression » ouverte. Passe adversariale : rien de bloquant, trois points repris. P2 remesuré en prod : passation 2,4 → 0,97 s (23 copies). Détail au §0 sexies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.

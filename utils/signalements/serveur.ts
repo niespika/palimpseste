@@ -694,15 +694,19 @@ export async function marquerLeCasTraite(
  * la file, sur les mêmes lectures, réduites au strict nécessaire.
  */
 export async function compterLesExercicesATraiter(admin: Admin): Promise<number> {
-  const { data: sig } = await admin.from('exercices_signalements_eleve')
-    .select('exercice_id, signale_at, maj_at')
+  // ⭐ 18/09 — les deux lectures partent ensemble : la table des « cas traités »
+  //    est petite (une ligne par exercice traité), on la lit entière plutôt que
+  //    d'attendre les signalements pour la filtrer. Même compte : la carte ne
+  //    sert qu'à des recherches par exercice signalé.
+  const [{ data: sig }, { data: tr }] = await Promise.all([
+    admin.from('exercices_signalements_eleve').select('exercice_id, signale_at, maj_at'),
+    admin.from('exercices_signalements_traites').select('exercice_id, traite_at'),
+  ])
   const par = new Map<string, Array<{ signaleAt: string; majAt: string | null }>>()
   for (const s of (sig ?? []) as Array<{ exercice_id: string; signale_at: string; maj_at: string | null }>) {
     par.set(s.exercice_id, [...(par.get(s.exercice_id) ?? []), { signaleAt: s.signale_at, majAt: s.maj_at }])
   }
   if (par.size === 0) return 0
-  const { data: tr } = await admin.from('exercices_signalements_traites')
-    .select('exercice_id, traite_at').in('exercice_id', [...par.keys()])
   const traiteAt = new Map((tr ?? []).map((t) => [t.exercice_id as string, t.traite_at as string]))
   let n = 0
   for (const [id, ss] of par) if (estATraiter(ss, traiteAt.get(id) ?? null)) n++

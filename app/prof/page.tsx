@@ -5,6 +5,7 @@ import { classesAvecRappel } from '@/utils/rappels'
 import { calculerSante, type SanteInscription } from '@/utils/sante'
 import { tachesDeriveesDuCalendrier } from '@/utils/calendrier-a-faire'
 import { compterLesExercicesATraiter } from '@/utils/signalements/serveur'
+import { lancer } from '@/utils/lancer'
 import BoutonRetirerDuPlan from './BoutonRetirerDuPlan'
 import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import { type ModuleSceau } from '@/components/Pastille'
@@ -21,6 +22,23 @@ const fmtDate = (iso: string) => formatJour(iso, { day: 'numeric', month: 'short
 export default async function ProfAccueil() {
   const supabase = await createClient()
   const admin = createAdminClient()
+
+  // ⭐ 18/09 — TOUT CE QUI NE DÉPEND DE RIEN PART ICI (patron `utils/lancer.ts`) :
+  //    les analyses ouvertes et les semaines de Vestigia, les quatre lectures de
+  //    l'intégrité, le compte des exercices signalés. Chacun est attendu à sa
+  //    place d'avant, dans le même ordre. Mesuré en prod : l'accueil faisait
+  //    ~28 lectures en série pour 2,0 s.
+  const analysesOuvertesQ = lancer(admin
+    .from('fragments_analyses').select('depot_id, statut, updated_at')
+    .in('statut', ['generee', 'erreur', 'en_cours']))
+  const semainesVQ = lancer(admin.from('fragments_semaines').select('id, numero'))
+  const integriteQ = lancer(Promise.all([
+    admin.from('integrite_signalements').select('id', { count: 'exact', head: true }).is('acquitte_at', null),
+    admin.from('profiles').select('id', { count: 'exact', head: true }).eq('integrite_bloque', true),
+    admin.from('integrite_params').select('actif').eq('id', 1).maybeSingle(),
+    admin.from('integrite_signalements').select('id').is('acquitte_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+  ]))
+  const nbExercicesSignalesQ = lancer(compterLesExercicesATraiter(admin))
 
   const [{ data: classes }, { data: inscriptionsActives }, rappels, sante, tachesCal, examen] =
     await Promise.all([
@@ -40,6 +58,12 @@ export default async function ProfAccueil() {
 
   const toutesClasses = classes ?? []
   const inscrits = inscriptionsActives ?? []
+  // Les noms des inscrits partent dès qu'on les connaît ; ceux des seuls élèves
+  // « à valider » qui ne sont pas inscrits se liront après, s'il y en a.
+  const idsInscrits = [...new Set(inscrits.map((i) => i.eleve_id as string))]
+  const profilsInscritsQ = idsInscrits.length > 0
+    ? lancer(admin.from('profiles').select('id, display_name').in('id', idsInscrits))
+    : null
 
   // ── Zone 1 : fragments à valider (analyses générées, toutes classes) ────────
   //    ⭐ 13/09/2026 — ET LES ANALYSES EN ÉCHEC. « 2 fragments déposés THLP ont eu
@@ -48,9 +72,7 @@ export default async function ProfAccueil() {
   //    n'ouvre quand rien ne l'y invite. Une analyse restée `en_cours` plus de
   //    30 min est comptée en échec aussi : la fonction a été tuée avant d'écrire
   //    `erreur`, et elle n'en sortira jamais seule.
-  const { data: analysesOuvertes } = await admin
-    .from('fragments_analyses').select('depot_id, statut, updated_at')
-    .in('statut', ['generee', 'erreur', 'en_cours'])
+  const { data: analysesOuvertes } = await analysesOuvertesQ
   const seuilEnCoursMs = Date.now() - 30 * 60 * 1000
   const estEnEchec = (a: { statut: string; updated_at: string | null }) =>
     a.statut === 'erreur'
@@ -71,15 +93,15 @@ export default async function ProfAccueil() {
   const eleveIdsAValider = [...new Set((inscAValider ?? []).map((i) => i.eleve_id as string))]
   // Noms pour TOUTES les lignes affichées : à valider + inscriptions actives (couvre les
   // « élèves à risque », sinon ils s'affichaient « ? » dès qu'il n'y avait rien à valider).
-  const eleveIdsAffichage = [...new Set([
-    ...inscrits.map((i) => i.eleve_id as string),
-    ...eleveIdsAValider,
-  ])]
-  const { data: profilsAffichage } = eleveIdsAffichage.length > 0
-    ? await admin.from('profiles').select('id, display_name').in('id', eleveIdsAffichage)
+  const dejaLus = new Set(idsInscrits)
+  const eleveIdsRestants = eleveIdsAValider.filter((id) => !dejaLus.has(id))
+  const { data: profilsRestants } = eleveIdsRestants.length > 0
+    ? await admin.from('profiles').select('id, display_name').in('id', eleveIdsRestants)
     : { data: [] }
-  const nomEleve = new Map((profilsAffichage ?? []).map((p) => [p.id as string, p.display_name as string]))
-  const { data: semainesV } = await admin.from('fragments_semaines').select('id, numero')
+  const { data: profilsInscrits } = profilsInscritsQ ? await profilsInscritsQ : { data: [] }
+  const profilsAffichage = [...(profilsInscrits ?? []), ...(profilsRestants ?? [])]
+  const nomEleve = new Map(profilsAffichage.map((p) => [p.id as string, p.display_name as string]))
+  const { data: semainesV } = await semainesVQ
   const numSemaine = new Map((semainesV ?? []).map((s) => [s.id as string, s.numero as number]))
   const nomClasse = new Map(toutesClasses.map((c) => [c.id, c.nom]))
 
@@ -103,12 +125,7 @@ export default async function ProfAccueil() {
   const libelleEnEchec = (n: number) => `${n} analyse${n > 1 ? 's' : ''} de fragments en échec`
 
   // ── Zone 1 : intégrité (« petits malins ») — signalements à traiter + bloqués ─
-  const [{ count: nbSignalements }, { count: nbBloques }, { data: integriteParams }, { data: premierSig }] = await Promise.all([
-    admin.from('integrite_signalements').select('id', { count: 'exact', head: true }).is('acquitte_at', null),
-    admin.from('profiles').select('id', { count: 'exact', head: true }).eq('integrite_bloque', true),
-    admin.from('integrite_params').select('actif').eq('id', 1).maybeSingle(),
-    admin.from('integrite_signalements').select('id').is('acquitte_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-  ])
+  const [{ count: nbSignalements }, { count: nbBloques }, { data: integriteParams }, { data: premierSig }] = await integriteQ
   // Détection désactivée → les élèves ne sont plus bloqués de facto : on n'alerte pas.
   const integriteActive = integriteParams?.actif ?? true
   const bloq = nbBloques ?? 0
@@ -124,7 +141,7 @@ export default async function ProfAccueil() {
   //    juste le compte d'EXERCICES (pas de signalements — 24 élèves sur la même
   //    instance ne font qu'un exercice à traiter) et le lien vers la page.
   //    ⭐ 11/09 soir — la même règle que la file : le geste « cas traité ».
-  const nbExercicesSignales = await compterLesExercicesATraiter(admin)
+  const nbExercicesSignales = await nbExercicesSignalesQ
 
   // ── Zone 2 : santé de la cohorte (par inscription) ──────────────────────────
   const santeValues = [...sante.values()]
