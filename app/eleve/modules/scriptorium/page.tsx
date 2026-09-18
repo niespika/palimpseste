@@ -187,23 +187,33 @@ export default async function ScriptoriumElevePage({
   // LOCALEMENT (sans toucher au layout) le `pt-8`/`pb-8` du <main> pour ramener la
   // bande au-dessus du cadre à 16px et la respiration basse à 24px. Sous lg :
   // aucun décalage (le `pb-24` du <main> couvre toujours la barre d'onglets).
-  return (
-    <div className="lg:-mt-4 lg:-mb-2" data-module="scriptorium">
-      {vue === 'plan' ? (
+  //
+  // ⭐ 18/09 (handoff `scriptorium_discussion_bureau`) : la DISCUSSION en bureau se
+  // passe de l'en-tête. Elle pose `data-sans-en-tete` ; la coquille élève lit ce
+  // flag par un `:has()` (globals.css) et retire, sur lg seulement, l'en-tête à
+  // deux barres ainsi que le cadre du <main>. Le wrapper ne porte alors aucune
+  // marge négative : le chat occupe 100vw × 100dvh. Le plan garde tout.
+  if (vue === 'plan') {
+    return (
+      <div className="lg:-mt-4 lg:-mb-2" data-module="scriptorium">
         <PlanCours plan={plan} />
-      ) : (
-        <ChatScriptorium
-          key={convActive?.id ?? 'nouvelle'}
-          classeId={classe.classe_id}
-          conversations={conversations}
-          convActive={convActive}
-          quotaRestant={quotaRestant}
-          suggestions={suggestions}
-          premierUsage={conversations.length === 0}
-          datationAujourdhui={datationLettre(aujourdHui)}
-          jourAujourdhui={aujourdHui}
-        />
-      )}
+      </div>
+    )
+  }
+  return (
+    <div data-module="scriptorium" data-sans-en-tete="">
+      <ChatScriptorium
+        key={convActive?.id ?? 'nouvelle'}
+        classeId={classe.classe_id}
+        classeNom={classe.classe_nom}
+        conversations={conversations}
+        convActive={convActive}
+        quotaRestant={quotaRestant}
+        suggestions={suggestions}
+        premierUsage={conversations.length === 0}
+        datationAujourdhui={datationLettre(aujourdHui)}
+        jourAujourdhui={aujourdHui}
+      />
     </div>
   )
 }

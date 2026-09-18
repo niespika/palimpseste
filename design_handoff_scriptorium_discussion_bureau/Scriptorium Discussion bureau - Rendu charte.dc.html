@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&amp;family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Alegreya+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E7DECF;font-family:'EB Garamond',Georgia,serif;color:#221C16;-webkit-font-smoothing:antialiased}
+::selection{background:#D8C8A8}
+a{color:#4A3A28;text-decoration:none}
+a:hover{color:#221C16}
+</style>
+</helmet>
+
+<section style="padding:48px 48px 80px">
+
+  <div style="display:flex;align-items:flex-start;gap:13px;max-width:2700px;margin:0 auto 26px">
+    <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.06em;background:#DDE7D2;color:#4A5A38;padding:5px 12px;border-radius:20px;flex:none;margin-top:2px">Tour 2 · rendu charte du 1d</span>
+    <p style="font:italic 16px/1.5 'Cormorant Garamond',serif;color:#5A4632;margin:0;max-width:100ch">Le ruban de 64 px à gauche porte le retour vers Palimpseste, le sceau du Scriptorium, la nouvelle conversation, l’historique et le Plan de cours. Le fil garde une largeur de lecture (900 px max, centré) en correspondance continue (pas de bulles : le tuteur en pleine colonne, tes mots en retrait derrière un filet). <a href="#2a">2a</a> à l’arrivée, tiroir fermé ; <a href="#2b">2b</a> le tiroir des conversations ouvert, qui pousse le fil vers la droite.</p>
+  </div>
+
+  <div style="display:flex;gap:40px;flex-wrap:wrap;justify-content:center;align-items:flex-start;max-width:2700px;margin:0 auto">
+
+    <!-- ═══════ 2a ═══════ -->
+    <div id="2a" data-screen-label="2a Ruban fermé" style="flex:0 0 auto">
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px 2px"><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2a</span><span style="font:italic 15px 'Cormorant Garamond',serif;color:#6E5A3E">À l’arrivée — ruban replié, le fil seul</span></div>
+      <div style="width:1280px;height:760px;background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(60,45,25,.16);display:flex">
+
+        <aside style="width:64px;flex:none;background:#FBF8F1;border-right:1px solid #E4DBC9;display:flex;flex-direction:column;align-items:center;padding:14px 0 16px;gap:14px">
+          <span title="Retour à Palimpseste" style="width:40px;height:40px;border-radius:50%;background:#EDE6D6;border:1px solid #E4DBC9;overflow:hidden;display:inline-flex;position:relative"><img src="sceaux/palimpseste_medaillon.png" alt="" style="width:40px;height:40px;object-fit:cover;mix-blend-mode:multiply"><span style="position:absolute;left:-1px;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;background:#4A3A28;color:#F1EADD;font:700 11px/16px 'Alegreya Sans',sans-serif;text-align:center">‹</span></span>
+          <span style="position:relative;display:inline-flex"><span style="width:40px;height:40px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;overflow:hidden;display:inline-flex"><img src="sceaux/pastille-scriptorium.png" alt="Scriptorium" style="width:40px;height:40px;object-fit:cover;mix-blend-mode:multiply"></span><span style="position:absolute;inset:0;border-radius:50%;border:2px solid #B8893B;box-shadow:0 2px 8px rgba(74,58,40,.25)"></span></span>
+          <span style="width:28px;height:1px;background:linear-gradient(90deg,transparent,rgba(60,50,40,.25),transparent)"></span>
+          <span title="Nouvelle conversation" style="width:40px;height:40px;border-radius:10px;background:#6B5A46;color:#F1EADD;display:flex;align-items:center;justify-content:center;font:500 22px 'Alegreya Sans',sans-serif">＋</span>
+          <span title="Conversations" style="width:40px;height:40px;border-radius:10px;border:1px solid #E4DBC9;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="width:16px;height:1.5px;background:#6B5A46"></span><span style="width:16px;height:1.5px;background:#6B5A46"></span><span style="width:11px;height:1.5px;background:#6B5A46;align-self:flex-start;margin-left:12px"></span></span>
+          <span title="Plan de cours" style="width:40px;height:40px;border-radius:10px;border:1px solid #E4DBC9;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px"><span style="width:14px;height:5px;border-radius:1px;background:#5B6E4A"></span><span style="width:14px;height:5px;border-radius:1px;background:#9A6A2E"></span><span style="width:14px;height:5px;border-radius:1px;border:1px solid #C9BBA0;box-sizing:border-box;background:#fff"></span></span>
+          <span style="margin-top:auto;font:500 11px 'Alegreya Sans',sans-serif;color:#5A4632;background:#F6F1E7;border:1px solid #E4DBC9;border-radius:7px;padding:3px 6px">2de B</span>
+        </aside>
+
+        <section style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="flex:1;min-height:0;padding:28px 48px 0;display:flex;flex-direction:column;max-width:900px;box-sizing:border-box;width:100%;margin:0 auto">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid #E4DBC9">
+              <div style="display:flex;align-items:center;gap:12px"><span style="width:38px;height:38px;border-radius:50%;overflow:hidden;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;mix-blend-mode:multiply"></span><div><div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div><div style="font:13.5px 'EB Garamond',serif;color:#6E5A3E">Il s’appuie sur ce que ton professeur a préparé.</div></div></div>
+              <div style="display:flex;align-items:center;gap:14px"><span style="font:italic 15px 'Cormorant Garamond',serif;color:#6E5A3E">Le point de vue chez Maupassant</span><span style="font:12px 'Alegreya Sans',sans-serif;color:#8A6F4E;background:#F1EBDE;border:1px solid #E4DBC9;border-radius:99px;padding:4px 12px;white-space:nowrap">18 messages restants</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:26px 0"><span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span><span style="font:italic 18px 'Cormorant Garamond',serif;color:#6E5A3E;white-space:nowrap">Ce vendredi 18 septembre</span><span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span></div>
+            <p style="margin:0;font:17px/1.65 'EB Garamond',serif;color:#221C16;text-wrap:pretty">Bonjour ! Reprenons le point de vue chez Maupassant. Dans « La Parure », le narrateur est-il un personnage de l’histoire, ou reste-t-il extérieur à elle ? Repense à la toute première phrase.</p>
+            <div style="margin:22px 0 0 96px;padding-left:18px;border-left:2px solid rgba(74,58,40,.35)"><div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#6B5A46;margin-bottom:4px">Toi</div><p style="margin:0;font:italic 17px/1.6 'EB Garamond',serif;color:#3A2E22">Il est extérieur je crois — il raconte à la 3ᵉ personne.</p></div>
+            <p style="margin:22px 0 0;font:17px/1.65 'EB Garamond',serif;color:#221C16;text-wrap:pretty">Exactement : un narrateur <em>externe</em>, à la 3ᵉ personne. Et pourtant il connaît les pensées de Mathilde — « elle songeait aux grands salons… ». Comment appelle-t-on un narrateur qui a ainsi accès à l’intérieur des personnages ?</p>
+            <div style="margin:22px 0 0 96px;padding-left:18px;border-left:2px solid rgba(74,58,40,.35)"><div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#6B5A46;margin-bottom:4px">Toi</div><p style="margin:0;font:italic 17px/1.6 'EB Garamond',serif;color:#3A2E22">Omniscient ?</p></div>
+            <p style="margin:22px 0 0;font:17px/1.65 'EB Garamond',serif;color:#221C16;text-wrap:pretty">Oui. On dit aussi qu’il adopte un <em>point de vue omniscient</em>, ou une focalisation zéro. Garde la formule pour ton commentaire : elle dit à la fois ce que le narrateur sait et d’où il regarde.</p>
+            <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:26px"><span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span><span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.7"></span><span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span></div>
+          </div>
+          <div style="flex:none;padding:16px 48px 24px;max-width:900px;box-sizing:border-box;width:100%;margin:0 auto">
+            <div style="display:flex;align-items:flex-end;gap:10px"><div style="flex:1;border:1px solid #D8CCB4;border-radius:11px;background:#fff;padding:13px 16px;font:italic 15.5px 'EB Garamond',serif;color:#A8906A;min-height:44px;box-sizing:border-box">Ta question sur le cours… <span style="font-style:normal;font-size:12px;color:#C4B291">(Entrée pour envoyer)</span></div><span style="font:600 15px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:12px 22px;border-radius:11px;white-space:nowrap">Envoyer</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ═══════ 2b ═══════ -->
+    <div id="2b" data-screen-label="2b Tiroir ouvert" style="flex:0 0 auto">
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px 2px"><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2b</span><span style="font:italic 15px 'Cormorant Garamond',serif;color:#6E5A3E">Tiroir des conversations ouvert — il pousse le fil, se ferme au choix d’une conversation</span></div>
+      <div style="width:1280px;height:760px;background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(60,45,25,.16);display:flex;position:relative">
+
+        <aside style="width:64px;flex:none;background:#FBF8F1;border-right:1px solid #E4DBC9;display:flex;flex-direction:column;align-items:center;padding:14px 0 16px;gap:14px;position:relative;z-index:2">
+          <span style="width:40px;height:40px;border-radius:50%;background:#EDE6D6;border:1px solid #E4DBC9;overflow:hidden;display:inline-flex;position:relative"><img src="sceaux/palimpseste_medaillon.png" alt="" style="width:40px;height:40px;object-fit:cover;mix-blend-mode:multiply"><span style="position:absolute;left:-1px;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;background:#4A3A28;color:#F1EADD;font:700 11px/16px 'Alegreya Sans',sans-serif;text-align:center">‹</span></span>
+          <span style="position:relative;display:inline-flex"><span style="width:40px;height:40px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;overflow:hidden;display:inline-flex"><img src="sceaux/pastille-scriptorium.png" alt="Scriptorium" style="width:40px;height:40px;object-fit:cover;mix-blend-mode:multiply"></span><span style="position:absolute;inset:0;border-radius:50%;border:2px solid #B8893B;box-shadow:0 2px 8px rgba(74,58,40,.25)"></span></span>
+          <span style="width:28px;height:1px;background:linear-gradient(90deg,transparent,rgba(60,50,40,.25),transparent)"></span>
+          <span style="width:40px;height:40px;border-radius:10px;background:#6B5A46;color:#F1EADD;display:flex;align-items:center;justify-content:center;font:500 22px 'Alegreya Sans',sans-serif">＋</span>
+          <span style="width:40px;height:40px;border-radius:10px;border:1px solid #C9B896;background:#E6DDC9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="width:16px;height:1.5px;background:#4A3A28"></span><span style="width:16px;height:1.5px;background:#4A3A28"></span><span style="width:11px;height:1.5px;background:#4A3A28;align-self:flex-start;margin-left:12px"></span></span>
+          <span style="width:40px;height:40px;border-radius:10px;border:1px solid #E4DBC9;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px"><span style="width:14px;height:5px;border-radius:1px;background:#5B6E4A"></span><span style="width:14px;height:5px;border-radius:1px;background:#9A6A2E"></span><span style="width:14px;height:5px;border-radius:1px;border:1px solid #C9BBA0;box-sizing:border-box;background:#fff"></span></span>
+          <span style="margin-top:auto;font:500 11px 'Alegreya Sans',sans-serif;color:#5A4632;background:#F6F1E7;border:1px solid #E4DBC9;border-radius:7px;padding:3px 6px">2de B</span>
+        </aside>
+
+        <div style="width:360px;flex:none;background:#FBF8F1;border-right:1px solid #E4DBC9;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid #E4DBC9"><div><div style="font:600 16px 'Cinzel',serif;letter-spacing:.04em;color:#4A3A28">Conversations</div><div style="font:13px 'EB Garamond',serif;color:#8A6F4E;margin-top:2px">Tes échanges avec le tuteur — 2de B.</div></div><span style="font:20px 'Alegreya Sans',sans-serif;color:#8A6F4E;line-height:1">×</span></div>
+          <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.11em;text-transform:uppercase;color:#A8906A;padding:16px 20px 8px">Récentes</div>
+          <div style="display:flex;flex-direction:column;gap:7px;padding:0 14px">
+            <div style="border:1px solid #C9B896;background:#F4EEE2;border-left:3px solid #6B5A46;border-radius:9px;padding:10px 12px"><div style="font:600 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div><div style="display:flex;align-items:center;gap:10px;margin-top:4px"><span style="font:11px 'Alegreya Sans',sans-serif;color:#9A6A2E;flex:1">aujourd’hui</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#8A6F4E">Renommer</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#A25B4A">Supprimer</span></div></div>
+            <div style="border:1px solid #EAE1CF;background:#fff;border-radius:9px;padding:10px 12px"><div style="font:500 15px 'EB Garamond',serif;color:#3A2E22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Aide pour mon portrait</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:3px">hier</div></div>
+            <div style="border:1px solid #EAE1CF;background:#fff;border-radius:9px;padding:10px 12px"><div style="font:500 15px 'EB Garamond',serif;color:#3A2E22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Différence nouvelle / roman</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:3px">lundi</div></div>
+            <div style="border:1px solid #EAE1CF;background:#fff;border-radius:9px;padding:10px 12px"><div style="font:500 15px 'EB Garamond',serif;color:#3A2E22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Réviser le schéma narratif</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:3px">22 sept.</div></div>
+          </div>
+        </div>
+
+        <section style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="flex:1;min-height:0;padding:28px 48px 0;display:flex;flex-direction:column;max-width:900px;box-sizing:border-box;width:100%;margin:0 auto">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid #E4DBC9">
+              <div style="display:flex;align-items:center;gap:12px"><span style="width:38px;height:38px;border-radius:50%;overflow:hidden;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;mix-blend-mode:multiply"></span><div><div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div><div style="font:13.5px 'EB Garamond',serif;color:#6E5A3E">Il s’appuie sur ce que ton professeur a préparé.</div></div></div>
+              <div style="display:flex;align-items:center;gap:14px"><span style="font:italic 15px 'Cormorant Garamond',serif;color:#6E5A3E">Le point de vue chez Maupassant</span><span style="font:12px 'Alegreya Sans',sans-serif;color:#8A6F4E;background:#F1EBDE;border:1px solid #E4DBC9;border-radius:99px;padding:4px 12px;white-space:nowrap">18 messages restants</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:26px 0"><span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span><span style="font:italic 18px 'Cormorant Garamond',serif;color:#6E5A3E;white-space:nowrap">Ce vendredi 18 septembre</span><span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span></div>
+            <p style="margin:0;font:17px/1.65 'EB Garamond',serif;color:#221C16;text-wrap:pretty">Bonjour ! Reprenons le point de vue chez Maupassant. Dans « La Parure », le narrateur est-il un personnage de l’histoire, ou reste-t-il extérieur à elle ? Repense à la toute première phrase.</p>
+            <div style="margin:22px 0 0 96px;padding-left:18px;border-left:2px solid rgba(74,58,40,.35)"><div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#6B5A46;margin-bottom:4px">Toi</div><p style="margin:0;font:italic 17px/1.6 'EB Garamond',serif;color:#3A2E22">Il est extérieur je crois — il raconte à la 3ᵉ personne.</p></div>
+            <p style="margin:22px 0 0;font:17px/1.65 'EB Garamond',serif;color:#221C16;text-wrap:pretty">Exactement : un narrateur <em>externe</em>, à la 3ᵉ personne. Et pourtant il connaît les pensées de Mathilde — « elle songeait aux grands salons… ». Comment appelle-t-on un narrateur qui a ainsi accès à l’intérieur des personnages ?</p>
+          </div>
+          <div style="flex:none;padding:16px 48px 24px;max-width:900px;box-sizing:border-box;width:100%;margin:0 auto">
+            <div style="display:flex;align-items:flex-end;gap:10px"><div style="flex:1;border:1px solid #D8CCB4;border-radius:11px;background:#fff;padding:13px 16px;font:italic 15.5px 'EB Garamond',serif;color:#A8906A;min-height:44px;box-sizing:border-box">Ta question sur le cours…</div><span style="font:600 15px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:12px 22px;border-radius:11px;white-space:nowrap">Envoyer</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

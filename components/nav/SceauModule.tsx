@@ -12,7 +12,11 @@ import { MODULES, type CleModule } from './configModules'
 // `anneau` : l'anneau d'or de la Barre 2. Sans lui (handoff Fragments élève,
 // §Le sceau), la pastille est celle des corps de page : disque teinté, sceau
 // recadré, un simple liseré intérieur.
-export default function SceauModule({ cle, size = 64, anneau = true }: { cle: CleModule; size?: number; anneau?: boolean }) {
+// `epaisseurAnneau` : 3 px dans la Barre 2 ; 2 px sur le ruban de 64 px de la
+// Discussion Scriptorium (handoff du 18/09), où le sceau ne fait que 40 px.
+export default function SceauModule({
+  cle, size = 64, anneau = true, epaisseurAnneau = 3,
+}: { cle: CleModule; size?: number; anneau?: boolean; epaisseurAnneau?: number }) {
   const c = MODULES.find((m) => m.cle === cle)!.couleurs
 
   return (
@@ -45,7 +49,7 @@ export default function SceauModule({ cle, size = 64, anneau = true }: { cle: Cl
           className="absolute inset-0 pointer-events-none"
           style={{
             borderRadius: '50%',
-            border: '3px solid #B8893B',
+            border: `${epaisseurAnneau}px solid #B8893B`,
             boxShadow: `0 3px 12px rgba(${c.ombreAnneauRgb},.30)`,
           }}
         />

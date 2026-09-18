@@ -53,7 +53,9 @@ export default async function EleveLayout({ children }: { children: React.ReactN
     // Les deux barres d'onglets de Fragments (Barre 2 desktop et sous-nav mobile) sont
     // montées ensemble ; le fournisseur leur charge leur état UNE fois pour deux.
     <FournisseurEtatFragmentsEleve>
-    <div className="min-h-screen bg-parchemin">
+    {/* `data-coquille` : la Discussion Scriptorium en bureau efface l'en-tête et le
+        cadre du <main> par un `:has()` de globals.css (handoff du 18/09). */}
+    <div className="min-h-screen bg-parchemin" data-coquille="eleve">
       {/* En-tête desktop (2 barres). Le sélecteur de classe est dans la Barre 1. */}
       <EnTeteSite
         role="eleve"
