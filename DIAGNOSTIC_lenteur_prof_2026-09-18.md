@@ -6,7 +6,39 @@
 > `pg_stat_statements` de la prod en session lecture seule, comptes de lignes par PostgREST.
 > Les comptes d'allers-retours viennent de la lecture du code, pas de l'exécution.
 
-## 0 quindecies. Lot P3 bis — la page de classe : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+## 0 sexdecies. BILAN — tout est DÉPLOYÉ et remesuré en prod (18/09 soir) — ÉTAT COURANT
+
+Même protocole qu'au §1 (fetch depuis une page ouverte, 1 chauffe + 3 tirs, médiane), déploiement
+`1a02aeb` en service.
+
+| Écran | Au départ (matin) | **Ce soir** |
+|---|---|---|
+| Conception › une instance | 1,7 s | **0,43 – 0,46 s** |
+| Signalement › un dépôt | 2,9 s | **1,8 s** (premier tir sur une fonction froide : 3,1 – 3,8 s, le temps qu'elle lise la doctrine une fois) |
+| Passation prof, 23 copies | 2,4 s | **0,97 s** |
+| Classe 1HLP › Compétences | 3,0 s, 1 074 Ko | **2,2 s, 446 Ko** |
+| Classe T5 › Compétences | 2,8 s, 706 Ko | **2,1 s, 314 Ko** |
+| Classe 1HLP › Activité | 1,3 s | 1,3 s |
+| Tableau de bord | 2,0 s | **1,6 – 1,8 s** — et la tuile « Coût API » dit maintenant **24,68 $**, stable sur trois tirs (18,55 $ faux avant) |
+| Suivi Vestigia | 1,3 s | **0,81 s** |
+| Calendrier | 1,0 – 1,2 s | **0,8 s** |
+| Codex · Signalements · Aletheia | 0,85 · 0,75 · 1,1 s | 0,72 · 0,68 · 1,1 s |
+
+**Ce qui reste**
+
+- La page d'un signalement (1,8 s) : la file entière, le déroulé et l'édition partent ensemble, mais
+  le déroulé garde ~15 lectures de profondeur (hérité du côté élève, lot 2 du 17/09).
+- La classe en vue Compétences (2,1 – 2,2 s) : la matrice (17 lectures, agrégateurs Quazian et
+  Aletheia encore sériels) et l'attention (mesures paginées, faisceau sériel — il écrit) fixent la
+  durée du `Promise.all`.
+- Le tableau de bord (1,6 – 1,8 s) : la chaîne du plan dans les tâches du calendrier et la file
+  d'examen humain paginée.
+- **À décider par Louis** : passer le rendu à `getClaims` (un saut de moins par page, un compte
+  révoqué garde l'accès jusqu'à l'expiration du jeton, une heure).
+- Chaque fonction Vercel neuve lit la doctrine une fois (0,7 s) : les premiers tirs après un
+  déploiement ou une montée en charge sont plus lents sur signalement et conception.
+
+## 0 quindecies. Lot P3 bis — la page de classe : codé, éprouvé, DÉPLOYÉ (18/09) — ⚠️ état dépassé, voir 0 sexdecies
 
 **Ce qui change**
 
@@ -28,7 +60,7 @@ Compétences passe de 1,9-3,2 s à 1,0-1,9 s. Passe adversariale : rien de bloqu
 
 **Non éprouvé** : la prod (avant : 1HLP Compétences 2,8 s, T5 2,6 s, Activité 1,3 s).
 
-## 0 quaterdecies. Le cache de la doctrine et la tuile « Coût API » : CODÉS, éprouvés, NON déployés (18/09)
+## 0 quaterdecies. Le cache de la doctrine et la tuile « Coût API » : codés, éprouvés, DÉPLOYÉS (18/09) — ⚠️ état dépassé, voir 0 sexdecies
 
 **La doctrine gardée entre deux requêtes** (décision de Louis). `chargerDoctrineDepuisBase` garde la
 doctrine assemblée en **mémoire du processus**, par projet Supabase, **trois minutes** ; un refus ne

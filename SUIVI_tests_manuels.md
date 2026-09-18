@@ -1,5 +1,9 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Vitesse côté prof — BILAN en prod, tout déployé (18/09/2026 soir)
+
+Remesuré en prod après `1a02aeb` : conception 1,7 → 0,45 s ; signalement 2,9 → 1,8 s (3,1-3,8 s au premier tir d'une fonction froide) ; passation 2,4 → 0,97 s ; 1HLP Compétences 3,0 s / 1 074 Ko → 2,2 s / 446 Ko ; accueil 2,0 → 1,6-1,8 s avec la tuile Coût API à 24,68 $ stable (18,55 $ faux avant) ; suivi Vestigia 1,3 → 0,81 s ; calendrier 1,1 → 0,8 s. Reste : `getClaims` au rendu (décision de Louis). Bilan complet au §0 sexdecies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
+
 ## Vitesse côté prof — cache de la doctrine, tuile « Coût API », lot P3 bis : éprouvés au bac à sable, NON déployés (18/09/2026)
 
 `tsc`, `eslint`, 2 688 tests verts (3 ajoutés sur la garde de la doctrine). Doctrine gardée 3 min en mémoire par projet ; les chemins qui écrivent (import, conception) lisent une doctrine fraîche — trou trouvé par la revue. Tuile Coût API : lectures paginées et contrôlées, fenêtre fermée des deux côtés ; 9,57 $ au bac à sable, stable, égal à la somme calculée à part (24,68 $ en prod contre 18,55 $ affichés). P3 bis : socle de classe lu une fois, matrice/grille/attention/rétention ensemble ; 10 écrans identiques ; 8 écrans à doctrine identiques. P6 remesuré en prod : calendrier 0,8 s. Détail aux §0 quaterdecies et quindecies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
