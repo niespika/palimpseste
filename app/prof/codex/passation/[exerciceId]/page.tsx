@@ -13,6 +13,7 @@
 import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/passation/garde'
 import { chargerVueProf } from '@/utils/passation/vues'
+import { lancer } from '@/utils/lancer'
 import { EcranProf } from '@/components/passation/EcranProf'
 import { lireLaPorteCopieAnnotee } from '@/utils/copie/porte'
 import { chargerEntretienDeConception } from '@/utils/examens/entretien-serveur'
@@ -23,9 +24,12 @@ export default async function PassationCodexProf(
 ) {
   const { exerciceId } = await params
   const { admin, actif } = await garderProf()
+  // ⭐ 18/09 — la porte de la copie annotée part avec la vue (deux lectures
+  //    indépendantes, patron `utils/lancer.ts`) ; attendue à sa place d'avant.
+  const copieAnnoteeQ = lancer(lireLaPorteCopieAnnotee(admin))
   const vue = await chargerVueProf(admin, exerciceId, actif)
   // La copie annotée (03/09) : à ON, la liste devient une liste de noms.
-  const copieAnnotee = await lireLaPorteCopieAnnotee(admin)
+  const copieAnnotee = await copieAnnoteeQ
   if (!vue) notFound()
   const entretien = await chargerEntretienDeConception(admin, exerciceId, vue.copies)
   return (

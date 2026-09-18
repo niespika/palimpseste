@@ -70,6 +70,42 @@ export async function lireLesRetours(admin: Admin, depotId: string): Promise<Ret
 }
 
 /**
+ * ⭐ 18/09 — LES RETOURS DE PLUSIEURS DÉPÔTS EN UNE LECTURE, pour l'écran du
+ *    professeur qui les lisait copie par copie. Même tri (`created_at`), même
+ *    liste par dépôt que `lireLesRetours` ; un dépôt sans retour a une liste vide.
+ * ⚠️ Tranches de 100 dépôts (au plus deux retours par dépôt, chaud et final) ;
+ *    PostgREST plafonne ses réponses SANS le dire, donc une tranche dont le nombre
+ *    de lignes diffère du décompte annoncé par la base est relue dépôt par dépôt.
+ *    Une tranche illisible est journalisée et rend vide, comme `lireLesRetours`.
+ */
+export async function lireLesRetoursDeDepots(
+  admin: Admin, depotIds: readonly string[],
+): Promise<Map<string, RetourDeCopie[]>> {
+  const out = new Map<string, RetourDeCopie[]>()
+  const uniques = [...new Set(depotIds)]
+  for (const id of uniques) out.set(id, [])
+  const TRANCHE = 100
+  const tranches: string[][] = []
+  for (let i = 0; i < uniques.length; i += TRANCHE) tranches.push(uniques.slice(i, i + TRANCHE))
+  await Promise.all(tranches.map(async (ids) => {
+    const { data, error, count } = await admin
+      .from('exercices_retours').select(CHAMPS, { count: 'exact' }).in('depot_id', ids)
+      .order('created_at', { ascending: true })
+    if (error) {
+      console.error(`[passation] retours illisibles (${ids.length} dépôts, dont ${ids[0]}) — ${error.code} ${error.message}`)
+      return
+    }
+    const lignes = (data ?? []) as unknown as RetourDeCopie[]
+    if (count == null || count !== lignes.length) {
+      await Promise.all(ids.map(async (id) => out.set(id, await lireLesRetours(admin, id))))
+      return
+    }
+    for (const r of lignes) out.get(r.depot_id)?.push(r)
+  }))
+  return out
+}
+
+/**
  * Ce que l'écran affiche : le texte ÉDITÉ s'il existe, l'engendré sinon.
  *
  * ⚠️ Un tableau VIDE édité par le professeur n'est pas « pas d'édition » : c'est

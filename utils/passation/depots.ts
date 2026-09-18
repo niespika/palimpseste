@@ -27,7 +27,7 @@ import 'server-only'
 // ============================================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { mettreEnFile, etatDesJobs, relancerUnJob, type EtatLisible } from '@/utils/chaine/file'
+import { mettreEnFile, etatDesJobs, etatDesJobsDeDepots, relancerUnJob, type EtatLisible } from '@/utils/chaine/file'
 import { ETAPE_MESURE_V1, ETAPE_RETOUR_V1 } from './file-copie'
 import { cheminPage, prefixeDepot, BUCKET } from './chemins'
 import { refuserPhotos, renumeroter, type Photo } from './photos'
@@ -429,6 +429,13 @@ export async function mettreLaTranscriptionEnFile(
 
 export async function attenteDuDepot(admin: Admin, depotId: string): Promise<EtatLisible[]> {
   return etatDesJobs(admin, depotId)
+}
+
+/** ⭐ 18/09 — l'attente de PLUSIEURS dépôts en une lecture (écran du professeur). */
+export async function attenteDesDepots(
+  admin: Admin, depotIds: readonly string[],
+): Promise<Map<string, EtatLisible[]>> {
+  return etatDesJobsDeDepots(admin, depotIds)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -6,7 +6,54 @@
 > `pg_stat_statements` de la prod en session lecture seule, comptes de lignes par PostgREST.
 > Les comptes d'allers-retours viennent de la lecture du code, pas de l'exécution.
 
-## 0 bis. Lot P1 — CODÉ et éprouvé au bac à sable (18/09), NON déployé — ÉTAT COURANT
+## 0 quater. Lot P2 — la passation lit ses copies ensemble : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+
+**Ce qui change**
+
+- `chargerVueProf` (`utils/passation/vues.ts`) : les noms, **tous les retours** et **toutes les
+  attentes** de l'instance partent en trois lectures (`lireLesRetoursDeDepots`,
+  `etatDesJobsDeDepots` via `attenteDesDepots`), et chaque copie retrouve les siens par son
+  identifiant. Avant : deux lectures par copie, l'une après l'autre.
+- Les lecteurs groupés lisent par tranches (100 dépôts pour les retours, 50 pour les jobs), avec le
+  décompte exact de la base : une tranche dont le nombre de lignes diffère du décompte est relue
+  dépôt par dépôt avec les lecteurs d'avant. Même tri (`created_at`), même liste par dépôt, même
+  comportement en cas d'erreur (liste vide et une ligne au journal).
+- Les trois pages de passation (Codex, Aletheia, Vestigia) font partir la porte de la copie annotée
+  (et l'essai, pour Vestigia) avec la vue.
+
+**Éprouvé**
+
+- `tsc` propre, 2 685 tests verts.
+- **`chargerVueProf` JSON-identique** ancien/nouveau sur les **16 instances** du bac à sable qui ont
+  des dépôts (51 dépôts) ; 8,2 → 4,0 s pour les seize depuis Montréal.
+- **9 écrans identiques** ancien/nouveau (Codex et Aletheia sur 6 instances, Vestigia, identifiant
+  inconnu) avec la session prof du bac à sable ; en local 1,4-1,5 s → 0,7-0,8 s.
+- Le repli sur troncature est joué contre une doublure de PostgREST (réponses plafonnées, décompte
+  exact) : 120 dépôts × 25 jobs et 250 dépôts × 12 retours → tranches relues dépôt par dépôt,
+  résultat identique au lecteur unitaire ; dépôts sans ligne → liste vide.
+- **Passe adversariale** : rien de bloquant. Repris : le contrôle de troncature se fait sur le
+  décompte de la base et non sur un plafond codé (une contrainte d'unicité borne de toute façon à
+  4 jobs et 2 retours par dépôt) ; le journal nomme le premier dépôt de la tranche. Non repris : pas
+  de test commité pour les lecteurs groupés (leurs modules importent `server-only`, que `npm test`
+  ne charge pas — la doublure vit hors de l'arbre) ; `chargerVueEleve` lit encore ses retours en
+  série après son `Promise.all` (une ligne pour `IDEES_post_rentree.md`).
+
+**Non éprouvé** : la prod (avant : Codex 16 copies 1,9 s, 23 copies 2,4 s ; Aletheia 22 copies 2,35 s).
+
+## 0 ter. Lot P1 remesuré en prod (18/09, déploiement `a6facc5` vérifié « Ready »)
+
+| Écran | Avant | Après |
+|---|---|---|
+| Signalement › un dépôt | 2,9 s | **2,5 s** (3 tirs : 2,41 · 2,50 · 2,53) |
+| Conception › une instance | 1,7 s | **1,4 s** (1,37 · 1,43) |
+
+Moins que l'estimation. La raison, mesurée : la doctrine pèse **1,42 Mo de JSON** (routes 676 Ko,
+`exercices_types_crans` 348 Ko pour 117 lignes, problèmes 164 Ko), et ce volume traverse la
+passerelle à chaque rendu — 1,2 à 1,5 s depuis Montréal, sans doute 0,6 à 0,8 s depuis `pdx1`. La
+profondeur en série n'était que la moitié du coût. **Le cache entre requêtes (P1.3), invalidé à
+l'import, reste le levier** : il ramènerait ces deux pages autour de 0,8 s. Décision de Louis.
+
+## 0 bis. Lot P1 — codé, éprouvé, DÉPLOYÉ (18/09) — ⚠️ état dépassé, voir 0 ter
 
 **Ce qui change**
 

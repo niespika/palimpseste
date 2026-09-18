@@ -18,6 +18,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { garderProf } from '@/utils/passation/garde'
 import { chargerVueProf } from '@/utils/passation/vues'
+import { lancer } from '@/utils/lancer'
 import { EcranProf } from '@/components/passation/EcranProf'
 import { lireLaPorteCopieAnnotee } from '@/utils/copie/porte'
 import { essaiDeLInstance } from '@/utils/essai/branchement-serveur'
@@ -28,11 +29,15 @@ export default async function PassationFragmentsProf(
 ) {
   const { exerciceId } = await params
   const { admin, actif } = await garderProf()
+  // ⭐ 18/09 — l'essai, la vue et la porte partent ensemble (trois lectures
+  //    indépendantes, patron `utils/lancer.ts`) ; attendus dans l'ordre d'avant.
+  const vueQ = lancer(chargerVueProf(admin, exerciceId, actif))
+  const copieAnnoteeQ = lancer(lireLaPorteCopieAnnotee(admin))
   const essai = await essaiDeLInstance(admin, exerciceId)
   if (!essai) notFound()
-  const vue = await chargerVueProf(admin, exerciceId, actif)
+  const vue = await vueQ
   // La copie annotée (03/09) : à ON, la liste devient une liste de noms.
-  const copieAnnotee = await lireLaPorteCopieAnnotee(admin)
+  const copieAnnotee = await copieAnnoteeQ
   if (!vue) notFound()
   const retourEssai = `/prof/fragments-erudition/essais/${essai.essaiId}?classe=${essai.classeId}`
   return (

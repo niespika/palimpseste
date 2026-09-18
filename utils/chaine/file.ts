@@ -465,6 +465,56 @@ export interface EtatLisible {
   message: string | null
 }
 
+/**
+ * ⭐ 18/09 — LES JOBS DE PLUSIEURS DÉPÔTS EN UNE LECTURE. L'écran du professeur
+ *    (`chargerVueProf`) lisait l'attente copie par copie, en série : 70 ms par
+ *    élève, mesuré en prod. Même tri, même forme par dépôt que `etatDesJobs` ;
+ *    un dépôt sans job a une liste vide.
+ * ⚠️ PostgREST plafonne ses réponses SANS le dire : les dépôts se lisent par
+ *    tranches de 50 (au plus quatre jobs par dépôt, une étape chacun), et une
+ *    tranche dont le nombre de lignes diffère du décompte annoncé par la base est
+ *    relue dépôt par dépôt — jamais une attente tronquée, quel que soit le plafond.
+ * ⚠️ Une tranche illisible est journalisée et rend des listes vides, comme
+ *    `etatDesJobs` le fait pour un dépôt.
+ */
+export async function etatDesJobsDeDepots(
+  admin: Admin, depotIds: readonly string[],
+): Promise<Map<string, EtatLisible[]>> {
+  const out = new Map<string, EtatLisible[]>()
+  const uniques = [...new Set(depotIds)]
+  for (const id of uniques) out.set(id, [])
+  const TRANCHE = 50
+  const tranches: string[][] = []
+  for (let i = 0; i < uniques.length; i += TRANCHE) tranches.push(uniques.slice(i, i + TRANCHE))
+  await Promise.all(tranches.map(async (ids) => {
+    const { data, error, count } = await admin
+      .from('exercices_jobs').select(CHAMPS, { count: 'exact' }).in('depot_id', ids)
+      .order('created_at', { ascending: true })
+    if (error) {
+      console.error(`[chaine] état des jobs illisible (${ids.length} dépôts, dont ${ids[0]}) — ${error.code} ${error.message}`)
+      return
+    }
+    const lignes = (data ?? []) as unknown as Job[]
+    if (count == null || count !== lignes.length) {
+      // La réponse ne porte pas tout ce que la base annonce : on relit ces
+      // dépôts un par un, comme avant.
+      await Promise.all(ids.map(async (id) => out.set(id, await etatDesJobs(admin, id))))
+      return
+    }
+    for (const j of lignes) {
+      out.get(j.depot_id)?.push({
+        etape: j.etape,
+        statut: j.statut,
+        echec_definitif: j.echec_definitif,
+        tentatives: j.tentatives,
+        tentatives_max: j.tentatives_max,
+        message: j.dernier_message,
+      })
+    }
+  }))
+  return out
+}
+
 export async function etatDesJobs(admin: Admin, depotId: string): Promise<EtatLisible[]> {
   const { data, error } = await admin
     .from('exercices_jobs').select(CHAMPS).eq('depot_id', depotId)

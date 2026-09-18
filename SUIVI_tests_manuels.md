@@ -1,5 +1,9 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Vitesse côté prof — lot P2 (la passation lit ses copies ensemble), éprouvé au bac à sable, NON déployé (18/09/2026)
+
+`tsc` propre, 2 685 tests verts. `chargerVueProf` JSON-identique ancien/nouveau sur les 16 instances du bac à sable qui ont des dépôts (8,2 → 4,0 s). Neuf écrans de passation identiques (Codex, Aletheia, Vestigia, identifiant inconnu) avec la session prof du bac à sable, 1,4 → 0,75 s en local. Repli sur troncature joué contre une doublure PostgREST (décompte exact, réponses plafonnées). Passe adversariale : rien de bloquant, deux points repris. P1 remesuré en prod après déploiement : signalement 2,9 → 2,5 s, conception 1,7 → 1,4 s — le volume de la doctrine (1,42 Mo) borne le gain, le cache entre requêtes reste à décider. Détail au §0 quater et §0 ter de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
+
 ## Vitesse côté prof — lot P1 (doctrine lue une fois), éprouvé au bac à sable, NON déployé (18/09/2026)
 
 `tsc` propre, 2 685 tests verts. Lignes de doctrine byte-identiques ancien/nouveau lecteur sur le bac à sable (3 294 routes ; 2 286 → 560 ms depuis Montréal). Treize écrans identiques (texte + identifiants) entre HEAD (worktree, port 3100) et le nouveau code (3000) avec une session prof par lien magique sur le bac à sable : conception (crans 5, 2, 4), trois signalements de test aux deux moments, listes, trois chemins de refus. Signalements de test insérés puis effacés (0 restant). Passe adversariale : rien de bloquant, un point repris. Détail au §0 bis de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`. Reste : mesurer en prod après déploiement.

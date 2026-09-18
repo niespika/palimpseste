@@ -10,11 +10,11 @@ import 'server-only'
 // ============================================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { lireDepot, lireDepotsDeLInstance, attenteDuDepot, lireLeMessageReporte,
+import { lireDepot, lireDepotsDeLInstance, attenteDuDepot, attenteDesDepots, lireLeMessageReporte,
   eleveExempte, type DepotDePassation } from './depots'
 import { depotClos, MESSAGE_DEPOT_CLOS } from './statuts'
 import { depotPorteDuTravail } from '@/utils/examens/retrait'
-import { lireLesRetours, pointsAAfficher } from './retours'
+import { lireLesRetours, lireLesRetoursDeDepots, pointsAAfficher } from './retours'
 import { offreSeJuger, offreConfianceRemise, offreCredence, LIBELLES_CONFIANCE }
   from './metacognition'
 import { avertissementsDuPrompt } from './transcription'
@@ -107,14 +107,22 @@ export async function chargerVueProf(
   if (error || !ex) return null
 
   const { depots, tronque } = await lireDepotsDeLInstance(admin, exerciceId)
-  const noms = await lireLesNoms(admin, depots.map((d) => d.eleve_id))
+  // ⭐ 18/09 — LES COPIES SE LISENT ENSEMBLE. Avant : les retours et l'attente de
+  //    chaque copie, l'une après l'autre — 70 ms par élève, mesuré en prod
+  //    (16 copies → 1,9 s, 23 copies → 2,4 s). Maintenant : les noms, tous les
+  //    retours et toutes les attentes de l'instance partent en trois lectures,
+  //    et chaque copie retrouve les siens par son identifiant.
+  const depotIds = depots.map((d) => d.id)
+  const [noms, retoursParDepot, attenteParDepot] = await Promise.all([
+    lireLesNoms(admin, depots.map((d) => d.eleve_id)),
+    lireLesRetoursDeDepots(admin, depotIds),
+    attenteDesDepots(admin, depotIds),
+  ])
 
   const copies: LigneCopie[] = []
   for (const d of depots) {
-    const [retours, attente] = await Promise.all([
-      lireLesRetours(admin, d.id),
-      attenteDuDepot(admin, d.id),
-    ])
+    const retours = retoursParDepot.get(d.id) ?? []
+    const attente = attenteParDepot.get(d.id) ?? []
     // Le retour « chaud » est celui que la correction en classe regarde ; le
     // « final » n'existe pas ici — la séquence de classe s'arrête à
     // `retour_publie` (piège 4).
