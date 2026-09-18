@@ -81,7 +81,7 @@ complète. Les deux se recoupent à environ 0,1–0,4 s près : Vestigia donne 1
 | Codex (liste) | 2,6 s | **0,6 s** |
 | Aletheia (liste) | 2,2 s | **1,0 s** |
 | Un exercice terminé | non mesuré (3,4 s après le lot 0) | **1,7 s** |
-| Une séance Aletheia | non mesurée | **2,0 s** (1,5 – 2,4 s) |
+| Une séance Aletheia | non mesurée | **1,4 s** après la suite A du 18/09 (2,0 s avant ; quatre séances 1,29 – 1,44 s) |
 
 - Le premier octet est à 0,24 – 0,35 s presque partout. Il était à 0,85 s ou plus au départ.
 - **Vu à l'écran en prod** : Vestigia s'affiche (thème, « à faire maintenant », semaine 4), et le
@@ -89,8 +89,9 @@ complète. Les deux se recoupent à environ 0,1–0,4 s près : Vestigia donne 1
 
 **Ce qui reste, par ordre de poids**
 
-1. **La séance Aletheia (2,0 s).** Sa garde d'accès est une chaîne série : inscription, puis mode
-   d'exposition, puis séance.
+1. **La séance Aletheia (1,4 s le 18/09, après la suite A).** La garde d'accès lit désormais en
+   parallèle et le parcours ne se lit qu'une fois par rendu (`88116d8`). Ce qui reste est la
+   préparation des fenêtres de relance et du retour final, une chaîne série qui lit le texte du livre.
 2. **La page d'exercice (1,7 s).** `lireContexte` puis le chargeur gardent environ 15 lectures de
    profondeur.
 3. **L'accueil (1,6 s).** La chaîne Aletheia (`livresPourClasse`) et les signaux pèsent encore.
