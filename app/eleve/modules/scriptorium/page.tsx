@@ -8,7 +8,8 @@ import { jourDansFuseau, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import ChatScriptorium from './ChatScriptorium'
-import PlanCours, { type PlanEleve } from './PlanCours'
+import PlanCours from './PlanCours'
+import { construirePlanEleve } from '@/utils/scriptorium-plan-eleve'
 import { lancer } from '@/utils/lancer'
 
 // Face ÉLÈVE de Scriptorium (RAG L5, SPEC §7.1) : espace de dialogue ancré sur
@@ -17,7 +18,8 @@ import { lancer } from '@/utils/lancer'
 //
 // C2.2 — la page charge TOUT comme avant et répartit l'affichage entre les deux
 // sous-onglets du module (bande « seuil » de l'en-tête, cf. configModules) :
-//   ?vue=plan       → <PlanCours>        (le plan du cours, écran à part)
+//   ?vue=plan       → <PlanCours>        (le plan du cours, écran à part ; `?parcours=<id>`
+//                                          ouvre le volet d'un parcours — handoff du 18/09)
 //   ?vue=discussion → <ChatScriptorium>  (échange + historique) — DÉFAUT
 // `?conv=` continue de coexister ; il ne vaut que sous `discussion`.
 
@@ -43,7 +45,7 @@ function libelleRecence(jour: string, aujourdHui: string): string {
 export default async function ScriptoriumElevePage({
   searchParams,
 }: {
-  searchParams: Promise<{ conv?: string; vue?: string }>
+  searchParams: Promise<{ conv?: string; vue?: string; parcours?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -75,7 +77,7 @@ export default async function ScriptoriumElevePage({
   if (seuil.type === 'ecran') return seuil.noeud
   const classe = seuil.inscription
 
-  const { conv: convSel, vue = 'discussion' } = await searchParams
+  const { conv: convSel, vue = 'discussion', parcours: parcoursSel } = await searchParams
 
   // Fuseau du prof : gouverne le jour courant (quota) ET la datation des lettres.
   const fuseau = await pFuseau
@@ -145,31 +147,10 @@ export default async function ScriptoriumElevePage({
   // ── Plan du cours (L6) : la même donnée que le squelette du corpus, rendue à
   // l'élève — TITRES ET STATUTS SEULS (aucun texte ne franchit ce DTO, c'est la
   // règle anti-spoiler ; le contenu des semaines à venir n'existe que côté IA).
+  // La construction (bornes d'année, états, segments) est PURE et testée :
+  // utils/scriptorium-plan-eleve.ts.
   const matiere = await pMatiere
-  const plan: PlanEleve = {
-    parcours: (matiere?.instances ?? []).map(inst => {
-      const parSemaine = new Map<number, { libelle: string; statut: 'vu' | 'en_cours' | 'a_venir' }[]>()
-      for (const e of inst.elements) {
-        const statut = e.vu ? ('vu' as const) : e.semaine <= inst.semaineCourante ? ('en_cours' as const) : ('a_venir' as const)
-        const arr = parSemaine.get(e.semaine) ?? []
-        arr.push({ libelle: e.libelleMatiere, statut })
-        parSemaine.set(e.semaine, arr)
-      }
-      return {
-        titre: inst.parcoursTitre,
-        semaineCourante: inst.semaineCourante,
-        nbSemaines: inst.nbSemaines,
-        semaines: Array.from({ length: inst.nbSemaines }, (_, i) => i + 1)
-          .filter(k => (parSemaine.get(k) ?? []).length > 0)
-          .map(k => ({
-            k,
-            lundi: inst.lundis[k] ?? null,
-            courante: k === inst.semaineCourante,
-            elements: parSemaine.get(k) ?? [],
-          })),
-      }
-    }),
-  }
+  const plan = construirePlanEleve(matiere)
 
   // Amorces de la semaine courante (déterministes, côté serveur — §7.1).
   const enCours = plan.parcours.flatMap(p => p.semaines.filter(s => s.courante).flatMap(s => s.elements))
@@ -196,7 +177,7 @@ export default async function ScriptoriumElevePage({
   if (vue === 'plan') {
     return (
       <div className="lg:-mt-4 lg:-mb-2" data-module="scriptorium">
-        <PlanCours plan={plan} />
+        <PlanCours plan={plan} parcoursOuvert={parcoursSel ?? null} />
       </div>
     )
   }

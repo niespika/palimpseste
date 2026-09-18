@@ -14,6 +14,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { construireApercuAssign, memoSocleFrise, type ApercuSemaine, type AssignParcours } from './parcours-apercu'
+import { anneeScolaireDe } from './frise-enseignement'
 
 /**
  * Semaine courante d'une instance de parcours (§5.2, verrouillé) :
@@ -83,6 +84,24 @@ export interface InstanceCorpus {
   semaineCourante: number            // ≥ 0 — les instances NON DATÉES sont exclues en amont (corpusClasse)
   lundis: Record<number, string>     // semaine → libellé de lundi (« lun. 15 sept. ») ; absent si non résolu
   elements: ElementCorpus[]          // triés par (semaine, tri)
+  // ── Ajouts du 18/09 pour la VUE ANNÉE élève (utils/scriptorium-plan-eleve.ts). L'assembleur
+  // du corpus les ignore ; rien n'y change pour l'IA (préfixe inchangé à l'octet).
+  pcId?: string                      // id de l'assignation (scriptorium_parcours_classes) — adresse du volet
+  lundisISO?: Record<number, string> // semaine → lundi ISO (YYYY-MM-DD) ; même clé que `lundis`
+  semainesAnnee?: Record<number, number> // semaine de parcours → semaine d'ENSEIGNEMENT de l'année (indexContinu)
+}
+
+/**
+ * L'année d'enseignement telle que la frise la compte (semaines d'enseignement
+ * seules, vacances exclues) — pour le rail des N semaines de la vue Année élève.
+ * `semaineCourante` suit la règle de `semaineCourante()` : la dernière semaine
+ * COMMENCÉE (0 avant la rentrée, N après la dernière).
+ */
+export interface AnneeCorpus {
+  ay: number                         // 2026 pour « 2026-2027 »
+  nbSemaines: number
+  semaineCourante: number
+  lundis: string[]                   // lundis ISO, index 0 = semaine 1
 }
 
 export interface FicheSeance { seance: number; texte: string }  // fiche déjà formatée (thèse, arguments, …)
@@ -308,7 +327,7 @@ export interface LivreRefCorpus { cle: string; titre: string; totalSeances: numb
  */
 export async function chargerMatiereClasse(
   admin: SupabaseClient, classeId: string, aujourdHui: string,
-): Promise<{ instances: InstanceCorpus[]; livres: LivreCorpus[] } | null> {
+): Promise<{ instances: InstanceCorpus[]; livres: LivreCorpus[]; annee: AnneeCorpus } | null> {
   // 1. Assignations ACTIVES de la classe (tolérant si colonnes snapshot absentes).
   let assignData: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
@@ -332,7 +351,26 @@ export async function chargerMatiereClasse(
 
   // 2. Résolution des semaines courantes — une instance NON DATÉE est EXCLUE (§5.2).
   const socleDe = memoSocleFrise(admin)
-  const brutes: { pcId: string; titre: string; nb: number; courante: number; lundis: Record<number, string> }[] = []
+  // L'année d'enseignement d'aujourd'hui (vue Année élève) : une lecture, mémoïsée
+  // avec celles des aperçus. La semaine d'année d'un lundi se lit par sa DATE, pas par
+  // son rang : un snapshot publié garde ses dates même si la frise vivante a bougé.
+  const ay = anneeScolaireDe(aujourdHui)
+  const friseAnnee = (await socleDe(ay)).frise
+  const indexParLundi = new Map(friseAnnee.map(w => [w.dateDebutLundi, w.indexContinu]))
+  const semaineAnneeDe = (lundi: string): number | undefined => {
+    const exact = indexParLundi.get(lundi)
+    if (exact != null) return exact
+    let idx: number | undefined
+    for (const w of friseAnnee) if (w.dateDebutLundi <= lundi) idx = w.indexContinu
+    return idx
+  }
+  let couranteAnnee = 0
+  for (const w of friseAnnee) if (w.dateDebutLundi <= aujourdHui && w.indexContinu > couranteAnnee) couranteAnnee = w.indexContinu
+  const annee: AnneeCorpus = { ay, nbSemaines: friseAnnee.length, semaineCourante: couranteAnnee, lundis: friseAnnee.map(w => w.dateDebutLundi) }
+  const brutes: {
+    pcId: string; titre: string; nb: number; courante: number
+    lundis: Record<number, string>; lundisISO: Record<number, string>; semainesAnnee: Record<number, number>
+  }[] = []
   for (const a of assignData) {
     const meta = metaParcours.get(a.parcours_id as string)
     if (!meta) continue
@@ -347,10 +385,16 @@ export async function chargerMatiereClasse(
     const courante = semaineCourante(res?.apercu ?? null, aujourdHui)
     if (courante == null) continue
     const lundis: Record<number, string> = {}
+    const lundisISO: Record<number, string> = {}
+    const semainesAnnee: Record<number, number> = {}
     for (const s of res?.apercu ?? []) {
-      if (s.statut === 'definie' && s.dateReelle) lundis[s.semaine] = lundiCorpus(s.dateReelle)
+      if (s.statut !== 'definie' || !s.dateReelle) continue
+      lundis[s.semaine] = lundiCorpus(s.dateReelle)
+      lundisISO[s.semaine] = s.dateReelle
+      const idx = semaineAnneeDe(s.dateReelle)
+      if (idx != null) semainesAnnee[s.semaine] = idx
     }
-    brutes.push({ pcId: a.id as string, titre: meta.titre, nb: meta.nb, courante, lundis })
+    brutes.push({ pcId: a.id as string, titre: meta.titre, nb: meta.nb, courante, lundis, lundisISO, semainesAnnee })
   }
   if (brutes.length === 0) return null
   // Ordre STABLE (condition du cache) : titre de parcours, puis id d'assignation.
@@ -488,6 +532,9 @@ export async function chargerMatiereClasse(
     semaineCourante: b.courante,
     lundis: b.lundis,
     elements: (elementsParPc.get(b.pcId) ?? []).sort((x, y) => x.semaine - y.semaine || cmpTri(x.tri, y.tri)),
+    pcId: b.pcId,
+    lundisISO: b.lundisISO,
+    semainesAnnee: b.semainesAnnee,
   }))
 
   // 6. Livres : fiches READY + carte READY, dans un ordre stable (titre, id).
@@ -515,7 +562,7 @@ export async function chargerMatiereClasse(
         .map(f => ({ seance: f.semaine, texte: formaterFiche(f, chapParSeance.get(`${id}|${f.semaine}`) ?? null) })),
     }))
 
-  return { instances, livres: livresCorpus }
+  return { instances, livres: livresCorpus, annee }
 }
 
 /**

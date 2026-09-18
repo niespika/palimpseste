@@ -1,65 +1,32 @@
 import Link from 'next/link'
+import type { PlanEleve, ParcoursPlan, SemainePlan } from '@/utils/scriptorium-plan-eleve'
+import VueAnnee from './VueAnnee'
+import PasseReplie from './PasseReplie'
+import FermetureVolet, { HREF_ANNEE } from './FermetureVolet'
 
-// Onglet « Plan de cours » de la face élève (C2.2) — extrait du volet dépliable
-// de ChatScriptorium, qui se recentre sur la discussion. Écran à part, lisible
-// d'un coup d'œil : frise verticale des semaines, statuts distingués par la
-// COULEUR (jetons ok / attention / muet) ET par la POLICE (gras = cette semaine,
-// italique = à venir).
+// Onglet « Plan de cours » de la face élève — refait le 18/09/2026 sur le handoff
+// `design_handoff_plan_cours_eleve` (écrans 1a → 1d). Deux étages, une seule page :
+//   ?vue=plan                → la VUE ANNÉE seule (<VueAnnee>) — l'écran d'entrée ;
+//   ?vue=plan&parcours=<id>  → l'Année resserrée à gauche (bureau) + le VOLET du
+//                              parcours (sa frise) à droite ; sous lg, le volet est
+//                              un écran plein avec la barre « ‹ Année ».
+// Le commutateur Année | Parcours d'avant (jamais rendu) a disparu avec ce lot.
 //
-// Anti-spoiler : ce composant ne reçoit que le DTO `PlanEleve` — TITRES ET
-// STATUTS SEULS, aucun texte de contenu (le contenu des semaines à venir n'existe
-// que côté IA). Ne pas élargir ce DTO, même « pour enrichir » l'écran.
+// Anti-spoiler : ce composant ne reçoit que le DTO `PlanEleve` (utils/
+// scriptorium-plan-eleve.ts) — TITRES ET STATUTS SEULS, aucun texte de contenu.
+// Ne pas élargir ce DTO, même « pour enrichir » l'écran.
 //
-// Rendu seul : aucune logique, aucune Server Action, aucun état.
-
-// Plan du cours côté élève (L6) — TITRES ET STATUTS SEULS, aucun texte.
-export interface PlanEleve {
-  parcours: {
-    titre: string
-    semaineCourante: number
-    nbSemaines: number
-    semaines: {
-      k: number
-      lundi: string | null
-      courante: boolean
-      elements: { libelle: string; statut: 'vu' | 'en_cours' | 'a_venir' }[]
-    }[]
-  }[]
-}
-
-// ⚠️ Vue « Année » (une carte par parcours) : spécifiée, PAS construite en v1.
-// Tant qu'elle n'existe pas, le commutateur Année | Parcours n'est PAS rendu —
-// pas de bouton mort à l'écran (règle v1 du handoff, écran 1b). Passer ce drapeau
-// à `true` le fera apparaître le jour où la vue Année sera écrite.
-const VUE_ANNEE_DISPONIBLE: boolean = false
+// Rendu serveur ; deux îlots client minuscules : le passé qui se déplie
+// (<PasseReplie>) et Échap qui referme le volet (<FermetureVolet>).
 
 // Encres de la maquette absentes des jetons : versions ASSOMBRIES pour tenir le
-// contraste AA sur parchemin (même démarche que `ongletInactif` de configModules).
-// Les JETONS restent la couleur des pastilles, filets et segments : `ok`,
-// `attention` (#9A6A2E), `muet`.
-const ENCRE_META = '#6E5A3E' // méta, dates, libellés « à venir »
-const OCRE_AA = '#8A6023'    // texte et badge ocre (statut « cette semaine »)
+// contraste AA sur parchemin. Les JETONS restent la couleur des pastilles, filets
+// et segments : `ok`, `attention` (#9A6A2E), `muet`.
+const ENCRE_META = '#6E5A3E'
+const OCRE_AA = '#8A6023'
 
-// Nombre de semaines à venir montrées avant le repli (cf. handoff : « au-delà
-// de ~2 semaines à venir, replier »).
+// Nombre de semaines à venir montrées avant le repli.
 const A_VENIR_VISIBLES = 2
-
-function Commutateur() {
-  // Sobre, charte : deux libellés Alegreya Sans séparés d'un filet au pigment,
-  // l'actif souligné d'un filet de 2 px. Local au CONTENU du plan (changement de
-  // vue, pas de navigation) — il ne va pas dans l'en-tête et ne crée pas de `?vue=`.
-  return (
-    <div className="flex items-center gap-3">
-      <span className="font-ui text-[13px] font-medium tracking-[.03em] pb-[3px] border-b-2 border-transparent" style={{ color: ENCRE_META }}>
-        Année
-      </span>
-      <span className="w-px h-[15px] bg-pigment/30" />
-      <span className="font-ui text-[13px] font-semibold tracking-[.03em] pb-[3px] border-b-2 border-pigment text-pigment">
-        Parcours
-      </span>
-    </div>
-  )
-}
 
 function Legende() {
   return (
@@ -106,13 +73,12 @@ function Element({ libelle, statut, saillant }: { libelle: string; statut: 'vu' 
   )
 }
 
-type Semaine = PlanEleve['parcours'][number]['semaines'][number]
-
 // Une rangée de la frise : gouttière de date · pastille sur l'axe · carte.
-function Rangee({ s, etat, dernier }: { s: Semaine; etat: 'vu' | 'courante' | 'a_venir'; dernier: boolean }) {
+// `derniereSemaine` : la dernière semaine du parcours porte la mention à droite (§3).
+function Rangee({ s, etat, dernier, derniereSemaine }: { s: SemainePlan; etat: 'vu' | 'courante' | 'a_venir'; dernier: boolean; derniereSemaine: boolean }) {
   return (
     <div className="flex items-stretch">
-      {/* gouttière : ordinal + lundi (resserrée sous sm — chantier 4) */}
+      {/* gouttière : ordinal + lundi (resserrée sous sm) */}
       <div className="w-[72px] sm:w-[104px] flex-none text-right pr-3 sm:pr-4 pt-0.5">
         <div
           className="font-ui text-[10px] font-bold uppercase tracking-[.09em]"
@@ -164,6 +130,7 @@ function Rangee({ s, etat, dernier }: { s: Semaine; etat: 'vu' | 'courante' | 'a
               <span className="font-corps text-[13px] italic" style={{ color: ENCRE_META }}>
                 ce que vous étudiez en ce moment
               </span>
+              {derniereSemaine && <MentionDerniere />}
             </div>
             <ul className="flex flex-col gap-2">
               {s.elements.map((e, i) => <Element key={i} libelle={e.libelle} statut={e.statut} saillant />)}
@@ -179,12 +146,14 @@ function Rangee({ s, etat, dernier }: { s: Semaine; etat: 'vu' | 'courante' | 'a
           </div>
         ) : etat === 'vu' ? (
           <div className="rounded-[10px] border border-bordure bg-surface px-4 py-[11px]">
+            {derniereSemaine && <div className="flex justify-end mb-1"><MentionDerniere /></div>}
             <ul className="flex flex-col gap-[7px]">
               {s.elements.map((e, i) => <Element key={i} libelle={e.libelle} statut={e.statut} saillant={false} />)}
             </ul>
           </div>
         ) : (
           <div className="rounded-[10px] border border-dashed border-bordure-bouton bg-surface/60 px-4 py-[11px]">
+            {derniereSemaine && <div className="flex justify-end mb-1"><MentionDerniere /></div>}
             <ul className="flex flex-col gap-[7px]">
               {s.elements.map((e, i) => <Element key={i} libelle={e.libelle} statut={e.statut} saillant={false} />)}
             </ul>
@@ -195,36 +164,64 @@ function Rangee({ s, etat, dernier }: { s: Semaine; etat: 'vu' | 'courante' | 'a
   )
 }
 
-function Parcours({ p }: { p: PlanEleve['parcours'][number] }) {
-  const premierLundi = p.semaines.find(s => s.lundi)?.lundi ?? null
-  const etatDe = (s: Semaine): 'vu' | 'courante' | 'a_venir' =>
+function MentionDerniere() {
+  return <span className="font-ui text-[12px] text-muet-clair ml-auto whitespace-nowrap">dernière semaine</span>
+}
+
+// ── La frise d'un parcours (le volet) ────────────────────────────────────────
+
+function FriseParcours({ p }: { p: ParcoursPlan }) {
+  const etatDe = (s: SemainePlan): 'vu' | 'courante' | 'a_venir' =>
     s.courante ? 'courante' : s.k < p.semaineCourante ? 'vu' : s.k > p.semaineCourante ? 'a_venir' : 'vu'
 
-  // Repli : au-delà de A_VENIR_VISIBLES semaines à venir, on ne montre que les
-  // premières — le reste est résumé d'une ligne (le plan reste lisible d'un coup
-  // d'œil, et l'anti-spoiler n'y perd rien : seuls des titres sont en jeu).
+  const vues = p.semaines.filter(s => etatDe(s) === 'vu')
   const aVenir = p.semaines.filter(s => etatDe(s) === 'a_venir')
   const repliees = aVenir.slice(A_VENIR_VISIBLES)
   const derniereRepliee = repliees[repliees.length - 1]
-  const visibles = p.semaines.filter(s => !repliees.includes(s))
+  const visibles = p.semaines.filter(s => !repliees.includes(s) && !vues.includes(s))
+  const derniereK = p.semaines[p.semaines.length - 1]?.k
+  // Passé replié par défaut — SAUF parcours terminé (tout est passé : tout est déplié).
+  const replier = p.etat !== 'termine' && vues.length > 0
+  const groupesVus = [...new Set(vues.flatMap(s => s.groupes))]
+  const nbElementsVus = vues.reduce((n, s) => n + s.elements.length, 0)
+  const dernierVisible = visibles[visibles.length - 1] ?? (replier ? null : vues[vues.length - 1])
+  const rangee = (s: SemainePlan) => (
+    <Rangee
+      key={s.k}
+      s={s}
+      etat={etatDe(s)}
+      dernier={!derniereRepliee && s === dernierVisible}
+      derniereSemaine={s.k === derniereK && s.k === p.nbSemaines}
+    />
+  )
 
   return (
     <section className="space-y-4">
-      <div className="flex items-end justify-between gap-6 flex-wrap">
-        <div>
+      <div className="flex items-start justify-between gap-6">
+        <div className="min-w-0">
           <h2 className="font-titre font-semibold text-[26px] text-encre m-0">{p.titre}</h2>
-          <p className="font-corps text-[15px] mt-1" style={{ color: ENCRE_META }}>
+          <p className="font-corps text-[15px] mt-1 m-0" style={{ color: ENCRE_META }}>
             {p.nbSemaines} semaine{p.nbSemaines > 1 ? 's' : ''}
-            {premierLundi ? ` · commencé le ${premierLundi}` : ''}
-            {' · tu es en '}
-            <strong className="font-semibold" style={{ color: OCRE_AA }}>semaine {p.semaineCourante}</strong>
+            {p.semaineDebut > 0 ? ` · S${p.semaineDebut} → S${p.semaineFin}` : ''}
+            {p.lundiDebut ? ` · commencé le ${p.lundiDebut}` : ''}
+            {p.etat === 'termine' ? (
+              <> · terminé</>
+            ) : p.etat === 'a_venir' ? (
+              <> · pas encore commencé</>
+            ) : (
+              <>{' · tu es en '}<strong className="font-semibold" style={{ color: OCRE_AA }}>semaine {p.semaineCourante}</strong></>
+            )}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2.5">
-          {VUE_ANNEE_DISPONIBLE && <Commutateur />}
-          <Legende />
-        </div>
+        <Link
+          href={HREF_ANNEE}
+          aria-label="Refermer le parcours"
+          className="hidden lg:flex flex-none w-9 h-9 items-center justify-center rounded-full font-ui text-[18px] text-bouton-parcours hover:text-encre hover:bg-parchemin-fonce focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+        >
+          ✕
+        </Link>
       </div>
+      <Legende />
 
       {/* barre d'avancement : un segment par semaine */}
       <div className="flex gap-[3px]" aria-hidden>
@@ -237,25 +234,51 @@ function Parcours({ p }: { p: PlanEleve['parcours'][number] }) {
         ))}
       </div>
 
-      <div>
-        {visibles.map((s, i) => (
-          <Rangee key={s.k} s={s} etat={etatDe(s)} dernier={!derniereRepliee && i === visibles.length - 1} />
-        ))}
-        {derniereRepliee && (
-          <div className="flex items-center">
-            <div className="w-[72px] sm:w-[104px] flex-none" />
-            <div className="w-6 flex-none flex justify-center text-puce text-[15px]" aria-hidden>⌄</div>
-            <div className="flex-1 font-corps text-[13px] italic" style={{ color: ENCRE_META }}>
-              … jusqu’à la semaine {derniereRepliee.k}{derniereRepliee.lundi ? ` (${derniereRepliee.lundi})` : ''}
+      {p.semaines.length === 0 ? (
+        <p className="font-corps text-[14px] italic" style={{ color: ENCRE_META }}>
+          Ce parcours n’a pas encore de contenu inscrit.
+        </p>
+      ) : (
+        <div>
+          {replier ? (
+            <PasseReplie
+              nbSemaines={vues.length}
+              nbElements={nbElementsVus}
+              premiereK={vues[0].k}
+              derniereK={vues[vues.length - 1].k}
+              libelles={groupesVus}
+            >
+              {vues.map(rangee)}
+            </PasseReplie>
+          ) : (
+            vues.map(rangee)
+          )}
+          {visibles.map(rangee)}
+          {derniereRepliee && (
+            <div className="flex items-center">
+              <div className="w-[72px] sm:w-[104px] flex-none" />
+              <div className="w-6 flex-none flex justify-center text-puce text-[15px]" aria-hidden>⌄</div>
+              <div className="flex-1 font-corps text-[13px] italic" style={{ color: ENCRE_META }}>
+                … jusqu’à la semaine {derniereRepliee.k}{derniereRepliee.lundi ? ` (${derniereRepliee.lundi})` : ''}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      <p className="font-corps text-[13px] italic" style={{ color: ENCRE_META }}>
+        {p.etat === 'termine'
+          ? `Ce parcours s’est terminé le ${p.lundiFin ?? '—'}.`
+          : p.lundiFin ? `Ce parcours se termine la semaine du ${p.lundiFin}. ` : ''}
+        {p.etat !== 'termine' && 'Seuls les titres apparaissent — le tuteur ne dévoilera pas la suite, c’est voulu.'}
+      </p>
     </section>
   )
 }
 
-export default function PlanCours({ plan }: { plan: PlanEleve }) {
+// ── L'orchestrateur ──────────────────────────────────────────────────────────
+
+export default function PlanCours({ plan, parcoursOuvert }: { plan: PlanEleve; parcoursOuvert: string | null }) {
   if (plan.parcours.length === 0) {
     return (
       <p className="font-corps text-[15px] italic text-center py-10" style={{ color: ENCRE_META }}>
@@ -264,13 +287,41 @@ export default function PlanCours({ plan }: { plan: PlanEleve }) {
     )
   }
 
+  const ouvert = parcoursOuvert ? plan.parcours.find(p => p.id === parcoursOuvert) ?? null : null
+
+  if (!ouvert) {
+    return (
+      <div className="space-y-8">
+        <VueAnnee plan={plan} />
+        {/* Note anti-spoiler — italique atténué, au pied du plan (maquette 1a). */}
+        <p className="font-corps text-[13px] italic text-center" style={{ color: ENCRE_META }}>
+          Seuls les titres apparaissent ici — le tuteur ne dévoilera pas la suite du cours, c’est voulu.
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-10">
-      {plan.parcours.map(p => <Parcours key={p.titre} p={p} />)}
-      {/* Note anti-spoiler — italique atténué, au pied du plan (maquette 1a). */}
-      <p className="font-corps text-[13px] italic text-center" style={{ color: ENCRE_META }}>
-        Seuls les titres apparaissent ici — le tuteur ne dévoilera pas la suite du cours, c’est voulu.
-      </p>
+    <div className="lg:grid lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[430px_minmax(0,1fr)] lg:-mx-[28px]">
+      <FermetureVolet />
+      {/* Sous lg : la barre « ‹ Année · titre » d'un écran plein (1d). */}
+      <div className="lg:hidden flex items-center gap-3 mb-5 -mt-1">
+        <Link
+          href={HREF_ANNEE}
+          className="font-ui text-[14px] font-semibold text-bouton-parcours hover:text-encre focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment rounded-sm whitespace-nowrap"
+        >
+          ‹ Année
+        </Link>
+        <span className="w-px h-[15px] bg-pigment/30" aria-hidden />
+        <span className="font-ui text-[13px] truncate" style={{ color: ENCRE_META }}>{ouvert.titre}</span>
+      </div>
+      {/* Bureau : l'Année resserrée à gauche. */}
+      <aside className="hidden lg:block bg-surface border-r border-bordure px-6 py-5 rounded-l-[10px]" aria-label="Année">
+        <VueAnnee plan={plan} compact ouvertId={ouvert.id} />
+      </aside>
+      <div className="lg:px-8 lg:py-5 min-w-0">
+        <FriseParcours p={ouvert} />
+      </div>
     </div>
   )
 }
