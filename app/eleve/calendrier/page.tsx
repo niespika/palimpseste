@@ -34,7 +34,7 @@ const sansPoint = (s: string) => s.replace(/\./g, '')
 
 // Événement affiché (unifié : événements partagés color-codés par classe +
 // échéances hebdo des Fragments propres à l'élève).
-interface Evt { date: string; label: string; couleur: string; sousTitre: string | null }
+interface Evt { date: string; label: string; couleur: string; sousTitre: string | null; detail?: string | null }
 
 export default async function CalendrierEleve({
   searchParams,
@@ -111,12 +111,17 @@ export default async function CalendrierEleve({
   // 1. Événements partagés (essais, quizz, Codex, lectures) → classes de l'élève
   //    (+ événements sans classe, visibles de tous). Color-codés par classe.
   const partages = (await pPartages)
-    .filter((e) => (e.classe_id === null || classeIds.has(e.classe_id)) && slugs.has(SLUG_PAR_SOURCE[e.source_module]))
+    // L'agenda de classe (source 'agenda', 18/09) n'a pas de module derrière : il
+    // se voit dès que la classe est celle de l'élève (l'assembleur a déjà filtré
+    // la visibilité et la porte).
+    .filter((e) => (e.classe_id === null || classeIds.has(e.classe_id))
+      && (e.source_module === 'agenda' || slugs.has(SLUG_PAR_SOURCE[e.source_module])))
     .map((e): Evt => ({
       date: e.date,
       label: e.label,
       couleur: e.classe_id ? couleurs.get(e.classe_id) ?? COULEUR_NEUTRE : COULEUR_NEUTRE,
       sousTitre: e.classe_nom,
+      detail: e.detail ?? null,
     }))
 
   // 2. Échéances hebdomadaires des Fragments (à rendre) du semestre, dans la fenêtre.
@@ -241,6 +246,7 @@ export default async function CalendrierEleve({
         <span className="flex-1 min-w-0">
           <span className="block font-corps text-encre leading-snug truncate">{e.label}</span>
           {sous && <span className="block font-ui text-xs text-muet mt-0.5 truncate">{sous}</span>}
+          {e.detail && <span className="block font-corps text-xs text-encre-douce mt-1 whitespace-pre-line line-clamp-3">{e.detail}</span>}
         </span>
         {chevron && <span className="text-muet flex-shrink-0" aria-hidden>→</span>}
       </>
@@ -405,6 +411,7 @@ export default async function CalendrierEleve({
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: e.couleur }} />
                   <span className="text-sm text-encre-douce">{e.label}</span>
                   {e.sousTitre && <span className="text-xs text-muet">· {e.sousTitre}</span>}
+                  {e.detail && <p className="w-full pl-4 text-xs text-encre-douce whitespace-pre-line">{e.detail}</p>}
                 </li>
               ))}
             </ul>

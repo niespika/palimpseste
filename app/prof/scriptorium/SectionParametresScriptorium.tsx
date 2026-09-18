@@ -11,6 +11,7 @@ import PorteJugeDocuments from './PorteJugeDocuments'
 import PorteGabarit from './PorteGabarit'
 import PorteChaineCle from './PorteChaineCle'
 import PorteNotions from './PorteNotions'
+import PorteAgenda from './PorteAgenda'
 import PortePiloteArgument from './PortePiloteArgument'
 import PorteJugeMesure from './PorteJugeMesure'
 import PorteRetoursARelire from './PorteRetoursARelire'
@@ -50,6 +51,8 @@ export default async function SectionParametresScriptorium() {
       <PorteJugeMesure actif={!!p.juge_mesure_actif} jugeOuvert={!!p.juge_documents_actif} />
       {/* 10/09 — la troisième voie du rattachement : les sujets par notions, servis aux classes qui ont vu la notion. Même domicile, même tolérance, à OFF. */}
       <PorteNotions actif={!!p.notions_actif} />
+      {/* 18/09 — l'agenda de classe : évènements libres au calendrier, intitulés des exercices du plan. Même domicile, même tolérance, à OFF. */}
+      <PorteAgenda actif={!!p.agenda_classe_actif} />
       <PortePiloteArgument actif={p.pilote_argument_actif === true}
         disponible={typeof p.pilote_argument_actif === 'boolean'}
         banqueActive={p.pilote_argument_banque_actif === true}

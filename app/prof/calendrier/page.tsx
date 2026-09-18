@@ -8,7 +8,11 @@ import { coursParJour } from '@/utils/calendrier-cours'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
 import FiltreClasses from './FiltreClasses'
 import EditeurDate from './EditeurDate'
+import BoutonAjouterEvenement from './BoutonAjouterEvenement'
+import ControlesEvenementAgenda from './ControlesEvenementAgenda'
 import { lancer } from '@/utils/lancer'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lireLaPorteAgenda } from '@/utils/calendrier-agenda-porte'
 
 // (perf) Le bloc Aletheia du calendrier résout des dates de parcours (requêtes DB) → marge de temps.
 export const maxDuration = 60
@@ -64,6 +68,9 @@ export default async function CalendrierVue({
   //    les événements, les jours de cours, le semestre et les classes ; les
   //    vacances attendent le semestre. Chacune est attendue à sa place d'avant.
   const tousEventsQ = lancer(assemblerEvenements({ debut, fin, surface: 'prof' }))
+  // L'agenda de classe (18/09) : porte ouverte ⇒ le bouton d'ajout et les
+  // commandes des évènements libres. Même ligne de réglages que l'assembleur.
+  const agendaQ = lancer(lireLaPorteAgenda(createAdminClient()))
   const coursTousQ = lancer(coursParJour({ debut, fin }))
   const classesQ = lancer(supabase
     .from('classes')
@@ -94,6 +101,7 @@ export default async function CalendrierVue({
   // Événements de la fenêtre, filtrés par classe (les généraux sont toujours visibles).
   // surface='prof' → inclut les créneaux prospectifs du plan d'évaluation (source 5, gatée).
   const tousEvents = await tousEventsQ
+  const agendaActif = await agendaQ
   const visible = (e: CalendarEvent) => e.classe_id === null || selSet === null || selSet.has(e.classe_id)
   const events = tousEvents.filter(visible)
   const parJour = new Map<string, CalendarEvent[]>()
@@ -129,13 +137,15 @@ export default async function CalendrierVue({
     titre = fmt(anchor, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   }
 
+  // Un évènement de l'agenda non visible des élèves se signale (« prof »).
+  const suffixePrive = (e: CalendarEvent) => (e.visible_eleves === false ? ' · prof' : '')
   const Pastille = ({ e }: { e: CalendarEvent }) => (
-    <div className="flex items-center gap-1.5" title={e.classe_nom ? `${e.label} · ${e.classe_nom}` : e.label}>
+    <div className="flex items-center gap-1.5" title={`${e.label}${e.classe_nom ? ` · ${e.classe_nom}` : ''}${suffixePrive(e)}`}>
       <span
         className="w-2 h-2 rounded-full flex-shrink-0"
         style={{ backgroundColor: e.classe_id ? couleurs.get(e.classe_id) ?? '#a8a29e' : '#a8a29e' }}
       />
-      <span className="text-[11px] text-encre-douce truncate">{e.label}</span>
+      <span className="text-[11px] text-encre-douce truncate">{e.label}{suffixePrive(e)}</span>
     </div>
   )
 
@@ -149,6 +159,14 @@ export default async function CalendrierVue({
           <Link href={lien(vue, next)} aria-label="Période suivante" className="px-2 py-1 text-sm text-muet hover:text-encre border border-bordure rounded-lg">→</Link>
           <h3 className="text-base font-medium text-encre ml-2 capitalize">{titre}</h3>
         </div>
+        {agendaActif && cls.length > 0 && (
+          <BoutonAjouterEvenement
+            classes={cls.map((c) => ({ id: c.id, nom: c.nom }))}
+            couleurs={couleursObj}
+            dateDefaut={anchor}
+            classesPreselection={selSet ? [...selSet] : undefined}
+          />
+        )}
         <div className="flex gap-1 text-sm">
           {(['mois', 'semaine', 'jour'] as Vue[]).map((v) => (
             <Link
@@ -266,7 +284,14 @@ export default async function CalendrierVue({
                   />
                   <span className="text-sm text-encre-douce">{e.label}</span>
                   {e.classe_nom && <span className="text-xs text-muet">· {e.classe_nom}</span>}
-                  {e.is_editable && (
+                  {e.visible_eleves === false && <span className="text-[11px] text-muet border border-bordure rounded-full px-2">prof seulement</span>}
+                  {e.source_module === 'agenda' ? (
+                    agendaActif && (
+                      <ControlesEvenementAgenda evenement={{
+                        id: e.source_id, titre: e.label, date: e.date, detail: e.detail ?? null, visible_eleves: e.visible_eleves !== false,
+                      }} />
+                    )
+                  ) : e.is_editable && (
                     <EditeurDate
                       sourceModule={e.source_module}
                       sourceId={e.source_id}
@@ -274,6 +299,7 @@ export default async function CalendrierVue({
                       dateActuelle={e.date}
                     />
                   )}
+                  {e.detail && <p className="w-full pl-4 text-xs text-muet whitespace-pre-line">{e.detail}</p>}
                 </li>
               ))}
             </ul>

@@ -1,4 +1,5 @@
 import 'server-only'
+import { lireLaPorteAgenda } from '@/utils/calendrier-agenda-porte'
 // Loaders SERVEUR du plan annuel d'évaluation (client prof — RLS prof-only). Le
 // détail d'un plan EST la base de la panoptique (§7) : semaines couvertes de la
 // frise + exercices groupés. Voir SPEC_scriptorium_planification_exercices.md §5/§7.
@@ -39,6 +40,7 @@ export interface ExerciceLigne {
   semaineLundi: string
   jourPrevu: string | null
   annonce: boolean   // examen annoncé au calendrier élève (exige jourPrevu)
+  titre: string | null // intitulé (18/09) : « Les Lumières » ; se saisit et s'affiche agenda ouvert
   echeance: string   // date effective (§4.6)
   enRetard: boolean  // dérivé : a_concevoir ∧ échéance passée
 }
@@ -59,6 +61,7 @@ export interface PlanDetail {
   dateDebut: string
   anneeScolaire: number
   modeleTitre: string | null // « issu du modèle … » si l'instance provient d'une assignation (§5.4)
+  agendaActif: boolean // porte `agenda_classe_actif` (18/09) : l'intitulé des exercices se saisit et s'affiche
   avis?: string
   avisBloquant: boolean
   semaines: SemainePlan[]
@@ -172,7 +175,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     semainesCouvertes(dateDebut),
     supabase
       .from('scriptorium_exercices_planifies')
-      .select('id, type_exercice, diagnostique, nature, lieu, module, origine, statut, fenetre_diagnostique, semaine_lundi, jour_prevu, annonce')
+      .select('id, type_exercice, diagnostique, nature, lieu, module, origine, statut, fenetre_diagnostique, semaine_lundi, jour_prevu, annonce, titre')
       .eq('plan_id', plan.id as string)
       .eq('ancrage', 'semaine')
       .is('supprime_at', null),
@@ -182,6 +185,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
       : Promise.resolve({ data: null }),
   ])
   const modeleTitre = ((modeleRow as { titre?: string } | null)?.titre as string | null) ?? null
+  const agendaActif = await lireLaPorteAgenda(supabase)
 
   const toLigne = (e: Record<string, unknown>): ExerciceLigne => {
     const semaineLundi = e.semaine_lundi as string
@@ -202,6 +206,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
       semaineLundi,
       jourPrevu,
       annonce: !!(e.annonce as boolean | null),
+      titre: (e.titre as string | null) ?? null,
       echeance,
       enRetard: statut === 'a_concevoir' && echeance < today,
     }
@@ -257,6 +262,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     dateDebut,
     anneeScolaire: plan.annee_scolaire as number,
     modeleTitre,
+    agendaActif,
     avis: couverture.avis,
     avisBloquant: couverture.avisBloquant,
     semaines,

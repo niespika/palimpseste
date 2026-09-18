@@ -10,14 +10,20 @@ import { clesSynthesesOuvertes } from './plan-synthese-ouverture'
 import { titresCoursParSession } from './codex-titre'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
 import { lancer } from '@/utils/lancer'
+import { lireLaPorteAgenda } from '@/utils/calendrier-agenda-porte'
+import { filtrerEvenementsAgenda, libelleExercicePlanifie, type LigneEvenementAgenda } from '@/utils/calendrier-agenda'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
 // légère (lot C6) réécrit dans le module propriétaire.
+// ⭐ 18/09 — UNE exception, voulue : l'AGENDA DE CLASSE (source 6, table
+//    `calendrier_evenements`, porte `agenda_classe_actif`). Ce que le professeur
+//    y pose n'appartient à aucun module ; le calendrier en est le propriétaire.
 
-export type SourceModule = 'fragments' | 'quazian' | 'codex' | 'aletheia'
+export type SourceModule = 'fragments' | 'quazian' | 'codex' | 'aletheia' | 'agenda'
 // 'prevu' = créneau planifié PROSPECTIF (plan d'évaluation), pas encore réalisé.
-export type KindEvenement = 'ouverture' | 'fermeture' | 'epreuve' | 'quizz' | 'jalon' | 'prevu'
+// 'libre' = évènement de l'agenda de classe (source 6), sans module derrière.
+export type KindEvenement = 'ouverture' | 'fermeture' | 'epreuve' | 'quizz' | 'jalon' | 'prevu' | 'libre'
 
 export interface CalendarEvent {
   source_module: SourceModule
@@ -28,6 +34,8 @@ export interface CalendarEvent {
   date: string // YYYY-MM-DD
   label: string
   is_editable: boolean
+  detail?: string | null      // agenda : le détail saisi par le professeur (facultatif)
+  visible_eleves?: boolean    // agenda : false = note du professeur, jamais émise à l'élève
 }
 
 // Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
@@ -75,6 +83,15 @@ export async function assemblerEvenements(opts: {
     .not('lance_at', 'is', null))
   const pairesQ = lancer(pairesLivresGouvernes(admin, classeIds))
   const gateQ = lancer(lireGatePlanActif(admin))
+  const agendaQ = lancer(lireLaPorteAgenda(admin))
+  // Source 6 — l'agenda de classe : la lecture part avec les autres ; la porte,
+  // lue sur la même ligne de réglages, décide plus bas si on l'émet.
+  const agendaRowsQ = lancer(admin
+    .from('calendrier_evenements')
+    .select('id, classe_id, date, titre, detail, visible_eleves')
+    .gte('date', debut)
+    .lte('date', fin)
+    .is('supprime_at', null))
   const tz = await lireFuseau() // jour local des instants (lance_at) dans le fuseau choisi
 
   // Map des classes. idParNom n'est plus qu'un repli défensif : depuis la migration
@@ -220,6 +237,7 @@ export async function assemblerEvenements(opts: {
   //    n'est JAMAIS émis, à l'UNIQUE exception d'un quiz `concu` quand `quiz_annonce_defaut`
   //    (D5) — synthèses retenues (→ rétrospectif au lancement), `a_concevoir` prof-only,
   //    exercices sans canal de module (écriture/lecture/examen) jamais exposés.
+  const agendaActif = await agendaQ
   if (await gateQ) {
     const estEleve = surface === 'eleve'
     // Le réglage « quiz annoncé » ne dépend pas des plans : il part avec eux (élève seulement).
@@ -243,7 +261,7 @@ export async function assemblerEvenements(opts: {
       // Les exercices figés et les synthèses (prof) ne dépendent que des plans : ensemble.
       const exosQ = lancer(admin
         .from('scriptorium_exercices_planifies')
-        .select('id, plan_id, type_exercice, diagnostique, lieu, module, statut, semaine_lundi, jour_prevu, quiz_id, annonce')
+        .select('id, plan_id, type_exercice, diagnostique, lieu, module, statut, semaine_lundi, jour_prevu, quiz_id, annonce, titre')
         .in('plan_id', planIds)
         .eq('ancrage', 'semaine')
         // Les deux statuts, sur les deux surfaces : côté élève, un `a_concevoir` ne passe
@@ -281,8 +299,9 @@ export async function assemblerEvenements(opts: {
         }
         const d = dateEffectiveSemaine(e.semaine_lundi as string, (e.jour_prevu as string | null) ?? null, e.lieu as 'classe' | 'maison')
         if (d < debut || d > fin) continue
-        const base = libelleTypeExercice(e.type_exercice as string, e.diagnostique as boolean)
-        const libelle = base.charAt(0).toUpperCase() + base.slice(1)
+        // Élève : libellé générique (« Quiz »), + l'INTITULÉ si l'agenda est ouvert —
+        // il ne part à l'élève que parce que l'examen est annoncé (18/09 : annoncer,
+        // c'est publier la date ET le nom). Prof : + statut de conception.
         events.push({
           source_module: e.module as SourceModule,
           source_id: e.id as string,
@@ -290,8 +309,14 @@ export async function assemblerEvenements(opts: {
           classe_nom: cid ? nomParId.get(cid) ?? null : null,
           kind: 'prevu',
           date: d,
-          // Élève : libellé générique nu (« Quiz »). Prof : + statut de conception.
-          label: estEleve ? libelle : `${libelle} · ${e.statut === 'concu' ? 'conçu' : 'à concevoir'}`,
+          label: libelleExercicePlanifie({
+            generique: libelleTypeExercice(e.type_exercice as string, e.diagnostique as boolean),
+            titre: (e.titre as string | null) ?? null,
+            statut: e.statut as string,
+            surface: estEleve ? 'eleve' : 'prof',
+            agendaActif,
+            annonce: !!(e.annonce as boolean | null),
+          }),
           is_editable: false,
         })
       }
@@ -348,6 +373,30 @@ export async function assemblerEvenements(opts: {
           }
         }
       }
+    }
+  }
+
+  // 6. L'agenda de classe (18/09) — les évènements libres du professeur. Porte
+  //    `agenda_classe_actif` : fermée ⇒ rien n'est émis, sur les deux surfaces. Le
+  //    filtre pur (`filtrerEvenementsAgenda`) tient la fenêtre, la classe et la
+  //    visibilité ; élève sans `classeIds` ⇒ rien (fail-closed, contrat E1).
+  //    Date ÉDITABLE depuis le calendrier prof (le calendrier est le propriétaire).
+  const { data: agendaRows } = await agendaRowsQ
+  if (agendaActif) {
+    const lignes = filtrerEvenementsAgenda((agendaRows ?? []) as LigneEvenementAgenda[], { debut, fin, surface, classeIds })
+    for (const l of lignes) {
+      events.push({
+        source_module: 'agenda',
+        source_id: l.id,
+        classe_id: l.classe_id,
+        classe_nom: nomParId.get(l.classe_id) ?? null,
+        kind: 'libre',
+        date: l.date,
+        label: l.titre,
+        is_editable: true,
+        detail: l.detail,
+        visible_eleves: l.visible_eleves,
+      })
     }
   }
 

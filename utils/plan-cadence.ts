@@ -74,9 +74,11 @@ const MODULE_PAR_TYPE: Record<TypeExercice, ModuleConception> = {
 }
 
 // Libellé GÉNÉRIQUE d'un type d'exercice (nom commun, minuscule). Utilisé par les
-// surfaces dérivées (à-faire prof, calendrier prospectif) qui n'exposent JAMAIS le
-// `titre`/`note` d'un exercice (anti-spoiler, §8bis). Un type inconnu dégrade en
-// « exercice » (jamais d'échec). L'appelant capitalise si besoin.
+// surfaces dérivées (à-faire prof, calendrier prospectif). La `note` d'un exercice
+// n'est jamais exposée (anti-spoiler, §8bis) ; le `titre`, depuis le 18/09, s'accole
+// au générique par `libelleExercicePlanifie` (utils/calendrier-agenda.ts) quand
+// l'agenda de classe est ouvert — et à l'élève seulement sur un examen ANNONCÉ.
+// Un type inconnu dégrade en « exercice » (jamais d'échec). L'appelant capitalise.
 const LIBELLE_TYPE: Record<TypeExercice, string> = {
   ecriture: 'écriture',
   lecture: 'lecture',

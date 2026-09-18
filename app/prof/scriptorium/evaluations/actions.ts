@@ -15,6 +15,8 @@ import { resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { depotsQuiBloquent, type DepotPourRetrait } from '@/utils/examens/retrait'
+import { lireLaPorteAgenda } from '@/utils/calendrier-agenda-porte'
+import { normaliserIntitule } from '@/utils/calendrier-agenda'
 import { semainesCouvertes } from './plan-serveur'
 import { classeAModule } from '@/utils/acces'
 
@@ -924,6 +926,33 @@ export async function annoncerExercice(formData: FormData): Promise<{ success?: 
     .eq('id', exerciceId).is('supprime_at', null)
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
+  revalidatePath('/eleve/calendrier')
+  return { success: true }
+}
+
+/**
+ * Nommer un exercice du plan (18/09, demande de Louis : « donner un nom aux
+ * évaluations, afin que ce soit clair ce qui va se passer et sur quoi porte
+ * l'évaluation »). Écrit `titre`, colonne née en phase A et jamais raccordée.
+ * Porte `agenda_classe_actif` : fermée, rien ne s'écrit. Vide ⇒ null (sans nom).
+ * ⚠️ Un examen ANNONCÉ porte cet intitulé au calendrier élève : c'est voulu.
+ */
+export async function nommerExercice(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  if (!(await lireLaPorteAgenda(createAdminClient()))) return { error: 'L’agenda de classe est fermé (Paramètres).' }
+  const exerciceId = (formData.get('exercice_id') as string) ?? ''
+  if (!RE_UUID.test(exerciceId)) return { error: 'Exercice invalide.' }
+  const v = normaliserIntitule(formData.get('titre'))
+  if (!v.ok) return { error: v.error }
+  const { data, error } = await gardé.supabase
+    .from('scriptorium_exercices_planifies')
+    .update({ titre: v.valeur, updated_at: new Date().toISOString() })
+    .eq('id', exerciceId).is('supprime_at', null).select('id')
+  if (error) return { error: error.message }
+  if (!data || data.length === 0) return { error: 'Exercice introuvable.' }
+  revalidatePath('/prof/scriptorium')
+  revalidatePath('/prof/calendrier')
   revalidatePath('/eleve/calendrier')
   return { success: true }
 }

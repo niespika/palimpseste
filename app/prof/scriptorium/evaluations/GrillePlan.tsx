@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   validerPlan, supprimerPlan, marquerConcu, retirerExercice,
-  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, fixerJourExercice, annoncerExercice,
+  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, fixerJourExercice, annoncerExercice, nommerExercice,
 } from './actions'
 import PanneauSegments from './PanneauSegments'
 import type { PlanDetail, ExerciceLigne } from './plan-serveur'
@@ -74,7 +74,35 @@ function BadgeStatut({ e }: { e: ExerciceLigne }) {
   )
 }
 
-function LigneExercice({ e, semaines, joursCours }: { e: ExerciceLigne; semaines: Semaine[]; joursCours: { iso: string; label: string }[] }) {
+// L'intitulé d'un exercice (18/09) : « Quiz — Les Lumières ». Se saisit ici, se lit
+// aux deux calendriers (à l'élève : sur un examen ANNONCÉ seulement). Porte
+// `agenda_classe_actif` (la grille reçoit `nommable`).
+function Intitule({ e, busy, nommer }: { e: ExerciceLigne; busy: boolean; nommer: (titre: string) => Promise<void> }) {
+  const [edit, setEdit] = useState(false)
+  const [valeur, setValeur] = useState(e.titre ?? '')
+  if (edit) {
+    return (
+      <form onSubmit={async (ev) => { ev.preventDefault(); await nommer(valeur); setEdit(false) }} className="inline-flex items-center gap-1.5">
+        <input value={valeur} onChange={(ev) => setValeur(ev.target.value)} maxLength={120} autoFocus
+          placeholder="Intitulé (les élèves le voient si l’examen est annoncé)"
+          className="font-corps text-[14px] border border-bordure-bouton rounded-lg bg-white px-2 py-1 text-encre w-[22rem] max-w-full"
+          aria-label="Intitulé de l’exercice" />
+        <button type="submit" disabled={busy} className="font-ui text-[12px] bg-bouton text-surface px-2 py-1 rounded-lg disabled:opacity-50">OK</button>
+        <button type="button" onClick={() => { setEdit(false); setValeur(e.titre ?? '') }} className="font-ui text-[12px] text-muet hover:text-encre">annuler</button>
+      </form>
+    )
+  }
+  return e.titre ? (
+    <span className="inline-flex items-center gap-1.5 min-w-0">
+      <span className="font-corps text-[16px] text-encre truncate max-w-[24rem]">— {e.titre}</span>
+      <button onClick={() => setEdit(true)} disabled={busy} className="font-ui text-[12px] text-muet hover:text-encre disabled:opacity-50">renommer</button>
+    </span>
+  ) : (
+    <button onClick={() => setEdit(true)} disabled={busy} className="font-ui text-[12px] text-famille-eval hover:underline disabled:opacity-50">Nommer</button>
+  )
+}
+
+function LigneExercice({ e, semaines, joursCours, nommable }: { e: ExerciceLigne; semaines: Semaine[]; joursCours: { iso: string; label: string }[]; nommable: boolean }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -93,6 +121,7 @@ function LigneExercice({ e, semaines, joursCours }: { e: ExerciceLigne; semaines
   return (
     <div className="flex items-center gap-3 border border-bordure rounded-xl bg-white px-4 py-3 flex-wrap">
       <span className="font-corps text-[16px] font-semibold text-encre">{libelleType(e)}</span>
+      {nommable && <Intitule key={e.titre ?? ''} e={e} busy={busy} nommer={(titre) => act(nommerExercice, { titre })} />}
       <span className="font-corps text-[14px] text-muet">
         {e.lieu === 'maison' ? 'maison' : 'classe'} · à rendre {fmtJour(e.echeance)}
       </span>
@@ -469,7 +498,7 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
                 <p className="font-corps italic text-[14px] text-muet-clair">Aucun exercice cette semaine.</p>
               ) : (
                 <div className="flex flex-col gap-2.5">
-                  {semSel.exercices.map(e => <LigneExercice key={e.id} e={e} semaines={semaines} joursCours={semSel.joursCours} />)}
+                  {semSel.exercices.map(e => <LigneExercice key={e.id} e={e} semaines={semaines} joursCours={semSel.joursCours} nommable={plan.agendaActif} />)}
                   {synthesesSel.map(e => (
                     <div key={e.id} className="border border-bordure rounded-xl bg-white px-1"><LigneSynthese exo={e} /></div>
                   ))}
