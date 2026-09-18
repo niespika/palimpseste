@@ -8,6 +8,7 @@ import { coursParJour } from '@/utils/calendrier-cours'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
 import FiltreClasses from './FiltreClasses'
 import EditeurDate from './EditeurDate'
+import { lancer } from '@/utils/lancer'
 
 // (perf) Le bloc Aletheia du calendrier résout des dates de parcours (requêtes DB) → marge de temps.
 export const maxDuration = 60
@@ -44,6 +45,32 @@ export default async function CalendrierVue({
 
   const supabase = await createClient()
 
+  // Fenêtre selon la vue — elle ne dépend que de l'adresse et du jour : on la
+  // calcule d'abord, pour que les événements et les cours partent tout de suite.
+  let debut: string
+  let fin: string
+  if (vue === 'mois') {
+    debut = toISODate(lundiOnOrBefore(firstOfMonth(anchor)))
+    fin = toISODate(addDaysUTC(lundiOnOrBefore(lastOfMonth(anchor)), 6))
+  } else if (vue === 'semaine') {
+    debut = toISODate(lundiOnOrBefore(anchor))
+    fin = toISODate(addDaysUTC(parse(debut), 6))
+  } else {
+    debut = anchor
+    fin = anchor
+  }
+
+  // ⭐ 18/09 — LES LECTURES INDÉPENDANTES PARTENT ENSEMBLE (patron `utils/lancer.ts`) :
+  //    les événements, les jours de cours, le semestre et les classes ; les
+  //    vacances attendent le semestre. Chacune est attendue à sa place d'avant.
+  const tousEventsQ = lancer(assemblerEvenements({ debut, fin, surface: 'prof' }))
+  const coursTousQ = lancer(coursParJour({ debut, fin }))
+  const classesQ = lancer(supabase
+    .from('classes')
+    .select('id, nom, couleur')
+    .eq('statut', 'active')
+    .order('nom'))
+
   // Semestre actif + grille (numéros pédagogiques, vacances).
   const { data: sem } = await supabase
     .from('semesters')
@@ -59,32 +86,14 @@ export default async function CalendrierVue({
   const estVacance = (jour: string) => holidays.some((h) => h.start_date <= jour && jour <= h.end_date)
 
   // Classes + couleurs.
-  const { data: classes } = await supabase
-    .from('classes')
-    .select('id, nom, couleur')
-    .eq('statut', 'active')
-    .order('nom')
+  const { data: classes } = await classesQ
   const cls = classes ?? []
   const couleurs = couleursParClasse(cls)
   const couleursObj: Record<string, string> = Object.fromEntries(couleurs)
 
-  // Fenêtre selon la vue.
-  let debut: string
-  let fin: string
-  if (vue === 'mois') {
-    debut = toISODate(lundiOnOrBefore(firstOfMonth(anchor)))
-    fin = toISODate(addDaysUTC(lundiOnOrBefore(lastOfMonth(anchor)), 6))
-  } else if (vue === 'semaine') {
-    debut = toISODate(lundiOnOrBefore(anchor))
-    fin = toISODate(addDaysUTC(parse(debut), 6))
-  } else {
-    debut = anchor
-    fin = anchor
-  }
-
   // Événements de la fenêtre, filtrés par classe (les généraux sont toujours visibles).
   // surface='prof' → inclut les créneaux prospectifs du plan d'évaluation (source 5, gatée).
-  const tousEvents = await assemblerEvenements({ debut, fin, surface: 'prof' })
+  const tousEvents = await tousEventsQ
   const visible = (e: CalendarEvent) => e.classe_id === null || selSet === null || selSet.has(e.classe_id)
   const events = tousEvents.filter(visible)
   const parJour = new Map<string, CalendarEvent[]>()
@@ -95,7 +104,7 @@ export default async function CalendrierVue({
   }
 
   // Jours de cours (informatif), filtrés par la sélection de classes.
-  const coursTous = await coursParJour({ debut, fin })
+  const coursTous = await coursTousQ
   const coursJour = (jour: string) =>
     (coursTous.get(jour) ?? []).filter((c) => selSet === null || selSet.has(c.id))
 

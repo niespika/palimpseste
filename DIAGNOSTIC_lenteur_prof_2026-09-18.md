@@ -6,7 +6,45 @@
 > `pg_stat_statements` de la prod en session lecture seule, comptes de lignes par PostgREST.
 > Les comptes d'allers-retours viennent de la lecture du code, pas de l'exécution.
 
-## 0 decies. Lot P5 — le suivi Vestigia et le socle des gardes : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+## 0 duodecies. Lot P6 — le calendrier : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+
+**Ce qui change**
+
+- **`assemblerEvenements`** (`utils/calendrier-evenements.ts`, partagé par le calendrier du
+  professeur et celui de l'élève) : les cinq sources qui ne dépendent que de la fenêtre (classes,
+  essais, quizz, sessions Codex, paires de livres gouvernés) et la porte du plan partent ensemble ;
+  dans le bloc du plan, le réglage « quiz annoncé » (élève) part avec les plans, les exercices figés
+  et les synthèses (prof) partent ensemble après les plans. Chaque source est attendue à sa place
+  d'avant et pousse ses événements dans le même ordre (le tri final est stable).
+- **Page calendrier prof** : la fenêtre se calcule d'abord ; les événements, les jours de cours et
+  les classes partent avant le semestre et les vacances.
+
+**Éprouvé**
+
+- `tsc` et `eslint` propres, 2 685 tests verts.
+- **12 écrans identiques** ancien/nouveau : calendrier prof en vues mois, semaine, jour, deux dates,
+  deux filtres de classes (2,0-2,3 → 1,05-1,34 s en local) ; calendrier **élève** (compte de décor)
+  en mois, semaine, jour (1,2 → 0,7 s). Le plan est ouvert au bac à sable et porte des exercices
+  dans les deux ancrages : la source 5 a été exercée.
+- **Passe adversariale** : rien de bloquant. Vérifié : le contrat fermé côté élève est inchangé
+  (aucune synthèse lue, `quiz_annonce` lu seulement côté élève, paires appelées avec les mêmes
+  arguments), l'ordre de poussée, une seule lecture de la ligne des réglages par rendu. Noté,
+  préexistant : un élève sans inscription fait lire toutes les assignations actives
+  (`IDEES_post_rentree.md`).
+
+**Non éprouvé** : la prod (avant : calendrier prof 1,0-1,2 s ; élève 0,9 s le 17/09).
+
+## 0 undecies. Lot P5 remesuré en prod (18/09)
+
+| Écran | Avant | Après |
+|---|---|---|
+| Suivi Vestigia (toutes classes / une classe) | 1,2 – 1,3 s | **0,81 s** |
+| Codex | 0,85 s | 0,72 s |
+| Signalements | 0,75 s | 0,68 s |
+| Compétences (réglages) | 0,57 s | 0,55 s |
+| Intégrité, À risque, Scriptorium | 0,30 · 0,52 · 0,37 s | 0,33 · 0,53 · 0,37 s |
+
+## 0 decies. Lot P5 — le suivi Vestigia et le socle des gardes : codé, éprouvé, DÉPLOYÉ (18/09) — ⚠️ état dépassé, voir 0 undecies
 
 **Ce qui change**
 

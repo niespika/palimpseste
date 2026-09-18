@@ -9,6 +9,7 @@ import { resoudreDatesSyntheses } from './plan-synthese'
 import { clesSynthesesOuvertes } from './plan-synthese-ouverture'
 import { titresCoursParSession } from './codex-titre'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
+import { lancer } from '@/utils/lancer'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
@@ -52,11 +53,33 @@ export async function assemblerEvenements(opts: {
   const supabase = await createClient()
   const { debut, fin, classeIds, surface = 'eleve' } = opts
   const events: CalendarEvent[] = []
+  // ⭐ 18/09 — LES SOURCES PARTENT ENSEMBLE (patron `utils/lancer.ts`). Cet
+  //    agrégateur, partagé par le calendrier du professeur et celui de l'élève,
+  //    enchaînait dix lectures en série ; les cinq premières ne dépendent que de
+  //    la fenêtre demandée. Chacune est attendue à sa place d'avant, et les
+  //    événements sont poussés dans le même ordre (le tri final est stable).
+  const admin = createAdminClient()
+  const classesQ = lancer(supabase.from('classes').select('id, nom'))
+  const epClassesQ = lancer(supabase
+    .from('fragments_essais_classes')
+    .select('essai_id, classe_id, date_essai, fragments_essais_epreuves(titre)')
+    .gte('date_essai', debut)
+    .lte('date_essai', fin))
+  const quizzesQ = lancer(supabase
+    .from('quazian_quizzes')
+    .select('id, classe_id, lance_at')
+    .not('lance_at', 'is', null))
+  const sessionsQ = lancer(supabase
+    .from('codex_sessions')
+    .select('id, classe_id, lance_at, scriptorium_unites(label)')
+    .not('lance_at', 'is', null))
+  const pairesQ = lancer(pairesLivresGouvernes(admin, classeIds))
+  const gateQ = lancer(lireGatePlanActif(admin))
   const tz = await lireFuseau() // jour local des instants (lance_at) dans le fuseau choisi
 
   // Map des classes. idParNom n'est plus qu'un repli défensif : depuis la migration
   // lot1, codex_sessions.classe_id (comme quazian_quizzes.classe_id) est un uuid FK.
-  const { data: classes } = await supabase.from('classes').select('id, nom')
+  const { data: classes } = await classesQ
   const idParNom = new Map<string, string>()
   const nomParId = new Map<string, string>()
   for (const c of classes ?? []) {
@@ -65,11 +88,7 @@ export async function assemblerEvenements(opts: {
   }
 
   // 1. Essais Fragments (date par classe, éditable).
-  const { data: epClasses } = await supabase
-    .from('fragments_essais_classes')
-    .select('essai_id, classe_id, date_essai, fragments_essais_epreuves(titre)')
-    .gte('date_essai', debut)
-    .lte('date_essai', fin)
+  const { data: epClasses } = await epClassesQ
   for (const e of epClasses ?? []) {
     const titre = un<{ titre: string }>(e.fragments_essais_epreuves)?.titre ?? 'Essai'
     events.push({
@@ -85,10 +104,7 @@ export async function assemblerEvenements(opts: {
   }
 
   // 2. Quizz Quazian (date = lancement ; non rééditable, lancés en live).
-  const { data: quizzes } = await supabase
-    .from('quazian_quizzes')
-    .select('id, classe_id, lance_at')
-    .not('lance_at', 'is', null)
+  const { data: quizzes } = await quizzesQ
   for (const q of quizzes ?? []) {
     const d = jourDansFuseau(q.lance_at as string, tz) // jour local (fuseau choisi), pas l'UTC
     if (d < debut || d > fin) continue
@@ -104,8 +120,8 @@ export async function assemblerEvenements(opts: {
     })
   }
 
-  // Client admin — mutualisé par les sources 3/4/5 (RLS prof-only sur contenus/parcours).
-  const admin = createAdminClient()
+  // Client admin — mutualisé par les sources 3/4/5 (RLS prof-only sur contenus/parcours) :
+  // créé en tête, avec les lectures qui partent ensemble.
 
   // 3. Synthèses Codex (date = lancement ; classe_id = uuid FK classes depuis lot1). Deux
   //    résolutions séparées, gatées, byte-identiques pré-chantier : (a) le TITRE du bras
@@ -113,10 +129,7 @@ export async function assemblerEvenements(opts: {
   //    (comme les autres surfaces Codex ; gate OFF → map vide, aucune requête ; via admin
   //    car scriptorium_contenus est RLS prof-only) ; (b) la CLASSE par FORMAT uuid (fix
   //    lot 0), jamais par nom (idParNom renverrait null → fuite historique).
-  const { data: sessions } = await supabase
-    .from('codex_sessions')
-    .select('id, classe_id, lance_at, scriptorium_unites(label)')
-    .not('lance_at', 'is', null)
+  const { data: sessions } = await sessionsQ
   const sessRows = sessions ?? []
   const titreCoursParSession = await titresCoursParSession(admin, sessRows.map((s) => s.id as string))
   for (const s of sessRows) {
@@ -154,7 +167,7 @@ export async function assemblerEvenements(opts: {
   //    échéance (LD2). scriptorium_parcours* est en RLS prof-only → lecture via `admin` ;
   //    chaque événement porte son classe_id → la page élève filtre par classe (pas de
   //    fuite). L'échéance est déjà le DIMANCHE (résolveur).
-  const paires = await pairesLivresGouvernes(admin, classeIds)
+  const paires = await pairesQ
   if (paires.length) {
     const livreIds = [...new Set(paires.map(p => p.livreId))]
     const [{ data: docsLivre }, { data: livresRows }] = await Promise.all([
@@ -207,8 +220,10 @@ export async function assemblerEvenements(opts: {
   //    n'est JAMAIS émis, à l'UNIQUE exception d'un quiz `concu` quand `quiz_annonce_defaut`
   //    (D5) — synthèses retenues (→ rétrospectif au lancement), `a_concevoir` prof-only,
   //    exercices sans canal de module (écriture/lecture/examen) jamais exposés.
-  if (await lireGatePlanActif(admin)) {
+  if (await gateQ) {
     const estEleve = surface === 'eleve'
+    // Le réglage « quiz annoncé » ne dépend pas des plans : il part avec eux (élève seulement).
+    const quizAnnonceQ = estEleve ? lancer(lireQuizAnnonceDefaut(admin)) : null
     // Plan COURANT par classe (max AY, valide, classe active). Élève : scope aux classes du
     // spectateur (défense en profondeur — la page filtre déjà, mais on n'émet rien de plus).
     const plansValides = await plansValidesCourants(admin)
@@ -223,9 +238,10 @@ export async function assemblerEvenements(opts: {
     const classeParPlan = new Map<string, string>(plansScope.map((p) => [p.id, p.classeId]))
     // Dérogation « annoncé » (D5) : côté élève seulement, un quiz concu non lancé devient
     // exposable si le réglage est ON. Côté prof, non pertinent (tout est émis).
-    const quizAnnonce = estEleve ? await lireQuizAnnonceDefaut(admin) : true
+    const quizAnnonce = quizAnnonceQ ? await quizAnnonceQ : true
     if (planIds.length > 0) {
-      const { data: exos } = await admin
+      // Les exercices figés et les synthèses (prof) ne dépendent que des plans : ensemble.
+      const exosQ = lancer(admin
         .from('scriptorium_exercices_planifies')
         .select('id, plan_id, type_exercice, diagnostique, lieu, module, statut, semaine_lundi, jour_prevu, quiz_id, annonce')
         .in('plan_id', planIds)
@@ -233,7 +249,15 @@ export async function assemblerEvenements(opts: {
         // Les deux statuts, sur les deux surfaces : côté élève, un `a_concevoir` ne passe
         // que s'il est ANNONCÉ (filtre ci-dessous) — on publie une date, pas un sujet.
         .in('statut', ['a_concevoir', 'concu'])
-        .is('supprime_at', null)
+        .is('supprime_at', null))
+      const synthsQ = estEleve ? null : lancer(admin
+        .from('scriptorium_exercices_planifies')
+        .select('id, plan_id, module, statut, parcours_id, contenu_id, codex_session_id')
+        .in('plan_id', planIds)
+        .eq('ancrage', 'parcours')
+        .in('statut', ['a_concevoir', 'concu'])
+        .is('supprime_at', null))
+      const { data: exos } = await exosQ
       const exosRows = exos ?? []
       // Dédup E3 : un quiz déjà lancé apparaît via la source 2 → on n'émet pas son
       // créneau prospectif. (Une synthèse est ancrée parcours → hors périmètre ici.)
@@ -276,14 +300,8 @@ export async function assemblerEvenements(opts: {
       // rétention §8bis-3 (symétrie §8bis-6) : une synthèse `concu` non lancée n'est jamais
       // émise ; une fois lancée, c'est la source 3 rétrospective qui l'expose (E3). Date NON
       // stockée → résolue EN LOT (coût constant) ; ce coût ne s'engage donc pas côté élève.
-      if (!estEleve) {
-        const { data: synths } = await admin
-          .from('scriptorium_exercices_planifies')
-          .select('id, plan_id, module, statut, parcours_id, contenu_id, codex_session_id')
-          .in('plan_id', planIds)
-          .eq('ancrage', 'parcours')
-          .in('statut', ['a_concevoir', 'concu'])
-          .is('supprime_at', null)
+      if (synthsQ) {
+        const { data: synths } = await synthsQ
         const synthRows = synths ?? []
         if (synthRows.length > 0) {
           // Dédup E3, bras symétrique du quiz : une synthèse déjà LANCÉE est émise par la
