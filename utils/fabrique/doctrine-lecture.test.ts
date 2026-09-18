@@ -23,7 +23,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  chargerLignesDepuisBase, chargerDoctrineDepuisBase,
+  chargerLignesDepuisBase, chargerDoctrineDepuisBase, chargerDoctrineFraiche,
+  oublierLaDoctrineGardee,
   DoctrineAbsente, DoctrineTronquee, banqueDeConsignes,
 } from './doctrine'
 
@@ -348,4 +349,56 @@ test('une erreur de lecture reste une erreur de lecture, et nomme sa table', asy
       assert.match(e.message, /lecture de exercices_/)
       return true
     })
+})
+
+// ── Cas 4 · LA GARDE ENTRE DEUX REQUÊTES (18/09) ───────────────────────────
+//
+// Une doublure QUI PORTE UN `supabaseUrl` est gardée trois minutes ; sans lui,
+// chaque appel relit (les cas 1 à 3 ci-dessus). Le journal des appels compte.
+
+test('la garde : une doublure avec `supabaseUrl` n\'est lue qu\'une fois, la seconde fois sans requête', async () => {
+  oublierLaDoctrineGardee()
+  const journal: Appel[] = []
+  const admin = Object.assign(doublure(lignesDe(12), { journal }), { supabaseUrl: 'https://garde-1.test' })
+  const d1 = await chargerDoctrineDepuisBase(admin as never)
+  const n1 = journal.length
+  assert.ok(n1 > 0)
+  const d2 = await chargerDoctrineDepuisBase(admin as never)
+  assert.equal(journal.length, n1, 'la seconde demande ne relit rien')
+  assert.equal(d1, d2, 'le même objet est servi')
+  // Un autre projet a sa propre doctrine.
+  const autre = Object.assign(doublure(lignesDe(12), { journal }), { supabaseUrl: 'https://garde-2.test' })
+  const d3 = await chargerDoctrineDepuisBase(autre as never)
+  assert.ok(journal.length > n1)
+  assert.notEqual(d3, d1)
+  // Oublier force la relecture.
+  oublierLaDoctrineGardee()
+  const n3 = journal.length
+  const d4 = await chargerDoctrineDepuisBase(admin as never)
+  assert.ok(journal.length > n3)
+  assert.notEqual(d4, d1)
+  oublierLaDoctrineGardee()
+})
+
+test('la garde : un refus ne se garde pas — la demande suivante relit', async () => {
+  oublierLaDoctrineGardee()
+  const journal: Appel[] = []
+  const casse = Object.assign(
+    doublure(lignesDe(12), { journal, comptes: { exercices_routes: 99 } }), { supabaseUrl: 'https://garde-3.test' })
+  await assert.rejects(() => chargerDoctrineDepuisBase(casse as never), DoctrineTronquee)
+  const n1 = journal.length
+  await assert.rejects(() => chargerDoctrineDepuisBase(casse as never), DoctrineTronquee)
+  assert.ok(journal.length > n1, 'le second appel a relu')
+  oublierLaDoctrineGardee()
+})
+
+test('la doctrine FRAÎCHE relit toujours, même gardée — c\'est celle des chemins qui écrivent', async () => {
+  oublierLaDoctrineGardee()
+  const journal: Appel[] = []
+  const admin = Object.assign(doublure(lignesDe(12), { journal }), { supabaseUrl: 'https://garde-4.test' })
+  await chargerDoctrineDepuisBase(admin as never)
+  const n1 = journal.length
+  await chargerDoctrineFraiche(admin as never)
+  assert.ok(journal.length > n1, 'la doctrine fraîche a relu la base')
+  oublierLaDoctrineGardee()
 })

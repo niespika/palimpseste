@@ -30,7 +30,7 @@
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { controleImport, type DejaEnBase, type VerdictImport } from './verifie-import'
-import { chargerDoctrineDepuisBase } from './doctrine'
+import { chargerDoctrineFraiche } from './doctrine'
 import { lirePagine } from '@/utils/routeur/donnees'
 
 /** L'empreinte du CONTENU EXACT, octet pour octet. AUCUNE normalisation —
@@ -131,7 +131,7 @@ export async function lireDejaEnBase(admin: SupabaseClient): Promise<DejaEnBase>
 export async function deposerFichierImport(
   admin: SupabaseClient, brut: unknown, nomFichier: string, deposePar: string | null,
 ): Promise<ResultatImport> {
-  const doctrine = await chargerDoctrineDepuisBase(admin as never)
+  const doctrine = await chargerDoctrineFraiche(admin as never)
   const deja = await lireDejaEnBase(admin)
   const verdict = controleImport(brut, doctrine, deja)
 

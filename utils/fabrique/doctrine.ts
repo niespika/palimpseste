@@ -799,8 +799,62 @@ export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<Lig
 //    reçu : `createAdminClient()` est lui-même un par rendu, donc la page de
 //    conception (qui la chargeait deux fois, `page.tsx` puis `charger-edition.ts`)
 //    et la page d'un signalement ne paient qu'une lecture — 34 requêtes de moins.
-//    Hors d'un rendu (scripts, tests, cron), `cache()` laisse passer l'appel
-//    tel quel : rien n'est gardé entre deux requêtes.
+//    Hors d'un rendu (scripts, tests, cron), `cache()` laisse passer l'appel tel quel.
+//
+// ⭐⭐ 18/09 soir — ET GARDÉE ENTRE DEUX REQUÊTES (décision de Louis). Mesuré en
+//    prod après le lot P1 : la doctrine pèse 1,42 Mo de JSON (routes 676 Ko) et
+//    ce volume traversait la passerelle à chaque rendu — signalement 2,5 s,
+//    conception 1,4 s, le VOLUME, pas la profondeur. Les dix-sept tables ne sont
+//    écrites par AUCUN chemin de l'application : seule la dérivation
+//    (`python3 scripts/derive-doctrine.py --sql`, jouée à la main) les change.
+//    Il n'y a donc rien à invalider depuis le code, et une doctrine vieille de
+//    quelques minutes après une dérivation est le prix accepté.
+//
+//    Le garde-manger est la MÉMOIRE DU PROCESSUS, par projet Supabase, pour
+//    DUREE_DE_GARDE. Pas le cache de données de Next (`unstable_cache`, 2 Mo par
+//    entrée, un aller-retour réseau de plus) ni `'use cache'` (le projet n'a pas
+//    `cacheComponents`). Une fonction chaude sert donc la doctrine sans lecture ;
+//    une fonction froide la lit une fois. Une lecture qui ÉCHOUE n'est jamais
+//    gardée : le refus (`DoctrineTronquee`, `DoctrineAbsente`) remonte tel quel
+//    et la prochaine demande relit. Une doublure sans `supabaseUrl` (les tests)
+//    n'est jamais gardée non plus : chaque test lit sa propre base.
+const DUREE_DE_GARDE_MS = 3 * 60 * 1000
+const garde = new Map<string, { promesse: Promise<Doctrine>; expire: number }>()
+
+function cleDuProjet(admin: ClientLecture): string | null {
+  const url = (admin as { supabaseUrl?: unknown }).supabaseUrl
+  return typeof url === 'string' && url.length > 0 ? url : null
+}
+
+async function lireEtAssembler(admin: ClientLecture): Promise<Doctrine> {
+  return assemblerDoctrine(await chargerLignesDepuisBase(admin))
+}
+
 export const chargerDoctrineDepuisBase = cache(
-  async (admin: ClientLecture): Promise<Doctrine> =>
-    assemblerDoctrine(await chargerLignesDepuisBase(admin)))
+  async (admin: ClientLecture): Promise<Doctrine> => {
+    const cle = cleDuProjet(admin)
+    if (cle === null) return lireEtAssembler(admin)
+    const maintenant = Date.now()
+    const gardee = garde.get(cle)
+    if (gardee && gardee.expire > maintenant) return gardee.promesse
+    const promesse = lireEtAssembler(admin)
+    garde.set(cle, { promesse, expire: maintenant + DUREE_DE_GARDE_MS })
+    // Un échec ne se garde pas : la prochaine demande relit.
+    promesse.catch(() => { if (garde.get(cle)?.promesse === promesse) garde.delete(cle) })
+    return promesse
+  })
+
+/** Pour les scripts et la recette : oublier la doctrine gardée en mémoire. */
+export function oublierLaDoctrineGardee(): void { garde.clear() }
+
+/**
+ * ⛔ LA DOCTRINE FRAÎCHE, POUR CE QUI ÉCRIT. Un chemin qui VALIDE puis ÉCRIT
+ *    (l'import d'un fichier, la conception d'une instance) ne doit jamais juger
+ *    sur une doctrine gardée pendant qu'il écrit avec les tables du jour : après
+ *    une dérivation, une clé retirée serait acceptée par la garde et écrite sans
+ *    observable — une ligne fausse en base, qu'aucun rejeu ne répare. Ces
+ *    chemins sont rares ; une lecture entière ne leur coûte rien.
+ */
+export async function chargerDoctrineFraiche(admin: ClientLecture): Promise<Doctrine> {
+  return lireEtAssembler(admin)
+}

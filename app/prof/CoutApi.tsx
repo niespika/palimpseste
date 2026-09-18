@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { formatInstant, jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { lirePagine } from '@/utils/routeur/donnees'
 
 // Synthèse des coûts API du mois en cours (T5). Additionne les DEUX sources :
 // les colonnes `cout_api` existantes (Fragments ×3, Codex) + le journal
@@ -25,19 +26,36 @@ const LIBELLES: Record<string, string> = {
   scriptorium: 'Scriptorium',
 }
 
-async function sommeColonne(
-  admin: Admin, table: string, depuis: string,
-): Promise<{ somme: number; ok: boolean }> {
-  const { data, error } = await admin.from(table).select('cout_api').gte('created_at', depuis)
-  if (error) {
-    console.error(`[cout-api] lecture illisible — ${table}`, {
-      code: error.code, message: error.message, details: error.details, hint: error.hint,
-    })
-    return { somme: 0, ok: false }
+// ⛔ 18/09 — PostgREST rend 1 000 lignes SANS LE DIRE, et `api_couts` en porte
+//    1 407 ce mois-ci en prod : la tuile affichait un total PARTIEL, et qui
+//    variait d'un tir à l'autre (7,84 $ puis 8,61 $ mesurés sur la même base).
+//    Toute lecture passe maintenant par `lirePagine` (pages ordonnées sur `id`,
+//    confrontées au décompte) ; une lecture tronquée ou illisible rend « muet »,
+//    et le total se dit partiel — jamais un nombre faux présenté comme complet.
+// ⚠️ La fenêtre est FERMÉE DES DEUX CÔTÉS : `api_couts` s'écrit sans arrêt (chaque
+//    appel d'IA, la chaîne chaque minute). Le décompte et les pages sont des
+//    requêtes distinctes ; sans borne haute, une insertion entre les deux ferait
+//    diverger les deux nombres et déclarer la lecture tronquée à tort.
+async function lignesDuMois<T>(
+  admin: Admin, table: string, colonnes: string, depuis: string, jusqua: string,
+): Promise<{ lignes: T[]; ok: boolean }> {
+  try {
+    const lignes = await lirePagine<T>(admin, table, colonnes, ['id'],
+      (q) => (q as { gte: (c: string, v: string) => { lt: (c: string, v: string) => unknown } })
+        .gte('created_at', depuis).lt('created_at', jusqua))
+    return { lignes, ok: true }
+  } catch (e) {
+    console.error(`[cout-api] lecture illisible — ${table} : ${(e as Error).message}`)
+    return { lignes: [], ok: false }
   }
-  const somme = (data ?? []).reduce(
-    (s, r) => s + (Number((r as { cout_api: number | null }).cout_api) || 0), 0,
-  )
+}
+
+async function sommeColonne(
+  admin: Admin, table: string, depuis: string, jusqua: string,
+): Promise<{ somme: number; ok: boolean }> {
+  const { lignes, ok } = await lignesDuMois<{ cout_api: number | null }>(admin, table, 'cout_api, id', depuis, jusqua)
+  if (!ok) return { somme: 0, ok: false }
+  const somme = lignes.reduce((s, r) => s + (Number(r.cout_api) || 0), 0)
   return { somme, ok: true }
 }
 
@@ -56,30 +74,25 @@ export default async function CoutApi() {
   const moisDebut = `${jourDansFuseau(now, tz).slice(0, 7)}-01`
   const moisLabel = formatInstant(now, tz, { month: 'long', year: 'numeric' })
 
+  const jusqua = now.toISOString()
   const [fEcrit, fEssai, fSynth, codex, journal] = await Promise.all([
-    sommeColonne(admin, 'fragments_analyses', moisDebut),
-    sommeColonne(admin, 'fragments_essai_depot_analyses', moisDebut),
-    sommeColonne(admin, 'fragments_syntheses', moisDebut),
-    sommeColonne(admin, 'codex_travaux', moisDebut),
-    admin.from('api_couts').select('module, cout').gte('created_at', moisDebut),
+    sommeColonne(admin, 'fragments_analyses', moisDebut, jusqua),
+    sommeColonne(admin, 'fragments_essai_depot_analyses', moisDebut, jusqua),
+    sommeColonne(admin, 'fragments_syntheses', moisDebut, jusqua),
+    sommeColonne(admin, 'codex_travaux', moisDebut, jusqua),
+    lignesDuMois<{ module: string; cout: number | null }>(admin, 'api_couts', 'module, cout, id', moisDebut, jusqua),
   ])
 
   // Sources muettes → total partiel, dit à voix haute plutôt qu'avalé.
   const manquantes: string[] = []
   if (!fEcrit.ok || !fEssai.ok || !fSynth.ok) manquantes.push('Vestigia')
   if (!codex.ok) manquantes.push('Codex')
-  if (journal.error) {
-    console.error('[cout-api] lecture illisible — api_couts (journal Quazian/Aletheia/Scriptorium)', {
-      code: journal.error.code, message: journal.error.message,
-      details: journal.error.details, hint: journal.error.hint,
-    })
-    manquantes.push('journal api_couts')
-  }
+  if (!journal.ok) manquantes.push('journal api_couts')
 
   const parModule = new Map<string, number>()
   parModule.set('Vestigia', fEcrit.somme + fEssai.somme + fSynth.somme)
   parModule.set('Codex', codex.somme)
-  for (const r of journal.data ?? []) {
+  for (const r of journal.lignes) {
     const slug = r.module as string
     const nom = LIBELLES[slug] ?? slug
     parModule.set(nom, (parModule.get(nom) ?? 0) + (Number(r.cout) || 0))

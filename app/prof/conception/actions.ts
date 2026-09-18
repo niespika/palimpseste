@@ -27,7 +27,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { garderProf } from '@/utils/fabrique/acces'
-import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
+import { chargerDoctrineFraiche } from '@/utils/fabrique/doctrine'
 import {
   ciblePrimaireDeLInstance, ciblePrimaireRetenue, empechementsDeConception,
 } from '@/utils/fabrique/conception'
@@ -102,7 +102,7 @@ export async function concevoirInstance(
   _prec: RetourConception | null, form: FormData,
 ): Promise<RetourConception> {
   const { admin } = await garderProf(false)
-  const d = await chargerDoctrineDepuisBase(admin as never)
+  const d = await chargerDoctrineFraiche(admin as never)
 
   const objet = String(form.get('objet') ?? '')
   const mode = String(form.get('mode') ?? '')
