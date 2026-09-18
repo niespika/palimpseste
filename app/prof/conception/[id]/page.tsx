@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/fabrique/acces'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
+import { lancer } from '@/utils/lancer'
 import { composerApercu } from '@/utils/fabrique/conception'
 import { lireLaBanque } from '@/utils/deroule/credence'
 import { cranNumero } from '@/utils/cran'
@@ -63,11 +64,21 @@ export default async function EditionEtApercu({
 }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { admin } = await garderProf()
-  const d = await chargerDoctrineDepuisBase(admin as never)
-
-  const { data: ex } = await admin.from('exercices')
+  // ⭐ 18/09 — LES LECTURES INDÉPENDANTES PARTENT ENSEMBLE (patron `utils/lancer.ts`).
+  //    La doctrine part la première : `chargerLEditionDeLInstance` la redemande
+  //    et reçoit la MÊME lecture (mémoïsée par rendu, `utils/fabrique/doctrine.ts`).
+  //    L'édition et les classes ne dépendent pas de l'instance lue ici : elles
+  //    partent aussi, et s'attendent à leur place d'avant.
+  const doctrineQ = lancer(chargerDoctrineDepuisBase(admin as never))
+  const exQ = lancer(admin.from('exercices')
     .select('*, exercices_types(code, libelle, grain), exercices_cas(*, exercices_materiaux(contenu, defaut, famille, version_corrigee))')
-    .eq('id', id).maybeSingle()
+    .eq('id', id).maybeSingle())
+  const editionQ = lancer(chargerLEditionDeLInstance(admin, id))
+  const classesQ = lancer(admin.from('classes')
+    .select('id, nom, niveau, filiere').order('nom'))
+  const d = await doctrineQ
+
+  const { data: ex } = await exQ
   if (!ex) notFound()
   const e = ex as unknown as Ligne
 
@@ -171,10 +182,9 @@ export default async function EditionEtApercu({
     })),
   })
 
-  const edition = await chargerLEditionDeLInstance(admin, id)
+  const edition = await editionQ
 
-  const { data: classes } = await admin.from('classes')
-    .select('id, nom, niveau, filiere').order('nom')
+  const { data: classes } = await classesQ
 
   return (
     <div className="space-y-6 pb-12">

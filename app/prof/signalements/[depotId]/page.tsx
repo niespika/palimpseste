@@ -22,6 +22,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/routeur/acces'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { lancer } from '@/utils/lancer'
 import { lireLaPorte } from '@/utils/deroule/acces'
 import { chargerLeDeroule } from '@/utils/deroule/vue'
 import { chargerLaFileDesSignalements } from '@/utils/signalements/serveur'
@@ -45,23 +46,43 @@ export default async function EcranDeLEleve(
   const { moment } = await searchParams
   const avant = moment !== 'maintenant'
   const { admin } = await garderProf()
+  // ⭐ 18/09 — LES LECTURES INDÉPENDANTES PARTENT ENSEMBLE (patron `utils/lancer.ts`).
+  //    Mesuré en prod : 2,9 s, la page la plus lente du côté professeur — la
+  //    file, puis la porte, puis le déroulé, puis l'édition (et sa doctrine),
+  //    chacun derrière le précédent. Le déroulé et l'édition n'ont besoin que
+  //    de l'élève et de l'exercice du DÉPÔT : on les lit sur la ligne du dépôt
+  //    et on lance les deux sans attendre la file. La file reste ce que l'écran
+  //    montre ; si, contre toute attente, elle nommait un autre élève ou un
+  //    autre exercice, on relit sur sa foi (même résultat qu'avant, un peu plus lent).
+  const porteQ = lancer(lireLaPorte(admin))
+  const depotQ = lancer(admin.from('exercices_depots')
+    .select('exercice_id, eleve_id').eq('id', depotId).maybeSingle())
   const fuseau = await lireFuseau()
 
   // ⭐ La file est courte par construction : on la recharge plutôt que d'écrire
   //    un second lecteur du signalement, de son élève et de sa fenêtre.
-  const file = await chargerLaFileDesSignalements(admin, fuseau, new Date().toISOString())
+  const fileQ = lancer(chargerLaFileDesSignalements(admin, fuseau, new Date().toISOString()))
+  const depot = (await depotQ).data as { exercice_id: string; eleve_id: string } | null
+  const porte = await porteQ
+  // ⚠️ `ouvert: true` À DESSEIN : la porte `exercices_actif` commande les ÉLÈVES ;
+  //    le professeur doit voir l'écran même quand le module est éteint.
+  const optionsDeroule = { ouvert: true, delaiVfJours: porte.delaiVfJours }
+  const vueQ = depot ? lancer(chargerLeDeroule(admin, depotId, depot.eleve_id, optionsDeroule)) : null
+  const editionQ = depot ? lancer(chargerLEditionDeLInstance(admin, depot.exercice_id)) : null
+
+  const file = await fileQ
   const ligne = file.lignes.find((l) => l.signalements.some((s) => s.depotId === depotId))
   const sig = ligne?.signalements.find((s) => s.depotId === depotId)
   if (!ligne || !sig) notFound()
 
   const nom = ligne.noms[sig.eleveId] ?? '—'
-  const porte = await lireLaPorte(admin)
-  // ⚠️ `ouvert: true` À DESSEIN : la porte `exercices_actif` commande les ÉLÈVES ;
-  //    le professeur doit voir l'écran même quand le module est éteint.
-  const vueDuJour = await chargerLeDeroule(admin, depotId, sig.eleveId,
-    { ouvert: true, delaiVfJours: porte.delaiVfJours })
+  const vueDuJour = vueQ && depot?.eleve_id === sig.eleveId
+    ? await vueQ
+    : await chargerLeDeroule(admin, depotId, sig.eleveId, optionsDeroule)
   const vue = vueDuJour && avant ? vueAvantReponse(vueDuJour) : vueDuJour
-  const edition = await chargerLEditionDeLInstance(admin, ligne.identite.exerciceId)
+  const edition = editionQ && depot?.exercice_id === ligne.identite.exerciceId
+    ? await editionQ
+    : await chargerLEditionDeLInstance(admin, ligne.identite.exerciceId)
   // ⭐ Le formulaire se dérive de ce qui est SERVI (la vue d'avant la réponse),
   //    jamais de la fiche seule.
   const servi = vueDuJour && edition ? deriverCeQuiEstServi(vueAvantReponse(vueDuJour), edition) : null

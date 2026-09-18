@@ -1,3 +1,5 @@
+import { cache } from 'react'
+
 // ============================================================================
 // C4 · L8 — LA DOCTRINE, lue en base et assemblée.
 // ----------------------------------------------------------------------------
@@ -630,9 +632,16 @@ const PAGE = 1000
 async function lireTable(
   admin: ClientLecture, nom: string, cols: string, cle: string[],
 ): Promise<never[]> {
-  // Le décompte part AVEC la première page, pas après la dernière : il ne dépend
-  // d'aucune d'elles, et l'attendre en série ajouterait un aller-retour par
-  // table à une page que douze lectures parallèles font déjà attendre.
+  // Le décompte part EN PREMIER, et c'est lui qui dit combien de pages lancer.
+  //
+  // ⭐ 18/09 — LES PAGES PARTENT ENSEMBLE. Mesuré en prod : `exercices_routes`
+  //    porte 3 294 lignes, donc quatre pages, et la lecture en série faisait de
+  //    cette table le chemin critique des dix-sept (quatre sauts là où les seize
+  //    autres n'en font qu'un). On attend le décompte, on lance toutes les pages
+  //    qu'il annonce d'un coup, puis on VÉRIFIE comme avant : tant que la dernière
+  //    page lue revient pleine, on continue en série jusqu'à une page courte —
+  //    le décompte ANNONCE, il ne fait pas foi ; la page courte reste le seul
+  //    signe de fin, et le rapprochement des deux nombres reste le garde-fou.
   //
   // ⚠️ LE `Promise.resolve` N'EST PAS DÉCORATIF. Un constructeur de requête
   // Supabase est PARESSEUX : il ne part qu'au premier `then`. Le garder tel quel
@@ -641,20 +650,43 @@ async function lireTable(
   // ne le dise.
   const decompte = Promise.resolve(
     admin.from(nom).select(cols, { count: 'exact', head: true }))
-
-  const lignes: unknown[] = []
-  for (let debut = 0; ; debut += PAGE) {
+  const page = (debut: number) => {
     let q = admin.from(nom).select(cols)
     for (const colonne of cle) q = q.order(colonne, { ascending: true })
-    const { data, error } = await q.range(debut, debut + PAGE - 1)
-    if (error) throw new DoctrineAbsente(`lecture de ${nom} : ${JSON.stringify(error)}`)
-    const page = data ?? []
-    lignes.push(...page)
-    if (page.length < PAGE) break
+    return Promise.resolve(q.range(debut, debut + PAGE - 1))
   }
 
-  const { count, error } = await decompte
-  if (error) throw new DoctrineAbsente(`décompte de ${nom} : ${JSON.stringify(error)}`)
+  // La première page part AVEC le décompte : seize tables sur dix-sept tiennent
+  // en une page, et elles ne doivent pas payer un saut de plus pour l'apprendre.
+  const premierePage = page(0)
+  const { count, error: eDecompte } = await decompte
+  if (eDecompte) throw new DoctrineAbsente(`décompte de ${nom} : ${JSON.stringify(eDecompte)}`)
+
+  // Les pages SUIVANTES, celles que le décompte annonce, partent ensemble. Et
+  // c'est la page courte qui prouve la fin, pas le nombre annoncé.
+  const nPages = Math.max(1, Math.ceil((count ?? 0) / PAGE))
+  const premieres = await Promise.all([
+    premierePage, ...Array.from({ length: nPages - 1 }, (_, i) => page((i + 1) * PAGE))])
+
+  const lignes: unknown[] = []
+  let derniere = PAGE
+  for (const { data, error } of premieres) {
+    if (error) throw new DoctrineAbsente(`lecture de ${nom} : ${JSON.stringify(error)}`)
+    const p = data ?? []
+    lignes.push(...p)
+    derniere = p.length
+    if (derniere < PAGE) break
+  }
+  // Le décompte annonçait moins que la base ne porte : on finit en série, comme
+  // avant, jusqu'à la page courte.
+  while (derniere === PAGE) {
+    const { data, error } = await page(lignes.length)
+    if (error) throw new DoctrineAbsente(`lecture de ${nom} : ${JSON.stringify(error)}`)
+    const p = data ?? []
+    lignes.push(...p)
+    derniere = p.length
+  }
+
   if (count === null || count !== lignes.length) {
     throw new DoctrineTronquee(
       `Doctrine TRONQUÉE — la table ${nom} : ${lignes.length} ligne(s) lue(s), `
@@ -763,6 +795,12 @@ export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<Lig
   }
 }
 
-export async function chargerDoctrineDepuisBase(admin: ClientLecture): Promise<Doctrine> {
-  return assemblerDoctrine(await chargerLignesDepuisBase(admin))
-}
+// ⭐ 18/09 — LUE UNE FOIS PAR RENDU. `cache()` de React mémoïse sur le client
+//    reçu : `createAdminClient()` est lui-même un par rendu, donc la page de
+//    conception (qui la chargeait deux fois, `page.tsx` puis `charger-edition.ts`)
+//    et la page d'un signalement ne paient qu'une lecture — 34 requêtes de moins.
+//    Hors d'un rendu (scripts, tests, cron), `cache()` laisse passer l'appel
+//    tel quel : rien n'est gardé entre deux requêtes.
+export const chargerDoctrineDepuisBase = cache(
+  async (admin: ClientLecture): Promise<Doctrine> =>
+    assemblerDoctrine(await chargerLignesDepuisBase(admin)))
