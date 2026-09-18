@@ -41,6 +41,7 @@ import { SemainesReadonly } from './evaluations/panoptique-bandes'
 import { chargerListeModeles, chargerModeleDetail, chargerAssignationsModele, type ModeleListItem, type ModeleDetail, type LigneAssignationModele } from './evaluations/modele-serveur'
 import FormulaireCreerModele from './evaluations/FormulaireCreerModele'
 import GrilleModele from './evaluations/GrilleModele'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
 // timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
@@ -74,9 +75,9 @@ export default async function ScriptoriumPage({
   searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string; modele?: string; decouper?: string; instance?: string; synthese?: string }>
 }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile } = await lireIdentite()
   if (!user) notFound()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
   const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel, modele: modeleSel, decouper: decouperSel, instance: instanceSel, synthese: syntheseSel } = await searchParams

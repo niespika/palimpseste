@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import {
   LABEL_MODULE, LABEL_TYPE_STRIKE, MESSAGE_STRIKE_DEFAUT, MESSAGE_BLOQUE_DEFAUT,
@@ -14,6 +13,7 @@ import GestionIntegrite from './GestionIntegrite'
 import HistoriqueIntegrite from '@/components/integrite/HistoriqueIntegrite'
 import type { SignalementVue, BloqueVue, SelectionVue } from '@/components/integrite/types'
 import LibelleSuivi from '@/components/nav/LibelleSuivi'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 export default async function ProfIntegritePage({
   searchParams,
@@ -21,10 +21,9 @@ export default async function ProfIntegritePage({
   searchParams: Promise<{ sel?: string; vue?: string; eleve?: string }>
 }) {
   const { sel, vue: vueParam, eleve } = await searchParams
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile: moi } = await lireIdentite()
   if (!user) redirect('/login')
-  const { data: moi } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (moi?.role !== 'prof') redirect('/eleve')
 
   const admin = createAdminClient()

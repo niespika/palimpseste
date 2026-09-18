@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { dureeOralSecondes } from '@/utils/fragments-oral'
 import SceneTirage, { type CandidatTirage, type TireDuJour } from './SceneTirage'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 // ----------------------------------------------------------------------------
 // Vestigia · LE TIRAGE AU SORT, PAGE À PROJETER (15/09, demande de Louis).
@@ -24,10 +24,9 @@ export default async function PageTirage({
   const { semaine: semaineId, classe: classeId } = await searchParams
   if (!semaineId || !classeId) notFound()
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile } = await lireIdentite()
   if (!user) notFound()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
   const admin = createAdminClient()

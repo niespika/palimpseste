@@ -1,20 +1,19 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { calculerSante, SEUILS_SANTE, motifsSante, COULEUR_SIGNAL, type SanteInscription } from '@/utils/sante'
 import { noteVersLettre } from '@/utils/notation'
 import EnTeteMobileProf from '@/components/EnTeteMobileProf'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 // Page dédiée « à risque » (Pilotage / tableau de bord). On explique POURQUOI
 // chaque élève décroche : groupé PAR CLASSE, la raison portée en chips colorées
 // (un signal = une couleur). Calcul par inscription (un élève bi-classe
 // n'apparaît qu'au titre du contexte où il décroche).
 export default async function PageARisque() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile: moi } = await lireIdentite()
   if (!user) notFound()
-  const { data: moi } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (moi?.role !== 'prof') notFound()
 
   const admin = createAdminClient()

@@ -66,6 +66,12 @@ function charger<T>(fichier: string, deps: Record<string, unknown>): T {
 const lecteurs = charger<typeof import('./donnees')>('utils/routeur/donnees.ts', {
   'server-only': {}, '@/utils/cran': {}, '@/utils/statut-recette': {}, '@/utils/chaine/types': {},
   './assiduite': assiduite,
+  // ⭐ 18/09 — la ligne des réglages se lit par `lireLesReglages` (une lecture par
+  //    rendu) : la doublure la lit telle que le décor la porte, sans `id`.
+  '@/utils/scriptorium-params': {
+    lireLesReglages: async (admin: { from: (t: string) => { select: (c: string) => { limit: (n: number) => { maybeSingle: () => Promise<unknown> } } } }) =>
+      admin.from('scriptorium_params').select('*').limit(1).maybeSingle(),
+  },
 })
 const serveur = charger<typeof import('../../app/prof/routeur/serveur')>('app/prof/routeur/serveur.ts', {
   'server-only': {}, '@/utils/supabase/admin': {},

@@ -10,6 +10,8 @@ import { noteVersLettre, COULEUR_LETTRE } from '@/utils/notation'
 import LigneThemeEleve, { type ThemeEleve } from './LigneThemeEleve'
 import { semainesComptees } from '@/utils/fragments-semaines'
 import BoutonActiverClasse from './BoutonActiverClasse'
+import { lireIdentite } from '@/utils/supabase/identite'
+import { lancer } from '@/utils/lancer'
 
 // ---------------------------------------------------------------------------
 // C8·L3 — SUIVI : fusion des anciens onglets « Vue d'ensemble » et « Thèmes »
@@ -42,17 +44,20 @@ function moyenne(xs: number[]): number | null {
 
 export default async function PageSuivi({ searchParams }: { searchParams: Promise<{ classe?: string }> }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par
+  //    rendu) : mêmes refus qu'avant, un aller-retour de moins en tête de page.
+  const { user, profile } = await lireIdentite()
   if (!user) notFound()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
   const admin = createAdminClient()
   const { classe: classeSel } = await searchParams
 
   // Semestre consulté (sélecteur de la Barre 2) + ses semaines de travail.
+  // Le module ne dépend pas du semestre : les deux partent ensemble.
+  const moduleQ = lancer(admin.from('modules').select('id').eq('slug', 'fragments-erudition').maybeSingle())
   const { semestre } = await semestreFragmentsActif(supabase)
-  const { data: moduleData } = await admin.from('modules').select('id').eq('slug', 'fragments-erudition').maybeSingle()
+  const { data: moduleData } = await moduleQ
   const classes = (moduleData && semestre) ? await classesAvecModule(admin, moduleData.id) : []
 
   // C8-L4 — DEUX ensembles, et c'est volontaire (patron `utils/synthese-semestre.ts`) :
@@ -91,30 +96,38 @@ export default async function PageSuivi({ searchParams }: { searchParams: Promis
   }
   const statsParClasse = new Map<string, { eleves: EleveStats[]; classeMoy: MoySections; points: PointCourbe[] }>()
 
-  for (const c of classes) {
+  // ⭐ 18/09 — UNE PASSE PAR CLASSE, ET LES CLASSES ENSEMBLE (patron `utils/lancer.ts`).
+  //    Mesuré en prod : cinq lectures par classe, l'une derrière l'autre, ~40
+  //    sauts. Aucune classe ne dépend d'une autre : chacune part de son côté ;
+  //    dans une classe, les profils, les thèmes et les dépôts ne dépendent que
+  //    des inscrits et partent ensemble ; les analyses attendent les dépôts.
+  //    Les résultats se rangent dans l'ordre des classes, comme avant.
+  const parClasse = await Promise.all(classes.map(async (c) => {
     const inscrits = await inscriptionsClasse(admin, c.id)
     const inscriptionIds = inscrits.map(i => i.id)
     const eleveIds = inscrits.map(i => i.eleve_id)
     const inscParEleve = new Map(inscrits.map(i => [i.eleve_id, i.id]))
 
-    const { data: profils } = eleveIds.length > 0
-      ? await admin.from('profiles').select('id, display_name').in('id', eleveIds).eq('role', 'eleve').order('display_name')
-      : { data: [] }
-
+    const profilsQ = eleveIds.length > 0
+      ? lancer(admin.from('profiles').select('id, display_name').in('id', eleveIds).eq('role', 'eleve').order('display_name'))
+      : null
     // Thèmes du semestre consulté (un thème par inscription × semestre).
-    const { data: themes } = inscriptionIds.length > 0
-      ? await admin
+    const themesQ = inscriptionIds.length > 0
+      ? lancer(admin
           .from('fragments_themes')
           .select('inscription_id, theme, description, essai_actif, propose_at, valide_at, commentaire_prof, commente_at')
           .eq('semestre_id', semestre.id)
-          .in('inscription_id', inscriptionIds)
-      : { data: [] }
-    const themeParInsc = new Map((themes ?? []).map(t => [t.inscription_id as string, t]))
-
+          .in('inscription_id', inscriptionIds))
+      : null
     // Dépôts (du semestre) + analyses publiées.
-    const { data: depots } = inscriptionIds.length > 0
-      ? await admin.from('fragments_depots').select('id, inscription_id, semaine_id').in('inscription_id', inscriptionIds)
-      : { data: [] }
+    const depotsQ = inscriptionIds.length > 0
+      ? lancer(admin.from('fragments_depots').select('id, inscription_id, semaine_id').in('inscription_id', inscriptionIds))
+      : null
+
+    const { data: profils } = profilsQ ? await profilsQ : { data: [] }
+    const { data: themes } = themesQ ? await themesQ : { data: [] }
+    const themeParInsc = new Map((themes ?? []).map(t => [t.inscription_id as string, t]))
+    const { data: depots } = depotsQ ? await depotsQ : { data: [] }
     const depotsSemestre = (depots ?? []).filter(d => semaineIds.has(d.semaine_id as string))
     const depotParInsc = new Map<string, string[]>() // inscription → depotIds (NOTES)
     // C8-L4 — le NUMÉRATEUR du taux se compte à part : il ne retient que les
@@ -186,12 +199,13 @@ export default async function PageSuivi({ searchParams }: { searchParams: Promis
         moyenne: moyenne([...e.d, ...e.s, ...e.r]),
       }))
 
-    statsParClasse.set(c.id, {
+    return [c.id, {
       eleves,
       classeMoy: { decouvertes: moyenne(allD), sources: moyenne(allS), reflexions: moyenne(allR) },
       points,
-    })
-  }
+    }] as const
+  }))
+  for (const [id, stats] of parClasse) statsParClasse.set(id, stats)
 
   const classeChoisie = classes.find(c => c.id === classeSel)
   const detail = classeChoisie ? statsParClasse.get(classeChoisie.id) : null

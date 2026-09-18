@@ -31,6 +31,7 @@ import { COMPETENCES_FICHE } from '@/utils/fabrique/fiche-competence'
 import { formatJour } from '@/utils/fuseau'
 import DepotFiche from './DepotFiche'
 import LigneCompetence from './LigneCompetence'
+import { lancer } from '@/utils/lancer'
 /** Combien d'opt-out une classe porte — un décompte réel, jamais une jauge
  *  (`06-` §5 : « un écran n'affiche un nombre que si ce nombre compte quelque
  *  chose »). Une ligne absente vaut « active » : seules les `false` comptent. */
@@ -56,7 +57,8 @@ const NOM: Record<string, string> = {
 
 export default async function LieuDesCompetences() {
   const { admin, actif } = await garderProf()
-  const troisOff = await lireLesTroisInterrupteurs(admin)
+  // ⭐ 18/09 — les trois interrupteurs partent avec les six lectures (patron `utils/lancer.ts`).
+  const troisOffQ = lancer(lireLesTroisInterrupteurs(admin))
 
   // ⚠️ UNE LECTURE RATÉE N'EST PAS UNE BASE VIDE : chaque requête rend son
   //   incident, et l'écran le montre plutôt que d'afficher « aucune fiche ».
@@ -78,6 +80,7 @@ export default async function LieuDesCompetences() {
     lire<Ligne>('l’activation par classe',
       admin.from('competences_actives_par_classe').select('classe_id, competence, active')),
   ])
+  const troisOff = await troisOffQ
   const incidents = incidentsDe(lFiches, lCorr, lNiveaux, lMonitoring, lClasses, lActives)
   const fiches = lFiches.lignes
   const corr = lCorr.lignes

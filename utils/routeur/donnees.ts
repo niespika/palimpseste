@@ -31,6 +31,7 @@ import type { Competence, Mode, Palier, Parcours } from './types'
 import { SEUILS_DE_DEMARRAGE, type SeuilsAssiduite } from './assiduite'
 import { lireLesStatutsAvecDate, STATUT_PAR_DEFAUT } from '@/utils/statut-recette'
 import { COMPETENCES } from '@/utils/chaine/types'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 /** Le plafond que PostgREST applique sans le dire. */
 const PAGE = 1000
@@ -540,10 +541,9 @@ export async function lireLAssiduite(
 export async function lireLesSeuils(
   admin: Admin,
 ): Promise<{ seuils: SeuilsAssiduite; parDefaut: boolean }> {
-  const { data, error } = await admin
-    .from('scriptorium_params')
-    .select('assiduite_seuil_semaine_faite, assiduite_borne_basse_frise, assiduite_contrat_classe')
-    .limit(1).maybeSingle()
+  // ⭐ 18/09 — la ligne des réglages, lue une fois par rendu (`lireLesReglages`,
+  //    qui n'importe que React : appelable hors d'une requête Next, comme ce fichier l'exige).
+  const { data, error } = await lireLesReglages(admin)
   if (error || !data || data.assiduite_seuil_semaine_faite == null) {
     return { seuils: { ...SEUILS_DE_DEMARRAGE }, parDefaut: true }
   }
@@ -562,12 +562,8 @@ export async function lireLesSeuils(
  * professeur où en est l'allumage ; il ne s'y soumet pas.
  */
 export async function lireLesInterrupteurs(admin: Admin): Promise<Record<string, boolean>> {
-  // ⚠️ La liste des colonnes reste sur UNE SEULE LIGNE : concaténée, supabase-js
-  //    ne sait plus la typer et rend `GenericStringError`.
-  const { data } = await admin
-    .from('scriptorium_params')
-    .select('exercices_actif, routeur_actif, competences_affichage_actif, chaine_actif, fabrique_actif, passation_classe_actif')
-    .limit(1).maybeSingle()
+  // ⭐ 18/09 — la ligne entière, lue une fois par rendu (`lireLesReglages`).
+  const { data } = await lireLesReglages(admin)
   return {
     exercices_actif: !!data?.exercices_actif,
     routeur_actif: !!data?.routeur_actif,

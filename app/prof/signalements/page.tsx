@@ -28,15 +28,18 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { chargerLaFileDesSignalements } from '@/utils/signalements/serveur'
 import PorteDuSignalement from './PorteDuSignalement'
 import PanneauExercice from './PanneauExercice'
+import { lancer } from '@/utils/lancer'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SignalementsPage({
   searchParams,
 }: { searchParams: Promise<{ sel?: string; vue?: string }> }) {
+  // ⭐ 18/09 — le fuseau (une lecture, mémoïsée) part avec la garde ; attendu après elle.
+  const fuseauQ = lancer(lireFuseau())
   const { admin } = await garderProf()
   const { sel, vue } = await searchParams
-  const fuseau = await lireFuseau()
+  const fuseau = await fuseauQ
   const file = await chargerLaFileDesSignalements(admin, fuseau, new Date().toISOString())
 
   // ⭐ DEUX VUES (Louis, 11/09) : « quand j'ai traité un signalement, il

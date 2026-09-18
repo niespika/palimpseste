@@ -1,16 +1,15 @@
 import { createAdminClient } from '@/utils/supabase/admin'
-import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { FileValidation, type LigneValidation } from './FileValidation'
 import { libelleSession } from '@/utils/codex-libelle'
 import { titresCoursParSession } from '@/utils/codex-titre'
 import type { RetourCritique } from './actions'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 export default async function ValidationPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile } = await lireIdentite()
   if (!user) redirect('/login')
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') redirect('/eleve')
 
   const admin = createAdminClient()

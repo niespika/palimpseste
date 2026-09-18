@@ -76,6 +76,10 @@ function decor() {
     'next/navigation': { redirect(url) { throw new Error('redirect:' + url) } },
     '@/utils/supabase/identite': identite,
     '@/utils/supabase/admin': { createAdminClient() { admins++; return client() } }, './donnees': {},
+    // 18/09 — la garde lit la ligne des réglages par `lireLesReglages`.
+    '@/utils/scriptorium-params': {
+      lireLesReglages: (admin) => admin.from('scriptorium_params').select('*').limit(1).maybeSingle(),
+    },
   })
   return { ...serveur, ...identite, ...contexte, ...garde, lectures,
     instances: () => instances, admins: () => admins,

@@ -42,6 +42,7 @@ import { formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import Tuile from '@/components/Tuile'
 import { nombreAValiderCodex, passationsDeClasse } from '@/utils/codex-onglets/liste'
+import { lancer } from '@/utils/lancer'
 
 // Accès & classes · L1 — l'échec ne peut plus être MUET. Cette action jetait le
 // `error` de `preparerSynthese` : le prof pressait « Préparer → » et il ne se
@@ -67,6 +68,9 @@ const SANS_CLASSE = 'aucune'
 export default async function CodexProfPage({ searchParams }: { searchParams: Promise<{ classe?: string; echec?: string }> }) {
   const supabase = await createClient()
   const { classe: classeSel, echec } = await searchParams
+  // ⭐ 18/09 — les synthèses à préparer ne dépendent de rien ici : elles partent
+  //    maintenant (patron `utils/lancer.ts`), attendues à leur place d'avant.
+  const aPreparerQ = lancer(chargerSynthesesAPreparer())
 
   // Accès & classes · L1 — le module appartient à la classe : ce sélecteur ne
   // propose plus que les classes AYANT Codex. Il gouverne à la fois le formulaire
@@ -84,9 +88,12 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
   // Accès & classes · L1 — `classesAvecModule` est le SEUL écran de Codex qui
   // applique la règle « le module appartient à la classe » ; la réorganisation
   // ne le remplace pas par une lecture de toutes les classes.
-  const classes = moduleData ? await classesAvecModule(supabase, moduleData.id as string) : []
+  // Les classes et les titres des cours ne dépendent pas l'un de l'autre : ensemble.
+  const classesQ = moduleData ? lancer(classesAvecModule(supabase, moduleData.id as string)) : null
+  const titresQ = lancer(titresCoursParSession(supabase, (syntheses ?? []).map((s) => s.id as string)))
+  const classes = classesQ ? await classesQ : []
   // Titres des cours (bras contenu bi-source) résolus à part.
-  const titresCours = await titresCoursParSession(supabase, (syntheses ?? []).map((s) => s.id as string))
+  const titresCours = await titresQ
 
   const labelUnite = (s: { id: string; scriptorium_unites: unknown }) =>
     libelleSession(s.scriptorium_unites, null) || titresCours.get(s.id) || ''
@@ -94,7 +101,7 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
   const classesList = classes
   const toutes = syntheses ?? []
   // Synthèses de fin de cours planifiées (plan d'évaluation, gate). Vide gate OFF.
-  const aPreparer = await chargerSynthesesAPreparer()
+  const aPreparer = await aPreparerQ
   // C4-L9 — « le professeur voit ce qu'il a à concevoir, DANS SON MODULE ».
   // Lecture admin : les tables du plan sont en RLS prof-only. Gate du plan
   // OFF/absent → liste vide → encart absent, page inchangée.

@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addDaysUTC, toISODate } from './calendrier-grille'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 /**
  * Gate dark-launch du plan d'évaluation (scriptorium_params.plan_evaluation_actif,
@@ -14,11 +15,8 @@ import { addDaysUTC, toISODate } from './calendrier-grille'
  * (utils/aletheia-dates.ts) : `error` non déstructuré → `data` null → false.
  */
 export async function lireGatePlanActif(admin: SupabaseClient): Promise<boolean> {
-  const { data } = await admin
-    .from('scriptorium_params')
-    .select('plan_evaluation_actif')
-    .eq('id', 1)
-    .maybeSingle()
+  // ⭐ 18/09 — la ligne des réglages, lue une fois par rendu (`lireLesReglages`).
+  const { data } = await lireLesReglages(admin)
   return !!(data as { plan_evaluation_actif?: boolean } | null)?.plan_evaluation_actif
 }
 
@@ -113,10 +111,6 @@ export async function resoudreSemestrePourSemaine(admin: SupabaseClient, semaine
  * absente tolérée → false. Lu par le filtre `surface` de l'émission élève (lot 7).
  */
 export async function lireQuizAnnonceDefaut(admin: SupabaseClient): Promise<boolean> {
-  const { data } = await admin
-    .from('scriptorium_params')
-    .select('quiz_annonce_defaut')
-    .eq('id', 1)
-    .maybeSingle()
+  const { data } = await lireLesReglages(admin)
   return !!(data as { quiz_annonce_defaut?: boolean } | null)?.quiz_annonce_defaut
 }

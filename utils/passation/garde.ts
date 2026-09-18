@@ -14,6 +14,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireLesPortes } from './acces'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -25,14 +26,12 @@ export interface AccesProf {
 }
 
 export async function garderProf(redirection = true): Promise<AccesProf> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité déjà lue par le layout (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile: moi } = await lireIdentite()
   if (!user) {
     if (redirection) redirect('/login')
     throw new Error('Non authentifié')
   }
-  const { data: moi } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single()
   if (moi?.role !== 'prof') {
     if (redirection) redirect('/eleve')
     throw new Error('Accès refusé')

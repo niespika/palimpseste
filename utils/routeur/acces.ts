@@ -20,6 +20,7 @@
 import { redirect } from 'next/navigation'
 import { lireIdentite } from '@/utils/supabase/identite'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export type Admin = ReturnType<typeof createAdminClient>
 
@@ -46,8 +47,7 @@ export async function garderProf(redirection = true): Promise<AccesRouteur> {
     throw new Error('Accès refusé')
   }
   const admin = createAdminClient()
-  const { data: params } = await admin
-    .from('scriptorium_params').select('routeur_actif').limit(1).maybeSingle()
+  const { data: params } = await lireLesReglages(admin)
   return { admin, userId: user.id, routeurActif: !!params?.routeur_actif }
 }
 

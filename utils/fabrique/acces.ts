@@ -12,8 +12,9 @@
 // ============================================================================
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { lireIdentite } from '@/utils/supabase/identite'
+import { lireLesReglages } from '@/utils/scriptorium-params'
 
 export interface AccesFabrique {
   admin: ReturnType<typeof createAdminClient>
@@ -27,21 +28,19 @@ export interface AccesFabrique {
  * `redirection` à `false` pour les actions serveur, qui jettent au lieu de rediriger.
  */
 export async function garderProf(redirection = true): Promise<AccesFabrique> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité déjà lue par le layout (`lireIdentite`, mémoïsée par
+  //    rendu), et la ligne des réglages lue une fois (`lireLesReglages`) : mêmes refus.
+  const { user, profile: moi } = await lireIdentite()
   if (!user) {
     if (redirection) redirect('/login')
     throw new Error('Non authentifié')
   }
-  const { data: moi } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single()
   if (moi?.role !== 'prof') {
     if (redirection) redirect('/eleve')
     throw new Error('Accès refusé')
   }
   const admin = createAdminClient()
-  const { data: params } = await admin
-    .from('scriptorium_params').select('fabrique_actif').limit(1).maybeSingle()
+  const { data: params } = await lireLesReglages(admin)
   return { admin, userId: user.id, actif: !!params?.fabrique_actif }
 }
 
@@ -51,10 +50,7 @@ export async function garderProf(redirection = true): Promise<AccesFabrique> {
 export async function lireLesTroisInterrupteurs(
   admin: ReturnType<typeof createAdminClient>,
 ): Promise<{ exercices: boolean; routeur: boolean; affichage: boolean }> {
-  const { data } = await admin
-    .from('scriptorium_params')
-    .select('exercices_actif, routeur_actif, competences_affichage_actif')
-    .limit(1).maybeSingle()
+  const { data } = await lireLesReglages(admin)
   return {
     exercices: !!data?.exercices_actif,
     routeur: !!data?.routeur_actif,

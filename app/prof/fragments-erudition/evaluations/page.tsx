@@ -9,6 +9,7 @@ import FormulaireNouvelEssai from './FormulaireNouvelEssai'
 import GestionEssaisClasse from './GestionEssaisClasse'
 import GestionSyntheses from './GestionSyntheses'
 import LibelleSuivi from '@/components/nav/LibelleSuivi'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 // ---------------------------------------------------------------------------
 // C8·L3 — ÉVALUATIONS : les anciens onglets « Essais » et « Synthèses » se rangent
@@ -52,9 +53,9 @@ export default async function PageEvaluations({
   searchParams: Promise<{ vue?: string; classe?: string }>
 }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile } = await lireIdentite()
   if (!user) notFound()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
   const admin = createAdminClient()

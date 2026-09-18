@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { moduleIdsAccessibles } from '@/utils/acces'
 import { calculerSante, motifsSante, COULEUR_SIGNAL, SEUILS_SANTE, type SanteInscription } from '@/utils/sante'
@@ -10,6 +9,7 @@ import Pastille, { type ModuleSceau } from '@/components/Pastille'
 import EnTeteMobileProf from '@/components/EnTeteMobileProf'
 import { chargerDossierIntegrite } from '@/utils/integrite-historique'
 import DossierIntegriteEleve from '@/components/integrite/DossierIntegriteEleve'
+import { lireIdentite } from '@/utils/supabase/identite'
 
 // Hub transverse d'un élève (Pilotage › Élèves › nom). Point d'entrée vers les
 // vues détaillées de chaque module. En arrivant depuis « à risque », l'encart
@@ -20,10 +20,9 @@ export default async function PageEleveHub({
   params: Promise<{ eleveId: string }>
 }) {
   const { eleveId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // ⭐ 18/09 — l'identité que le layout a déjà lue (`lireIdentite`, mémoïsée par rendu) : mêmes refus.
+  const { user, profile: moi } = await lireIdentite()
   if (!user) notFound()
-  const { data: moi } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (moi?.role !== 'prof') notFound()
 
   const admin = createAdminClient()

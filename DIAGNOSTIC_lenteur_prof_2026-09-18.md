@@ -6,7 +6,56 @@
 > `pg_stat_statements` de la prod en session lecture seule, comptes de lignes par PostgREST.
 > Les comptes d'allers-retours viennent de la lecture du code, pas de l'exécution.
 
-## 0 octies. Lot P4 — l'accueil : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+## 0 decies. Lot P5 — le suivi Vestigia et le socle des gardes : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+
+**Ce qui change**
+
+- **Suivi Vestigia** (`app/prof/fragments-erudition/suivi/page.tsx`) : la garde passe par `lireIdentite`
+  (déjà lue par le layout) ; le module part avec le semestre ; **les classes se lisent ensemble**
+  (`Promise.all`), et dans chaque classe les profils, les thèmes et les dépôts partent ensemble, les
+  analyses après. Résultats rangés dans l'ordre des classes.
+- **Sept pages** (À risque, fiche élève, Scriptorium, validation Codex, intégrité, tirage,
+  évaluations) **et deux gardes** (`utils/fabrique/acces.ts`, `utils/passation/garde.ts`) lisent
+  l'identité par `lireIdentite` : mêmes refus, byte-identiques (`notFound` / `redirect` conservés
+  page par page) ; un saut de moins en tête de chaque page.
+- **La ligne des réglages** (`scriptorium_params`, une seule ligne, `check (id = 1)`) se lit par
+  `lireLesReglages` dans les gardes fabrique et routeur, `lireLesTroisInterrupteurs`,
+  `lireGatePlanActif`, `lireQuizAnnonceDefaut`, `lireLesSeuils`, `lireLesInterrupteurs`.
+  **⛔ Pas `chaineActive`** : c'est l'interrupteur de sécurité de la chaîne IA, relu à chaque job ;
+  il garde sa lecture directe (la revue a vérifié que le cache est de toute façon inactif dans une
+  route API, mais un interrupteur de sécurité ne se met pas derrière un cache).
+- **Chaînes garde → fuseau → chargeur** : signalements (fuseau part avec la garde), compétences (les
+  trois interrupteurs partent avec les six lectures), Codex (synthèses à préparer lancées en tête ;
+  classes et titres ensemble).
+- Deux doublures de test déclarent le nouveau module (`utils/routeur/pilotage-serveur.test.ts`,
+  `scripts/recette/fixtures/contexte-navigation.mjs` — ce dernier était déjà cassé depuis le 17/09
+  par le `getUser` mémoïsé, hors `npm test`).
+
+**Éprouvé**
+
+- `tsc` et `eslint` propres, 2 685 tests verts.
+- **22 écrans identiques** ancien/nouveau avec la session prof du bac à sable : suivi (toutes
+  classes, une classe), À risque, fiche élève, Scriptorium ×2, validation, intégrité, tirage,
+  évaluations, compétences, signalements, Codex ×2, conception ×2, routeur ×3, passation, calendrier,
+  accueil. En local : Codex 1,16 → 0,57 s, signalements 0,55 → 0,35 s, validation 0,46 → 0,27 s,
+  tirage 0,62 → 0,42 s, compétences 0,86 → 0,69 s ; suivi 0,94 → 0,79 s (4 petites classes).
+- **Refus identiques** sur dix pages, en session **élève** (307 → `/eleve`) et **anonyme**
+  (307 → `/login`), ancien et nouveau.
+- **Passe adversariale** : rien de bloquant. Vérifié par elle : `React.cache` est un passe-plat dans
+  les Route Handlers de Next 16 (aucun dispatcher installé), donc la chaîne relit sa porte à chaque
+  job ; `scriptorium_params` est une ligne unique ; parité des refus ; rien de lancé n'écrit. Repris :
+  un commentaire périmé, la doublure de la fixture de recette.
+
+**Non éprouvé** : la prod (avant : suivi Vestigia 1,2-1,3 s ; les pages à garde manuelle, ~0,07 s
+de moins chacune attendu).
+
+## 0 nonies. Lot P4 remesuré en prod (18/09) — accueil 2,0 → **1,6 s**, À risque 0,7 → **0,52 s**, fiche élève 1,1 → **1,0 s**, calendrier 1,1 → 1,03 s
+
+Moins que l'estimation (1,0 s) sur l'accueil : ce qui reste est la chaîne du plan dans les tâches
+du calendrier (porte → plans → quatre lectures → synthèses → dates) et la file d'examen humain
+paginée, chacune derrière l'autre à l'intérieur du `Promise.all`.
+
+## 0 octies. Lot P4 — l'accueil : codé, éprouvé, DÉPLOYÉ (18/09) — ⚠️ état dépassé, voir 0 nonies
 
 **Ce qui change** (patron `utils/lancer.ts` partout : des lectures, attendues à leur place d'avant)
 

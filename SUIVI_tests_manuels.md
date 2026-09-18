@@ -1,5 +1,9 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Vitesse côté prof — lot P5 (suivi Vestigia, socle des gardes, réglages), éprouvé au bac à sable, NON déployé (18/09/2026)
+
+`tsc`, `eslint`, 2 685 tests verts. 22 écrans identiques ancien/nouveau avec la session prof du bac à sable ; refus identiques sur dix pages en session élève (→ `/eleve`) et anonyme (→ `/login`). Codex 1,16 → 0,57 s, signalements 0,55 → 0,35 s en local. Passe adversariale : rien de bloquant ; `chaineActive` retiré du lot (interrupteur de sécurité de la chaîne IA, lecture directe conservée). P4 remesuré en prod : accueil 2,0 → 1,6 s, À risque 0,7 → 0,52 s, fiche élève 1,1 → 1,0 s. Détail au §0 decies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
+
 ## Vitesse côté prof — lot P4 (l'accueil), éprouvé au bac à sable, NON déployé (18/09/2026)
 
 `tsc` propre, 2 685 tests verts. Trois chargeurs JSON-identiques ancien/nouveau au bac à sable et en prod (lecture seule) : `calculerSante`, `chargerLaFileDExamenHumain` (vide des deux côtés), `compterLesExercicesATraiter`. Écrans identiques avec la session prof du bac à sable : accueil ×3 (montants « Coût API » masqués), « À risque », deux fiches élève, calendrier ; accueil 2,7 → 1,4 s en local. Passe adversariale : rien de bloquant. P3 remesuré en prod : 1HLP Compétences 1 074 → 451 Ko, 3,0 → 2,8 s seulement — la chaîne de lectures de cette page reste (« P3 bis »). ⚠️ Trouvé en route, préexistant : la tuile « Coût API » de l'accueil lit `api_couts` plafonnée à 1 000 lignes sur 1 407 ce mois-ci en prod — total partiel, variable (noté dans `IDEES_post_rentree.md`). Détail au §0 octies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
