@@ -81,6 +81,7 @@ import { signalerEnAttenteIA, lireParamsIntegrite, TYPE_FAISCEAU } from '@/utils
 import { citationTient } from '@/utils/chaine/citation-verifiee'
 import { citationsAttribueesDansLaProse } from '@/utils/chaine/retour'
 import { drapeauxDeRetourARelire } from './retour-a-relire-serveur'
+import { lancer } from '@/utils/lancer'
 import {
   cyclesEcoules, distributionDesContestations, elevesQuiRepetent, fileDExamenHumain,
   lireLesActes, ordonnerLesDrapeaux, type ActeLu, type CycleDuCalendrier, type Drapeau,
@@ -539,12 +540,17 @@ async function lireLesContestations(
   const ids = depots.map((d) => d.id)
 
   const brutes: Array<{ depot_id: string; contestation_points: unknown }> = []
+  // ⭐ 18/09 — les lots de 200 partent ensemble (patron `utils/lancer.ts`) et
+  //    s'attendent dans l'ordre : mêmes incidents, même refus au premier échec.
+  const lotsMeta = []
   for (let debut = 0; debut < ids.length; debut += 200) {
-    const tranche = ids.slice(debut, debut + 200)
-    const { data, error } = await admin.from('exercices_metacognition')
+    lotsMeta.push(lancer(admin.from('exercices_metacognition')
       .select('depot_id, contestation_points')
-      .in('depot_id', tranche)
-      .not('contestation_points', 'is', null)
+      .in('depot_id', ids.slice(debut, debut + 200))
+      .not('contestation_points', 'is', null)))
+  }
+  for (const lot of lotsMeta) {
+    const { data, error } = await lot
     if (error) { incidents.push(`les contestations : ${error.message}`); return vide }
     brutes.push(...((data ?? []) as Array<{ depot_id: string; contestation_points: unknown }>))
   }
@@ -558,11 +564,15 @@ async function lireLesContestations(
   // Le texte des points contestés, depuis le retour PUBLIÉ de leurs dépôts.
   const texteDuPoint = new Map<string, string>()
   const depotsContestes = [...new Set(actes.map((a) => a.depotId))]
+  const lotsRetours = []
   for (let debut = 0; debut < depotsContestes.length; debut += 200) {
-    const { data, error } = await admin.from('exercices_retours')
+    lotsRetours.push(lancer(admin.from('exercices_retours')
       .select('depot_id, texte, published_at')
       .in('depot_id', depotsContestes.slice(debut, debut + 200))
-      .not('published_at', 'is', null)
+      .not('published_at', 'is', null)))
+  }
+  for (const lot of lotsRetours) {
+    const { data, error } = await lot
     if (error) { incidents.push(`les retours contestés : ${error.message}`); continue }
     for (const r of (data ?? []) as Array<{ texte: unknown }>) {
       if (!Array.isArray(r.texte)) continue
@@ -919,11 +929,21 @@ async function drapeauxDeCitationComposee(
   // ⭐ Les retours dont le professeur a EFFACÉ le drapeau — lecture séparée,
   //    pour que la colonne manquante ne fasse pas tomber les 19 drapeaux avec.
   const ecartes = new Set<string>()
+  // ⭐ 18/09 — les deux séries de lots ne dépendent que des dépôts : elles partent
+  //    ensemble (patron `utils/lancer.ts`) et s'attendent dans l'ordre d'avant.
+  const lotsEcartes = []
+  const lotsRetours = []
   for (let debut = 0; debut < depotIds.length; debut += 200) {
-    const { data, error } = await admin.from('exercices_retours')
+    lotsEcartes.push(lancer(admin.from('exercices_retours')
       .select('depot_id, moment')
       .in('depot_id', depotIds.slice(debut, debut + 200))
-      .not('citation_composee_ecartee_at', 'is', null)
+      .not('citation_composee_ecartee_at', 'is', null)))
+    lotsRetours.push(lancer(admin.from('exercices_retours')
+      .select('depot_id, texte, moment, published_at, created_at, texte_edite_par_prof')
+      .in('depot_id', depotIds.slice(debut, debut + 200))))
+  }
+  for (const lot of lotsEcartes) {
+    const { data, error } = await lot
     if (error) {
       incidents.push(`les signaux effacés (citations composées) : ${error.message}`)
       break
@@ -934,10 +954,8 @@ async function drapeauxDeCitationComposee(
   }
 
   const drapeaux: Drapeau[] = []
-  for (let debut = 0; debut < depotIds.length; debut += 200) {
-    const { data, error } = await admin.from('exercices_retours')
-      .select('depot_id, texte, moment, published_at, created_at, texte_edite_par_prof')
-      .in('depot_id', depotIds.slice(debut, debut + 200))
+  for (const lot of lotsRetours) {
+    const { data, error } = await lot
     if (error) { incidents.push(`les retours pour les citations : ${error.message}`); continue }
 
     for (const r of (data ?? []) as Array<{

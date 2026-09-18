@@ -20,6 +20,7 @@ import { lundiDuCycle } from '@/utils/deroule/echeance'
 import { toISODate } from '@/utils/calendrier-grille'
 import { visibleDansLaClasse } from '@/utils/codex-onglets/regles'
 import { FUSEAU_DEFAUT } from '@/utils/fuseau'
+import { lancer } from '@/utils/lancer'
 
 // ----------------------------------------------------------------------------
 // Matrice « Pilotage Classe » — élèves × modules. Agrégation PAR CLASSE de l'état
@@ -181,11 +182,24 @@ async function aggregerFragments(
   if (inscIds.length === 0) return out
 
   const maintenant = new Date()
-  const { data: semestreCourant } = await admin
-    .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
+  // ⭐ 18/09 — le semestre et les dépôts ne dépendent de rien l'un de l'autre :
+  //    ils partent ensemble (patron `utils/lancer.ts`) ; les semaines et les thèmes
+  //    attendent le semestre, les analyses attendent les dépôts.
+  const semestreQ = lancer(admin
+    .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle())
+  const depotsQ = lancer(admin
+    .from('fragments_depots').select('id, inscription_id, semaine_id').in('inscription_id', inscIds))
+  const { data: semestreCourant } = await semestreQ
   let reqSemaines = admin.from('fragments_semaines').select('id, date_limite, numero, is_vacation')
   if (semestreCourant) reqSemaines = reqSemaines.eq('semestre_id', semestreCourant.id)
-  const { data: semaines } = await reqSemaines
+  const semainesQ = lancer(reqSemaines)
+  const themesQ = semestreCourant
+    ? lancer(admin
+        .from('fragments_themes')
+        .select('inscription_id, theme, propose_at, valide_at, commentaire_prof, commente_at')
+        .in('inscription_id', inscIds).eq('semestre_id', semestreCourant.id))
+    : null
+  const { data: semaines } = await semainesQ
   // C8-L4 — même règle qu'à `utils/sante.ts`, et pour la même raison : la matrice
   // de pilotage affiche « déposés / semaines échues ». Ni les vacances ni les
   // semaines d'avant le seuil du semestre n'ont été réclamées à l'élève.
@@ -196,8 +210,7 @@ async function aggregerFragments(
   )
   const nbSemainesPassees = idsPassees.size
 
-  const { data: depots } = await admin
-    .from('fragments_depots').select('id, inscription_id, semaine_id').in('inscription_id', inscIds)
+  const { data: depots } = await depotsQ
   const depotsParInsc = new Map<string, { id: string; semaine_id: string }[]>()
   for (const d of depots ?? []) {
     const arr = depotsParInsc.get(d.inscription_id as string) ?? []
@@ -223,11 +236,8 @@ async function aggregerFragments(
   // lu avec la même règle que l'écran élève et la page Suivi (`statutDuTheme`).
   // ⚠️ Sans semestre actif, aucune ligne ne se lit : le thème reste `vide`.
   const themeParInsc = new Map<string, StatutDuTheme>()
-  if (semestreCourant) {
-    const { data: themes } = await admin
-      .from('fragments_themes')
-      .select('inscription_id, theme, propose_at, valide_at, commentaire_prof, commente_at')
-      .in('inscription_id', inscIds).eq('semestre_id', semestreCourant.id)
+  if (themesQ) {
+    const { data: themes } = await themesQ
     for (const t of themes ?? []) {
       themeParInsc.set(t.inscription_id as string, statutDuTheme({
         theme: t.theme as string | null,
@@ -445,30 +455,57 @@ async function aggregerCodex(
   return out
 }
 
-// ── Point d'entrée ──────────────────────────────────────────────────────────
-export async function chargerMatricePilotage(
-  admin: SupabaseClient,
-  classeId: string,
-  /** Le fuseau de l'école — la semaine Scriptorium se coupe au lundi DANS ce fuseau. */
-  fuseau: string = FUSEAU_DEFAUT,
-): Promise<MatricePilotage> {
-  // 1. Inscriptions + noms.
+// ── Le socle : les inscrits et leurs noms ───────────────────────────────────
+// ⭐ 18/09 — LU UNE FOIS, SERVI À QUATRE CHARGEURS. La page de classe lisait la
+//    matrice entière, PUIS la grille des compétences, PUIS l'attention, chacune
+//    derrière la précédente, alors que toutes trois ne dépendent que des inscrits
+//    et de leurs noms. Le socle se lit d'abord ; la page le passe à la matrice et
+//    fait partir les trois autres en même temps qu'elle.
+export interface SocleDeClasse {
+  inscriptions: Awaited<ReturnType<typeof inscriptionsClasse>>
+  /** Les identifiants d'élèves, dédoublonnés, dans l'ordre des inscriptions. */
+  eleveIds: string[]
+  nomParEleve: Map<string, string>
+}
+
+export async function chargerLeSocleDeLaClasse(
+  admin: SupabaseClient, classeId: string,
+): Promise<SocleDeClasse> {
   const inscriptions = await inscriptionsClasse(admin, classeId)
   const eleveIds = [...new Set(inscriptions.map((i) => i.eleve_id))]
   const { data: profils } = eleveIds.length > 0
     ? await admin.from('profiles').select('id, display_name').in('id', eleveIds)
     : { data: [] }
   const nomParEleve = new Map((profils ?? []).map((p) => [p.id as string, p.display_name as string]))
+  return { inscriptions, eleveIds, nomParEleve }
+}
+
+// ── Point d'entrée ──────────────────────────────────────────────────────────
+export async function chargerMatricePilotage(
+  admin: SupabaseClient,
+  classeId: string,
+  /** Le fuseau de l'école — la semaine Scriptorium se coupe au lundi DANS ce fuseau. */
+  fuseau: string = FUSEAU_DEFAUT,
+  /** Le socle déjà lu par l'appelant, s'il l'a ; sinon il se lit ici. */
+  socleDejaLu?: SocleDeClasse,
+): Promise<MatricePilotage> {
+  // Les modules et les accès de la classe ne dépendent pas des inscrits : ils
+  // partent tout de suite (patron `utils/lancer.ts`) — avec le socle quand il
+  // se lit ici, avant les agrégateurs quand l'appelant l'a déjà lu.
+  const modulesQ = lancer(admin.from('modules').select('id, slug, description'))
+  const cmQ = lancer(admin.from('classe_modules').select('module_id').eq('classe_id', classeId))
+
+  // 1. Inscriptions + noms.
+  const { inscriptions, eleveIds, nomParEleve } = socleDejaLu ?? await chargerLeSocleDeLaClasse(admin, classeId)
 
   // 2. Modules accessibles à la classe.
-  const { data: modulesRows } = await admin.from('modules').select('id, slug, description')
+  const { data: modulesRows } = await modulesQ
   const slugParId = new Map((modulesRows ?? []).map((m) => [m.id as string, m.slug as string]))
   const modulesDb: Record<string, ModuleDb> = {}
   for (const m of modulesRows ?? []) {
     modulesDb[m.slug as string] = { id: m.id as string, description: (m.description as string | null) ?? null }
   }
-  const { data: cm } = await admin
-    .from('classe_modules').select('module_id').eq('classe_id', classeId)
+  const { data: cm } = await cmQ
   const slugsAccessibles = new Set(
     (cm ?? []).map((r) => slugParId.get(r.module_id as string)).filter((s): s is string => !!s),
   )

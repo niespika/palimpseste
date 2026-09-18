@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sousTitreClasse } from '@/utils/classes'
 import {
+  chargerLeSocleDeLaClasse,
   chargerMatricePilotage,
   trierLignes,
   MODULES_PILOTAGE,
@@ -84,7 +85,35 @@ export default async function PilotageClasse({
   //    matrice : elle part avec elle (patron `utils/lancer.ts`), attendue plus bas.
   const tousElevesQ = lancer(admin
     .from('profiles').select('id, display_name').eq('role', 'eleve').order('display_name'))
-  const matrice = await chargerMatricePilotage(admin, classeId, fuseauEcole)
+  // ⭐ 18/09 (P3 bis) — LE SOCLE D'ABORD, PUIS TOUT PART ENSEMBLE. Mesuré en prod :
+  //    la vue Compétences restait à 2,8 s parce que la matrice (17 lectures), la
+  //    grille, l'attention et la rétention se lisaient l'une derrière l'autre,
+  //    alors que toutes ne dépendent que des inscrits et de leurs noms. Le socle
+  //    se lit une fois ; la matrice le reçoit, et les trois autres chargeurs de
+  //    l'onglet Compétences partent avec elle. Chacun est attendu à sa place d'avant.
+  const socle = await chargerLeSocleDeLaClasse(admin, classeId)
+  const eleveIdsDuSocle = socle.inscriptions.map((i) => i.eleve_id)
+  const nomDe = new Map(eleveIdsDuSocle.map((id) => [id, socle.nomParEleve.get(id) ?? '—']))
+  const matriceQ = lancer(chargerMatricePilotage(admin, classeId, fuseauEcole, socle))
+  const grilleQ = vue === 'competences' && affichageActif
+    ? lancer(chargerGrilleCompetences(admin, classeId, eleveIdsDuSocle, optOut))
+    : null
+  // ⚠️ Ce chargeur contient UNE écriture (le faisceau d'intégrité pose un
+  //    signalement « en attente » : upsert idempotent, ignoré s'il existe, gardé
+  //    par `integrite_params.actif`). Le ⛔ de `lancer.ts` vise une écriture
+  //    qu'une garde ULTÉRIEURE aurait refusée : ici la seule garde (la classe
+  //    existe) est passée AVANT ce départ, et rien ne refuse après. Même ligne
+  //    posée qu'au rendu suivant ; la matrice ne lit pas les signalements.
+  const attentionQ = vue === 'competences' && affichageActif
+    ? lancer(chargerLAttentionDeLaClasse(
+      admin, eleveIdsDuSocle, nomDe, fuseauEcole,
+      jourDansFuseau(new Date().toISOString(), fuseauEcole),
+      optOut))
+    : null
+  const retentionQ = vue === 'competences' && affichageActif
+    ? lancer(chargerLaRetentionDeLaClasse(admin, classeId))
+    : null
+  const matrice = await matriceQ
   const lignesTriees = trierLignes(matrice.lignes, tri)
   const nbEleves = matrice.lignes.length
 
@@ -116,13 +145,9 @@ export default async function PilotageClasse({
   //    le serveur lit UNE FOIS et passe en prop (`utils/fuseau` en-tête).
   let grille: GrilleCompetencesClasse | null = null
   let tz = FUSEAU_DEFAUT
-  if (vue === 'competences' && affichageActif) {
-    const [g, f] = await Promise.all([
-      chargerGrilleCompetences(admin, classeId, matrice.lignes.map((l) => l.eleveId), optOut),
-      lireFuseau(),
-    ])
-    grille = g
-    tz = f
+  if (grilleQ) {
+    grille = await grilleQ
+    tz = fuseauEcole
   }
 
   // ── C6-L1 — CE QUI DEMANDE L'ATTENTION, ET LE DIAGNOSTIC DE RÉTENTION ─────
@@ -138,19 +163,11 @@ export default async function PilotageClasse({
   //    cycles se font sur des dates pures, jamais sur des instants.
   let attention: AttentionDeLaClasse | null = null
   let retention: RetentionDeLaClasse | null = null
-  if (vue === 'competences' && affichageActif) {
-    const nomDe = new Map(matrice.lignes.map((l) => [l.eleveId, l.nom]))
-    const [a, r] = await Promise.all([
-      chargerLAttentionDeLaClasse(
-        admin, matrice.lignes.map((l) => l.eleveId), nomDe, tz,
-        jourDansFuseau(new Date().toISOString(), tz),
-        // ⚠️ L'OPT-OUT : un drapeau sur une compétence que ce cours ne travaille
-        //    pas se SIGNALE — il ne se cache pas (voir l'en-tête du chargeur).
-        optOut),
-      chargerLaRetentionDeLaClasse(admin, classeId),
-    ])
-    attention = a
-    retention = r
+  if (attentionQ && retentionQ) {
+    // ⚠️ L'OPT-OUT : un drapeau sur une compétence que ce cours ne travaille
+    //    pas se SIGNALE — il ne se cache pas (voir l'en-tête du chargeur).
+    attention = await attentionQ
+    retention = await retentionQ
   }
 
   const sousTitre = sousTitreClasse(classe)

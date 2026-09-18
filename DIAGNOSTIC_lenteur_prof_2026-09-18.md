@@ -6,7 +6,56 @@
 > `pg_stat_statements` de la prod en session lecture seule, comptes de lignes par PostgREST.
 > Les comptes d'allers-retours viennent de la lecture du code, pas de l'exécution.
 
-## 0 duodecies. Lot P6 — le calendrier : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+## 0 quindecies. Lot P3 bis — la page de classe : CODÉ, éprouvé, NON déployé (18/09) — ÉTAT COURANT
+
+**Ce qui change**
+
+- **`chargerLeSocleDeLaClasse`** (`utils/matrice-pilotage.ts`) : les inscrits et leurs noms, lus une
+  fois par la page et passés à la matrice. La page fait alors partir **ensemble** la matrice, la
+  grille des compétences, l'attention et la rétention, qui ne dépendent que de ce socle ; avant,
+  chacune attendait la précédente. Dans la matrice, les modules et les accès partent tout de suite ;
+  dans l'agrégateur Vestigia, le semestre et les dépôts partent ensemble.
+- **Attention** : les lots de 200 des contestations et des citations composées partent ensemble et
+  s'attendent dans l'ordre. `drapeauxDuFaisceau`, qui contient une écriture, n'est pas touché.
+- ⚠️ L'attention part maintenant AVANT que la matrice soit attendue ; elle contient une écriture
+  idempotente (le signalement du faisceau, `upsert` ignoré s'il existe). La revue l'a jugé acceptable :
+  la seule garde (la classe existe) est passée avant ce départ, rien ne refuse après, et la même ligne
+  aurait été posée au rendu suivant. C'est écrit en commentaire dans la page.
+
+**Éprouvé** : `tsc`, `eslint`, tests verts ; **10 écrans identiques** (4 classes en vue Compétences,
+tri par nom, 3 en vue Activité, identifiant inconnu) ancien/nouveau au bac à sable ; en local, la vue
+Compétences passe de 1,9-3,2 s à 1,0-1,9 s. Passe adversariale : rien de bloquant, deux commentaires repris.
+
+**Non éprouvé** : la prod (avant : 1HLP Compétences 2,8 s, T5 2,6 s, Activité 1,3 s).
+
+## 0 quaterdecies. Le cache de la doctrine et la tuile « Coût API » : CODÉS, éprouvés, NON déployés (18/09)
+
+**La doctrine gardée entre deux requêtes** (décision de Louis). `chargerDoctrineDepuisBase` garde la
+doctrine assemblée en **mémoire du processus**, par projet Supabase, **trois minutes** ; un refus ne
+se garde pas ; une doublure sans `supabaseUrl` (les tests) n'est jamais gardée ;
+`oublierLaDoctrineGardee()` pour la recette. Ni `unstable_cache` (2 Mo par entrée, un saut réseau)
+ni `'use cache'` (pas de `cacheComponents`). Les 17 tables ne sont écrites par aucun chemin de
+l'application (vérifié par la revue) : la seule dérivation est `derive-doctrine.py --sql`, jouée à la
+main ; **après une dérivation, la prod peut servir une doctrine vieille de trois minutes**.
+⛔ **Les chemins qui ÉCRIVENT lisent une doctrine FRAÎCHE** (`chargerDoctrineFraiche`) : l'import
+d'un fichier (`import-ecriture.ts`) et la conception d'une instance (`conception/actions.ts`)
+valident contre la doctrine puis écrivent avec les tables du jour — une clé retirée par une
+dérivation aurait été acceptée par la garde et écrite sans observable (trouvé par la revue).
+
+**La tuile « Coût API »** lit ses cinq tables par `lirePagine` (pages sur `id`, décompte exact), avec une
+fenêtre **fermée des deux côtés** (`created_at < maintenant`) : `api_couts` s'écrit sans arrêt et une
+insertion entre le décompte et les pages déclarerait la lecture tronquée à tort (trouvé par la revue).
+
+**Éprouvé** : 3 tests ajoutés (garde servie sans lecture, refus non gardé, doctrine fraîche qui relit) ;
+2 688 tests verts ; script : sandbox et prod gardées séparément, 0 ms au second appel, refus relu ;
+8 écrans à doctrine identiques ancien/nouveau (conception ×4, `nouvelle`, signalements ×2, accueil),
+conception 1,1 → 0,5-0,8 s en local ; la tuile affiche **9,57 $** au bac à sable, stable sur trois
+tirs, égal à la somme paginée calculée à part (contre 7,84 / 8,61 $ avant). En prod la somme vraie du
+mois est **24,68 $** quand la tuile affichait 18,55 $.
+
+## 0 terdecies. Lot P6 remesuré en prod (18/09) — calendrier prof 1,0-1,2 → **0,8 s** (mois 0,81 · semaine 0,86 · jour 0,77)
+
+## 0 duodecies. Lot P6 — le calendrier : codé, éprouvé, DÉPLOYÉ (18/09) — ⚠️ état dépassé, voir 0 terdecies
 
 **Ce qui change**
 

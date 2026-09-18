@@ -1,5 +1,9 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Vitesse côté prof — cache de la doctrine, tuile « Coût API », lot P3 bis : éprouvés au bac à sable, NON déployés (18/09/2026)
+
+`tsc`, `eslint`, 2 688 tests verts (3 ajoutés sur la garde de la doctrine). Doctrine gardée 3 min en mémoire par projet ; les chemins qui écrivent (import, conception) lisent une doctrine fraîche — trou trouvé par la revue. Tuile Coût API : lectures paginées et contrôlées, fenêtre fermée des deux côtés ; 9,57 $ au bac à sable, stable, égal à la somme calculée à part (24,68 $ en prod contre 18,55 $ affichés). P3 bis : socle de classe lu une fois, matrice/grille/attention/rétention ensemble ; 10 écrans identiques ; 8 écrans à doctrine identiques. P6 remesuré en prod : calendrier 0,8 s. Détail aux §0 quaterdecies et quindecies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
+
 ## Vitesse côté prof — lot P6 (le calendrier, prof et élève), éprouvé au bac à sable, NON déployé (18/09/2026)
 
 `tsc`, `eslint`, 2 685 tests verts. Douze écrans identiques ancien/nouveau : calendrier prof (mois, semaine, jour, deux dates, deux filtres ; 2,1 → 1,1 s en local) et calendrier élève avec le compte de décor (1,2 → 0,7 s) ; plan ouvert au bac à sable. Passe adversariale : rien de bloquant. P5 remesuré en prod : suivi Vestigia 1,2-1,3 → 0,81 s, Codex 0,85 → 0,72 s. Détail au §0 duodecies de `DIAGNOSTIC_lenteur_prof_2026-09-18.md`.
