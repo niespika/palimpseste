@@ -69,6 +69,16 @@ export function statutDuTheme(t: EtatDuTheme | null | undefined): StatutDuTheme 
   return 'pose_par_le_prof'
 }
 
+/**
+ * 20/09 — l'élève ne peut plus proposer une fois le thème ARRÊTÉ par le professeur
+ * (validé, ou posé par lui). Oubli d'origine : des élèves re-proposaient sur un
+ * thème validé. Il reste modifiable tant qu'il attend (à valider, commenté) ou
+ * qu'il n'existe pas. Cette règle garde l'écran ET l'action serveur.
+ */
+export function themeModifiableParEleve(statut: StatutDuTheme): boolean {
+  return statut === 'vide' || statut === 'a_valider' || statut === 'commente'
+}
+
 /** Ce que l'élève lit sous son thème. */
 export function libelleEleve(statut: StatutDuTheme): string {
   switch (statut) {

@@ -1,7 +1,7 @@
 // C8 — le thème proposé par l'élève, validé par le professeur : la règle pure.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { themeAValider, statutDuTheme, libelleEleve, themePropose, commentaireEnAttente, commentaireProf } from './fragments-theme'
+import { themeAValider, statutDuTheme, libelleEleve, themePropose, commentaireEnAttente, commentaireProf, themeModifiableParEleve } from './fragments-theme'
 
 test('un thème posé par le professeur (sans proposition) n’est JAMAIS « à valider » — la migration est inerte', () => {
   assert.equal(themeAValider({ theme: 'La piraterie', propose_at: null, valide_at: null }), false)
@@ -80,4 +80,14 @@ test('le commentaire est nettoyé, borné, et vide devient null', () => {
   assert.equal(commentaireProf(''), null)
   assert.equal(commentaireProf(undefined), null)
   assert.equal(commentaireProf('x'.repeat(1200))!.length, 1000)
+})
+
+test('20/09 — un thème validé ou posé par le professeur n’est plus modifiable par l’élève ; en attente ou vide, il l’est', () => {
+  assert.equal(themeModifiableParEleve('valide'), false)
+  assert.equal(themeModifiableParEleve('pose_par_le_prof'), false)
+  assert.equal(themeModifiableParEleve('vide'), true)
+  assert.equal(themeModifiableParEleve('a_valider'), true)
+  assert.equal(themeModifiableParEleve('commente'), true)
+  // Le cas réel : validé après proposition → fermé.
+  assert.equal(themeModifiableParEleve(statutDuTheme({ theme: 'Le doute', propose_at: '2026-09-02T10:00:00Z', valide_at: '2026-09-02T11:00:00Z' })), false)
 })

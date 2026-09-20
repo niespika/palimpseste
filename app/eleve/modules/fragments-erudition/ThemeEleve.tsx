@@ -17,7 +17,7 @@
 
 import { useState } from 'react'
 import { proposerTheme } from './actions'
-import { libelleEleve, type StatutDuTheme } from '@/utils/fragments-theme'
+import { libelleEleve, themeModifiableParEleve, type StatutDuTheme } from '@/utils/fragments-theme'
 
 interface Props {
   inscriptionId: string
@@ -39,6 +39,8 @@ function Commentaire({ texte }: { texte: string }) {
 }
 
 export default function ThemeEleve({ inscriptionId, semestreId, theme, description, statut, commentaire = null }: Props) {
+  // 20/09 — validé ou posé par le professeur : plus de « Modifier », plus de formulaire.
+  const modifiable = themeModifiableParEleve(statut)
   const [edition, setEdition] = useState(statut === 'vide')
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -70,7 +72,7 @@ export default function ThemeEleve({ inscriptionId, semestreId, theme, descripti
         {statut !== 'vide' && (
           <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-1">
             <span className={`font-corps text-sm ${couleur}`}>{libelleEleve(statut)}</span>
-            {!edition && (
+            {modifiable && !edition && (
               <button type="button" onClick={() => setEdition(true)}
                 className="font-ui text-xs text-muet hover:text-encre underline underline-offset-2">
                 Modifier
@@ -91,7 +93,7 @@ export default function ThemeEleve({ inscriptionId, semestreId, theme, descripti
         </div>
       )}
 
-      {edition && (
+      {modifiable && edition && (
         <form onSubmit={handleSubmit} className="bg-parchemin-fonce rounded-xl px-4 py-3 space-y-2 border border-bordure">
           {commentaire && <Commentaire texte={commentaire} />}
           <p className="font-corps text-sm text-encre-douce">{libelleEleve(commentaire ? 'commente' : 'vide')}</p>

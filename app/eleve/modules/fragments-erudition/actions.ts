@@ -9,7 +9,7 @@ import { detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { etatOngletsFragmentsEleve, type EtatOngletsFragments } from '@/utils/fragments-etat-eleve'
-import { themePropose } from '@/utils/fragments-theme'
+import { themePropose, statutDuTheme, themeModifiableParEleve } from '@/utils/fragments-theme'
 
 // Vérifier que l'appelant est bien un élève
 async function verifierEleve() {
@@ -44,7 +44,13 @@ export async function proposerTheme(formData: FormData) {
 
   const maintenant = new Date().toISOString()
   const { data: existant } = await admin
-    .from('fragments_themes').select('id').eq('inscription_id', inscriptionId).eq('semestre_id', semestreId).maybeSingle()
+    .from('fragments_themes').select('id, theme, propose_at, valide_at, commentaire_prof, commente_at')
+    .eq('inscription_id', inscriptionId).eq('semestre_id', semestreId).maybeSingle()
+  // 20/09 — un thème arrêté par le professeur (validé, ou posé par lui) ne se
+  // re-propose plus : la garde est ici, pas seulement à l'écran.
+  if (existant && !themeModifiableParEleve(statutDuTheme(existant))) {
+    return { error: 'Ton thème a été validé par ton professeur : il ne se modifie plus. Parle-lui si tu veux en changer.' }
+  }
   const { error } = existant
     ? await admin.from('fragments_themes').update({ theme, description, propose_at: maintenant }).eq('id', existant.id)
     : await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: userId, theme, description, propose_at: maintenant })
