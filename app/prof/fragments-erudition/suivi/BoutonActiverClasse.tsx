@@ -14,6 +14,7 @@ export default function BoutonActiverClasse({ classeId, semestreId }: { classeId
     setChargement(true)
     const res = await activerEssaiPourClasse(classeId, semestreId, actif)
     setChargement(false)
+    if ('error' in res && res.error) { setMessage(res.error); return }
     setMessage(actif ? `Essai activé (${res.count})` : `Essai désactivé (${res.count})`)
     router.refresh()
     setTimeout(() => setMessage(null), 3000)

@@ -448,12 +448,26 @@ export async function activerEssaiPourClasse(classeId: string, semestreId: strin
 
   if (!inscrits || inscrits.length === 0) return { success: true, count: 0 }
 
-  await Promise.all(
-    inscrits.map(i => admin.from('fragments_themes').upsert(
-      { inscription_id: i.id, semestre_id: semestreId, eleve_id: i.eleve_id, essai_actif: actif, theme: '' },
-      { onConflict: 'inscription_id,semestre_id', ignoreDuplicates: false }
-    ))
-  )
+  // 20/09 — plus d'`upsert` avec `theme: ''` : sur une ligne existante il
+  // ÉCRASAIT le thème de l'élève (proposé, validé, commenté). Les lignes qui
+  // existent ne reçoivent que `essai_actif` ; seules les inscriptions sans
+  // ligne en reçoivent une, au thème vide.
+  const ids = inscrits.map(i => i.id)
+  const { data: existants } = await admin
+    .from('fragments_themes').select('inscription_id').eq('semestre_id', semestreId).in('inscription_id', ids)
+  const deja = new Set((existants ?? []).map(e => e.inscription_id as string))
+  const sans = inscrits.filter(i => !deja.has(i.id))
+
+  const [maj, ins] = await Promise.all([
+    deja.size > 0
+      ? admin.from('fragments_themes').update({ essai_actif: actif }).eq('semestre_id', semestreId).in('inscription_id', [...deja])
+      : Promise.resolve({ error: null }),
+    sans.length > 0
+      ? admin.from('fragments_themes').insert(sans.map(i => ({ inscription_id: i.id, semestre_id: semestreId, eleve_id: i.eleve_id, essai_actif: actif, theme: '' })))
+      : Promise.resolve({ error: null }),
+  ])
+  const err = maj.error ?? ins.error
+  if (err) return { error: `L’essai n’a pas été activé : ${err.message}` }
 
   revalidatePath('/prof/fragments-erudition/suivi')
   return { success: true, count: inscrits.length }
