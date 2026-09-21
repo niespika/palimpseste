@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { REGLE_JSON_TEXTE, creerJsonSurveille } from '@/utils/ia-commun'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { assemblerPromptFragment } from '@/utils/prompt-fragment'
 import { signalDepuisIA } from '@/utils/detecteur-integrite'
@@ -280,7 +281,7 @@ export async function lancerAnalyse(
 
     // Appel Claude
     const client = new Anthropic()
-    const response = await client.messages.create({
+    const response = await creerJsonSurveille(client, {
       model: 'claude-sonnet-4-6',
       // 8192 : à 4096, un dépôt de trois pages denses (transcription + six
       // retours) dépassait le plafond ; le JSON tronqué ne se parsait plus et
@@ -295,11 +296,11 @@ export async function lancerAnalyse(
               type: 'image' as const,
               source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: b64 },
             })),
-            { type: 'text' as const, text: prompt },
+            { type: 'text' as const, text: prompt + REGLE_JSON_TEXTE },
           ],
         },
       ],
-    })
+    }, `analyse dépôt ${depotId}`)
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
 

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { REGLE_JSON_TEXTE, creerJsonSurveille } from '@/utils/ia-commun'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { signalDepuisIA } from '@/utils/detecteur-integrite'
 import { signalerEnAttenteIA } from '@/utils/integrite'
@@ -169,7 +170,7 @@ export async function analyserV1(travailId: string): Promise<void> {
       .replace(/\{\{plafond_erreurs\}\}/g, String(plafondErreurs))
 
     const client = new Anthropic()
-    const response = await client.messages.create({
+    const response = await creerJsonSurveille(client, {
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       output_config: { format: { type: 'json_schema', schema: SCHEMA_V1 } },
@@ -180,10 +181,10 @@ export async function analyserV1(travailId: string): Promise<void> {
             type: 'image' as const,
             source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: b64 },
           })),
-          { type: 'text' as const, text: prompt },
+          { type: 'text' as const, text: prompt + REGLE_JSON_TEXTE },
         ],
       }],
-    })
+    }, `codex ${travailId}`)
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
 
@@ -354,7 +355,7 @@ export async function analyserVF(travailId: string): Promise<void> {
       .replace('{{suggestions_v1}}', formaterSuggestionsV1(travail.suggestions_v1))
 
     const client = new Anthropic()
-    const response = await client.messages.create({
+    const response = await creerJsonSurveille(client, {
       model: 'claude-sonnet-4-6',
       max_tokens: 8000,
       output_config: { format: { type: 'json_schema', schema: SCHEMA_VF } },
@@ -365,10 +366,10 @@ export async function analyserVF(travailId: string): Promise<void> {
             type: 'image' as const,
             source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: b64 },
           })),
-          { type: 'text' as const, text: prompt },
+          { type: 'text' as const, text: prompt + REGLE_JSON_TEXTE },
         ],
       }],
-    })
+    }, `codex ${travailId}`)
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
 

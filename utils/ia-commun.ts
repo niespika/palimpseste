@@ -1,3 +1,4 @@
+import type Anthropic from '@anthropic-ai/sdk'
 // Briques IA COMMUNES aux modules (RAG L5, SPEC §9.3) — EXTRACTION à
 // comportement constant depuis utils/aletheia-retours.ts : le REGISTRE et les
 // helpers d'injection/neutralisation y étaient locaux ; le chat Scriptorium les
@@ -48,4 +49,64 @@ export function injecter(template: string, vars: Record<string, string>): string
 
 export function extraireJSON(texte: string): string {
   return texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
+}
+
+// ── Sorties JSON contraintes — LA GRAMMAIRE NE SAIT PAS ÉCHAPPER (21/09) ─────
+// Nina P., S3 (Vestigia) : le modèle écrit « la question "qui suis-je ?" » avec
+// des guillemets DROITS. Sans schéma, `JSON.parse` cassait (analyse en erreur).
+// AVEC `output_config.format`, le `"` brut est accepté par la grammaire comme FIN
+// DE CHAÎNE, la clé suivante est forcée, et le modèle CONTINUE SA PHRASE dans le
+// champ d'après : JSON valide, quatre champs qui sont les morceaux d'une seule
+// phrase, rien ne lève. Deux parades, ensemble :
+//   1. la règle ci-dessous, ajoutée PAR LE CODE à chaque appel (un prompt
+//      personnalisé en base ne peut pas l'omettre) ;
+//   2. `creerJsonSurveille` : la signature de la corruption est un champ texte
+//      qui COMMENCE par une ponctuation de continuation — on rejoue l'appel une
+//      fois, et on le dit au journal.
+export const REGLE_JSON_TEXTE = `
+
+## Règle de format (impérative)
+Dans TOUTES les chaînes de ta réponse JSON, n'écris JAMAIS le guillemet droit (") ni la barre oblique inverse (\\). Pour citer un mot ou une phrase, utilise les guillemets français « … » ou l'apostrophe. Cette règle vaut aussi pour la transcription : remplace les guillemets droits de la copie par « ».`
+
+const DEBUT_SUSPECT = /^[,;.»)\]]/
+
+/** Chemin du premier champ texte dont le début trahit une chaîne coupée, ou null. */
+export function champJsonSuspect(texte: string): string | null {
+  let obj: unknown
+  try { obj = JSON.parse(extraireJSON(texte)) } catch { return null }
+  const visiter = (v: unknown, chemin: string): string | null => {
+    if (typeof v === 'string') return DEBUT_SUSPECT.test(v.trimStart()) ? chemin : null
+    if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) { const r = visiter(v[i], `${chemin}[${i}]`); if (r) return r } return null }
+    if (v && typeof v === 'object') { for (const [k, x] of Object.entries(v)) { const r = visiter(x, chemin ? `${chemin}.${k}` : k); if (r) return r } return null }
+    return null
+  }
+  return visiter(obj, '')
+}
+
+/**
+ * `messages.create` non streamé, rejoué UNE fois si la réponse porte la signature
+ * d'une chaîne coupée. L'usage rendu SOMME les deux appels (le coût est vrai).
+ */
+export async function creerJsonSurveille(
+  client: Anthropic,
+  params: Anthropic.MessageCreateParamsNonStreaming,
+  contexte: string,
+): Promise<Anthropic.Message> {
+  const premier = await client.messages.create(params)
+  const texte1 = premier.content[0]?.type === 'text' ? premier.content[0].text : ''
+  const suspect1 = champJsonSuspect(texte1)
+  if (!suspect1) return premier
+  console.warn(`[ia] ${contexte} : champ « ${suspect1} » commence par une ponctuation (chaîne coupée par un guillemet ?) — reprise de l'appel`)
+  const second = await client.messages.create(params)
+  const texte2 = second.content[0]?.type === 'text' ? second.content[0].text : ''
+  const suspect2 = champJsonSuspect(texte2)
+  if (suspect2) console.error(`[ia] ${contexte} : toujours suspect après reprise (« ${suspect2} »)`)
+  return {
+    ...second,
+    usage: {
+      ...second.usage,
+      input_tokens: premier.usage.input_tokens + second.usage.input_tokens,
+      output_tokens: premier.usage.output_tokens + second.usage.output_tokens,
+    },
+  }
 }

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { REGLE_JSON_TEXTE, creerJsonSurveille } from '@/utils/ia-commun'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { RUBRIQUE_DEFAUT, BAREME_DEFAUT } from '@/utils/rubrique'
 
@@ -240,12 +241,12 @@ export async function analyserOral(oralId: string): Promise<void> {
       .replace('{{rubrique}}', config?.rubrique?.trim() ? config.rubrique : RUBRIQUE_DEFAUT)
 
     const client = new Anthropic()
-    const response = await client.messages.create({
+    const response = await creerJsonSurveille(client, {
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       output_config: { format: { type: 'json_schema', schema: SCHEMA_ORALE } },
-      messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
-    })
+      messages: [{ role: 'user', content: [{ type: 'text', text: prompt + REGLE_JSON_TEXTE }] }],
+    }, `analyse orale ${oralId}`)
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
     const nettoye = texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { REGLE_JSON_TEXTE } from '@/utils/ia-commun'
 import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 
 const MODELE = 'claude-sonnet-4-6'
@@ -86,7 +87,7 @@ export async function genererQuestions(
     model: MODELE,
     max_tokens: 6000,
     output_config: { format: { type: 'json_schema', schema: SCHEMA_QUESTIONS } },
-    system: PROMPT_SYSTEME,
+    system: PROMPT_SYSTEME + REGLE_JSON_TEXTE,
     messages: [
       {
         role: 'user',
@@ -123,7 +124,7 @@ export async function regenererQuestion(
     model: MODELE,
     max_tokens: 512,
     output_config: { format: { type: 'json_schema', schema: SCHEMA_QUESTIONS } },
-    system: PROMPT_SYSTEME,
+    system: PROMPT_SYSTEME + REGLE_JSON_TEXTE,
     messages: [
       {
         role: 'user',

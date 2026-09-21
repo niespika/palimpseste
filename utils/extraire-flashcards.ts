@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { REGLE_JSON_TEXTE } from '@/utils/ia-commun'
 import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 
 const MODELE = 'claude-sonnet-4-6'
@@ -105,7 +106,7 @@ export async function extraireFlashcards(
     // d'ouvrir 4096 tokens pour trois cartes.
     max_tokens: Math.min(4096, 512 + max * 160),
     output_config: { format: { type: 'json_schema', schema: SCHEMA_CARTES } },
-    system: PROMPT_SYSTEME,
+    system: PROMPT_SYSTEME + REGLE_JSON_TEXTE,
     messages: [
       {
         role: 'user',
@@ -146,7 +147,7 @@ export async function extraireFlashcardsTexte(
     model: MODELE,
     max_tokens: 1024,
     output_config: { format: { type: 'json_schema', schema: SCHEMA_CARTES } },
-    system: PROMPT_SYSTEME_TEXTE,
+    system: PROMPT_SYSTEME_TEXTE + REGLE_JSON_TEXTE,
     messages: [
       {
         role: 'user',
