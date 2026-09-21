@@ -835,3 +835,119 @@ export async function chargerRetourDepot(depotId: string): Promise<{ data: Retou
     error: null,
   }
 }
+
+// ============================================================
+// Vestigia · onglet Semaine — LE PROFESSEUR DÉPOSE À LA PLACE DE L'ÉLÈVE (21/09)
+// ------------------------------------------------------------
+// Un élève n'a pas réussi à déposer (téléphone, HEIC illisible, panne, absence) et
+// remet ses photos autrement. Le professeur les verse ici, DEPUIS le panneau de
+// l'élève « manquant ». Ce dépôt suit exactement le chemin du dépôt élève (ligne
+// `fragments_depots`, photos, analyse lancée) — à trois différences près, voulues :
+//   - aucune garde de semaine OUVERTE, de blocage ni de retour non lu : le prof décide ;
+//   - les fichiers vont dans le Storage par le client admin (la policy d'insertion du
+//     bucket `fragments` n'admet que l'élève dans son propre dossier) — mais dans le
+//     dossier de l'ÉLÈVE, pour que ses propres lectures signées continuent de marcher ;
+//   - le statut est au choix du prof (« à temps » par défaut : s'il dépose pour lui,
+//     c'est en général que l'élève n'y est pour rien).
+// Le commentaire du dépôt porte la marque « déposé par le professeur » : ce n'est pas
+// lu par l'analyse IA (mesuré : `commentaire_eleve` n'entre pas dans `utils/analyse`).
+// ============================================================
+
+export async function deposerPourEleve(formData: FormData) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const semaineId = String(formData.get('semaineId') ?? '')
+  const eleveId = String(formData.get('eleveId') ?? '')
+  const classeId = String(formData.get('classeId') ?? '')
+  const note = String(formData.get('note') ?? '').trim()
+  const aTemps = formData.get('aTemps') === 'true'
+  const fichiers = formData.getAll('photos').filter((f): f is File => f instanceof File && f.size > 0)
+
+  if (!semaineId || !eleveId || !classeId) return { error: 'Contexte incomplet (semaine, élève ou classe).' }
+  if (fichiers.length === 0) return { error: 'Aucune photo reçue.' }
+  if (fichiers.length > 4) return { error: 'Maximum 4 photos par dépôt.' }
+
+  // L'inscription ACTIVE de l'élève dans cette classe — la même clé que le dépôt élève.
+  const { data: inscription } = await admin
+    .from('inscriptions')
+    .select('id')
+    .eq('eleve_id', eleveId)
+    .eq('classe_id', classeId)
+    .eq('statut', 'active')
+    .maybeSingle()
+  if (!inscription) return { error: 'Aucune inscription active de cet élève dans cette classe.' }
+
+  const { data: semaine } = await admin
+    .from('fragments_semaines')
+    .select('id, date_limite')
+    .eq('id', semaineId)
+    .maybeSingle()
+  if (!semaine) return { error: 'Semaine introuvable.' }
+
+  // Un dépôt existe déjà ? On ne remplace pas à l'aveugle : le prof le supprime d'abord.
+  const { data: existant } = await admin
+    .from('fragments_depots')
+    .select('id')
+    .eq('inscription_id', inscription.id)
+    .eq('semaine_id', semaineId)
+    .maybeSingle()
+  if (existant) return { error: 'Cet élève a déjà un dépôt cette semaine. Supprimez-le d’abord depuis sa fiche si vous voulez le remplacer.' }
+
+  // Les fichiers d'abord (dans le dossier de l'élève), la ligne ensuite : un échec
+  // d'envoi ne laisse aucune ligne sans photos.
+  const chemins: string[] = []
+  for (let i = 0; i < fichiers.length; i++) {
+    const chemin = `${eleveId}/${inscription.id}/${semaineId}/${Date.now()}_prof_${i + 1}.jpg`
+    const { error } = await admin.storage
+      .from('fragments')
+      .upload(chemin, fichiers[i], { contentType: 'image/jpeg', upsert: true })
+    if (error) {
+      if (chemins.length > 0) await admin.storage.from('fragments').remove(chemins)
+      return { error: `Envoi de la photo ${i + 1} refusé : ${error.message}` }
+    }
+    chemins.push(chemin)
+  }
+
+  const statut: StatutDepot = aTemps || new Date() <= new Date(semaine.date_limite) ? 'depose' : 'en_retard'
+  const commentaire = `Déposé par le professeur${note ? ` — ${note}` : ''}`
+
+  const { data: depot, error: eDepot } = await admin
+    .from('fragments_depots')
+    .insert({
+      eleve_id: eleveId,
+      inscription_id: inscription.id,
+      semaine_id: semaineId,
+      statut,
+      commentaire_eleve: commentaire,
+      photos_suspectes: false,
+      photo_prise_at: null,
+      signal_integrite: null,
+    })
+    .select('id')
+    .single()
+  if (eDepot || !depot) {
+    await admin.storage.from('fragments').remove(chemins)
+    return { error: `Le dépôt n’a pas pu être enregistré : ${eDepot?.message ?? 'erreur inconnue'}` }
+  }
+
+  const { error: ePhotos } = await admin
+    .from('fragments_photos')
+    .insert(chemins.map((storage_path, i) => ({ depot_id: depot.id, storage_path, ordre: i + 1 })))
+  if (ePhotos) {
+    // Pas de ligne sans photo : on défait, la ligne d'abord, les fichiers ensuite.
+    await admin.from('fragments_depots').delete().eq('id', depot.id)
+    await admin.storage.from('fragments').remove(chemins)
+    return { error: `Les photos n’ont pas pu être rattachées, rien n’a été enregistré : ${ePhotos.message}` }
+  }
+
+  await admin.from('fragments_analyses').insert({ depot_id: depot.id, statut: 'en_cours' })
+
+  revalidatePath('/prof/fragments-erudition')
+  revalidatePath('/eleve/modules/fragments-erudition')
+
+  const depotId = depot.id
+  after(async () => { await lancerAnalyse(depotId, eleveId) })
+
+  return { success: true, statut }
+}

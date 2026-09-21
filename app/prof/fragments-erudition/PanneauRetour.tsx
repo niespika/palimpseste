@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VisionneusModal from './VisionneusModal'
+import FormulaireDepotProf from './FormulaireDepotProf'
 import {
   chargerRetourDepot,
   sauvegarderAnalyse,
@@ -29,6 +30,7 @@ import type { EleveAvecDepot, RetourDepotComplet } from '@/types/fragments'
 interface Props {
   eleve: EleveAvecDepot
   classeNom: string
+  classeId: string
   semaineId: string
   tz: string
   position: { index: number; total: number }
@@ -75,7 +77,7 @@ function champsDepuis(a: RetourDepotComplet['analyse']): Champs {
   }
 }
 
-export default function PanneauRetour({ eleve, classeNom, semaineId, tz, position, onFermer, onPrecedent, onSuivant, onModifie }: Props) {
+export default function PanneauRetour({ eleve, classeNom, classeId, semaineId, tz, position, onFermer, onPrecedent, onSuivant, onModifie }: Props) {
   const router = useRouter()
   const depotId = eleve.depot?.id ?? null
   const [retour, setRetour] = useState<RetourDepotComplet | null>(null)
@@ -302,6 +304,9 @@ export default function PanneauRetour({ eleve, classeNom, semaineId, tz, positio
             <div className="rounded-xl bg-parchemin-fonce/60 border border-dashed border-puce p-6 text-center text-sm text-muet">
               Pas de dépôt cette semaine.
               <div className="mt-2"><Link href={`/prof/fragments-erudition/eleve/${eleve.id}`} className="font-ui text-xs underline hover:text-encre-douce">Voir la fiche de l’élève →</Link></div>
+              {/* 21/09 — l'élève n'a pas réussi à déposer : le prof verse ses photos à sa
+                  place, semaine ouverte ou non. */}
+              <div className="mt-3"><FormulaireDepotProf semaineId={semaineId} eleveId={eleve.id} classeId={classeId} prenom={eleve.display_name} onModifie={onModifie} /></div>
             </div>
           ) : erreurChargement ? (
             <div className="rounded-xl bg-retard-teinte border border-retard p-4 text-sm text-retard">{erreurChargement}</div>

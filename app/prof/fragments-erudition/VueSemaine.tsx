@@ -402,6 +402,7 @@ export default function VueSemaine({ semaineId, classes, classeInitiale, tz }: P
           key={ouvert.id}
           eleve={ouvert}
           classeNom={classe.nom}
+          classeId={classe.id}
           semaineId={semaineId}
           tz={tz}
           position={{ index: indexOuvert, total: parcours.length }}
