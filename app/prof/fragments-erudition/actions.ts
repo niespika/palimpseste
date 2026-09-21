@@ -719,25 +719,38 @@ export async function annulerPresentation(presentationId: string) {
 }
 
 export async function supprimerDepot(formData: FormData) {
-  const supabase = await verifierProf()
-  const depotId = formData.get('depotId') as string
+  await verifierProf()
+  const depotId = String(formData.get('depotId') ?? '')
+  if (!depotId) return { error: 'Dépôt non désigné.' }
   const admin = createAdminClient()
 
-  // Récupérer les chemins des photos
-  const { data: photos } = await supabase
+  const { data: photos } = await admin
     .from('fragments_photos')
     .select('storage_path')
     .eq('depot_id', depotId)
+  const chemins = (photos ?? []).map(p => p.storage_path as string)
 
-  if (photos && photos.length > 0) {
-    await admin.storage
-      .from('fragments')
-      .remove(photos.map(p => p.storage_path))
+  // ⭐ 21/09 — L'ORDRE : la ligne D'ABORD (réversible, et elle emporte en cascade
+  //    photos, analyse et pistes), les fichiers ENSUITE (irréversibles). L'ancienne
+  //    version retirait les fichiers en premier puis effaçait la ligne avec le client
+  //    du prof, sans lire le retour : un `DELETE 0` silencieux laissait une ligne
+  //    pointant vers des photos détruites — le piège du 29/08 côté élève.
+  const { data: efface, error } = await admin
+    .from('fragments_depots')
+    .delete()
+    .eq('id', depotId)
+    .select('id')
+  if (error || !efface || efface.length === 0) {
+    return { error: `Le dépôt n’a pas été supprimé — rien n’a été modifié${error ? ` : ${error.message}` : ''}.` }
   }
 
-  await supabase.from('fragments_depots').delete().eq('id', depotId)
+  if (chemins.length > 0) {
+    const { error: eStorage } = await admin.storage.from('fragments').remove(chemins)
+    if (eStorage) console.error(`[fragments] photos orphelines après suppression de ${depotId} : ${eStorage.message}`)
+  }
 
   revalidatePath('/prof/fragments-erudition')
+  revalidatePath('/prof/fragments-erudition/eleve', 'layout')
   return { success: true }
 }
 

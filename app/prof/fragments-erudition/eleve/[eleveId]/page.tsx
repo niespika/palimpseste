@@ -7,6 +7,7 @@ import { semestreFragmentsActif } from '../../contexte-semestre'
 import { semainesComptees } from '@/utils/fragments-semaines'
 import { noteVersLettre } from '@/utils/notation'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
+import BoutonSupprimerDepot from '../../BoutonSupprimerDepot'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
 export default async function PageEleveDetail({
@@ -93,15 +94,19 @@ export default async function PageEleveDetail({
     (depots ?? []).map(d => [d.semaine_id, d])
   )
 
-  // Analyses publiées pour ces dépôts
+  // Analyses de ces dépôts — TOUS statuts pour la liste des dépôts (21/09) ; la
+  // courbe et les moyennes ne lisent que les PUBLIÉES, comme avant.
   const depotIds = (depots ?? []).map(d => d.id)
-  const { data: analyses } = depotIds.length > 0
+  const { data: analysesToutes } = depotIds.length > 0
     ? await admin
         .from('fragments_analyses')
         .select('id, depot_id, statut, note_decouvertes, note_sources, note_reflexions, publiee_at')
-        .eq('statut', 'publiee')
         .in('depot_id', depotIds)
     : { data: [] }
+  const analyses = (analysesToutes ?? []).filter(a => a.statut === 'publiee')
+  const etatAnalyseParDepot = Object.fromEntries(
+    (analysesToutes ?? []).map(a => [a.depot_id, a.statut as string])
+  )
 
   const analyseParDepot = Object.fromEntries(
     (analyses ?? []).map(a => [a.depot_id, a])
@@ -322,6 +327,29 @@ export default async function PageEleveDetail({
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 21/09 — TOUS les dépôts du semestre, avec leur état et la suppression :
+          l'action existait (`supprimerDepot`) sans aucun écran pour l'appeler. */}
+      {depots.length > 0 && (
+        <div className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="text-sm font-medium text-encre-douce mb-3">Dépôts du semestre</h3>
+          <div className="space-y-1.5">
+            {[...depots].sort((a, b) => (semainePourDepot[a.semaine_id] ?? 0) - (semainePourDepot[b.semaine_id] ?? 0)).map(d => {
+              const st = etatAnalyseParDepot[d.id]
+              const num = semainePourDepot[d.semaine_id] ?? null
+              const etat = !st ? 'sans analyse' : st === 'en_cours' ? 'analyse en cours…' : st === 'erreur' ? 'analyse en erreur' : st === 'generee' ? 'à valider' : 'publiée ✓'
+              return (
+                <div key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  <Link href={`/prof/fragments-erudition/analyse/${d.id}`} className="text-encre-douce hover:text-pigment underline-offset-2 hover:underline">Semaine {num ?? '?'}</Link>
+                  {d.statut === 'en_retard' && <span className="font-ui text-[11px] bg-attention-teinte text-attention px-2 py-0.5 rounded-full">en retard</span>}
+                  <span className="font-ui text-xs text-muet">{etat}</span>
+                  <span className="ml-auto"><BoutonSupprimerDepot depotId={d.id} numeroSemaine={num} analysePubliee={st === 'publiee'} /></span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
