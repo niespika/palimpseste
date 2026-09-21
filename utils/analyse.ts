@@ -20,6 +20,70 @@ interface AnalyseJSON {
   signal_integrite?: { type: string; motif?: string }
 }
 
+// ⭐ 21/09 — LE JSON EST GARANTI PAR L'API, plus demandé au modèle. Nina P., S3 :
+//    la copie portait « bonne réponse » entre guillemets droits et le modèle, une
+//    fois sur deux, les recopiait NON ÉCHAPPÉS dans une chaîne JSON → `JSON.parse`
+//    échouait, l'analyse tombait en `erreur` à chaque relance (même famille que
+//    Lisa G., 14/09, où la réponse était TRONQUÉE). Avec `output_config.format`,
+//    la réponse est contrainte au schéma ci-dessous : l'échappement ne peut plus
+//    manquer. Le prompt décrit toujours le format (le modèle lit les deux) ;
+//    `signal_integrite` devient exigé — `type: "aucun"` quand il n'y a rien.
+export const SCHEMA_ANALYSE = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['transcription', 'notes', 'retour_progres', 'retour_langue', 'retour_style', 'retour_contenu', 'commentaire_general', 'pistes_nouvelles', 'rappels_pistes', 'bilan_pistes', 'signal_integrite'],
+  properties: {
+    transcription: { type: 'string' },
+    notes: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['decouvertes', 'sources', 'reflexions'],
+      properties: {
+        decouvertes: { type: 'integer', enum: [0, 1, 2, 3, 4] },
+        sources: { type: 'integer', enum: [0, 1, 2, 3, 4] },
+        reflexions: { type: 'integer', enum: [0, 1, 2, 3, 4] },
+      },
+    },
+    retour_progres: { type: 'string' },
+    retour_langue: { type: 'string' },
+    retour_style: { type: 'string' },
+    retour_contenu: { type: 'string' },
+    commentaire_general: { type: 'string' },
+    pistes_nouvelles: { type: 'array', items: { type: 'string' } },
+    rappels_pistes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['piste_id', 'reformulation'],
+        properties: { piste_id: { type: 'string' }, reformulation: { type: 'string' } },
+      },
+    },
+    bilan_pistes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['piste_id', 'statut', 'justification'],
+        properties: {
+          piste_id: { type: 'string' },
+          statut: { type: 'string', enum: ['suivie', 'partiellement_suivie', 'proposee'] },
+          justification: { type: 'string' },
+        },
+      },
+    },
+    signal_integrite: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'motif'],
+      properties: {
+        type: { type: 'string', enum: ['aucun', 'hors_sujet', 'aveu_non_travail', 'section_na'] },
+        motif: { type: 'string' },
+      },
+    },
+  },
+} as const
+
 function construireHistorique(
   analyses: Array<{
     semaine_numero: number
@@ -222,6 +286,7 @@ export async function lancerAnalyse(
       // retours) dépassait le plafond ; le JSON tronqué ne se parsait plus et
       // l'analyse tombait en `erreur` à chaque relance (Lisa G., S3, 14/09).
       max_tokens: 8192,
+      output_config: { format: { type: 'json_schema', schema: SCHEMA_ANALYSE } },
       messages: [
         {
           role: 'user',
@@ -242,7 +307,8 @@ export async function lancerAnalyse(
       console.error(`[analyse] dépôt ${depotId} : réponse tronquée (max_tokens, ${response.usage.output_tokens} jetons de sortie)`)
     }
 
-    // Parser le JSON (Claude peut ajouter des balises ```)
+    // Parser le JSON — garanti valide par `output_config.format` ; le nettoyage des
+    // balises et le filet d'erreur restent, ils ne coûtent rien.
     let parsed: AnalyseJSON
     try {
       const nettoye = texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
