@@ -16,6 +16,25 @@ export interface FlashcardSuggestion {
   concept_tag: string
 }
 
+// ⭐ 21/09 — le JSON est GARANTI par l'API (`output_config.format`), plus demandé au
+//    modèle : un guillemet non échappé dans une chaîne cassait `JSON.parse` (Nina P.,
+//    S3, Vestigia). ⚠️ L'API refuse `minimum`/`maximum` sur un entier et `minItems` > 1.
+const SCHEMA_CARTES = {
+  type: 'array',
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['type', 'format', 'recto', 'verso', 'concept_tag'],
+    properties: {
+      type: { type: 'string', enum: ['philosophe', 'concept', 'mouvement', 'these'] },
+      format: { type: 'string', enum: ['recto_verso', 'cloze'] },
+      recto: { type: 'string' },
+      verso: { type: 'string' },
+      concept_tag: { type: 'string' },
+    },
+  },
+} as const
+
 export const PROMPT_SYSTEME = `Tu es un assistant spécialisé dans la création de flashcards pour des cours de philosophie au lycée (terminale et première).
 
 PLAFOND — RÈGLE ABSOLUE : chaque demande t'indique un nombre MAXIMAL de cartes. Tu ne le dépasses JAMAIS. En rendre moins est toujours permis, et souvent préférable : mieux vaut 6 cartes que l'élève retiendra que 15 qu'il survolera.
@@ -85,6 +104,7 @@ export async function extraireFlashcards(
     // ~120 tokens par carte, avec de la marge : le budget suit le plafond au lieu
     // d'ouvrir 4096 tokens pour trois cartes.
     max_tokens: Math.min(4096, 512 + max * 160),
+    output_config: { format: { type: 'json_schema', schema: SCHEMA_CARTES } },
     system: PROMPT_SYSTEME,
     messages: [
       {
@@ -125,6 +145,7 @@ export async function extraireFlashcardsTexte(
   const message = await client.messages.create({
     model: MODELE,
     max_tokens: 1024,
+    output_config: { format: { type: 'json_schema', schema: SCHEMA_CARTES } },
     system: PROMPT_SYSTEME_TEXTE,
     messages: [
       {

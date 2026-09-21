@@ -57,6 +57,22 @@ interface V1JSON {
   ortho: string | null
 }
 
+// ⭐ 21/09 — le JSON est GARANTI par l'API (`output_config.format`), plus demandé au
+//    modèle : un guillemet non échappé dans une chaîne cassait `JSON.parse` (Nina P.,
+//    S3, Vestigia). ⚠️ L'API refuse `minimum`/`maximum` sur un entier et `minItems` > 1.
+const SCHEMA_V1 = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['transcription', 'ocr_confiance', 'oublis', 'erreurs', 'ortho'],
+  properties: {
+    transcription: { type: 'string' },
+    ocr_confiance: { type: 'number' },
+    oublis: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['titre', 'detail'], properties: { titre: { type: 'string' }, detail: { type: 'string' } } } },
+    erreurs: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['type', 'titre', 'detail'], properties: { type: { type: 'string', enum: ['factuelle', 'ambiguite'] }, titre: { type: 'string' }, detail: { type: 'string' } } } },
+    ortho: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+  },
+} as const
+
 // Ancrage textuel d'une session Codex — BI-SOURCE (§4.4/§6.2). Bras `contenu_id` :
 // une synthèse de parcours ancrée à un cours de bibliothèque (scriptorium_contenus).
 // Bras historique `scriptorium_unite_id` : documents de l'unité. L'arc est exclusif
@@ -156,6 +172,7 @@ export async function analyserV1(travailId: string): Promise<void> {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
+      output_config: { format: { type: 'json_schema', schema: SCHEMA_V1 } },
       messages: [{
         role: 'user',
         content: [
@@ -256,6 +273,22 @@ interface VFJSON {
   ajouts: { titre: string; contenu: string }[]
 }
 
+const SCHEMA_VF = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['transcription', 'ocr_confiance', 'erreurs_corrections', 'suivi_suggestions', 'pouvait_aller_plus_loin', 'non_ameliore', 'synthese_completee', 'ajouts'],
+  properties: {
+    transcription: { type: 'string' },
+    ocr_confiance: { type: 'number' },
+    erreurs_corrections: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['concept_tag', 'description', 'correction', 'importance'], properties: { concept_tag: { type: 'string' }, description: { type: 'string' }, correction: { type: 'string' }, importance: { type: 'number' } } } },
+    suivi_suggestions: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['suggestion', 'statut', 'commentaire'], properties: { suggestion: { type: 'string' }, statut: { type: 'string' }, commentaire: { type: 'string' } } } },
+    pouvait_aller_plus_loin: { type: 'array', items: { type: 'string' } },
+    non_ameliore: { type: 'array', items: { type: 'string' } },
+    synthese_completee: { type: 'string' },
+    ajouts: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['titre', 'contenu'], properties: { titre: { type: 'string' }, contenu: { type: 'string' } } } },
+  },
+} as const
+
 function formaterSuggestionsV1(suggestions: unknown): string {
   const s = suggestions as {
     oublis?: { titre: string; detail: string }[]
@@ -324,6 +357,7 @@ export async function analyserVF(travailId: string): Promise<void> {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 8000,
+      output_config: { format: { type: 'json_schema', schema: SCHEMA_VF } },
       messages: [{
         role: 'user',
         content: [

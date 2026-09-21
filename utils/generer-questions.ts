@@ -10,6 +10,25 @@ export interface QuestionGeneree {
   concept_tag: string
 }
 
+// ⭐ 21/09 — le JSON est GARANTI par l'API (`output_config.format`), plus demandé au
+//    modèle : un guillemet non échappé dans une chaîne cassait `JSON.parse` (Nina P.,
+//    S3, Vestigia). ⚠️ L'API refuse `minimum`/`maximum` sur un entier et `minItems` > 1.
+//    `minItems: 4` étant refusé, c'est `estQuestionValide` qui garde les quatre options.
+const SCHEMA_QUESTIONS = {
+  type: 'array',
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['enonce', 'options', 'index_correct', 'concept_tag'],
+    properties: {
+      enonce: { type: 'string' },
+      options: { type: 'array', items: { type: 'string' } },
+      index_correct: { type: 'integer', enum: [0, 1, 2, 3] },
+      concept_tag: { type: 'string' },
+    },
+  },
+} as const
+
 // Garde de schéma : une question malformée (options ≠ 4, index hors 0..3, énoncé vide) ne
 // doit jamais être insérée (sinon mauvais scoring / LETTRES[index] hors borne à l'affichage).
 function estQuestionValide(q: unknown): q is QuestionGeneree {
@@ -66,6 +85,7 @@ export async function genererQuestions(
   const message = await client.messages.create({
     model: MODELE,
     max_tokens: 6000,
+    output_config: { format: { type: 'json_schema', schema: SCHEMA_QUESTIONS } },
     system: PROMPT_SYSTEME,
     messages: [
       {
@@ -102,6 +122,7 @@ export async function regenererQuestion(
   const message = await client.messages.create({
     model: MODELE,
     max_tokens: 512,
+    output_config: { format: { type: 'json_schema', schema: SCHEMA_QUESTIONS } },
     system: PROMPT_SYSTEME,
     messages: [
       {

@@ -76,6 +76,32 @@ interface EssaiAnalyseJSON {
   note20_justification: string
 }
 
+// ⭐ 21/09 — le JSON est GARANTI par l'API (`output_config.format`), plus demandé au
+//    modèle : un guillemet non échappé dans une chaîne cassait `JSON.parse` (Nina P.,
+//    S3, Vestigia). ⚠️ L'API refuse `minimum`/`maximum` sur un entier et `minItems` > 1.
+const SCHEMA_ESSAI = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['transcription', 'lettres', 'retour_structure', 'retour_expression', 'retour_argumentation', 'retour_connaissances', 'retour_parcours', 'synthese', 'note20_suggeree', 'note20_justification'],
+  properties: {
+    transcription: { type: 'string' },
+    lettres: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['structure', 'expression', 'argumentation', 'connaissances'],
+      properties: { structure: { type: 'string' }, expression: { type: 'string' }, argumentation: { type: 'string' }, connaissances: { type: 'string' } },
+    },
+    retour_structure: { type: 'string' },
+    retour_expression: { type: 'string' },
+    retour_argumentation: { type: 'string' },
+    retour_connaissances: { type: 'string' },
+    retour_parcours: { type: 'string' },
+    synthese: { type: 'string' },
+    note20_suggeree: { type: 'number' },
+    note20_justification: { type: 'string' },
+  },
+} as const
+
 function construireDossierEssai(
   analyses: Array<{
     semaine_numero: number
@@ -348,6 +374,7 @@ export async function analyserEssai(essaiId: string): Promise<void> {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 8000,
+      output_config: { format: { type: 'json_schema', schema: SCHEMA_ESSAI } },
       messages: [{
         role: 'user',
         content: [

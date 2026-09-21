@@ -60,6 +60,28 @@ interface AnalyseOraleJSON {
   commentaire_general: string
 }
 
+// ⭐ 21/09 — le JSON est GARANTI par l'API (`output_config.format`), plus demandé au
+//    modèle : un guillemet non échappé dans une chaîne cassait `JSON.parse` (Nina P.,
+//    S3, Vestigia). ⚠️ L'API refuse `minimum`/`maximum` sur un entier et `minItems` > 1.
+const SCHEMA_ORALE = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['retour_integration', 'retour_pistes', 'retour_completude', 'retour_oral', 'notes', 'commentaire_general'],
+  properties: {
+    retour_integration: { type: 'string' },
+    retour_pistes: { type: 'string' },
+    retour_completude: { type: 'string' },
+    retour_oral: { type: 'string' },
+    notes: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['contenu', 'structure', 'expression'],
+      properties: { contenu: { type: 'number' }, structure: { type: 'number' }, expression: { type: 'number' } },
+    },
+    commentaire_general: { type: 'string' },
+  },
+} as const
+
 function construireDossier(
   analyses: Array<{
     semaine_numero: number
@@ -221,6 +243,7 @@ export async function analyserOral(oralId: string): Promise<void> {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
+      output_config: { format: { type: 'json_schema', schema: SCHEMA_ORALE } },
       messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
     })
 
