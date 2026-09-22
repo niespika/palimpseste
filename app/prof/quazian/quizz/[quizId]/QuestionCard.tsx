@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { validerQuestion, modifierQuestion, regenererDisctracteurs } from '../actions'
+import { validerQuestion, modifierQuestion, regenererDisctracteurs, refuserQuestion } from '../actions'
 
 interface Question {
   id: string
@@ -31,6 +31,35 @@ export function QuestionCard({
   const [options, setOptions] = useState([...question.options])
   const [correct, setCorrect] = useState(question.index_correct)
   const [tag, setTag] = useState(question.concept_tag)
+  const [confirmerRefus, setConfirmerRefus] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  function ouvrirEdition() {
+    setEnonce(question.enonce)
+    setOptions([...question.options])
+    setCorrect(question.index_correct)
+    setTag(question.concept_tag)
+    setConfirmerRefus(false)
+    setErreur(null)
+    setMode('edit')
+  }
+
+  async function handleRefuser() {
+    if (pending) return
+    setPending(true)
+    setErreur(null)
+    try {
+      const fd = new FormData()
+      fd.append('id', question.id)
+      fd.append('quizId', quizId)
+      const resultat = await refuserQuestion(fd)
+      if (resultat.error) setErreur(resultat.error)
+    } catch {
+      setErreur('Le refus n’a pas pu être confirmé. Réessaie.')
+    } finally {
+      setPending(false)
+    }
+  }
 
   async function handleValider() {
     setPending(true)
@@ -91,7 +120,7 @@ export function QuestionCard({
               <button
                 type="button"
                 onClick={() => setCorrect(i)}
-                className={`w-6 h-6 rounded-full text-xs font-bold border transition-colors ${
+                className={`w-6 h-6 shrink-0 rounded-full text-xs font-bold border transition-colors ${
                   correct === i
                     ? 'bg-ok text-surface border-ok'
                     : 'bg-surface text-muet border-bordure hover:border-encre-douce'
@@ -103,7 +132,7 @@ export function QuestionCard({
                 type="text"
                 value={opt}
                 onChange={(e) => setOptions((prev) => prev.map((o, j) => j === i ? e.target.value : o))}
-                className="flex-1 px-3 py-1.5 text-sm border border-bordure rounded-lg"
+                className="min-w-0 flex-1 px-3 py-1.5 text-sm border border-bordure rounded-lg"
               />
             </div>
           ))}
@@ -172,8 +201,9 @@ export function QuestionCard({
             </button>
           )}
           <button
-            onClick={() => setMode('edit')}
-            className="px-3 py-1 text-xs bg-parchemin-fonce text-encre-douce rounded-lg hover:bg-bordure"
+            onClick={ouvrirEdition}
+            disabled={pending}
+            className="px-3 py-1 text-xs bg-parchemin-fonce text-encre-douce rounded-lg hover:bg-bordure disabled:opacity-50"
           >
             Modifier
           </button>
@@ -184,8 +214,39 @@ export function QuestionCard({
           >
             ↻ Nouveaux distracteurs
           </button>
+          {!confirmerRefus && (
+            <button
+              onClick={() => { setErreur(null); setConfirmerRefus(true) }}
+              disabled={pending}
+              className="px-3 py-1 text-xs text-retard hover:bg-retard-teinte rounded-lg transition-colors disabled:opacity-50"
+            >
+              Refuser
+            </button>
+          )}
         </div>
       )}
+      {!readOnly && confirmerRefus && (
+        <div className="mt-3 text-sm">
+          <p className="text-encre-douce mb-2">Refuser cette question ? Elle sera supprimée du quiz.</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleRefuser}
+              disabled={pending}
+              className="px-3 py-1 text-xs text-retard hover:bg-retard-teinte rounded-lg disabled:opacity-50"
+            >
+              {pending ? 'Refus en cours…' : 'Confirmer le refus'}
+            </button>
+            <button
+              onClick={() => setConfirmerRefus(false)}
+              disabled={pending}
+              className="px-3 py-1 text-xs bg-parchemin-fonce text-encre-douce rounded-lg hover:bg-bordure disabled:opacity-50"
+            >
+              Garder
+            </button>
+          </div>
+        </div>
+      )}
+      {erreur && <p role="alert" className="mt-2 text-sm text-retard">{erreur}</p>}
     </div>
   )
 }

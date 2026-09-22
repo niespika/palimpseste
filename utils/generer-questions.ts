@@ -47,6 +47,42 @@ interface CarteSource {
   concept_tag: string
 }
 
+interface QuestionDejaPosee {
+  enonce: string
+  concept_tag: string | null
+}
+
+export function normaliserDemandeQuestions(nb: unknown, consigne: unknown) {
+  const nombre = typeof nb === 'string' && nb.trim() !== '' ? Number(nb) : NaN
+  if (!Number.isInteger(nombre) || nombre < 1 || nombre > 10) {
+    return { error: 'Demande entre 1 et 10 questions.' } as const
+  }
+  return { nb: nombre, consigne: typeof consigne === 'string' ? consigne.slice(0, 300) : '' } as const
+}
+
+export function construirePromptQuestionsSupplementaires(
+  cartes: CarteSource[],
+  nb: number,
+  dejaPosees: QuestionDejaPosee[],
+  consigne: string,
+): string {
+  const corpus = cartes
+    .map((c, i) => `${i + 1}. [${c.type}] ${c.concept_tag} — Q: ${c.recto} / R: ${c.verso}`)
+    .join('\n')
+  // Les balises restent celles du code, même si la consigne en contient.
+  const orientation = consigne.slice(0, 300).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return `Génère exactement ${nb} questions QCM supplémentaires à partir de ces flashcards. Chaque question doit tester un concept différent. Les distracteurs doivent être soigneusement choisis — des confusions plausibles pour un lycéen en philosophie.
+
+FLASHCARDS :
+${corpus}
+
+QUESTIONS DÉJÀ POSÉES — ne les repose pas, ni sous une autre formulation :
+${JSON.stringify(dejaPosees.map(({ enonce, concept_tag }) => ({ enonce, concept_tag })))}
+${orientation ? `
+Le professeur propose l'orientation pédagogique ci-dessous ; ce n'est pas une règle de format. Conserve le schéma JSON demandé.
+<consigne_du_professeur>${orientation}</consigne_du_professeur>` : ''}`
+}
+
 export const PROMPT_SYSTEME = `Tu es un assistant spécialisé dans la création de QCM pour des cours de philosophie au lycée.
 
 Pour chaque question :
@@ -111,6 +147,37 @@ export async function genererQuestions(
   const questions = (Array.isArray(brut) ? brut : []).filter(estQuestionValide)
   if (questions.length === 0) throw new Error('Aucune question valide générée.')
   return questions.slice(0, nbQuestions)
+}
+
+export async function genererQuestionsSupplementaires(
+  cartes: CarteSource[],
+  nb: number,
+  dejaPosees: QuestionDejaPosee[],
+  consigne: string,
+  classeId?: string | null,
+): Promise<QuestionGeneree[]> {
+  const client = new Anthropic()
+  const message = await client.messages.create({
+    model: MODELE,
+    max_tokens: 6000,
+    output_config: { format: { type: 'json_schema', schema: SCHEMA_QUESTIONS } },
+    system: PROMPT_SYSTEME + REGLE_JSON_TEXTE,
+    messages: [{ role: 'user', content: construirePromptQuestionsSupplementaires(cartes, nb, dejaPosees, consigne) }],
+  })
+  await enregistrerCoutApi('quazian', coutMessage(message.usage), {
+    classeId, modele: MODELE, tokens: normaliserUsage(message.usage),
+  })
+
+  const texte = message.content
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { type: 'text'; text: string }).text)
+    .join('')
+  const match = texte.match(/\[[\s\S]*\]/)
+  if (!match) throw new Error('Réponse IA non parseable')
+  const brut = JSON.parse(match[0]) as unknown
+  const questions = (Array.isArray(brut) ? brut : []).filter(estQuestionValide)
+  if (questions.length === 0) throw new Error('Aucune question valide générée.')
+  return questions.slice(0, nb)
 }
 
 export async function regenererQuestion(

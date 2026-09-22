@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { libellesCibles } from '@/utils/quazian-cibles'
 import { validerToutesQuestions } from '../actions'
 import { QuestionCard } from './QuestionCard'
+import { AjouterQuestions } from './AjouterQuestions'
 
 async function actionValiderToutes(formData: FormData): Promise<void> {
   'use server'
@@ -113,7 +114,9 @@ export default async function QuizzDetailPage({
 
       {!toutValide && !readOnly && (
         <div className="bg-attention-teinte border border-attention rounded-xl p-3 mb-6 text-sm text-attention">
-          {total - nbValidees} question{total - nbValidees > 1 ? 's' : ''} encore à valider avant de pouvoir lancer le quizz.
+          {total === 0
+            ? "Ce quiz n'a plus de question — génère-en ci-dessous."
+            : `${total - nbValidees} question${total - nbValidees > 1 ? 's' : ''} encore à valider avant de pouvoir lancer le quizz.`}
         </div>
       )}
 
@@ -128,6 +131,7 @@ export default async function QuizzDetailPage({
           />
         ))}
       </div>
+      {!readOnly && <AjouterQuestions quizId={quizId} />}
     </div>
   )
 }

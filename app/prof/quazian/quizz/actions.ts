@@ -1,9 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { genererQuestions, regenererQuestion } from '@/utils/generer-questions'
+import { genererQuestions, regenererQuestion, genererQuestionsSupplementaires, normaliserDemandeQuestions } from '@/utils/generer-questions'
 import { lireGatePlanActif, plansValidesCourants, synchroniserStatutExerciceQuiz, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serveur'
 import { resoudreCible } from '@/utils/quazian-cibles'
@@ -30,6 +31,48 @@ async function verifierProf() {
 
 // Résultat de création : erreur, ou succès (avec un signal `avis` optionnel — Q3).
 type CreerQuizzResult = { error: string } | { success: true; quizId: string; avis?: string }
+
+async function cartesDuPerimetre(supabase: SupabaseClient, contenuIds: string[], uniteIds: string[]) {
+  const selectCarte = 'recto, verso, type, concept_tag'
+  const [contenus, unites] = await Promise.all([
+    contenuIds.length > 0
+      ? supabase.from('quazian_flashcards').select(selectCarte)
+          .in('contenu_id', contenuIds).eq('statut', 'valide').is('eleve_id', null)
+      : Promise.resolve({ data: [], error: null }),
+    uniteIds.length > 0
+      ? supabase.from('quazian_flashcards').select(selectCarte)
+          .in('scriptorium_unite_id', uniteIds).eq('statut', 'valide').is('eleve_id', null)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+  return { cartes: [...(contenus.data ?? []), ...(unites.data ?? [])], error: contenus.error ?? unites.error }
+}
+
+async function actualiserNombreQuestions(supabase: SupabaseClient, quizId: string) {
+  const compter = () => supabase
+    .from('quazian_questions').select('id', { count: 'exact', head: true }).eq('quiz_id', quizId)
+  let lecture = await compter()
+  let erreur: string | null = null
+  for (;;) {
+    if (lecture.error || lecture.count === null) {
+      erreur = 'Les questions ont changé, mais leur nombre n’a pas pu être relu.'
+      break
+    }
+    const nombre = lecture.count
+    const { error } = await supabase.from('quazian_quizzes').update({ nb_questions: nombre }).eq('id', quizId)
+    if (error) {
+      erreur = 'Les questions ont changé, mais leur compteur n’a pas pu être enregistré.'
+      break
+    }
+    // Deux onglets peuvent ajouter ensemble : un ancien UPDATE peut finir après
+    // le plus récent. Relire le COUNT après l'écriture et reprendre s'il a changé.
+    lecture = await compter()
+    if (!lecture.error && lecture.count === nombre) break
+  }
+  await synchroniserStatutExerciceQuiz(createAdminClient(), quizId)
+  revalidatePath(`/prof/quazian/quizz/${quizId}`)
+  revalidatePath('/prof/quazian/quizz')
+  return erreur
+}
 
 // Créer un quizz + générer ses questions
 export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> {
@@ -66,18 +109,8 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
 
   // Cartes validées PARTAGÉES des contenus choisis — une requête par bras (plutôt
   // qu'un `.or()` à construire par concaténation d'uuid).
-  const selectCarte = 'recto, verso, type, concept_tag'
-  const [{ data: cartesContenu }, { data: cartesUnite }] = await Promise.all([
-    contenuIds.length > 0
-      ? supabase.from('quazian_flashcards').select(selectCarte)
-          .in('contenu_id', contenuIds).eq('statut', 'valide').is('eleve_id', null)
-      : Promise.resolve({ data: [] as { recto: string; verso: string; type: string; concept_tag: string }[] }),
-    uniteIds.length > 0
-      ? supabase.from('quazian_flashcards').select(selectCarte)
-          .in('scriptorium_unite_id', uniteIds).eq('statut', 'valide').is('eleve_id', null)
-      : Promise.resolve({ data: [] as { recto: string; verso: string; type: string; concept_tag: string }[] }),
-  ])
-  const cartes = [...(cartesContenu ?? []), ...(cartesUnite ?? [])]
+  const { cartes, error: erreurCartes } = await cartesDuPerimetre(supabase, contenuIds, uniteIds)
+  if (erreurCartes) return { error: 'Impossible de lire les cartes des contenus sélectionnés.' }
 
   if (cartes.length < 5) {
     return { error: `Pas assez de cartes validées dans les contenus sélectionnés (${cartes.length} carte${cartes.length > 1 ? 's' : ''} trouvée${cartes.length > 1 ? 's' : ''}, minimum 5).` }
@@ -254,6 +287,62 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
     quizId: quizz.id,
     ...(avisSansPlan ? { avis: 'Cette classe n’a pas de plan annuel exploitable — le quiz n’apparaîtra pas au calendrier prospectif.' } : {}),
   }
+}
+
+// Refuser retire réellement la question ; aucun lecteur élève ne filtre un statut « refusé ».
+export async function refuserQuestion(formData: FormData) {
+  const { supabase } = await verifierProf()
+  const id = formData.get('id') as string
+  const quizId = formData.get('quizId') as string
+  const { data: quiz, error: erreurQuiz } = await supabase
+    .from('quazian_quizzes').select('statut').eq('id', quizId).single()
+  if (erreurQuiz) return { error: 'Impossible de lire le quiz.' }
+  if (quiz?.statut !== 'brouillon') return { error: 'Seul un brouillon se modifie.' }
+
+  const { data, error } = await supabase.from('quazian_questions')
+    .delete().eq('quiz_id', quizId).eq('id', id).select('id')
+  if (error) return { error: error.code === '23503' ? 'Cette question a déjà été répondue.' : 'La question n’a pas pu être refusée.' }
+  if (!data?.length) return { error: 'Cette question ne fait plus partie de ce quiz.' }
+  const erreur = await actualiserNombreQuestions(supabase, quizId)
+  return erreur ? { error: erreur } : { success: true }
+}
+
+export async function ajouterQuestions(formData: FormData) {
+  const { supabase } = await verifierProf()
+  const quizId = formData.get('quizId') as string
+  const { data: quiz, error: erreurQuiz } = await supabase
+    .from('quazian_quizzes').select('statut, scope_contenus, scope_unites, classe_id').eq('id', quizId).single()
+  if (erreurQuiz) return { error: 'Impossible de lire le quiz.' }
+  if (quiz?.statut !== 'brouillon') return { error: 'Seul un brouillon se modifie.' }
+  const demande = normaliserDemandeQuestions(formData.get('nb'), formData.get('consigne'))
+  if ('error' in demande) return { error: demande.error }
+
+  const { cartes, error: erreurCartes } = await cartesDuPerimetre(supabase, quiz.scope_contenus ?? [], quiz.scope_unites ?? [])
+  if (erreurCartes) return { error: 'Impossible de lire les cartes du périmètre du quiz.' }
+  if (cartes.length < 5) return { error: `Pas assez de cartes validées dans le périmètre (${cartes.length}, minimum 5).` }
+  const { data: dejaPosees, error: erreurQuestions } = await supabase
+    .from('quazian_questions').select('enonce, concept_tag').eq('quiz_id', quizId).order('created_at', { ascending: true })
+  if (erreurQuestions) return { error: 'Impossible de lire les questions déjà posées.' }
+
+  let questions
+  try {
+    questions = await genererQuestionsSupplementaires(cartes, demande.nb, dejaPosees ?? [], demande.consigne, quiz.classe_id)
+  } catch (e) {
+    console.error('[quazian] questions supplémentaires :', e)
+    return { error: 'La génération IA n’a rendu aucune question exploitable. Réessaie.' }
+  }
+  // L'appel IA est long : le brouillon doit encore être modifiable à son retour.
+  const { data: actuel, error: erreurStatut } = await supabase
+    .from('quazian_quizzes').select('statut').eq('id', quizId).single()
+  if (erreurStatut) return { error: 'Impossible de relire le quiz ; aucune question ajoutée.' }
+  if (actuel?.statut !== 'brouillon') return { error: 'Seul un brouillon se modifie.' }
+  const { error } = await supabase.from('quazian_questions').insert(
+    questions.map((q) => ({ ...q, quiz_id: quizId, statut_validation: 'suggere' })),
+  )
+  if (error) return { error: 'Les questions générées n’ont pas pu être enregistrées.' }
+  const erreur = await actualiserNombreQuestions(supabase, quizId)
+  if (erreur) return { error: erreur }
+  return { success: true, message: `${questions.length} question${questions.length > 1 ? 's' : ''} ajoutée${questions.length > 1 ? 's' : ''} sur ${demande.nb} demandée${demande.nb > 1 ? 's' : ''}.` }
 }
 
 // Valider une question
