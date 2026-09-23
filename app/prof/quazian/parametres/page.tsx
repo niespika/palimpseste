@@ -8,6 +8,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
 import PorteAntichambre from './PorteAntichambre'
 import PorteTuteur from './PorteTuteur'
+import PorteRapport from './PorteRapport'
+import { lirePorteRapport } from '@/utils/quazian-rapports-serveur'
 import { lirePorteTuteur } from '@/utils/quazian-tuteur-serveur'
 
 async function actionSauvegarder(formData: FormData): Promise<void> {
@@ -25,7 +27,7 @@ function Entrees({ vue }: { vue: string }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-lg">
       <Tuile nom="Notation" sousTitre="Notes formative & de semestre, FSRS" href="/prof/quazian/parametres?vue=notation" selectionnee={vue === 'notation'} />
       <Tuile nom="Génération" sousTitre="Plafond de cartes & prompts IA" href="/prof/quazian/parametres?vue=generation" selectionnee={vue === 'generation'} />
-      <Tuile nom="Passation" sousTitre="Antichambre, tuteur après le quiz" href="/prof/quazian/parametres?vue=passation" selectionnee={vue === 'passation'} />
+      <Tuile nom="Passation" sousTitre="Antichambre, tuteur, rapports" href="/prof/quazian/parametres?vue=passation" selectionnee={vue === 'passation'} />
     </div>
   )
 }
@@ -40,6 +42,7 @@ export default async function ParametresPage({ searchParams }: { searchParams: P
         <div className="space-y-4">
           <PorteAntichambre actif={await lirePorteAntichambre(createAdminClient())} />
           <PorteTuteur actif={await lirePorteTuteur(createAdminClient())} />
+          <PorteRapport actif={await lirePorteRapport(createAdminClient())} />
         </div>
       </div>
     )

@@ -7,6 +7,10 @@ import {
   chargerLeDiagnosticParCible, type DiagnosticParCible,
 } from '@/utils/quazian-diagnostic-serveur'
 import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
+import { toutesLesPages } from '@/utils/quazian-pages'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lirePorteRapport } from '@/utils/quazian-rapports-serveur'
+import { aDesFragilites, texteSansMarkdown } from '@/utils/quazian-rapports'
 
 const MODELE = 'claude-sonnet-4-6'
 
@@ -28,19 +32,28 @@ export async function chargerDiagnosticClasse(classeId?: string) {
   // Quizz de la classe ciblée (pour scoper les réponses).
   let quizIds: Set<string> | null = null
   if (classeId) {
-    const { data: qz } = await supabase.from('quazian_quizzes').select('id').eq('classe_id', classeId)
+    const { data: qz, error: eQuiz } = await supabase.from('quazian_quizzes').select('id').eq('classe_id', classeId)
+    if (eQuiz) return { diagnostics: {}, profilesMap: {}, conceptsClasse: {}, eleveIds: [], erreur: `les quizz de la classe : ${eQuiz.message}` }
     quizIds = new Set((qz ?? []).map((q) => q.id as string))
+    if (quizIds.size === 0) return { diagnostics: {}, profilesMap: {}, conceptsClasse: {}, eleveIds: [], erreur: null }
   }
 
-  // Toutes les réponses avec concept_tag depuis les quizz fermés
-  const { data: reponses } = await supabase
-    .from('quazian_answers')
-    .select(`
-      score, repondu,
-      quazian_sessions!inner(eleve_id, quiz_id),
-      quazian_questions!inner(concept_tag)
-    `)
-    .not('score', 'is', null)
+  // Toutes les réponses avec concept_tag depuis les quizz fermés — celles des
+  // quizz de la classe, filtrées EN BASE (`!inner`), et par pages : PostgREST
+  // s'arrête à 1000 lignes sans le dire (`utils/quazian-pages.ts`).
+  const { data: reponses, error: eRep } = await toutesLesPages((debut, fin) => {
+    let requete = supabase
+      .from('quazian_answers')
+      .select(`
+        score, repondu,
+        quazian_sessions!inner(eleve_id, quiz_id),
+        quazian_questions!inner(concept_tag)
+      `)
+      .not('score', 'is', null)
+    if (quizIds) requete = requete.in('quazian_sessions.quiz_id', [...quizIds])
+    return requete.order('session_id', { ascending: true }).order('question_id', { ascending: true }).range(debut, fin)
+  })
+  if (eRep) return { diagnostics: {}, profilesMap: {}, conceptsClasse: {}, eleveIds: [], erreur: `les réponses de quizz : ${eRep.message}` }
 
   const reponsesScope = (reponses ?? []).filter((r) => {
     if (!quizIds) return true
@@ -88,7 +101,7 @@ export async function chargerDiagnosticClasse(classeId?: string) {
     }
   }
 
-  return { diagnostics, profilesMap, conceptsClasse, eleveIds }
+  return { diagnostics, profilesMap, conceptsClasse, eleveIds, erreur: null as string | null }
 }
 
 // ⭐⭐ C6-L1 — LES DEUX FILS CASSÉS DU DIAGNOSTIC SONT RÉPARÉS, et le corps de
@@ -104,14 +117,17 @@ export async function chargerDiagnosticParUnite(): Promise<DiagnosticParCible> {
 export async function chargerDiagnosticEleve(eleveId: string) {
   const { supabase } = await verifierProf()
 
-  const { data: reponses } = await supabase
+  // Les réponses de CET élève, filtrées en base (jointure `!inner`), et par pages.
+  const { data: reponses } = await toutesLesPages((debut, fin) => supabase
     .from('quazian_answers')
     .select(`
       score, repondu, p_a, p_b, p_c, p_d,
       quazian_sessions!inner(eleve_id),
       quazian_questions!inner(concept_tag, index_correct)
     `)
-    .not('score', 'is', null)
+    .eq('quazian_sessions.eleve_id', eleveId)
+    .not('score', 'is', null).order('session_id', { ascending: true }).order('question_id', { ascending: true })
+    .range(debut, fin))
 
   const repEleve = (reponses ?? []).filter((r) => {
     const s = r.quazian_sessions as unknown as { eleve_id: string }
@@ -165,6 +181,75 @@ export async function chargerDiagnosticEleve(eleveId: string) {
 }
 
 // Rapport de fragilités IA
+// Le contexte envoyé au modèle : les concepts en idée fausse et en lacune.
+function composerContexte(conceptsClasse: Record<string, { idee_fausse: number; lacune: number; maitrise: number }>): string {
+  const ideesFausses = Object.entries(conceptsClasse)
+    .filter(([, v]) => v.idee_fausse > 0)
+    .sort(([, a], [, b]) => b.idee_fausse - a.idee_fausse)
+    .slice(0, 10)
+  const lacunes = Object.entries(conceptsClasse)
+    .filter(([, v]) => v.lacune > 0 && v.idee_fausse === 0)
+    .sort(([, a], [, b]) => b.lacune - a.lacune)
+    .slice(0, 10)
+  return `CONCEPTS EN IDÉE FAUSSE (score très négatif, erreur confiante) :\n${
+    ideesFausses.map(([c, v]) => `- ${c} : ${v.idee_fausse} élève(s)`).join('\n') || 'Aucun'
+  }\n\nCONCEPTS EN LACUNE (score proche de 2.5, incertitude honnête) :\n${
+    lacunes.map(([c, v]) => `- ${c} : ${v.lacune} élève(s)`).join('\n') || 'Aucun'
+  }`
+}
+
+/**
+ * Le rapport de fragilités D'UNE CLASSE, conservé et daté (Louis, 23/09 : « par
+ * classe et daté » — le rapport d'hier n'était écrit nulle part et mêlait toutes
+ * les classes). Porte `quazian_rapport_actif`.
+ */
+export async function genererRapportClasse(classeId: string): Promise<
+  { rapport: { id: string; contenu: string; created_at: string } } | { rien: string } | { error: string }
+> {
+  const { supabase } = await verifierProf()
+  if (!(await lirePorteRapport(createAdminClient()))) return { error: 'Les rapports conservés sont fermés dans les paramètres de Quazian.' }
+  const { data: classe } = await supabase.from('classes').select('id, nom').eq('id', classeId).maybeSingle()
+  if (!classe) return { error: 'Classe introuvable.' }
+
+  const { conceptsClasse, erreur } = await chargerDiagnosticClasse(classeId)
+  // Une lecture en échec ne fait JAMAIS un rapport daté sur une partie des réponses.
+  if (erreur) return { error: `Lecture du diagnostic impossible (${erreur}) : aucun rapport n’a été demandé.` }
+  const evalues = Object.keys(conceptsClasse).length
+  if (evalues === 0) {
+    return { rien: 'Aucune réponse de quiz corrigée pour cette classe : rien à analyser.' }
+  }
+  // Mesuré au bac à sable : sans fragilité, le modèle est payé pour écrire « rien à signaler ».
+  if (!aDesFragilites(conceptsClasse)) {
+    return { rien: `Rien à signaler : sur ${evalues} concept${evalues > 1 ? 's' : ''} évalué${evalues > 1 ? 's' : ''}, aucun n’est en idée fausse ni en lacune. Aucun rapport n’a été demandé à l’IA.` }
+  }
+  const client = new Anthropic()
+  const message = await client.messages.create({
+    model: MODELE,
+    max_tokens: 1024,
+    messages: [{
+      role: 'user',
+      content: `Tu es un assistant pédagogique pour un professeur de philosophie au lycée. Analyse ces données de diagnostic de la classe ${classe.nom} et produis un rapport de fragilités concis (8-10 lignes max). Distingue clairement les idées fausses (à corriger en priorité) des lacunes (à exposer davantage). Formule des suggestions d'action concrètes. Écris en texte simple, sans Markdown : ni titre, ni astérisques, ni dièses ; des phrases, un paragraphe par idée.\n\n${composerContexte(conceptsClasse)}`,
+    }],
+  })
+  const cout = coutMessage(message.usage)
+  await enregistrerCoutApi('quazian', cout, { classeId, modele: MODELE, tokens: normaliserUsage(message.usage) })
+  const contenu = texteSansMarkdown(message.content
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { type: 'text'; text: string }).text)
+    .join(''))
+  if (!contenu) return { error: 'Le modèle n’a rien rendu. Réessaie.' }
+
+  const { data: ligne, error } = await supabase.from('quazian_rapports_fragilites')
+    .insert({ classe_id: classeId, contenu, modele: MODELE, cout })
+    .select('id, contenu, created_at').single()
+  // Le rapport a coûté : s'il ne s'enregistre pas, on le montre quand même, et on le dit.
+  if (error || !ligne) {
+    console.error(`[quazian] rapport non conservé (classe ${classeId}) — ${error?.message}`)
+    return { error: `Le rapport n’a pas pu être conservé (${error?.message ?? 'erreur inconnue'}). Voici son texte : ${contenu}` }
+  }
+  return { rapport: ligne as { id: string; contenu: string; created_at: string } }
+}
+
 export async function genererRapportFragilites(): Promise<{ rapport: string } | { error: string }> {
   await verifierProf()
 

@@ -26,6 +26,7 @@ import 'server-only'
 
 import type { createAdminClient } from '@/utils/supabase/admin'
 import { diagnostiquerEleve } from '@/utils/diagnostic'
+import { toutesLesPages } from '@/utils/quazian-pages'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -67,10 +68,14 @@ export async function chargerLaRetentionDeLaClasse(
   const quizIds = new Set(((quiz ?? []) as Array<{ id: string }>).map((q) => q.id))
   if (quizIds.size === 0) return { eleves: 0, reponses: 0, fragiles: [], incidents, href }
 
-  const { data: reponses, error: eRep } = await admin
+  // Les réponses des quizz de la classe, filtrées EN BASE (`!inner`), et par
+  // pages : PostgREST s'arrête à 1000 lignes sans le dire (`utils/quazian-pages.ts`).
+  const { data: reponses, error: eRep } = await toutesLesPages((debut, fin) => admin
     .from('quazian_answers')
     .select('score, quazian_sessions!inner(eleve_id, quiz_id), quazian_questions!inner(concept_tag)')
-    .not('score', 'is', null)
+    .not('score', 'is', null).in('quazian_sessions.quiz_id', [...quizIds])
+    .order('session_id', { ascending: true }).order('question_id', { ascending: true })
+    .range(debut, fin))
   if (eRep) {
     incidents.push(`les réponses de quizz : ${eRep.message}`)
     return { eleves: 0, reponses: 0, fragiles: [], incidents, href }
