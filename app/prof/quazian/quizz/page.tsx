@@ -10,7 +10,9 @@ import { formatInstant, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 
 // (perf) Le contexte plan (gate ON) résout la frise d'enseignement par classe. Inerte gate OFF.
-export const maxDuration = 60
+// 300 (23/09) : `creerQuizz` part d'ici, et la génération contrôlée (génération,
+// relecture à l'aveugle, réécriture, relecture) prend 50 à 65 s pour 15 questions au banc.
+export const maxDuration = 300
 
 // lance_at / ferme_at = instants (timestamptz) → affichés dans le fuseau choisi.
 const DATE_COURTE: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }

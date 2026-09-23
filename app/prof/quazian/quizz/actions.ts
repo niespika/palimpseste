@@ -10,6 +10,8 @@ import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serve
 import { resoudreCible } from '@/utils/quazian-cibles'
 import { classeAModule } from '@/utils/acces'
 import { lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
+import { phraseEcartees } from '@/utils/quazian-controle-questions'
+import type { Generation, QuestionEcartee } from '@/utils/generer-questions'
 
 // L'antichambre ouverte (22/09) fige le brouillon : des élèves attendent devant
 // ce quiz. Tolérant — porte fermée ou colonne absente ⇒ pas d'antichambre.
@@ -38,6 +40,20 @@ async function refusSiNonModifiable(
   if (s !== 'brouillon') return 'Seul un brouillon se modifie.'
   if (await antichambreOuverte(quizId)) return REFUS_ANTICHAMBRE
   return null
+}
+
+// 23/09 — ce que le contrôle des questions générées dit au professeur. Un lot
+// entièrement écarté porte ses motifs (`AucuneQuestionRetenue`) : ce n'est pas
+// une panne du modèle. Reconnu par sa forme, pas par `instanceof`.
+function ecarteesDe(e: unknown): QuestionEcartee[] | null {
+  const ecartees = (e as { ecartees?: unknown } | null)?.ecartees
+  return Array.isArray(ecartees) && ecartees.length > 0 ? ecartees as QuestionEcartee[] : null
+}
+function bilanControle(g: Generation): string {
+  return [
+    phraseEcartees(g.ecartees),
+    g.relecture ? '' : 'La relecture automatique n’a pas pu vérifier tous les énoncés : relis les mises en situation avant de valider.',
+  ].filter(Boolean).join(' ')
 }
 
 // Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
@@ -146,14 +162,26 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
     return { error: `Pas assez de cartes validées dans les contenus sélectionnés (${cartes.length} carte${cartes.length > 1 ? 's' : ''} trouvée${cartes.length > 1 ? 's' : ''}, minimum 5).` }
   }
 
-  // Générer les questions via IA
+  // Générer les questions via IA — contrôlées (23/09) : ce qui échoue au contrôle
+  // après une réécriture est écarté, et le professeur en est averti.
   let questions
+  let avisControle = ''
   try {
-    questions = await genererQuestions(cartes, Math.min(nbQuestions, cartes.length * 2), classeId)
+    const demandees = Math.min(nbQuestions, cartes.length * 2)
+    const generation = await genererQuestions(cartes, demandees, classeId)
+    questions = generation.questions
+    if (generation.ecartees.length > 0) {
+      avisControle = `Quiz créé avec ${questions.length} question${questions.length > 1 ? 's' : ''} sur ${demandees} : ${bilanControle(generation)} Tu peux en ajouter depuis le quiz.`
+    } else if (!generation.relecture) {
+      avisControle = bilanControle(generation)
+    }
   } catch (e) {
     console.error('[quazian] génération questions :', e)
+    const ecartees = ecarteesDe(e)
+    if (ecartees) return { error: `Aucune question n’a été retenue : ${phraseEcartees(ecartees)} Réessaie.` }
     return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
   }
+  const avec = (...avis: (string | false)[]) => avis.filter(Boolean).join(' ') || undefined
 
   // ── Résolution du semestre ────────────────────────────────────────────────
   // Gate ON + conception depuis le plan (exercice_id) → Q7 : le semestre est celui
@@ -281,7 +309,7 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
       // Erreur DB transitoire (≠ course perdue) : NE PAS supprimer le quiz (travail IA).
       // Le brouillon reste utilisable ; la liaison au plan pourra être reprise.
       revalidatePath('/prof/quazian/quizz')
-      return { success: true, quizId: quizz.id, avis: 'Le quiz est créé, mais sa liaison au plan a échoué (erreur passagère). Ouvre-le ; tu pourras relancer sa conception depuis le plan.' }
+      return { success: true, quizId: quizz.id, avis: avec('Le quiz est créé, mais sa liaison au plan a échoué (erreur passagère). Ouvre-le ; tu pourras relancer sa conception depuis le plan.', avisControle) }
     }
     if (!claimed || claimed.length === 0) {
       // Course perdue (un autre onglet a posé quiz_id) : le quiz frais est un doublon
@@ -306,17 +334,14 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
     if (eExo) {
       // Le quiz existe et reste utilisable ; seul son rattachement au plan a échoué.
       revalidatePath('/prof/quazian/quizz')
-      return { success: true, quizId: quizz.id, avis: 'Le quiz est créé, mais son rattachement au plan a échoué. Tu peux le rattacher depuis la grille du plan.' }
+      return { success: true, quizId: quizz.id, avis: avec('Le quiz est créé, mais son rattachement au plan a échoué. Tu peux le rattacher depuis la grille du plan.', avisControle) }
     }
     await synchroniserStatutExerciceQuiz(admin, quizz.id)
   }
 
   revalidatePath('/prof/quazian/quizz')
-  return {
-    success: true,
-    quizId: quizz.id,
-    ...(avisSansPlan ? { avis: 'Cette classe n’a pas de plan annuel exploitable — le quiz n’apparaîtra pas au calendrier prospectif.' } : {}),
-  }
+  const avis = avec(avisSansPlan && 'Cette classe n’a pas de plan annuel exploitable — le quiz n’apparaîtra pas au calendrier prospectif.', avisControle)
+  return { success: true, quizId: quizz.id, ...(avis ? { avis } : {}) }
 }
 
 // Refuser retire réellement la question ; aucun lecteur élève ne filtre un statut « refusé ».
@@ -357,10 +382,15 @@ export async function ajouterQuestions(formData: FormData) {
   if (erreurQuestions) return { error: 'Impossible de lire les questions déjà posées.' }
 
   let questions
+  let ecartees = ''
   try {
-    questions = await genererQuestionsSupplementaires(cartes, demande.nb, dejaPosees ?? [], demande.consigne, quiz.classe_id)
+    const generation = await genererQuestionsSupplementaires(cartes, demande.nb, dejaPosees ?? [], demande.consigne, quiz.classe_id)
+    questions = generation.questions
+    ecartees = bilanControle(generation)
   } catch (e) {
     console.error('[quazian] questions supplémentaires :', e)
+    const motifs = ecarteesDe(e)
+    if (motifs) return { error: `Aucune question n’a été retenue : ${phraseEcartees(motifs)} Réessaie.` }
     return { error: 'La génération IA n’a rendu aucune question exploitable. Réessaie.' }
   }
   // L'appel IA est long : le brouillon doit encore être modifiable à son retour.
@@ -377,7 +407,7 @@ export async function ajouterQuestions(formData: FormData) {
   if (error) return { error: 'Les questions générées n’ont pas pu être enregistrées.' }
   const erreur = await actualiserNombreQuestions(supabase, quizId)
   if (erreur) return { error: erreur }
-  return { success: true, message: `${questions.length} question${questions.length > 1 ? 's' : ''} ajoutée${questions.length > 1 ? 's' : ''} sur ${demande.nb} demandée${demande.nb > 1 ? 's' : ''}.` }
+  return { success: true, message: `${questions.length} question${questions.length > 1 ? 's' : ''} ajoutée${questions.length > 1 ? 's' : ''} sur ${demande.nb} demandée${demande.nb > 1 ? 's' : ''}.${ecartees ? ' ' + ecartees : ''}` }
 }
 
 // Valider une question

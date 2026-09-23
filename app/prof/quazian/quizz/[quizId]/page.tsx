@@ -8,6 +8,10 @@ import { AjouterQuestions } from './AjouterQuestions'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
 
+// « Ajouter des questions » part d'ici : génération contrôlée (génération, relecture
+// à l'aveugle, réécriture, relecture), jusqu'à ~1 min au banc du 23/09.
+export const maxDuration = 300
+
 async function actionValiderToutes(formData: FormData): Promise<void> {
   'use server'
   await validerToutesQuestions(formData)
