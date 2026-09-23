@@ -86,6 +86,16 @@ const reponsesElo = async () => {
   const { data: a } = await admin.from('quazian_answers').select('score, repondu').eq('session_id', s.id)
   return { soumise: !!s.submitted_at, lignes: a.length, sansScore: a.filter((x) => x.score === null).length, repondues: a.filter((x) => x.repondu).length }
 }
+// Ce qu'un élève lit PAR L'API avec son propre jeton (la fuite de la revue finale).
+const anon = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+async function noteLueParLEleve() {
+  const { data: lien } = await admin.auth.admin.generateLink({ type: 'magiclink', email: env.TEST_ELEVE_EMAIL })
+  const { data: ses, error } = await anon.auth.verifyOtp({ token_hash: lien.properties.hashed_token, type: 'magiclink' })
+  if (error) return `connexion refusée : ${error.message}`
+  const r = await fetch(`${env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/quazian_quiz_scores?select=score_moyen&quiz_id=eq.${QUIZ}`, {
+    headers: { apikey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY, Authorization: `Bearer ${ses.session.access_token}` } })
+  return `${(await r.json()).length} ligne(s) lisible(s)`
+}
 try {
   console.log('1. Élo passe le quiz et soumet, à l’écran')
   await elo.taille(375)
@@ -93,6 +103,10 @@ try {
   const glisse = (i, v) => elo.evalue(`(() => { const el = document.querySelectorAll('input[type=range]')[${i}]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '${v}'); el.dispatchEvent(new Event('input', { bubbles: true })); return true })()`)
   const clic = (t) => elo.evalue(`(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim().startsWith(${JSON.stringify(t)}) || x.getAttribute('aria-label')?.startsWith(${JSON.stringify(t)})); if (!b) return false; b.click(); return true })()`)
   await glisse(0, 70); await glisse(1, 30); await dors(300)
+  // Remonter en haut quand on change de question (revue finale) : on part du bas.
+  await elo.evalue('window.scrollTo(0, document.body.scrollHeight)'); await dors(300)
+  await clic('Suivant'); await dors(1500)
+  console.log('   après « Suivant » depuis le bas de page, défilement :', await elo.evalue('Math.round(window.scrollY)'), 'px')
   const n = await elo.evalue(`document.querySelectorAll('button[aria-label^="Question "]').length`)
   await clic(`Question ${n} `); await dors(1500)
   await glisse(2, 100); await dors(300)
@@ -100,6 +114,7 @@ try {
   await clic('Envoyer mes réponses'); await dors(3000)
   console.log('   écran :', (await elo.evalue(`document.body.innerText`)).includes('Quizz soumis') ? '« Quizz soumis ! »' : '(pas de confirmation)')
   console.log('   en base, quiz encore lancé :', JSON.stringify(await reponsesElo()))
+  console.log('   sa note lue par l’API, quiz encore lancé :', await noteLueParLEleve())
 
   console.log('2. Le professeur ferme le quiz, à l’écran')
   await prof.taille(1280)
@@ -113,10 +128,16 @@ try {
   console.log('   toutes copies : réponses', a.length, '— sans score', a.filter((x) => x.score === null).length)
   const { data: note } = await admin.from('quazian_quiz_scores').select('note_formative_20').eq('quiz_id', QUIZ).eq('eleve_id', eloId).single()
   console.log('   note d’Élo :', note.note_formative_20)
+  console.log('   sa note lue par l’API, quiz fermé :', await noteLueParLEleve())
+  const { data: sess } = await admin.from('quazian_sessions').select('submitted_at, auto_submitted').eq('quiz_id', QUIZ)
+  console.log('   copies :', sess.length, '— soumises', sess.filter((x) => x.submitted_at).length, '— dont auto', sess.filter((x) => x.auto_submitted).length)
+  const { data: zs } = await admin.from('quazian_quiz_scores').select('z_quiz').eq('quiz_id', QUIZ)
+  console.log('   notes :', zs.length, '— z nuls', zs.filter((x) => !x.z_quiz).length)
 
   console.log('3. Élo recharge : l’écran de note')
   await elo.va(`${BASE}/eleve/modules/quazian/quizz/${QUIZ}`)
   console.log('   ', (await elo.evalue(`document.querySelector('section')?.innerText.replace(/\\s+/g, ' ').slice(0, 240) ?? '(rien)'`)))
+  console.log('   « J’ai vu ma note » à', await elo.evalue(`Math.round([...document.querySelectorAll('button, div')].find(x => /Note vue|J’ai vu ma note|J'ai vu ma note/.test(x.textContent) && x.children.length === 0)?.getBoundingClientRect().top ?? -1)`), 'px du haut')
   await elo.capture('eleve-note-apres-fermeture-375')
 } catch (e) {
   console.error('⛔ recette interrompue :', e)

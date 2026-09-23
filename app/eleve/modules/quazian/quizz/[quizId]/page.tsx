@@ -85,10 +85,13 @@ export default async function PassationPage({
     const n = details.length
     const total = details.reduce((a, d) => a + d.score, 0)
     const moyenne = n > 0 ? total / n : 0
-    const moyenne2 = Math.round(moyenne * 100) / 100
+    // Au millième, comme le détail des questions : l'élève qui refait le calcul
+    // tombe juste, et « arrondie à » part du même nombre (revue finale du 23/09 :
+    // deux arrondis sur deux nombres se contredisaient sur ~5 % des copies).
+    const moyenne2 = Math.round(moyenne * 1000) / 1000
     const note = retour.noteFormative
-    const noteCalculee = Math.round((10 + moyenne2) * 100) / 100
-    const note1 = note !== null ? Math.round(note * 10) / 10 : null
+    const noteCalculee = Math.round((10 + moyenne2) * 1000) / 1000
+    const note1 = note !== null ? Math.round(noteCalculee * 10) / 10 : null
     // Point 8 : « En parler avec le tuteur » sous une erreur assurée (≥ 70 points
     // sur une mauvaise réponse) — porte ouverte, tuteur actif, classe qui l'a.
     const adminTuteur = createAdminClient()
@@ -98,7 +101,7 @@ export default async function PassationPage({
       classeAModule(supabase, quizz.classe_id as string, 'scriptorium'),
     ])
     const tuteurOffert = porteTuteur && reglagesRag.actif && classeATuteur
-    const aPoints = (x: number) => `${x < 0 ? '−' : ''}${nombre(Math.abs(x))} point${Math.abs(x) > 1 || x === 0 ? 's' : ''}`
+    const aPoints = (x: number) => `${x < 0 ? '−' : ''}${nombre(Math.abs(x), 3)} point${Math.abs(x) > 1 || x === 0 ? 's' : ''}`
 
     return (
       <div className="max-w-xl mx-auto space-y-4">
@@ -116,10 +119,10 @@ export default async function PassationPage({
               <p>Chaque question te rapporte entre <strong className="text-encre">−10</strong> et <strong className="text-encre">+10</strong> points.</p>
               <p>Tes {n} questions ensemble : <strong className="text-encre">{aPoints(total)}</strong>.</p>
               <p>
-                Ta moyenne : {total < 0 ? '−' : ''}{nombre(Math.abs(total))} ÷ {n} = <strong className="text-encre">{signe(moyenne2)}</strong> par question.
+                Ta moyenne : {total < 0 ? '−' : ''}{nombre(Math.abs(total), 3)} ÷ {n} = <strong className="text-encre">{signe(moyenne2)}</strong> par question.
               </p>
               <p>
-                Ta note : 10 {moyenne2 < 0 ? '−' : '+'} {nombre(Math.abs(moyenne2))} = {nombre(noteCalculee)}
+                Ta note : 10 {moyenne2 < 0 ? '−' : '+'} {nombre(Math.abs(moyenne2), 3)} = {nombre(noteCalculee, 3)}
                 {Math.abs(noteCalculee - note1) > 0.001 ? <>, arrondie à <strong className="text-encre">{nombre(note1, 1)} / 20</strong>.</> : <> <strong className="text-encre">/ 20</strong>.</>}
               </p>
             </div>
@@ -128,6 +131,11 @@ export default async function PassationPage({
             </p>
           </section>
         )}
+
+        {/* « J'ai vu ma note » EN HAUT (revue finale du 23/09) : tant qu'il n'est
+            pas coché, l'élève ne peut rien rendre ailleurs, et c'est ici qu'on
+            l'envoie — la page fait maintenant plusieurs écrans de long. */}
+        <BoutonVuNote quizId={quizId} dejaVu={noteVue} />
 
         <BaremePartage />
 
@@ -183,9 +191,6 @@ export default async function PassationPage({
           )
         })}
 
-        <div className="pt-2">
-          <BoutonVuNote quizId={quizId} dejaVu={noteVue} />
-        </div>
       </div>
     )
   }

@@ -206,6 +206,12 @@ export async function fermerQuizz(formData: FormData) {
 
   if (eFermeture) return { error: `La fermeture a échoué : ${eFermeture.message}` }
 
+  // Seconde passe, quiz figé : un élève qui envoyait pendant la fermeture a pu
+  // écrire ses lignes après la première. Rien de grave si elle échoue (la note
+  // et l'écran de note se recalculent depuis les points) : on le dit au journal.
+  const eSeconde = await ecrireScoresParReponse(supabase, quizId, questions)
+  if (eSeconde) console.error(`[quazian] seconde passe des scores (quiz ${quizId}) — ${eSeconde}`)
+
   if (!fermes || fermes.length === 0) {
     // Zéro ligne : soit un autre onglet a fermé entre-temps (succès), soit le
     // quizz n'est pas dans un état fermable — deux cas très différents à dire.
@@ -314,6 +320,9 @@ async function soumettreSession(
 
     const scoreBrut = calculerScoreBrier(jetons, q.index_correct)
 
+    // Les scores PAR RÉPONSE ne s'écrivent plus ici : `ecrireScoresParReponse`
+    // les pose tous à la fin de la fermeture (revue finale du 23/09 — sans quoi,
+    // une fermeture interrompue laissait des copies scorées lisibles).
     if (!rep) {
       answersToInsert.push({
         session_id: sessionId,
@@ -323,22 +332,17 @@ async function soumettreSession(
         p_c: 0.25,
         p_d: 0.25,
         repondu: false,
-        brier_brut: scoreBrut / 10,
-        score: scoreBrut,
       })
-    } else {
-      const { error } = await supabase.from('quazian_answers').update({
-        brier_brut: scoreBrut / 10,
-        score: scoreBrut,
-      }).eq('session_id', sessionId).eq('question_id', q.id)
-      if (error) return error.message
     }
 
     scoreMoyen += scoreBrut
   }
 
   if (answersToInsert.length > 0) {
-    const { error } = await supabase.from('quazian_answers').insert(answersToInsert)
+    // `ignoreDuplicates` : si l'élève envoie au même instant, son propre envoi a
+    // pu insérer ces lignes — l'insertion ne doit pas échouer en « duplicate key ».
+    const { error } = await supabase.from('quazian_answers')
+      .upsert(answersToInsert, { onConflict: 'session_id,question_id', ignoreDuplicates: true })
     if (error) return error.message
   }
 
