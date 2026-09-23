@@ -220,6 +220,27 @@ async function aletheiaNonLus(admin: Admin, eleveId: string, classeIds: string[]
   }
 }
 
+/**
+ * Les notes de quiz FERMÉS, de ces classes, que l'élève n'a pas encore marquées
+ * « vues » — pour la tâche « Ta note de quiz t'attend » de l'accueil (demande de
+ * Louis, 23/09 : tant qu'elle n'est pas cochée, l'élève ne peut rien rendre, et
+ * il doit le lire dans « À faire »). Une panne rend une liste vide (journal).
+ */
+export async function notesQuizzNonVues(
+  admin: Admin, eleveId: string, classeIds: string[],
+): Promise<{ quizId: string; classeId: string }[]> {
+  if (classeIds.length === 0) return []
+  const { data: scores, error: eScore } = await admin
+    .from('quazian_quiz_scores').select('quiz_id').eq('eleve_id', eleveId).is('note_vue_at', null)
+  log('quazian (notes non vues)', eScore)
+  const quizIds = (scores ?? []).map((s) => s.quiz_id as string)
+  if (quizIds.length === 0) return []
+  const { data: quizzes, error } = await admin
+    .from('quazian_quizzes').select('id, classe_id').eq('statut', 'ferme').in('classe_id', classeIds).in('id', quizIds)
+  log('quazian (quiz des notes non vues)', error)
+  return (quizzes ?? []).map((q) => ({ quizId: q.id as string, classeId: q.classe_id as string }))
+}
+
 async function quazianNonLus(admin: Admin, eleveId: string, classeIds: string[]): Promise<RetourNonLu[]> {
   try {
     if (classeIds.length === 0) return []

@@ -7,6 +7,8 @@ import { PROFIL_LABELS, type ProfilConcept, type DiagnosticConcept } from '@/uti
 import { formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { RapportIA } from './RapportIA'
+import { RapportsFragilites } from './RapportsFragilites'
+import { chargerRapports, lirePorteRapport } from '@/utils/quazian-rapports-serveur'
 import Tuile from '@/components/Tuile'
 import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
 
@@ -270,16 +272,23 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
   const classesList = (classes ?? []) as { id: string; nom: string }[]
   const classeChoisie = classesList.find(c => c.id === classeSel)
 
-  const { diagnostics, profilesMap, conceptsClasse } = classeChoisie
+  const { diagnostics, profilesMap, conceptsClasse, erreur: erreurDiagnostic } = classeChoisie
     ? await chargerDiagnosticClasse(classeChoisie.id)
-    : { diagnostics: {} as Record<string, DiagnosticConcept[]>, profilesMap: {}, conceptsClasse: {} }
+    : { diagnostics: {} as Record<string, DiagnosticConcept[]>, profilesMap: {}, conceptsClasse: {}, erreur: null }
+
+  // Porte `quazian_rapport_actif` (23/09) : le rapport se fait PAR CLASSE et se
+  // conserve. Fermée, le rapport d'hier (toutes classes, non conservé) reste.
+  const porteRapport = await lirePorteRapport(createAdminClient())
+  const [lecture, fuseau] = porteRapport && classeChoisie
+    ? await Promise.all([chargerRapports(supabase, classeChoisie.id), lireFuseau()])
+    : [null, '']
 
   return (
     <div>
       <Entrees vue={vue} retourClasse={retourClasse} />
 
-      {/* Synthèse IA — vue d'ensemble toutes classes */}
-      <RapportIA />
+      {/* Synthèse IA — vue d'ensemble toutes classes (porte des rapports fermée) */}
+      {!porteRapport && <RapportIA />}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         {classesList.map(c => (
@@ -287,10 +296,30 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
         ))}
       </div>
 
+      {classeChoisie && lecture && (
+        <>
+          {lecture.error && <p role="alert" className="text-sm text-retard mb-3">Lecture des rapports impossible : {lecture.error}</p>}
+          <RapportsFragilites
+            key={classeChoisie.id}
+            classeId={classeChoisie.id}
+            classeNom={classeChoisie.nom}
+            fuseau={fuseau}
+            rapportsInit={lecture.rapports}
+          />
+        </>
+      )}
+
+      {erreurDiagnostic && (
+        <p role="alert" className="text-sm text-retard mb-3">Diagnostic incomplet — lecture impossible : {erreurDiagnostic}. Rien n’est affiché plutôt qu’une partie.</p>
+      )}
+
       {classeChoisie ? (
         <MatriceClasse diagnostics={diagnostics} profilesMap={profilesMap} conceptsClasse={conceptsClasse} />
       ) : (
-        <p className="text-center py-8 text-muet text-sm">Choisis une classe pour voir le détail des fragilités par concept et par élève.</p>
+        <p className="text-center py-8 text-muet text-sm">
+          Choisis une classe pour voir le détail des fragilités par concept et par élève
+          {porteRapport ? ', et son rapport de fragilités (conservé, daté).' : '.'}
+        </p>
       )}
     </div>
   )

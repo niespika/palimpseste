@@ -479,6 +479,11 @@ export async function regenererDisctracteurs(formData: FormData) {
 
   const bonneReponse = question.options[question.index_correct]
   const nouvelle = await regenererQuestion(question.enonce, bonneReponse, question.concept_tag)
+  // L'appel IA dure 5 à 30 s : le quiz a pu être lancé entre-temps. On relit
+  // AVANT d'écrire — sinon des élèves répondraient à une question dont la bonne
+  // réponse change de place sous leurs points (revue finale du 23/09).
+  const refusApres = await refusSiNonModifiable(supabase, quizId, id)
+  if (refusApres) return { error: refusApres }
 
   await supabase
     .from('quazian_questions')

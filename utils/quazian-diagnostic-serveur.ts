@@ -41,6 +41,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { diagnostiquerEleve } from '@/utils/diagnostic'
 import { chargerCiblesQuazian } from '@/utils/quazian-cibles'
+import { toutesLesPages } from '@/utils/quazian-pages'
 
 export interface DiagnosticParCible {
   /** Les cibles vivantes de Quazian — l'ARC BI-SOURCE : contenus ET unités. */
@@ -60,14 +61,16 @@ export async function chargerLeDiagnosticParCible(
     //    quiz d'aujourd'hui, `scope_unites` celui de l'ancien monde. Lire l'un
     //    sans l'autre est exactement le second fil cassé.
     client.from('quazian_quizzes').select('id, scope_unites, scope_contenus'),
-    client
+    // Par pages : PostgREST s'arrête à 1000 lignes sans le dire (`utils/quazian-pages.ts`).
+    toutesLesPages((debut, fin) => client
       .from('quazian_answers')
       .select(`
         score,
         quazian_sessions!inner(eleve_id, quiz_id),
         quazian_questions!inner(concept_tag)
       `)
-      .not('score', 'is', null),
+      .not('score', 'is', null).order('session_id', { ascending: true }).order('question_id', { ascending: true })
+      .range(debut, fin)),
   ])
 
   const unites = cibles.map((c: { id: string; label: string }) => ({ id: c.id, label: c.label }))

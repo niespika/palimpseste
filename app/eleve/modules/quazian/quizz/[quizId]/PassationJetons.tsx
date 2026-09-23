@@ -151,6 +151,9 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
     if (envoiEnCours.current) return
     const aller = () => {
       setErreur(null)
+      // Sur téléphone, la page est longue (quatre curseurs) : sans cela, l'élève
+      // arrivait sur les réponses de la question suivante, énoncé hors de l'écran.
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
       if (cible === 'recap') { setRecap(true); setRecapVu(true); return }
       setRecap(false)
       setIndexQuestion(cible)
@@ -277,7 +280,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
       {/* En-tête */}
       <div className="flex items-start justify-between gap-3 mb-6">
         <div className="min-w-0">
-          {/* ⚠️ `flex-wrap` : 15 cases de 32 px ne tiennent pas sur une ligne à 375 px. */}
+          {/* ⚠️ `flex-wrap` : 15 cases de 40 px ne tiennent pas sur une ligne à 375 px. */}
           <div className="flex flex-wrap gap-1">
             {questions.map((q, i) => (
               <button
@@ -285,7 +288,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
                 onClick={() => allerA(i)}
                 disabled={pending}
                 aria-label={`Question ${i + 1} — ${LIBELLE_CASE[etatCase(i)]}`}
-                className={`w-8 h-8 text-xs rounded-md border transition-colors ${CLASSE_CASE[etatCase(i)]}`}
+                className={`w-10 h-10 text-sm rounded-md border transition-colors ${CLASSE_CASE[etatCase(i)]}`}
               >
                 {i + 1}
               </button>

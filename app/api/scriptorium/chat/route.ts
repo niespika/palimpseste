@@ -23,7 +23,7 @@ import { fournisseurPour, type AppelIA, type UsageIA } from '@/utils/ia-fourniss
 import { coutSelonModele, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 import { sansDelims } from '@/utils/ia-commun'
 import { inscriptionEleveClasse, classeAModule, classeIdsActives } from '@/utils/acces'
-import { chargerContexteQuestion, lireAncrage, lirePorteTuteur, quizEnCoursPourClasses } from '@/utils/quazian-tuteur-serveur'
+import { chargerContexteQuestion, lireAncrage, quizEnCoursPourClasses } from '@/utils/quazian-tuteur-serveur'
 import { blocContexteQuiz, erreurAssuree, messageOuverture } from '@/utils/quazian-tuteur'
 
 export const maxDuration = 60
@@ -155,7 +155,11 @@ export async function POST(req: Request): Promise<Response> {
   // la colonne n'est pas lue.
   let blocQuiz = ''
   let posteCout = 'scriptorium'
-  if (body?.conversationId && await lirePorteTuteur(admin)) {
+  // ⚠️ Le rattachement se lit MÊME porte fermée (revue finale du 23/09) : la porte
+  //    ne gouverne que le BOUTON ; une discussion déjà ouverte depuis un quiz
+  //    garde sa question — sinon le tuteur répondait sans savoir de quoi on
+  //    parle. `lireAncrage` est tolérant (colonne absente ⇒ null).
+  if (body?.conversationId) {
     const questionId = await lireAncrage(admin, convId)
     const ctx = questionId ? await chargerContexteQuestion(admin, questionId, user.id) : null
     // ⛔ La policy élève des conversations est `for all` : l'élève peut écrire

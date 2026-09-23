@@ -128,6 +128,22 @@ if (RETOUR) {
   } else console.log('aucun bouton « En parler avec le tuteur »')
   console.log('retour élève :', await cdp.evalue(`JSON.stringify([...document.querySelectorAll('main .space-y-4 > div')].map(d => d.innerText.replace(/\\n/g, ' · ').slice(0, 300)))`))
 }
+// La tâche « Ta note de quiz t'attend » de l'accueil (23/09).
+if (process.argv.includes('--accueil')) {
+  await connecter(env.TEST_ELEVE_EMAIL, '/eleve')
+  for (const largeur of LARGEURS) { await taille(largeur); await va(`${BASE}/eleve`); await capture(`eleve-accueil-${largeur}`) }
+  console.log('accueil :', await cdp.evalue(`(() => { const t = document.body.innerText; const i = t.indexOf('Ta note de quiz'); return i < 0 ? '(pas de tâche)' : t.slice(i, i + 220).replace(/\\s+/g, ' ') })()`))
+}
+// Cocher « J'ai vu ma note », puis revenir à l'accueil : la tâche doit disparaître.
+const VU = arg('--vu')
+if (VU) {
+  await connecter(env.TEST_ELEVE_EMAIL, `/eleve/modules/quazian/quizz/${VU}`)
+  await taille(375); await va(`${BASE}/eleve/modules/quazian/quizz/${VU}`)
+  console.log('clic « J’ai vu ma note » :', await cdp.evalue(`(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.includes('ai vu ma note')); if (!b) return false; b.click(); return true })()`))
+  await dors(2500)
+  await va(`${BASE}/eleve`)
+  console.log('accueil après :', await cdp.evalue(`document.body.innerText.includes('Ta note de quiz') ? 'tâche encore là' : 'tâche disparue'`))
+}
 if (PASSATION) {
   // Un glissé au doigt, tel que React le reçoit : valeur posée par le setter natif, puis `input`.
   const glisse = (lettre, v) => cdp.evalue(`(() => {

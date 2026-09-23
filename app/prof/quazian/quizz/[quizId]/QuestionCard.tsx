@@ -79,7 +79,11 @@ export function QuestionCard({
     options.forEach((o, i) => fd.append(`opt${i}`, o))
     fd.append('index_correct', String(correct))
     fd.append('concept_tag', tag)
-    await modifierQuestion(fd)
+    // Le refus se DIT (revue finale du 23/09) : hors brouillon ou antichambre
+    // ouverte, l'action refuse désormais — sans ce message, la correction
+    // disparaissait sans un mot.
+    const res = await modifierQuestion(fd)
+    setErreur(res && 'error' in res && res.error ? res.error : null)
     setMode('vue')
     setPending(false)
   }
@@ -89,7 +93,8 @@ export function QuestionCard({
     const fd = new FormData()
     fd.append('id', question.id)
     fd.append('quizId', quizId)
-    await regenererDisctracteurs(fd)
+    const res = await regenererDisctracteurs(fd)
+    setErreur(res && 'error' in res && res.error ? res.error : null)
     setPending(false)
   }
 

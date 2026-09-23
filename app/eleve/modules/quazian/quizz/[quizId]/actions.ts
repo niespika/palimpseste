@@ -116,6 +116,12 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
     ordreOptions = sessionExist.ordre_options as Record<string, number[]>
   } else {
     if (quizFerme) return { error: 'Ce quizz est terminé.' }
+    // Échéance passée, quiz pas encore fermé : pas de copie neuve (revue finale
+    // du 23/09). Sinon le chrono, déjà à 0, soumettait aussitôt « 25 partout » :
+    // 12,5 / 20 pour un élève qui n'a rien fait, quand un absent n'a pas de note.
+    if (quizz.ferme_at && new Date(quizz.ferme_at as string) <= new Date()) {
+      return { error: 'Le temps est écoulé : ce quiz n’accepte plus de réponse.' }
+    }
 
     // Créer la session avec randomisation par élève
     // ⛔ Graine ALÉATOIRE (revue du 23/09) : l'ancienne (`userId + id`) se
@@ -143,8 +149,16 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
       .select('id')
       .single()
 
-    if (error || !nouvelleSession) return { error: 'Erreur création session' }
-    sessionId = nouvelleSession.id
+    if (error?.code === '23505') {
+      // Double toucher : la session jumelle vient d'être créée — on la reprend.
+      const { data: jumelle } = await supabase.from('quazian_sessions')
+        .select('id, ordre_questions, ordre_options').eq('quiz_id', quizId).eq('eleve_id', userId).maybeSingle()
+      if (!jumelle) return { error: 'Erreur création session' }
+      ordreQuestions = jumelle.ordre_questions as string[]
+      ordreOptions = jumelle.ordre_options as Record<string, number[]>
+      sessionId = jumelle.id as string
+    } else if (error || !nouvelleSession) return { error: 'Erreur création session' }
+    else sessionId = nouvelleSession.id
   }
 
   // Réponses existantes
@@ -347,8 +361,10 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
   //    soumettait en avance lisait son `score` par question — et avec ses propres
   //    points, le score DÉSIGNE la bonne réponse (10 × (2·p_bonne − Σp²)), qu'il
   //    pouvait passer aux autres. Les scores par réponse s'écrivent à la
-  //    FERMETURE (`fermerQuizz`) ; la note, elle, se calcule ici, en mémoire
-  //    (une seule moyenne ne trahit aucune question). Quiz déjà fermé : tout de suite.
+  //    FERMETURE (`fermerQuizz`) ; la note, elle, se calcule ici. ⚠️ Une moyenne
+  //    PEUT trahir une question (copie « sonde ») : c'est la policy de lecture
+  //    élève de `quazian_quiz_scores`, bornée aux quiz fermés, qui la garde
+  //    (`quazian_scores_apres_fermeture.sql`). Quiz déjà fermé : tout de suite.
   const scoresTout = quizz.statut !== 'lance'
   for (const q of questions) {
     const rep = repMap[q.id]
@@ -411,13 +427,43 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
 
   // Écriture serveur (C1) : la NOTE ne s'écrit plus jamais avec le JWT élève —
   // client admin uniquement, calcul 100 % serveur (Brier ci-dessus).
-  await admin.from('quazian_quiz_scores').upsert({
+  // ⚠️ Quiz encore lancé : PAS de `z_quiz` — la fermeture le calcule, et un envoi
+  //    tardif ne doit pas l'écraser par 0 (revue finale du 23/09).
+  const { error: eNote } = await admin.from('quazian_quiz_scores').upsert({
     quiz_id: quizId,
     eleve_id: userId,
     score_moyen: scoreMoyen,
     note_formative_20: Math.min(Math.max(10 + scoreMoyen, 0), 20),
-    z_quiz: zQuiz,
+    ...(quizz.statut === 'lance' ? {} : { z_quiz: zQuiz }),
   }, { onConflict: 'quiz_id,eleve_id' })
+  if (eNote) {
+    // ⛔ Une copie verrouillée SANS note : l'élève lisait « Quizz soumis ! » et
+    //    n'avait jamais de note (la fermeture ne reprend que les copies ouvertes).
+    //    On relâche le verrou posé plus haut : il pourra renvoyer.
+    console.error(`[quazian] note non écrite (session ${sessionId}) — ${eNote.message}`)
+    await admin.from('quazian_sessions').update({ submitted_at: null })
+      .eq('id', sessionId).eq('eleve_id', userId).eq('submitted_at', maintenant)
+    return { error: 'Ta note n’a pas pu être enregistrée — renvoie ton quiz.' }
+  }
+
+  // Le quiz a pu se fermer PENDANT cet envoi : ses scores par réponse, s'ils sont
+  // encore vides, s'écrivent maintenant (la fermeture a pu passer avant eux).
+  if (!scoresTout) {
+    const { data: q2 } = await admin.from('quazian_quizzes').select('statut').eq('id', quizId).maybeSingle()
+    if (q2?.statut === 'ferme') {
+      const correcte = new Map(questions.map((q) => [q.id as string, q.index_correct as number]))
+      const { data: vides } = await admin.from('quazian_answers')
+        .select('session_id, question_id, p_a, p_b, p_c, p_d, repondu').eq('session_id', sessionId).is('score', null)
+      const lignes = (vides ?? []).filter((r) => correcte.has(r.question_id as string)).map((r) => {
+        const s = calculerScoreBrier([r.p_a * 100, r.p_b * 100, r.p_c * 100, r.p_d * 100], correcte.get(r.question_id as string)!)
+        return { ...r, score: s, brier_brut: s / 10 }
+      })
+      if (lignes.length) {
+        const { error: eTard } = await admin.from('quazian_answers').upsert(lignes, { onConflict: 'session_id,question_id' })
+        if (eTard) console.error(`[quazian] scores tardifs non écrits (session ${sessionId}) — ${eTard.message}`)
+      }
+    }
+  }
 
   return {}
 }

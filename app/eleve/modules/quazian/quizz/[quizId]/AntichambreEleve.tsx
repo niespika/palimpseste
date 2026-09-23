@@ -26,9 +26,10 @@ export function AntichambreEleve({ quizId }: { quizId: string }) {
         if (!actif) return
         // `?commencer=1` : il était là, il n'a pas à relire les consignes.
         if (r.etat === 'lance') router.replace(`/eleve/modules/quazian/quizz/${quizId}?commencer=1`)
+        // ⚠️ On sonde TOUJOURS, même sur « introuvable » : une lecture ratée
+        //    d'un instant le renvoie aussi, et arrêter ici laissait l'élève sur
+        //    l'écran d'attente pendant que le quiz tournait (revue finale du 23/09).
         else setRefermee(r.etat !== 'attente')
-        // Quiz supprimé, ou plus de sa classe : inutile de sonder encore.
-        if (r.etat === 'introuvable') clearInterval(id)
       } catch { /* un sondage raté : le suivant rattrapera */ }
     }
     // Déclaré AVANT le premier sondage, qui peut l'arrêter (quiz introuvable).
@@ -42,12 +43,12 @@ export function AntichambreEleve({ quizId }: { quizId: string }) {
       <div>
         <p className="text-sm text-muet flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${refermee ? 'bg-muet' : 'bg-attention animate-pulse'}`} />
-          {refermee ? 'L’antichambre est refermée' : 'En attente du lancement par ton professeur'}
+          {refermee ? 'L’antichambre est fermée pour le moment' : 'En attente du lancement par ton professeur'}
         </p>
         <h2 className="mt-1 text-xl font-serif text-encre">Le quiz va commencer</h2>
         {refermee && (
           <p role="status" className="mt-2 text-sm text-attention">
-            Ton professeur a refermé l’antichambre. Cet écran reprendra tout seul s’il la rouvre.
+            L’antichambre n’est pas ouverte en ce moment. Cet écran reprendra tout seul dès que ton professeur l’ouvrira.
           </p>
         )}
       </div>
