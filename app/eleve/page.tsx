@@ -17,6 +17,7 @@ import Pastille, { type ModuleSceau } from '@/components/Pastille'
 import { lancer } from '@/utils/lancer'
 import { NAV_ELEVE } from '@/components/nav/configNavigation'
 import { lirePorteAntichambre, seuilAntichambre } from '@/utils/quazian-antichambre-serveur'
+import { notesQuizzNonVues } from '@/utils/retours-lus'
 
 // Dates PURES (bornes de semaine) → UTC, agnostique au fuseau.
 const fmtJourCourt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
@@ -100,6 +101,7 @@ export default async function TableauDeBordEleve() {
   let cartesDues = 0
   const codexEnCours: { id: string; classe: string }[] = []
   const quizzEnCours: { id: string; classe: string; antichambre?: boolean }[] = []
+  const notesNonVues: { quizId: string; classe: string }[] = []
   const aletheiaAFaire: { classe: string }[] = []
   type SemaineCourante = { label: string; debut: string; fin: string; vacances: boolean } | null
   let semaineCourante = null as SemaineCourante
@@ -220,6 +222,10 @@ export default async function TableauDeBordEleve() {
     // L'antichambre d'un quiz (22/09) ne se cherche que porte ouverte : fermée,
     // la colonne peut ne pas exister, et l'accueil est celui d'hier.
     const pPorteAntichambre = lancer(lirePorteAntichambre(admin))
+    // Les notes de quiz pas encore marquées « vues » : elles BLOQUENT les rendus
+    // des autres modules — l'élève doit le lire ici (demande de Louis, 23/09).
+    const pNotesNonVues = lancer(notesQuizzNonVues(admin, user.id,
+      enContexte.filter((i) => aModule(i.classe_id, 'quazian')).map((i) => i.classe_id)))
     const pSeances = lancer(Promise.all(enContexte.map(async (insc) => {
       const [codex, quizz, aletheia] = await Promise.all([
         aModule(insc.classe_id, 'codex')
@@ -283,6 +289,9 @@ export default async function TableauDeBordEleve() {
       if (f.tache) fragmentTaches.push(f.tache)
       if (f.theme) themesCommentes.push(f.theme)
     }
+    for (const n of await pNotesNonVues) {
+      notesNonVues.push({ quizId: n.quizId, classe: enContexte.find((i) => i.classe_id === n.classeId)?.classe_nom ?? '' })
+    }
     for (const s of await pSeances) {
       if (s.codexId) codexEnCours.push({ id: s.codexId, classe: s.insc.classe_nom })
       if (s.quizzId) quizzEnCours.push({ id: s.quizzId, classe: s.insc.classe_nom, antichambre: s.antichambre })
@@ -307,6 +316,12 @@ export default async function TableauDeBordEleve() {
     cle: `quizz-${q.id}`, module: 'quazian', titre: 'Quizz en cours', detail: 'Un quizz est ouvert en ce moment.',
     href: `/eleve/modules/quazian/quizz/${q.id}`, cta: 'Participer au quizz', urgence: 100,
     badge: { texte: 'en direct', ton: 'ok', pulse: true }, classe: q.classe,
+  })
+  for (const n of notesNonVues) taches.push({
+    cle: `note-quizz-${n.quizId}`, module: 'quazian', titre: 'Ta note de quiz t’attend',
+    detail: 'Ouvre-la et coche « J’ai vu ma note » : tant que ce n’est pas fait, tu ne peux rien rendre dans les autres modules.',
+    href: `/eleve/modules/quazian/quizz/${n.quizId}`, cta: 'Voir ma note', urgence: 95,
+    badge: { texte: 'bloquant', ton: 'retard' }, classe: n.classe,
   })
   for (const c of codexEnCours) taches.push({
     cle: `codex-${c.id}`, module: 'codex', titre: 'Synthèse Codex', detail: 'Une séance de synthèse est en cours.',
