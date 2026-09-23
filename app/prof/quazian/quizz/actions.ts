@@ -9,6 +9,36 @@ import { lireGatePlanActif, plansValidesCourants, synchroniserStatutExerciceQuiz
 import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serveur'
 import { resoudreCible } from '@/utils/quazian-cibles'
 import { classeAModule } from '@/utils/acces'
+import { lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
+
+// L'antichambre ouverte (22/09) fige le brouillon : des élèves attendent devant
+// ce quiz. Tolérant — porte fermée ou colonne absente ⇒ pas d'antichambre.
+async function antichambreOuverte(quizId: string): Promise<boolean> {
+  const admin = createAdminClient()
+  return (await lirePorteAntichambre(admin)) && !!(await lireAntichambreAt(admin, quizId))
+}
+const REFUS_ANTICHAMBRE = 'L’antichambre de ce quiz est ouverte : referme-la avant de le modifier.'
+
+/**
+ * La garde des gestes qui RÉÉCRIVENT une question (revue du 23/09). Avant, seul
+ * l'écran les cachait : un onglet resté ouvert pouvait « Modifier » ou tirer de
+ * « Nouveaux distracteurs » sur un quiz LANCÉ — et depuis le remêlage à
+ * l'enregistrement, la bonne réponse y change de place alors que les points des
+ * élèves sont enregistrés par position. Brouillon seulement, antichambre fermée.
+ */
+async function refusSiNonModifiable(
+  supabase: Awaited<ReturnType<typeof createClient>>, quizId: string, id: string,
+): Promise<string | null> {
+  const { data: q, error } = await supabase
+    .from('quazian_questions').select('quiz_id, quazian_quizzes!inner(statut)').eq('id', id).maybeSingle()
+  if (error || !q) return 'Question introuvable.'
+  if (q.quiz_id !== quizId) return 'Cette question ne fait plus partie de ce quiz.'
+  const statut = (q.quazian_quizzes as unknown as { statut: string } | { statut: string }[])
+  const s = Array.isArray(statut) ? statut[0]?.statut : statut?.statut
+  if (s !== 'brouillon') return 'Seul un brouillon se modifie.'
+  if (await antichambreOuverte(quizId)) return REFUS_ANTICHAMBRE
+  return null
+}
 
 // Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
 function un<T>(x: T | T[] | null | undefined): T | null {
@@ -298,6 +328,7 @@ export async function refuserQuestion(formData: FormData) {
     .from('quazian_quizzes').select('statut').eq('id', quizId).single()
   if (erreurQuiz) return { error: 'Impossible de lire le quiz.' }
   if (quiz?.statut !== 'brouillon') return { error: 'Seul un brouillon se modifie.' }
+  if (await antichambreOuverte(quizId)) return { error: REFUS_ANTICHAMBRE }
 
   const { data, error } = await supabase.from('quazian_questions')
     .delete().eq('quiz_id', quizId).eq('id', id).select('id')
@@ -314,6 +345,7 @@ export async function ajouterQuestions(formData: FormData) {
     .from('quazian_quizzes').select('statut, scope_contenus, scope_unites, classe_id').eq('id', quizId).single()
   if (erreurQuiz) return { error: 'Impossible de lire le quiz.' }
   if (quiz?.statut !== 'brouillon') return { error: 'Seul un brouillon se modifie.' }
+  if (await antichambreOuverte(quizId)) return { error: REFUS_ANTICHAMBRE }
   const demande = normaliserDemandeQuestions(formData.get('nb'), formData.get('consigne'))
   if ('error' in demande) return { error: demande.error }
 
@@ -336,6 +368,9 @@ export async function ajouterQuestions(formData: FormData) {
     .from('quazian_quizzes').select('statut').eq('id', quizId).single()
   if (erreurStatut) return { error: 'Impossible de relire le quiz ; aucune question ajoutée.' }
   if (actuel?.statut !== 'brouillon') return { error: 'Seul un brouillon se modifie.' }
+  // L'antichambre a pu s'ouvrir pendant l'appel IA (20 à 60 s) : pas de question
+  // non relue devant des élèves qui attendent (revue du 22/09).
+  if (await antichambreOuverte(quizId)) return { error: REFUS_ANTICHAMBRE }
   const { error } = await supabase.from('quazian_questions').insert(
     questions.map((q) => ({ ...q, quiz_id: quizId, statut_validation: 'suggere' })),
   )
@@ -376,6 +411,8 @@ export async function modifierQuestion(formData: FormData) {
   if (!Number.isInteger(indexCorrect) || indexCorrect < 0 || indexCorrect > 3) {
     return { error: 'Réponse correcte invalide (attendu : 0 à 3).' }
   }
+  const refus = await refusSiNonModifiable(supabase, quizId, id)
+  if (refus) return { error: refus }
   const conceptTag = formData.get('concept_tag') as string
 
   await supabase
@@ -399,6 +436,8 @@ export async function regenererDisctracteurs(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
   const quizId = formData.get('quizId') as string
+  const refus = await refusSiNonModifiable(supabase, quizId, id)
+  if (refus) return { error: refus }
 
   const { data: question } = await supabase
     .from('quazian_questions')
@@ -452,6 +491,7 @@ export async function supprimerQuizz(formData: FormData) {
     .single()
 
   if (q?.statut !== 'brouillon') return { error: 'Seuls les brouillons peuvent être supprimés.' }
+  if (await antichambreOuverte(id)) return { error: 'L’antichambre de ce quiz est ouverte : referme-la avant de le supprimer.' }
 
   // Q5 : l'exercice planifié lié retombe `a_concevoir` (gate ON). Fait AVANT le DELETE,
   // tant que quiz_id pointe encore le quiz ; le `on delete set null` de la FK n'est que

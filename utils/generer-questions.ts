@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { REGLE_JSON_TEXTE } from '@/utils/ia-commun'
 import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
+import { melangerReponses } from './quazian-melange'
 
 const MODELE = 'claude-sonnet-4-6'
 
@@ -146,7 +147,7 @@ export async function genererQuestions(
   const brut = JSON.parse(match[0]) as unknown
   const questions = (Array.isArray(brut) ? brut : []).filter(estQuestionValide)
   if (questions.length === 0) throw new Error('Aucune question valide générée.')
-  return questions.slice(0, nbQuestions)
+  return questions.slice(0, nbQuestions).map((q) => melangerReponses(q))
 }
 
 export async function genererQuestionsSupplementaires(
@@ -177,7 +178,7 @@ export async function genererQuestionsSupplementaires(
   const brut = JSON.parse(match[0]) as unknown
   const questions = (Array.isArray(brut) ? brut : []).filter(estQuestionValide)
   if (questions.length === 0) throw new Error('Aucune question valide générée.')
-  return questions.slice(0, nb)
+  return questions.slice(0, nb).map((q) => melangerReponses(q))
 }
 
 export async function regenererQuestion(
@@ -216,5 +217,5 @@ export async function regenererQuestion(
   const brut = JSON.parse(match[0]) as unknown
   const questions = (Array.isArray(brut) ? brut : []).filter(estQuestionValide)
   if (questions.length === 0) throw new Error('Question régénérée invalide.')
-  return questions[0]
+  return melangerReponses(questions[0])
 }

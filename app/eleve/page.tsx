@@ -16,6 +16,7 @@ import { statutDuTheme } from '@/utils/fragments-theme'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
 import { lancer } from '@/utils/lancer'
 import { NAV_ELEVE } from '@/components/nav/configNavigation'
+import { lirePorteAntichambre, seuilAntichambre } from '@/utils/quazian-antichambre-serveur'
 
 // Dates PURES (bornes de semaine) → UTC, agnostique au fuseau.
 const fmtJourCourt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
@@ -98,7 +99,7 @@ export default async function TableauDeBordEleve() {
   const themesCommentes: { inscriptionId: string; classe: string; commentaire: string }[] = []
   let cartesDues = 0
   const codexEnCours: { id: string; classe: string }[] = []
-  const quizzEnCours: { id: string; classe: string }[] = []
+  const quizzEnCours: { id: string; classe: string; antichambre?: boolean }[] = []
   const aletheiaAFaire: { classe: string }[] = []
   type SemaineCourante = { label: string; debut: string; fin: string; vacances: boolean } | null
   let semaineCourante = null as SemaineCourante
@@ -216,6 +217,9 @@ export default async function TableauDeBordEleve() {
     })())
 
     // ── Codex, quizz, Aletheia : une passe par inscription, les trois ensemble.
+    // L'antichambre d'un quiz (22/09) ne se cherche que porte ouverte : fermée,
+    // la colonne peut ne pas exister, et l'accueil est celui d'hier.
+    const pPorteAntichambre = lancer(lirePorteAntichambre(admin))
     const pSeances = lancer(Promise.all(enContexte.map(async (insc) => {
       const [codex, quizz, aletheia] = await Promise.all([
         aModule(insc.classe_id, 'codex')
@@ -235,7 +239,17 @@ export default async function TableauDeBordEleve() {
           })()
           : false,
       ])
-      return { insc, codexId: (codex?.data?.id as string | undefined) ?? null, quizzId: (quizz?.data?.id as string | undefined) ?? null, aletheia }
+      // Pas de quiz lancé : une antichambre ouverte appelle l'élève de la même façon.
+      const antichambre = aModule(insc.classe_id, 'quazian') && !quizz?.data && await pPorteAntichambre
+        ? (await admin.from('quazian_quizzes').select('id').eq('classe_id', insc.classe_id)
+          .eq('statut', 'brouillon').gte('antichambre_at', seuilAntichambre())
+          .order('antichambre_at', { ascending: false }).limit(1).maybeSingle()).data
+        : null
+      return {
+        insc, codexId: (codex?.data?.id as string | undefined) ?? null,
+        quizzId: (quizz?.data?.id as string | undefined) ?? (antichambre?.id as string | undefined) ?? null,
+        antichambre: !quizz?.data && !!antichambre, aletheia,
+      }
     })))
 
     // Flashcards dues — via la même dérivation de visibilité que la file de révision
@@ -271,7 +285,7 @@ export default async function TableauDeBordEleve() {
     }
     for (const s of await pSeances) {
       if (s.codexId) codexEnCours.push({ id: s.codexId, classe: s.insc.classe_nom })
-      if (s.quizzId) quizzEnCours.push({ id: s.quizzId, classe: s.insc.classe_nom })
+      if (s.quizzId) quizzEnCours.push({ id: s.quizzId, classe: s.insc.classe_nom, antichambre: s.antichambre })
       if (s.aletheia) aletheiaAFaire.push({ classe: s.insc.classe_nom })
     }
     if (pStats) cartesDues = (await pStats).dues
@@ -284,7 +298,12 @@ export default async function TableauDeBordEleve() {
   // En état « Toutes », chaque tâche porte sa classe (`classe`) et une clé qui la
   // distingue de sa jumelle de l'autre classe.
   const taches: Tache[] = []
-  for (const q of quizzEnCours) taches.push({
+  for (const q of quizzEnCours) taches.push(q.antichambre ? {
+    cle: `quizz-${q.id}`, module: 'quazian', titre: 'Le quiz va commencer',
+    detail: 'Ton professeur a ouvert l’antichambre : entre et lis les consignes en attendant.',
+    href: `/eleve/modules/quazian/quizz/${q.id}`, cta: 'Entrer', urgence: 100,
+    badge: { texte: 'maintenant', ton: 'ok', pulse: true }, classe: q.classe,
+  } : {
     cle: `quizz-${q.id}`, module: 'quazian', titre: 'Quizz en cours', detail: 'Un quizz est ouvert en ce moment.',
     href: `/eleve/modules/quazian/quizz/${q.id}`, cta: 'Participer au quizz', urgence: 100,
     badge: { texte: 'en direct', ton: 'ok', pulse: true }, classe: q.classe,

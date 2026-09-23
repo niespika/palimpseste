@@ -141,7 +141,9 @@ export async function genererSyntheseClasse(
     const blocs: string[] = []
     for (const c of convRows) {
       const ms = parConv.get(c.id)
-      if (!ms?.length) continue
+      // Une conversation ouverte depuis un quiz sans que l'élève y écrive ne porte
+      // que le message d'ouverture, écrit par le code : rien à synthétiser.
+      if (!ms?.some(m => m.role === 'eleve')) continue
       const nom = nomEleve.get(c.eleveId) ?? 'élève inconnu'
       blocs.push([
         `--- Conversation (élève : ${nom}) ---`,

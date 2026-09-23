@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
+import * as melange from './quazian-melange'
 
 // Même chargement isolé que quazian-fiabilite.test.ts : aucun appel IA ni réseau.
 function charger<T>(fichier: string, deps: Record<string, unknown>): T {
@@ -21,6 +22,8 @@ function charger<T>(fichier: string, deps: Record<string, unknown>): T {
 }
 const generation = charger<typeof import('./generer-questions')>('utils/generer-questions.ts', {
   '@anthropic-ai/sdk': {}, '@/utils/ia-commun': {}, '@/utils/cout-api': {},
+  // 22/09 — le remêlage des réponses à l'enregistrement : le vrai module, il est pur.
+  './quazian-melange': melange,
 })
 const { normaliserDemandeQuestions, construirePromptQuestionsSupplementaires } = generation
 const carte = { recto: 'Que peut-on connaître ?', verso: 'Une réponse de cours.', type: 'concept', concept_tag: 'connaissance' }
@@ -145,6 +148,8 @@ function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ro
     },
     '@/utils/plan-exercices': { synchroniserStatutExerciceQuiz: async (_: unknown, id: string) => { synchronisations.push(id) } },
     '@/app/prof/scriptorium/evaluations/plan-serveur': {}, '@/utils/quazian-cibles': {}, '@/utils/acces': {},
+    // 22/09 — l'antichambre fige le brouillon ; porte fermée ici, comme en prod par défaut.
+    '@/utils/quazian-antichambre-serveur': { lirePorteAntichambre: async () => false, lireAntichambreAt: async () => null },
   })
   const fd = (id = 'q4', nb = '3') => {
     const f = new FormData()
@@ -242,4 +247,30 @@ test('ajouter — deux appels concurrents, un ancien UPDATE termine en dernier',
   assert.ok((await premier).success)
   assert.equal(d.compteur(), 21)
   assert.equal(d.lignes.filter(q => q.quiz_id === 'quiz').length, 21)
+})
+
+// 23/09 — la bonne réponse ne reste pas en tête : aux TROIS sorties de la
+// génération, le modèle rend 60 questions toutes justes en position 0, et ce qui
+// sort doit avoir été remêlé (sans changer la bonne réponse).
+test('génération : les réponses sont remêlées aux trois sorties, la bonne réponse suit', async () => {
+  const rendues = Array.from({ length: 60 }, (_, i) => ({
+    enonce: `Q${i}`, options: [`juste ${i}`, `b${i}`, `c${i}`, `d${i}`], index_correct: 0, concept_tag: `t${i}`,
+  }))
+  class FauxAnthropic {
+    messages = { create: async () => ({ content: [{ type: 'text', text: JSON.stringify(rendues) }], usage: {} }) }
+  }
+  const g = charger<typeof import('./generer-questions')>('utils/generer-questions.ts', {
+    '@anthropic-ai/sdk': { default: FauxAnthropic, __esModule: true },
+    '@/utils/ia-commun': { REGLE_JSON_TEXTE: '' },
+    '@/utils/cout-api': { enregistrerCoutApi: async () => {}, coutMessage: () => 0, normaliserUsage: () => null },
+    './quazian-melange': melange,
+  })
+  const verifier = (qs: { options: string[]; index_correct: number; enonce: string }[]) => {
+    for (const q of qs) assert.equal(q.options[q.index_correct], `juste ${q.enonce.slice(1)}`)
+    assert.ok(qs.some((q) => q.index_correct !== 0), 'toutes les bonnes réponses sont restées en tête')
+  }
+  verifier(await g.genererQuestions([carte], 60))
+  verifier(await g.genererQuestionsSupplementaires([carte], 60, [], ''))
+  const unes = await Promise.all(Array.from({ length: 30 }, () => g.regenererQuestion('Q0', 'juste 0', 't')))
+  verifier(unes)
 })

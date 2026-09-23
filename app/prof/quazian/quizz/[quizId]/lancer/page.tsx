@@ -2,9 +2,13 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { libellesCibles } from '@/utils/quazian-cibles'
-import { eleveIdsAvecAccesModule } from '@/utils/acces'
+import { chargerTableauLive } from '@/utils/quazian-tableau-live-serveur'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { chargerAntichambre, lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
 import { lancerQuizz } from './actions'
 import { TableauLive } from './TableauLive'
+import { AntichambreProf } from './AntichambreProf'
+import { BoutonOuvrirAntichambre } from './BoutonOuvrirAntichambre'
 
 async function actionLancer(formData: FormData): Promise<void> {
   'use server'
@@ -48,50 +52,21 @@ export default async function LancerPage({
     }
   }
 
-  // Récupérer les sessions et scores
-  const { data: sessions } = await supabase
-    .from('quazian_sessions')
-    .select('id, eleve_id, submitted_at, auto_submitted')
-    .eq('quiz_id', quizId)
+  // L'antichambre (22/09) : lue SEULEMENT porte ouverte — porte fermée, la page
+  // est celle d'hier, et la colonne peut même ne pas exister encore.
+  const admin = createAdminClient()
+  const porteAntichambre = quizz.statut === 'brouillon' && await lirePorteAntichambre(admin)
+  const antichambreAt = porteAntichambre ? await lireAntichambreAt(admin, quizId) : null
+  const salle = antichambreAt
+    ? await chargerAntichambre(admin, quizId, quizz.classe_id as string | null)
+    : null
 
-  const { data: scores } = await supabase
-    .from('quazian_quiz_scores')
-    .select('eleve_id, score_moyen')
-    .eq('quiz_id', quizId)
-
-  const scoresMap: Record<string, number> = {}
-  for (const s of scores ?? []) scoresMap[s.eleve_id] = s.score_moyen
-
-  // Récupérer les élèves assignés au module Quazian
-  const { data: moduleData } = await supabase
-    .from('modules')
-    .select('id')
-    .eq('slug', 'quazian')
-    .single()
-
-  const eleveIds = moduleData ? await eleveIdsAvecAccesModule(supabase, moduleData.id) : []
-  const { data: rosterProfiles } = eleveIds.length > 0
-    ? await supabase.from('profiles').select('id, display_name').in('id', eleveIds)
-    : { data: [] }
-
-  const sessionsMap: Record<string, typeof sessions extends (infer T)[] | null ? T : never> = {}
-  for (const s of sessions ?? []) sessionsMap[s.eleve_id] = s
-
-  const eleves = (rosterProfiles ?? []).map((p) => {
-    const session = sessionsMap[p.id]
-    return {
-      id: p.id,
-      display_name: p.display_name as string,
-      // `commence` distingue « a ouvert le quizz » de « est dans la classe » : sans
-      // lui, un élève qui n'a jamais ouvert était compté comme « en cours » et
-      // annoncé comme futur auto-soumis, alors qu'il n'aura simplement AUCUNE note.
-      commence: !!session,
-      soumis: !!session?.submitted_at,
-      submitted_at: session?.submitted_at ?? null,
-      score_moyen: scoresMap[p.id] ?? null,
-      auto: session?.auto_submitted ?? false,
-    }
-  }).sort((a, b) => a.display_name.localeCompare(b.display_name))
+  // Élèves de la CLASSE du quiz, leur avancée et leurs notes — même lecteur que
+  // la route de sondage (`utils/quazian-tableau-live-serveur.ts`).
+  // Un brouillon n'a pas de tableau : pas de lectures pour rien.
+  const tableau = quizz.statut === 'brouillon'
+    ? null
+    : await chargerTableauLive(supabase, quizId, quizz.classe_id as string | null)
 
   // Périmètre BI-SOURCE (C7·L1) : contenus de bibliothèque d'abord, unités
   // héritées ensuite. Un id que ni l'une ni l'autre table ne connaît retombe sur
@@ -117,8 +92,34 @@ export default async function LancerPage({
         </p>
       </div>
 
-      {/* Lancement si encore brouillon */}
-      {quizz.statut === 'brouillon' && (
+      {/* L'antichambre ouverte : qui est là, et le lancement (second temps). */}
+      {/* Une lecture ratée se DIT, mais ne retire ni « Lancer » ni « Refermer » :
+          le professeur est devant sa classe (revue du 22/09). */}
+      {salle && 'error' in salle && <p role="alert" className="text-sm text-retard mb-4">{salle.error}</p>}
+      {salle && (
+        <AntichambreProf
+          quizId={quizId}
+          dureeMin={quizz.duree_min}
+          salleInit={'error' in salle ? { lignes: [], presents: 0, total: 0 } : salle}
+        />
+      )}
+
+      {/* Porte ouverte, antichambre pas encore ouverte : le premier temps. */}
+      {porteAntichambre && !antichambreAt && (
+        <div className="bg-surface border border-bordure rounded-xl p-6 mb-6 text-center">
+          <p className="text-encre-douce text-sm mb-1">
+            Toutes les questions sont validées.
+          </p>
+          <p className="text-muet text-sm mb-4">
+            Ouvre l’antichambre : les élèves y lisent les consignes et s’essaient sur une question
+            qui ne compte pas. Tu lances quand ils sont là — le chrono ne part qu’à ce moment.
+          </p>
+          <BoutonOuvrirAntichambre quizId={quizId} />
+        </div>
+      )}
+
+      {/* Lancement en un geste : la porte de l'antichambre est fermée. */}
+      {quizz.statut === 'brouillon' && !porteAntichambre && (
         <div className="bg-surface border border-bordure rounded-xl p-6 mb-6 text-center">
           <p className="text-encre-douce text-sm mb-4">
             Toutes les questions sont validées. Le quizz est prêt à être lancé.
@@ -136,12 +137,18 @@ export default async function LancerPage({
         </div>
       )}
 
-      {(quizz.statut === 'lance' || quizz.statut === 'ferme') && (
+      {tableau && 'error' in tableau && (
+        <p role="alert" className="text-sm text-retard mb-4">{tableau.error}</p>
+      )}
+
+      {/* Même règle : l'erreur se dit, le chrono et « Fermer le quizz » restent. */}
+      {tableau && (quizz.statut === 'lance' || quizz.statut === 'ferme') && (
         <TableauLive
           quizId={quizId}
           statut={quizz.statut}
           fermeAt={quizz.ferme_at}
-          eleves={eleves}
+          eleves={'error' in tableau ? [] : tableau.eleves}
+          nbQuestions={'error' in tableau ? quizz.nb_questions : tableau.nbQuestions}
           moyenneCohorte={quizz.moyenne_cohorte}
           ecartTypeCohorte={quizz.ecart_type_cohorte}
         />

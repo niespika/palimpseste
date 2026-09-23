@@ -24,6 +24,7 @@ const LIBELLES: Record<string, string> = {
   aletheia: 'Aletheia',
   quazian: 'Quazian',
   scriptorium: 'Scriptorium',
+  'quazian-tuteur': 'Tuteur après quiz',
 }
 
 // ⛔ 18/09 — PostgREST rend 1 000 lignes SANS LE DIRE, et `api_couts` en porte

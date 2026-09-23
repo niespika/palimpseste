@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { eleveIdsAvecAccesModule } from '@/utils/acces'
+import { chargerTableauLive } from '@/utils/quazian-tableau-live-serveur'
 
 export async function GET(
   _req: Request,
@@ -15,43 +15,15 @@ export async function GET(
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
 
-  const { data: sessions } = await supabase
-    .from('quazian_sessions')
-    .select('eleve_id, submitted_at, auto_submitted')
-    .eq('quiz_id', quizId)
+  const { data: quizz, error: eQuizz } = await supabase
+    .from('quazian_quizzes')
+    .select('classe_id')
+    .eq('id', quizId)
+    .maybeSingle()
+  if (eQuizz) return NextResponse.json({ error: eQuizz.message }, { status: 500 })
+  if (!quizz) return NextResponse.json({ error: 'Quizz introuvable' }, { status: 404 })
 
-  const { data: scores } = await supabase
-    .from('quazian_quiz_scores')
-    .select('eleve_id, score_moyen')
-    .eq('quiz_id', quizId)
-
-  const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'quazian').single()
-  const eleveIds = moduleData ? await eleveIdsAvecAccesModule(supabase, moduleData.id) : []
-  const { data: rosterProfiles } = eleveIds.length > 0
-    ? await supabase.from('profiles').select('id, display_name').in('id', eleveIds)
-    : { data: [] }
-
-  const sessionsMap: Record<string, { submitted_at: string | null; auto_submitted: boolean }> = {}
-  for (const s of sessions ?? []) sessionsMap[s.eleve_id] = s
-
-  const scoresMap: Record<string, number> = {}
-  for (const s of scores ?? []) scoresMap[s.eleve_id] = s.score_moyen
-
-  const eleves = (rosterProfiles ?? []).map((p) => {
-    const session = sessionsMap[p.id]
-    return {
-      id: p.id,
-      display_name: p.display_name as string,
-      // `commence` distingue « a ouvert le quizz » de « est dans la classe » : sans
-      // lui, un élève qui n'a jamais ouvert était compté comme « en cours » et
-      // annoncé comme futur auto-soumis, alors qu'il n'aura simplement AUCUNE note.
-      commence: !!session,
-      soumis: !!session?.submitted_at,
-      submitted_at: session?.submitted_at ?? null,
-      score_moyen: scoresMap[p.id] ?? null,
-      auto: session?.auto_submitted ?? false,
-    }
-  })
-
-  return NextResponse.json({ eleves })
+  const tableau = await chargerTableauLive(supabase, quizId, quizz.classe_id as string | null)
+  if ('error' in tableau) return NextResponse.json({ error: tableau.error }, { status: 500 })
+  return NextResponse.json(tableau)
 }

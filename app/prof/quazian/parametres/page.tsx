@@ -4,6 +4,11 @@ import { MOTS_PAR_CARTE, PLAFOND_MAX, PLAFOND_MIN } from '@/utils/quazian-quotas
 import { PROMPT_SYSTEME as PROMPT_FLASHCARDS, PROMPT_SYSTEME_TEXTE as PROMPT_TEXTE } from '@/utils/extraire-flashcards'
 import { PROMPT_SYSTEME as PROMPT_QUIZZ } from '@/utils/generer-questions'
 import Tuile from '@/components/Tuile'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
+import PorteAntichambre from './PorteAntichambre'
+import PorteTuteur from './PorteTuteur'
+import { lirePorteTuteur } from '@/utils/quazian-tuteur-serveur'
 
 async function actionSauvegarder(formData: FormData): Promise<void> {
   'use server'
@@ -20,12 +25,25 @@ function Entrees({ vue }: { vue: string }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-lg">
       <Tuile nom="Notation" sousTitre="Notes formative & de semestre, FSRS" href="/prof/quazian/parametres?vue=notation" selectionnee={vue === 'notation'} />
       <Tuile nom="Génération" sousTitre="Plafond de cartes & prompts IA" href="/prof/quazian/parametres?vue=generation" selectionnee={vue === 'generation'} />
+      <Tuile nom="Passation" sousTitre="Antichambre, tuteur après le quiz" href="/prof/quazian/parametres?vue=passation" selectionnee={vue === 'passation'} />
     </div>
   )
 }
 
 export default async function ParametresPage({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
   const { vue = 'notation' } = await searchParams
+
+  if (vue === 'passation') {
+    return (
+      <div className="max-w-lg">
+        <Entrees vue="passation" />
+        <div className="space-y-4">
+          <PorteAntichambre actif={await lirePorteAntichambre(createAdminClient())} />
+          <PorteTuteur actif={await lirePorteTuteur(createAdminClient())} />
+        </div>
+      </div>
+    )
+  }
 
   // `vue=prompts` reste servi : c'est l'ancienne adresse de cet onglet, et des
   // liens (ou un signet du prof) la portent encore.

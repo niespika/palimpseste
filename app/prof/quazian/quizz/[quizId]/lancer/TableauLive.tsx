@@ -3,29 +3,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { fermerQuizz } from './actions'
-
-interface EleveStatut {
-  id: string
-  display_name: string
-  commence: boolean
-  soumis: boolean
-  submitted_at: string | null
-  score_moyen: number | null
-  auto: boolean
-}
+import type { LigneTableauLive } from '@/utils/quazian-tableau-live'
 
 interface Props {
   quizId: string
   statut: string
   fermeAt: string | null
-  eleves: EleveStatut[]
+  eleves: LigneTableauLive[]
+  nbQuestions: number
   moyenneCohorte: number | null
   ecartTypeCohorte: number | null
 }
 
-export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyenneCohorte }: Props) {
+export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, nbQuestions, moyenneCohorte }: Props) {
   const router = useRouter()
-  const [elevesLive, setElevesLive] = useState<EleveStatut[] | null>(null)
+  const [elevesLive, setElevesLive] = useState<LigneTableauLive[] | null>(null)
   const [confirmation, setConfirmation] = useState(false)
   const [pending, setPending] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -227,13 +219,14 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
       )}
 
       {/* Tableau élèves */}
-      <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+      {/* `overflow-x-auto` : quiz fermé, quatre colonnes ne tiennent pas toujours à 375 px. */}
+      <div className="bg-surface border border-bordure rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-bordure text-xs text-muet">
               <th className="text-left px-4 py-3">Élève</th>
-              <th className="text-center px-4 py-3">Statut</th>
-              {statut === 'ferme' && <th className="text-right px-4 py-3">Score</th>}
+              <th className="text-left px-4 py-3">Avancée</th>
+              {statut === 'ferme' && <th className="hidden sm:table-cell text-right px-4 py-3">Score</th>}
               {statut === 'ferme' && <th className="text-right px-4 py-3">Note /20</th>}
             </tr>
           </thead>
@@ -247,24 +240,15 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
             )}
             {eleves.map((e) => (
               <tr key={e.id} className="border-b border-bordure last:border-0">
-                <td className="px-4 py-3 text-encre">{e.display_name}</td>
-                <td className="px-4 py-3 text-center">
-                  {e.soumis ? (
-                    <span className="text-xs px-2 py-0.5 bg-ok-teinte text-ok rounded-full">
-                      {e.auto ? 'Auto-soumis' : 'Soumis'}
-                    </span>
-                  ) : e.commence ? (
-                    <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-muet rounded-full">
-                      En cours…
-                    </span>
-                  ) : (
-                    <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-muet rounded-full">
-                      Pas commencé
-                    </span>
-                  )}
+                <td className="px-4 py-3 text-encre">
+                  {e.display_name}
+                  {e.horsClasse && <span className="block text-xs text-muet">plus inscrit dans la classe</span>}
+                </td>
+                <td className="px-4 py-3">
+                  <Avancee eleve={e} nbQuestions={nbQuestions} />
                 </td>
                 {statut === 'ferme' && (
-                  <td className="px-4 py-3 text-right font-mono text-encre-douce">
+                  <td className="hidden sm:table-cell px-4 py-3 text-right font-mono text-encre-douce">
                     {e.score_moyen != null ? e.score_moyen.toFixed(2) : '—'}
                   </td>
                 )}
@@ -280,6 +264,46 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+// Retour de classe du 22/09 : « en cours » ne disait pas OÙ en était l'élève.
+// La barre compte les réponses ENREGISTRÉES — une réponse l'est quand l'élève
+// passe à la question suivante ; celle qu'il a sous les yeux compte ensuite.
+function Avancee({ eleve, nbQuestions }: { eleve: LigneTableauLive; nbQuestions: number }) {
+  if (!eleve.commence) {
+    return <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-muet rounded-full">Pas commencé</span>
+  }
+  const faites = Math.min(eleve.repondues, nbQuestions)
+  const reste = Math.max(nbQuestions - faites, 0)
+  const part = nbQuestions > 0 ? (faites / nbQuestions) * 100 : 0
+  return (
+    <div className="min-w-[7.5rem]">
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className={eleve.soumis ? 'text-ok font-medium' : 'text-encre-douce'}>
+          {eleve.soumis ? (eleve.auto ? 'Auto-soumis' : 'Soumis') : 'En cours'}
+        </span>
+        <span className="tabular-nums text-encre-douce">{faites}/{nbQuestions}</span>
+      </div>
+      <div
+        className="mt-1 h-1.5 bg-parchemin-fonce rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={nbQuestions}
+        aria-valuenow={faites}
+        aria-label={`${faites} question${faites > 1 ? 's' : ''} sur ${nbQuestions}`}
+      >
+        <div
+          className={`h-full transition-all duration-500 ${eleve.soumis ? 'bg-ok' : 'bg-pigment'}`}
+          style={{ width: `${part}%` }}
+        />
+      </div>
+      {reste > 0 && (
+        <p className="mt-0.5 text-xs text-muet tabular-nums">
+          {eleve.soumis ? `${reste} sans réponse` : `reste ${reste}`}
+        </p>
+      )}
     </div>
   )
 }

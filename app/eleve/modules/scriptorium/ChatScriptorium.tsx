@@ -214,7 +214,11 @@ export default function ChatScriptorium({
       })
       if (!res.ok) {
         const data = await res.json().catch(() => null) as { error?: string } | null
-        setMessages(prev => prev.slice(0, -1)) // retire la réponse vide du tuteur
+        // Refus (pause pendant un quiz, quota, classe) : rien n'est enregistré. On
+        // retire la bulle de l'élève ET la réponse vide, et son texte revient dans
+        // la saisie — sinon il le perdait au rechargement (revue du 23/09).
+        setMessages(prev => prev.slice(0, -2))
+        if (!texteAmorce) setSaisie(message)
         setErreur(data?.error ?? 'Un problème est survenu — réessaie.')
         return
       }

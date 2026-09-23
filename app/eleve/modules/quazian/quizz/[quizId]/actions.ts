@@ -6,6 +6,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { classeIdsActives } from '@/utils/acces'
 import { calculerScoreBrier, JETONS_NEUTRE, shuffleArray } from '@/utils/brier'
 import { lancer } from '@/utils/lancer'
+import { remettreDansOrdreEleve, type QuestionRetourEleve } from '@/utils/quazian-ordre-eleve'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -46,7 +47,11 @@ export interface QuestionPassation {
   id: string             // id de la question originale
   enonce: string
   options: string[]      // dans l'ordre randomisé pour cet élève
-  optionMapping: number[]  // optionMapping[i] = index dans options originales
+  // ⛔⛔ PLUS D'`optionMapping` ICI — revue du 22/09. L'ordre du mélange partait
+  //    au navigateur ; tant que la bonne réponse était en tête en base (15 sur 15
+  //    en prod), « la réponse dont le mapping vaut 0 » ÉTAIT la bonne réponse,
+  //    lisible dans le source de la page. Le serveur relit l'ordre de la session.
+  //    (Les réponses sont aussi remêlées en base : `melangerReponses`.)
   // ⛔⛔ PAS DE BONNE RÉPONSE ICI — C-RLS-4, 29/08. Le champ
   //    `indexCorrecteRandomise` a vécu là, servi à la PASSATION, donc lisible
   //    AVANT de répondre : la charge de l'action part au navigateur, où elle
@@ -113,10 +118,13 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
     if (quizFerme) return { error: 'Ce quizz est terminé.' }
 
     // Créer la session avec randomisation par élève
-    ordreQuestions = shuffleArray(questions.map((q) => q.id), userId + quizId)
+    // ⛔ Graine ALÉATOIRE (revue du 23/09) : l'ancienne (`userId + id`) se
+    //    recalculait avec le code du dépôt, public — et `ordre_options` est de
+    //    toute façon stocké dans la session : la graine n'a pas à se rejouer.
+    ordreQuestions = shuffleArray(questions.map((q) => q.id), crypto.randomUUID())
     ordreOptions = {}
     for (const q of questions) {
-      ordreOptions[q.id] = shuffleArray([0, 1, 2, 3], userId + q.id)
+      ordreOptions[q.id] = shuffleArray([0, 1, 2, 3], crypto.randomUUID())
     }
 
     // Écriture serveur (C1) : plus aucune policy d'écriture élève sur
@@ -148,7 +156,9 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
 
   const reponsesMap: Record<string, [number, number, number, number]> = {}
   for (const r of reponsesDB ?? []) {
-    const originaux = [r.p_a * 100, r.p_b * 100, r.p_c * 100, r.p_d * 100]
+    // Points ENTIERS : 0,55 × 100 vaut 55,00000000000001 en JS — la question
+    // rechargée ne faisait plus 100 tout rond, et « Suivant » restait bloqué.
+    const originaux = [r.p_a, r.p_b, r.p_c, r.p_d].map((p) => Math.round(p * 100))
     const mapping = ordreOptions[r.question_id] ?? [0, 1, 2, 3]
     reponsesMap[r.question_id] = mapping.map((i) => originaux[i]) as [number, number, number, number]
   }
@@ -166,7 +176,6 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
       id: q.id,
       enonce: q.enonce,
       options: optionsRandomisees,
-      optionMapping: mapping,
     }
   })
 
@@ -184,13 +193,15 @@ export async function sauvegarderReponse(
   sessionId: string,
   questionId: string,
   jetonsRandomises: [number, number, number, number],
-  optionMapping: number[]
+  // Ignoré : un onglet ouvert avant le déploiement l'envoie encore. L'ordre fait
+  // foi depuis la SESSION, jamais depuis le navigateur.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _mappingIgnore?: unknown,
 ): Promise<{ error?: string; ferme?: boolean }> {
   const { supabase, userId } = await verifierEleve()
-  if (jetonsRandomises.length !== 4 || jetonsRandomises.some((j) => !Number.isFinite(j) || j < 0 || j > 100)
-      || Math.abs(jetonsRandomises.reduce((a, b) => a + b, 0) - 100) > 0.001
-      || optionMapping.length !== 4 || new Set(optionMapping).size !== 4
-      || optionMapping.some((i) => !Number.isInteger(i) || i < 0 || i > 3)) {
+  if (!Array.isArray(jetonsRandomises) || jetonsRandomises.length !== 4
+      || jetonsRandomises.some((j) => !Number.isFinite(j) || j < 0 || j > 100)
+      || Math.abs(jetonsRandomises.reduce((a, b) => a + b, 0) - 100) > 0.001) {
     return { error: 'Répartis les 100 points avant de continuer.' }
   }
 
@@ -199,12 +210,19 @@ export async function sauvegarderReponse(
   // directement) → sans ça, un élève peut éditer ses réponses après l'expiration.
   const { data: session, error: erreurSession } = await supabase
     .from('quazian_sessions')
-    .select('quiz_id, submitted_at')
+    .select('quiz_id, submitted_at, ordre_options')
     .eq('id', sessionId)
     .eq('eleve_id', userId)
     .maybeSingle()
   if (erreurSession) return { error: 'Lecture de ta session impossible. Réessaie.' }
   if (!session || session.submitted_at) return { error: 'Cette session n’est plus modifiable.' }
+  // L'ordre des réponses de CETTE question pour CET élève : celui de sa session.
+  // Une question que la session ne connaît pas n'est pas la sienne.
+  const optionMapping = (session.ordre_options as Record<string, number[]> | null)?.[questionId]
+  if (!Array.isArray(optionMapping) || optionMapping.length !== 4 || new Set(optionMapping).size !== 4
+      || optionMapping.some((i) => !Number.isInteger(i) || i < 0 || i > 3)) {
+    return { error: 'Cette question ne fait pas partie de ton quiz.' }
+  }
   // Garde de classe (C1) en plus du statut/échéance : même helper que la page.
   const quizzGarde = await chargerQuizAccessible(supabase, userId, session.quiz_id as string)
   if (!quizzGarde) return { error: 'Quizz inaccessible. Réessaie.' }
@@ -324,6 +342,14 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
   const answersToInsert: Record<string, unknown>[] = []
   const answersToUpdate = []
 
+  // ⛔⛔ PAS DE SCORE PAR RÉPONSE TANT QUE LE QUIZ TOURNE (revue du 23/09). La
+  //    policy élève laisse lire SES réponses, colonnes comprises : un élève qui
+  //    soumettait en avance lisait son `score` par question — et avec ses propres
+  //    points, le score DÉSIGNE la bonne réponse (10 × (2·p_bonne − Σp²)), qu'il
+  //    pouvait passer aux autres. Les scores par réponse s'écrivent à la
+  //    FERMETURE (`fermerQuizz`) ; la note, elle, se calcule ici, en mémoire
+  //    (une seule moyenne ne trahit aucune question). Quiz déjà fermé : tout de suite.
+  const scoresTout = quizz.statut !== 'lance'
   for (const q of questions) {
     const rep = repMap[q.id]
     let jetons: [number, number, number, number] = JETONS_NEUTRE
@@ -341,10 +367,9 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
         question_id: q.id,
         p_a: 0.25, p_b: 0.25, p_c: 0.25, p_d: 0.25,
         repondu: false,
-        brier_brut: score / 10,
-        score,
+        ...(scoresTout ? { brier_brut: score / 10, score } : {}),
       })
-    } else {
+    } else if (scoresTout) {
       answersToUpdate.push({ question_id: q.id, brier_brut: score / 10, score })
     }
   }
@@ -399,14 +424,7 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
 
 // Récupérer le retour post-quizz
 export async function chargerRetourQuizz(quizId: string): Promise<{
-  questions: Array<{
-    enonce: string
-    options: string[]
-    indexCorrect: number
-    mesJetons: [number, number, number, number] | null
-    score: number | null
-    repondu: boolean
-  }>
+  questions: QuestionRetourEleve[]
   scoreMoyen: number | null
   noteFormative: number | null
 } | { error: string }> {
@@ -452,9 +470,6 @@ export async function chargerRetourQuizz(quizId: string): Promise<{
   //    ment à l'élève sur ce qu'il a fait : on préfère le dire.
   if (eReponses) return { error: `Lecture de tes réponses impossible : ${eReponses.message}` }
 
-  const repMap: Record<string, typeof reponses extends (infer T)[] | null ? T : never> = {}
-  for (const r of reponses ?? []) repMap[r.question_id] = r
-
   const { data: scoreData } = await supabase
     .from('quazian_quiz_scores')
     .select('score_moyen, note_formative_20')
@@ -462,19 +477,14 @@ export async function chargerRetourQuizz(quizId: string): Promise<{
     .eq('eleve_id', userId)
     .single()
 
-  const result = (questions ?? []).map((q) => {
-    const rep = repMap[q.id]
-    return {
-      enonce: q.enonce,
-      options: q.options,
-      indexCorrect: q.index_correct,
-      mesJetons: rep
-        ? [rep.p_a * 100, rep.p_b * 100, rep.p_c * 100, rep.p_d * 100] as [number, number, number, number]
-        : null,
-      score: rep?.score ?? null,
-      repondu: rep?.repondu ?? false,
-    }
-  })
+  // L'ordre de SA passation — questions et réponses —, pas celui de la base :
+  // la lettre qu'il lit ici est celle qu'il a lue pendant le quiz.
+  const result = remettreDansOrdreEleve(
+    questions ?? [],
+    reponses ?? [],
+    session.ordre_questions as string[] | null,
+    session.ordre_options as Record<string, number[]> | null,
+  )
 
   return {
     questions: result,

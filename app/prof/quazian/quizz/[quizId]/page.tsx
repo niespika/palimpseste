@@ -5,6 +5,8 @@ import { libellesCibles } from '@/utils/quazian-cibles'
 import { validerToutesQuestions } from '../actions'
 import { QuestionCard } from './QuestionCard'
 import { AjouterQuestions } from './AjouterQuestions'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
 
 async function actionValiderToutes(formData: FormData): Promise<void> {
   'use server'
@@ -50,7 +52,12 @@ export default async function QuizzDetailPage({
   const nbValidees = (questions ?? []).filter((q) => q.statut_validation === 'valide').length
   const total = (questions ?? []).length
   const toutValide = nbValidees === total && total > 0
-  const readOnly = quizz.statut !== 'brouillon'
+  // L'antichambre ouverte (22/09) fige le quiz comme un lancement : des élèves
+  // attendent devant ces questions. Lue seulement porte ouverte.
+  const admin = createAdminClient()
+  const enAntichambre = quizz.statut === 'brouillon' && await lirePorteAntichambre(admin)
+    && !!(await lireAntichambreAt(admin, quizId))
+  const readOnly = quizz.statut !== 'brouillon' || enAntichambre
 
   return (
     <div>
@@ -67,11 +74,12 @@ export default async function QuizzDetailPage({
           </p>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              enAntichambre ? 'bg-attention-teinte text-attention' :
               quizz.statut === 'brouillon' ? 'bg-parchemin-fonce text-muet' :
               quizz.statut === 'lance' ? 'bg-ok-teinte text-ok' :
               'bg-info-teinte text-info'
             }`}>
-              {quizz.statut === 'brouillon' ? 'Brouillon' : quizz.statut === 'lance' ? 'En cours' : 'Terminé'}
+              {enAntichambre ? 'Antichambre ouverte' : quizz.statut === 'brouillon' ? 'Brouillon' : quizz.statut === 'lance' ? 'En cours' : 'Terminé'}
             </span>
             <span className="text-xs text-muet">{quizz.duree_min} min</span>
             {!readOnly && (
@@ -98,7 +106,7 @@ export default async function QuizzDetailPage({
               href={`/prof/quazian/quizz/${quizId}/lancer`}
               className="px-4 py-2 text-sm bg-ok text-surface rounded-lg hover:opacity-90 transition-colors"
             >
-              Lancer le quizz →
+              {enAntichambre ? 'Voir l’antichambre →' : 'Lancer le quizz →'}
             </Link>
           )}
           {quizz.statut === 'lance' && (

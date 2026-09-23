@@ -1,5 +1,9 @@
 # PLAN DE CHANTIER — l'ordre des lots, et la fabrique de leurs prompts
 
+## État courant — Quazian : les retours du premier quiz en classe (22-23/09/2026 ; code local, push à Louis)
+
+Huit demandes de Louis après le quiz de T5 du 22/09, conduites une à une avec lui, plus une fuite préexistante (bonne réponse lisible dans la page) intégrée sur son accord. Tout est codé, éprouvé au bac à sable aux trois largeurs et passé en revue adversariale (deux passes). Les deux migrations (`quazian_antichambre.sql`, `quazian_tuteur.sql`) sont jouées au bac à sable **et en production le 23/09**, sur l'ordre de Louis, portes à OFF ; le code est **commité en local, PAS poussé** (aucun identifiant GitHub dans la séance) — le push, puis l'ouverture des portes, restent à Louis. Détail et chiffres : `SUIVI_tests_manuels.md` (section du 22-23/09) et `REPRISE_Quazian_retours_classe.md` (local). Les entrées ci-dessous décrivent les chantiers antérieurs.
+
 ## État courant — Quazian : le professeur a la main sur les questions (21/09/2026 soir, 22/09 UTC ; livraison locale, push à Louis)
 
 Lot autonome défini par `PROMPT_Code_Quazian_quiz_main_du_prof.md`, sans entrée de conception. **Refuser** avec confirmation dans la carte (choix explicite de Louis), **générer 1–10 questions supplémentaires** avec consigne facultative, et **Modifier** initialisé depuis les dernières options au clic. Brouillon seulement pour les nouvelles actions ; suppression réelle, COUNT et synchronisation du plan, aucun statut `refuse`. Génération et coût au patron existant, lecture bi-source extraite et partagée, protection du compteur contre deux ajouts concurrents. **Aucune migration ni nouvelle porte**, dérogation explicite de la spécification ; aucun changement de production.

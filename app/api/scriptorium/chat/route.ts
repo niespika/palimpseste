@@ -22,7 +22,9 @@ import {
 import { fournisseurPour, type AppelIA, type UsageIA } from '@/utils/ia-fournisseur'
 import { coutSelonModele, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 import { sansDelims } from '@/utils/ia-commun'
-import { inscriptionEleveClasse, classeAModule } from '@/utils/acces'
+import { inscriptionEleveClasse, classeAModule, classeIdsActives } from '@/utils/acces'
+import { chargerContexteQuestion, lireAncrage, lirePorteTuteur, quizEnCoursPourClasses } from '@/utils/quazian-tuteur-serveur'
+import { blocContexteQuiz, erreurAssuree, messageOuverture } from '@/utils/quazian-tuteur'
 
 export const maxDuration = 60
 
@@ -65,6 +67,18 @@ export async function POST(req: Request): Promise<Response> {
   ])
   if (!aLeModule || !inscription) {
     return Response.json({ error: 'Accès refusé pour cette classe.' }, { status: 403 })
+  }
+
+  // ⛔ LE TUTEUR EST EN PAUSE PENDANT UN QUIZ (décision de Louis, 23/09) : sans
+  //    cela, un élève pouvait lui poser les questions du quiz dans un autre
+  //    onglet. Toutes les classes de l'élève comptent (un bi-classe changerait de
+  //    classe en contexte), et la pause s'arrête à l'échéance du quiz.
+  const enCours = await quizEnCoursPourClasses(admin, await classeIdsActives(supabase, user.id))
+  if (enCours) {
+    const heure = new Date(enCours.fermeAt).toLocaleTimeString('fr-CA', {
+      timeZone: await lireFuseau(), hour: '2-digit', minute: '2-digit',
+    })
+    return Response.json({ error: `Le tuteur est en pause pendant le quiz. Il revient à ${heure}.` }, { status: 423 })
   }
 
   // Propriété de la conversation (si reprise d'un fil existant).
@@ -135,11 +149,35 @@ export async function POST(req: Request): Promise<Response> {
   }
   const convId = conversationId
 
+  // Une conversation partie d'un QUIZ (point 8) : son contexte — la question, les
+  // points de l'élève, la bonne réponse — se recompose à CHAQUE tour, dans le
+  // suffixe par élève (jamais le préfixe de classe, mis en cache). Porte fermée,
+  // la colonne n'est pas lue.
+  let blocQuiz = ''
+  let posteCout = 'scriptorium'
+  if (body?.conversationId && await lirePorteTuteur(admin)) {
+    const questionId = await lireAncrage(admin, convId)
+    const ctx = questionId ? await chargerContexteQuestion(admin, questionId, user.id) : null
+    // ⛔ La policy élève des conversations est `for all` : l'élève peut écrire
+    //    lui-même `quiz_question_id`. Le contexte ne vaut donc que pour une
+    //    question de LA classe de cette conversation, et une erreur assurée —
+    //    les gardes de `ouvrirTuteur`, reprises ici (revue du 23/09).
+    if (ctx && ctx.classeId === classeId && erreurAssuree(ctx.jetons, ctx.indexCorrect) !== null) {
+      blocQuiz = blocContexteQuiz({ ...ctx, ouverture: messageOuverture(ctx) })
+      posteCout = 'quazian-tuteur'
+    }
+  }
+  // Une conversation partie d'un quiz s'ouvre par un message du TUTEUR (écrit par
+  // le code) : l'historique repart toujours d'un message d'élève — certains
+  // fournisseurs refusent un échange qui s'ouvre par l'assistant. SANS condition :
+  // porte refermée ou question supprimée, le message d'ouverture est encore là.
+  while (historique[0]?.role === 'assistant') historique.shift()
+
   const progression = await progressionLivres(admin, user.id, corpus.livres)
   const appel: AppelIA = {
     systeme: reglages.prompt,
     prefixe: corpus.prefixe,
-    suffixeDynamique: construireSuffixe(aujourdHui, progression),
+    suffixeDynamique: [construireSuffixe(aujourdHui, progression), blocQuiz].filter(Boolean).join('\n\n'),
     historique,
     message: baliserQuestion(sansDelims(message)),
     maxTokensSortie: MAX_TOKENS_CHAT,
@@ -206,7 +244,8 @@ export async function POST(req: Request): Promise<Response> {
           conversation_id: convId, role: 'assistant', contenu: reponse, modele: reglages.modele, cout,
         })
         // Seul site à porter élève ET classe : un tour de chat appartient aux deux.
-        await enregistrerCoutApi('scriptorium', cout, {
+        // Un tour parti d'un quiz se compte à part (« quazian-tuteur »).
+        await enregistrerCoutApi(posteCout, cout, {
           eleveId: user.id, classeId, modele: reglages.modele, tokens: normaliserUsage(usage),
         })
       }

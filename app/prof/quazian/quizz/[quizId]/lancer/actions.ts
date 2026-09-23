@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { calculerScoreBrier, JETONS_NEUTRE } from '@/utils/brier'
+import { lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -17,6 +19,15 @@ export async function lancerQuizz(formData: FormData) {
   const { supabase } = await verifierProf()
   const quizId = formData.get('quizId') as string
   const dureeMin = parseInt(formData.get('duree_min') as string) || 25
+
+  // Aucune question en attente de validation ne part aux élèves (revue du 22/09) :
+  // la page le contrôle, mais un lancement depuis l'antichambre passe par ici
+  // sans la recharger — et des questions IA peuvent être arrivées entre-temps.
+  const { count: aValider, error: eCompte } = await supabase
+    .from('quazian_questions').select('id', { count: 'exact', head: true })
+    .eq('quiz_id', quizId).eq('statut_validation', 'suggere')
+  if (eCompte) return { error: `Lecture des questions impossible : ${eCompte.message}` }
+  if ((aValider ?? 0) > 0) return { error: `${aValider} question${(aValider ?? 0) > 1 ? 's attendent' : ' attend'} encore ta validation : le quiz ne se lance pas.` }
 
   const maintenant = new Date()
   const fermeAt = new Date(maintenant.getTime() + dureeMin * 60 * 1000)
@@ -36,6 +47,55 @@ export async function lancerQuizz(formData: FormData) {
     return { error: q ? `Ce quizz est « ${q.statut} » : seul un brouillon se lance.` : 'Quizz introuvable.' }
   }
   revalidatePath(`/prof/quazian/quizz/${quizId}/lancer`)
+  return { success: true }
+}
+
+/**
+ * Ouvrir l'antichambre (retours de classe du 22/09) : le premier des deux temps.
+ * Le statut RESTE `brouillon` — aucune question ne sort — et `ferme_at` ne se
+ * pose pas : le chrono ne part qu'au lancement (`lancerQuizz`, inchangé).
+ */
+export async function ouvrirAntichambre(formData: FormData) {
+  const { supabase } = await verifierProf()
+  const quizId = formData.get('quizId') as string
+  if (!(await lirePorteAntichambre(createAdminClient()))) {
+    return { error: 'L’antichambre est fermée dans les paramètres de Quazian : le quiz se lance en un geste.' }
+  }
+  // Même contrôle que la page : on n'ouvre pas la salle d'un quiz inachevé.
+  const { count, error: eCompte } = await supabase
+    .from('quazian_questions').select('id', { count: 'exact', head: true })
+    .eq('quiz_id', quizId).eq('statut_validation', 'suggere')
+  if (eCompte) return { error: `Lecture des questions impossible : ${eCompte.message}` }
+  if ((count ?? 0) > 0) return { error: 'Des questions restent à valider : l’antichambre ne s’ouvre pas encore.' }
+
+  // Pas de `.is('antichambre_at', null)` : une antichambre expirée (3 h) se rouvre,
+  // et un double clic ne fait que rafraîchir l'instant d'ouverture.
+  const { data, error } = await supabase.from('quazian_quizzes')
+    .update({ antichambre_at: new Date().toISOString() })
+    .eq('id', quizId).eq('statut', 'brouillon')
+    .select('id')
+  if (error) return { error: error.message }
+  if (!data || data.length === 0) {
+    const { data: q } = await supabase.from('quazian_quizzes').select('statut').eq('id', quizId).maybeSingle()
+    return { error: q ? `Ce quizz est « ${q.statut} » : seul un brouillon ouvre son antichambre.` : 'Quizz introuvable.' }
+  }
+  revalidatePath(`/prof/quazian/quizz/${quizId}/lancer`)
+  revalidatePath(`/prof/quazian/quizz/${quizId}`)
+  return { success: true }
+}
+
+/** Refermer l'antichambre sans lancer : le quiz redevient un simple brouillon. */
+export async function fermerAntichambre(formData: FormData) {
+  const { supabase } = await verifierProf()
+  const quizId = formData.get('quizId') as string
+  const { error } = await supabase.from('quazian_quizzes')
+    .update({ antichambre_at: null }).eq('id', quizId).eq('statut', 'brouillon')
+  if (error) return { error: error.message }
+  // Les présences ne servent plus : la table est au service-role (aucune policy).
+  const { error: eMenage } = await createAdminClient().from('quazian_antichambre').delete().eq('quiz_id', quizId)
+  if (eMenage) console.error(`[quazian] présences non effacées (quiz ${quizId}) — ${eMenage.message}`)
+  revalidatePath(`/prof/quazian/quizz/${quizId}/lancer`)
+  revalidatePath(`/prof/quazian/quizz/${quizId}`)
   return { success: true }
 }
 
@@ -121,6 +181,14 @@ export async function fermerQuizz(formData: FormData) {
     if (eNote) return { error: `Écriture d’une note impossible (${eNote.message}) — le quizz reste ouvert. Réessaie.` }
   }
 
+  // ⭐ LES SCORES PAR RÉPONSE S'ÉCRIVENT ICI (revue du 23/09) : pendant le quiz,
+  //    un élève qui avait soumis pouvait lire son score par question et en tirer
+  //    la bonne réponse. `soumettreQuizz` ne les écrit donc plus tant que le quiz
+  //    tourne ; on complète ici toute réponse encore sans score, AVANT de figer —
+  //    un échec laisse le quiz ouvert, réparable (même doctrine que plus haut).
+  const eParReponse = await ecrireScoresParReponse(supabase, quizId, questions)
+  if (eParReponse) return { error: `Écriture des scores par question impossible (${eParReponse}) — le quizz reste ouvert. Réessaie.` }
+
   // Figer le quizz. Garde `statut='lance'` + `select()` : un double-clic ou un
   // second onglet ne recalcule pas la cohorte, et un UPDATE qui ne touche AUCUNE
   // ligne cesse d'être indiscernable d'un succès.
@@ -157,6 +225,51 @@ export async function fermerQuizz(formData: FormData) {
   revalidatePath(`/prof/quazian/quizz/${quizId}/lancer`)
   revalidatePath(`/prof/quazian/quizz/${quizId}`)
   return { success: true }
+}
+
+/**
+ * Le score de chaque réponse encore sans score, pour toutes les copies soumises
+ * du quiz. Lecture paginée (PostgREST s'arrête à 1000 lignes sans le dire), puis
+ * écriture groupée par `upsert` sur la clé (session, question) — les lignes
+ * existent, seules `score` et `brier_brut` changent. Renvoie le message d'erreur,
+ * ou null.
+ */
+async function ecrireScoresParReponse(
+  supabase: Awaited<ReturnType<typeof import('@/utils/supabase/server').createClient>>,
+  quizId: string,
+  questions: { id: string; index_correct: number }[],
+): Promise<string | null> {
+  const correcte = new Map(questions.map((q) => [q.id, q.index_correct]))
+  const { data: sessions, error: eSessions } = await supabase
+    .from('quazian_sessions').select('id').eq('quiz_id', quizId).not('submitted_at', 'is', null)
+  if (eSessions) return eSessions.message
+  const ids = (sessions ?? []).map((s) => s.id as string)
+  if (ids.length === 0) return null
+
+  const PAGE = 1000
+  const aEcrire: Record<string, unknown>[] = []
+  for (let debut = 0; ; debut += PAGE) {
+    const { data, error } = await supabase
+      .from('quazian_answers')
+      .select('session_id, question_id, p_a, p_b, p_c, p_d, repondu')
+      .in('session_id', ids).is('score', null)
+      .order('session_id', { ascending: true }).order('question_id', { ascending: true })
+      .range(debut, debut + PAGE - 1)
+    if (error) return error.message
+    for (const r of data ?? []) {
+      const ok = correcte.get(r.question_id as string)
+      if (ok === undefined) continue
+      const score = calculerScoreBrier([r.p_a * 100, r.p_b * 100, r.p_c * 100, r.p_d * 100], ok)
+      aEcrire.push({ ...r, score, brier_brut: score / 10 })
+    }
+    if ((data ?? []).length < PAGE) break
+  }
+  for (let i = 0; i < aEcrire.length; i += 500) {
+    const { error } = await supabase.from('quazian_answers')
+      .upsert(aEcrire.slice(i, i + 500), { onConflict: 'session_id,question_id' })
+    if (error) return error.message
+  }
+  return null
 }
 
 /**

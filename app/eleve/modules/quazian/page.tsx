@@ -11,6 +11,7 @@ import BanniereIntegrite from '@/components/BanniereIntegrite'
 import Tuile from '@/components/Tuile'
 import { seuilModule } from '@/app/eleve/seuil-module'
 import { lancer } from '@/utils/lancer'
+import { lirePorteAntichambre, seuilAntichambre } from '@/utils/quazian-antichambre-serveur'
 
 type QuizListItem = { id: string; statut: string; lance_at: string | null; nb_questions: number }
 
@@ -103,6 +104,15 @@ export default async function QuazianElevePage({
   // Quizz en cours non encore soumis → bannière d'appel (à faire)
   const quizzActif = quizList.find(q => q.statut === 'lance' && !soumisMap.get(q.id))
 
+  // L'antichambre ouverte (22/09) : le brouillon est caché par la RLS élève, on
+  // le lit au service-role, borné à la classe en contexte ; porte fermée, rien.
+  const adminAntichambre = createAdminClient()
+  const antichambre = !quizzActif && await lirePorteAntichambre(adminAntichambre)
+    ? (await adminAntichambre.from('quazian_quizzes').select('id').eq('classe_id', active.classe_id)
+      .eq('statut', 'brouillon').gte('antichambre_at', seuilAntichambre())
+      .order('antichambre_at', { ascending: false }).limit(1).maybeSingle()).data
+    : null
+
   // Blocage « petit malin » : la révision est gelée, mais le quizz reste accessible.
   const blocage = await pBlocage
 
@@ -127,6 +137,21 @@ export default async function QuazianElevePage({
           className="text-sm text-encre-douce hover:text-encre mb-6 inline-flex items-center gap-1"
         >
           ← Retour
+        </Link>
+      )}
+
+      {antichambre && (
+        <Link
+          href={`/eleve/modules/quazian/quizz/${antichambre.id}`}
+          className="block bg-attention-teinte border border-attention rounded-xl p-4 mb-6 hover:opacity-90 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-attention animate-pulse shrink-0" />
+            <div>
+              <p className="font-medium text-attention text-sm">Le quiz va commencer</p>
+              <p className="text-xs text-attention">Entre dans l’antichambre et lis les consignes en attendant →</p>
+            </div>
+          </div>
         </Link>
       )}
 

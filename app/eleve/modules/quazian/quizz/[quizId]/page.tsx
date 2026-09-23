@@ -1,19 +1,32 @@
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { aAccesModule, classeIdsActives } from '@/utils/acces'
+import { aAccesModule, classeAModule, classeIdsActives } from '@/utils/acces'
 import { initialiserSession, chargerRetourQuizz, etatNoteVue } from './actions'
 import { PassationJetons } from './PassationJetons'
 import BoutonVuNote from './BoutonVuNote'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
+import { AntichambreEleve } from './AntichambreEleve'
+import { Consignes } from './Consignes'
+import { BaremePartage } from './BaremePartage'
+import { BoutonTuteur } from './BoutonTuteur'
+import { lirePorteTuteur } from '@/utils/quazian-tuteur-serveur'
+import { erreurAssuree } from '@/utils/quazian-tuteur'
+import { lireReglagesRag } from '@/utils/scriptorium-rag'
+import { bilanPartage, contributionsQuestion, ecrireCalcul, nombre, signe } from '@/utils/quazian-explication-note'
 
 const LETTRES = ['A', 'B', 'C', 'D']
 
 export default async function PassationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ quizId: string }>
+  searchParams: Promise<{ commencer?: string }>
 }) {
   const { quizId } = await params
+  const { commencer } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -29,6 +42,10 @@ export default async function PassationPage({
     .single()
 
   if (!quizz) {
+    // Un brouillon est caché par la RLS élève — c'est voulu. Son ANTICHAMBRE,
+    // elle, se montre (22/09) : porte ouverte, antichambre ouverte, classe de
+    // l'élève. Rien d'autre n'en sort : aucune question tant que dure l'attente.
+    if (await antichambreVisible(supabase, user.id, quizId)) return <AntichambreEleve quizId={quizId} />
     return <div className="text-center py-16 text-muet">Quizz introuvable.</div>
   }
 
@@ -57,85 +74,167 @@ export default async function PassationPage({
       )
     }
 
+    // Retours de classe du 22/09 (point 7) : la note s'EXPLIQUE. Chaque réponse
+    // dit ce qu'elle a rapporté ou coûté ; la somme fait le score de la question,
+    // la moyenne des scores fait la note (`utils/quazian-explication-note.ts`).
+    const details = retour.questions.map((q) => {
+      const jetons = q.mesJetons ?? ([25, 25, 25, 25] as [number, number, number, number])
+      const parts = contributionsQuestion(jetons, q.indexCorrect)
+      return { q, jetons, parts, score: parts.reduce((a, b) => a + b, 0) }
+    })
+    const n = details.length
+    const total = details.reduce((a, d) => a + d.score, 0)
+    const moyenne = n > 0 ? total / n : 0
+    const moyenne2 = Math.round(moyenne * 100) / 100
+    const note = retour.noteFormative
+    const noteCalculee = Math.round((10 + moyenne2) * 100) / 100
+    const note1 = note !== null ? Math.round(note * 10) / 10 : null
+    // Point 8 : « En parler avec le tuteur » sous une erreur assurée (≥ 70 points
+    // sur une mauvaise réponse) — porte ouverte, tuteur actif, classe qui l'a.
+    const adminTuteur = createAdminClient()
+    const [porteTuteur, reglagesRag, classeATuteur] = await Promise.all([
+      lirePorteTuteur(adminTuteur),
+      lireReglagesRag(adminTuteur),
+      classeAModule(supabase, quizz.classe_id as string, 'scriptorium'),
+    ])
+    const tuteurOffert = porteTuteur && reglagesRag.actif && classeATuteur
+    const aPoints = (x: number) => `${x < 0 ? '−' : ''}${nombre(Math.abs(x))} point${Math.abs(x) > 1 || x === 0 ? 's' : ''}`
+
     return (
-      <div className="max-w-xl mx-auto">
-        <Link href="/eleve/modules/quazian" className="text-sm text-encre-douce hover:text-encre mb-6 inline-block">
+      <div className="max-w-xl mx-auto space-y-4">
+        <Link href="/eleve/modules/quazian" className="text-sm text-encre-douce hover:text-encre inline-block">
           ← Retour
         </Link>
-        <h2 className="text-xl font-serif text-pigment mb-2 mt-2">Résultats du quizz</h2>
+        <h2 className="text-xl font-serif text-pigment">Résultats du quizz</h2>
 
-        {retour.scoreMoyen !== null && (
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
-              {/* C7·L2 (item 6) — « /10 » retiré : ce champ est le score de Brier
-                  moyen, centré sur 0, dont la note /20 se déduit (10 + score). Le
-                  tableau du prof l'appelle « Score », sans dénominateur. */}
-              <p className="text-2xl font-serif text-encre">{retour.scoreMoyen.toFixed(1)}</p>
-              <p className="text-xs text-muet mt-1">score moyen</p>
-            </div>
-            <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
-              <p className="text-2xl font-serif text-encre">
-                {retour.noteFormative?.toFixed(1)}/20
+        {note1 !== null && (
+          <section className="bg-surface border border-bordure rounded-2xl p-4 sm:p-5 shadow-sm">
+            <p className="text-3xl font-serif text-encre tabular-nums">
+              {nombre(note1, 1)} <span className="text-lg text-muet">/ 20</span>
+            </p>
+            <div className="mt-2 space-y-1 text-sm text-encre-douce leading-relaxed tabular-nums">
+              <p>Chaque question te rapporte entre <strong className="text-encre">−10</strong> et <strong className="text-encre">+10</strong> points.</p>
+              <p>Tes {n} questions ensemble : <strong className="text-encre">{aPoints(total)}</strong>.</p>
+              <p>
+                Ta moyenne : {total < 0 ? '−' : ''}{nombre(Math.abs(total))} ÷ {n} = <strong className="text-encre">{signe(moyenne2)}</strong> par question.
               </p>
-              <p className="text-xs text-muet mt-1">note formative</p>
+              <p>
+                Ta note : 10 {moyenne2 < 0 ? '−' : '+'} {nombre(Math.abs(moyenne2))} = {nombre(noteCalculee)}
+                {Math.abs(noteCalculee - note1) > 0.001 ? <>, arrondie à <strong className="text-encre">{nombre(note1, 1)} / 20</strong>.</> : <> <strong className="text-encre">/ 20</strong>.</>}
+              </p>
             </div>
-          </div>
+            <p className="mt-3 text-sm text-attention leading-relaxed">
+              {bilanPartage(details.map((d) => ({ jetons: d.jetons, indexCorrect: d.q.indexCorrect })))}
+            </p>
+          </section>
         )}
 
-        <div className="space-y-4">
-          {retour.questions.map((q, i) => {
-            const correct = q.indexCorrect
-            const score = q.score
-            const couleurScore = score === null ? '' : score > 5 ? 'text-ok' : score > 0 ? 'text-attention' : 'text-retard'
+        <BaremePartage />
 
-            return (
-              <div key={i} className="bg-surface border border-bordure rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-muet">Q{i + 1}</p>
-                  {score !== null && (
-                    <span className={`text-sm font-bold ${couleurScore}`}>
-                      {score > 0 ? '+' : ''}{score.toFixed(1)}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm font-medium text-encre mb-3">{q.enonce}</p>
-
-                <div className="space-y-1.5">
-                  {q.options.map((opt, j) => {
-                    const estCorrect = j === correct
-                    const mesJetons = q.mesJetons?.[j] ?? 25
-                    return (
-                      <div
-                        key={j}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                          estCorrect
-                            ? 'bg-ok-teinte border border-ok text-ok'
-                            : 'bg-parchemin-fonce text-encre-douce'
-                        }`}
-                      >
-                        <span className="font-mono text-xs font-bold w-4">{LETTRES[j]}</span>
-                        <span className="flex-1">{opt}</span>
-                        <span className={`text-xs font-bold tabular-nums ${mesJetons > 50 ? 'text-pigment' : 'text-muet'}`}>
-                          {mesJetons}
-                        </span>
-                        {estCorrect && <span className="text-xs text-ok">✓</span>}
-                      </div>
-                    )
-                  })}
-                </div>
-                {!q.repondu && (
-                  <p className="text-xs text-muet mt-2">Non répondu (25/25/25/25 appliqué)</p>
-                )}
+        <p className="pt-2 text-xs text-muet">Question par question — dans l’ordre où tu les as vues</p>
+        {details.map(({ q, jetons, parts, score }, i) => {
+          const calcul = ecrireCalcul(parts)
+          return (
+            <div key={q.id} className={`bg-surface border rounded-xl p-4 ${score < 0 ? 'border-retard' : 'border-bordure'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muet">Question {i + 1}</p>
+                <span className={`text-sm font-bold tabular-nums ${score > 5 ? 'text-ok' : score >= 0 ? 'text-attention' : 'text-retard'}`}>
+                  {signe(score)}
+                </span>
               </div>
-            )
-          })}
-        </div>
+              <p className="text-sm font-medium text-encre mb-2 leading-snug">{q.enonce}</p>
 
-        <div className="mt-6">
+              {/* Le texte de la réponse garde toute la largeur (160 caractères à 375 px) ;
+                  ses deux nombres vont dessous : « 50 points → +7,5 ». */}
+              <div className="space-y-1.5">
+                {q.options.map((opt, j) => {
+                  const estCorrect = j === q.indexCorrect
+                  const v = parts[j]
+                  return (
+                    <div
+                      key={j}
+                      className={`px-3 py-2 rounded-lg text-sm ${
+                        estCorrect ? 'bg-ok-teinte border border-ok text-ok' : 'bg-parchemin-fonce text-encre-douce'
+                      }`}
+                    >
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-mono text-xs font-bold w-4 shrink-0">{LETTRES[j]}</span>
+                        <span className="flex-1 min-w-0 leading-snug">{opt}{estCorrect && ' ✓'}</span>
+                      </div>
+                      <p className="mt-0.5 text-right tabular-nums">
+                        <span className={jetons[j] > 0 ? 'text-encre' : 'text-muet'}>
+                          {jetons[j]} point{jetons[j] > 1 ? 's' : ''}
+                        </span>
+                        <span className="text-muet"> → </span>
+                        <span className={`font-semibold ${v > 0 ? 'text-ok' : v < 0 ? 'text-retard' : 'text-muet'}`}>{signe(v)}</span>
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+              {calcul && <p className="mt-2 text-xs text-encre-douce tabular-nums">Calcul : {calcul}</p>}
+              {!q.repondu && (
+                <p className="mt-1 text-xs text-muet">Sans réponse : 25 points ont été comptés sur chaque réponse.</p>
+              )}
+              {tuteurOffert && q.repondu && erreurAssuree(q.mesJetons, q.indexCorrect) !== null && (
+                <BoutonTuteur questionId={q.id} />
+              )}
+            </div>
+          )
+        })}
+
+        <div className="pt-2">
           <BoutonVuNote quizId={quizId} dejaVu={noteVue} />
         </div>
       </div>
     )
+  }
+
+  // L'élève qui arrive APRÈS le lancement (22/09) : quand le quiz est passé par
+  // l'antichambre, il lit d'abord les consignes — mais le chrono, lui, tourne
+  // déjà. Celui qui attendait dans l'antichambre arrive avec `?commencer=1`, et
+  // celui qui a déjà une session reprend sa copie sans détour.
+  if (quizz.statut === 'lance' && commencer !== '1') {
+    const admin = createAdminClient()
+    if (await lirePorteAntichambre(admin) && await lireAntichambreAt(admin, quizId)) {
+      const { data: session } = await supabase
+        .from('quazian_sessions').select('id').eq('quiz_id', quizId).eq('eleve_id', user.id).maybeSingle()
+      const expire = !!quizz.ferme_at && Date.parse(quizz.ferme_at as string) <= Date.now() // eslint-disable-line react-hooks/purity -- Server Component, rendu une fois par requête
+      if (!session && expire) {
+        return (
+          <div className="max-w-xl mx-auto text-center py-16">
+            <h2 className="text-xl font-serif text-encre">Le temps est écoulé</h2>
+            <p className="mt-2 text-sm text-encre-douce">Ce quiz n’accepte plus de réponse. Ton professeur va le fermer.</p>
+            <Link href="/eleve/modules/quazian" className="mt-4 inline-block text-sm text-muet underline">Retour</Link>
+          </div>
+        )
+      }
+      if (!session) {
+        const minutes = quizz.ferme_at
+          // eslint-disable-next-line react-hooks/purity -- Server Component : rendu une fois par requête, Date.now() est sûr ici
+          ? Math.max(0, Math.round((new Date(quizz.ferme_at as string).getTime() - Date.now()) / 60000))
+          : null
+        return (
+          <div className="max-w-xl mx-auto space-y-4">
+            <div>
+              <h2 className="text-xl font-serif text-encre">Le quiz a déjà commencé</h2>
+              {minutes !== null && (
+                <p className="mt-1 text-sm text-attention">
+                  Il reste environ {minutes} minute{minutes > 1 ? 's' : ''} : lis ceci, puis commence.
+                </p>
+              )}
+            </div>
+            <Consignes />
+            <Link
+              href={`/eleve/modules/quazian/quizz/${quizId}?commencer=1`}
+              className="block w-full py-3 text-center text-sm bg-ok text-surface rounded-xl hover:opacity-90 font-medium"
+            >
+              Commencer le quiz →
+            </Link>
+          </div>
+        )
+      }
+    }
   }
 
   // Passation en cours
@@ -176,4 +275,22 @@ export default async function PassationPage({
       />
     </div>
   )
+}
+
+/**
+ * L'antichambre d'un brouillon est-elle visible pour CET élève ? Porte ouverte,
+ * antichambre ouverte, quiz de sa classe (garde du code : le brouillon est lu au
+ * service-role, la RLS élève le cache).
+ */
+async function antichambreVisible(
+  supabase: Awaited<ReturnType<typeof createClient>>, eleveId: string, quizId: string,
+): Promise<boolean> {
+  const admin = createAdminClient()
+  if (!(await lirePorteAntichambre(admin))) return false
+  const [{ data: q }, classeIds, ouverte] = await Promise.all([
+    admin.from('quazian_quizzes').select('statut, classe_id').eq('id', quizId).maybeSingle(),
+    classeIdsActives(supabase, eleveId),
+    lireAntichambreAt(admin, quizId),
+  ])
+  return !!ouverte && q?.statut === 'brouillon' && !!q.classe_id && classeIds.includes(q.classe_id as string)
 }

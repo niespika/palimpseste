@@ -22,18 +22,34 @@ export function calculerScoreBrier(
 export const JETONS_NEUTRE: [number, number, number, number] = [25, 25, 25, 25]
 export const SCORE_NON_REPONDU = 2.5
 
+/**
+ * Mélange déterministe basé sur une graine (id élève + quiz ou question).
+ * ⛔ Refait le 22/09 : l'ancien (`hash*31 + i`, `% (i+1)`) ne produisait que 12
+ *    ordres sur 24, et la réponse d'origine n°0 tombait en B une fois sur trois
+ *    (mesuré sur 100 000 graines). Ici : la graine est brassée (xmur3), un
+ *    générateur semé (mulberry32) tire un Fisher-Yates — chaque ordre équiprobable.
+ *    Les ordres déjà tirés vivent dans les sessions (`ordre_options`) : rien ne bouge
+ *    pour un quiz en cours.
+ */
 export function shuffleArray<T>(arr: T[], seed: string): T[] {
-  // Mélange déterministe basé sur une graine (id élève)
-  const result = [...arr]
-  let hash = 0
+  let h = 1779033703 ^ seed.length
   for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i)
-    hash |= 0
+    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353)
+    h = (h << 13) | (h >>> 19)
   }
+  h = Math.imul(h ^ (h >>> 16), 2246822507)
+  h = Math.imul(h ^ (h >>> 13), 3266489909)
+  let etat = (h ^ (h >>> 16)) >>> 0
+  const aleatoire = () => {
+    etat = (etat + 0x6d2b79f5) >>> 0
+    let t = etat
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+  const result = [...arr]
   for (let i = result.length - 1; i > 0; i--) {
-    hash = ((hash << 5) - hash) + i
-    hash |= 0
-    const j = Math.abs(hash) % (i + 1)
+    const j = Math.floor(aleatoire() * (i + 1))
     ;[result[i], result[j]] = [result[j], result[i]]
   }
   return result
