@@ -1,6 +1,6 @@
 # PLAN DE CHANTIER — l'ordre des lots, et la fabrique de leurs prompts
 
-## État courant — Quazian : le générateur de QCM contrôlé par le code (23/09/2026 ; commité sur la branche `claude/suspicious-borg-2fa8eb`, push à Louis)
+## État courant — Quazian : le générateur de QCM contrôlé par le code (23/09/2026 ; POUSSÉ et déployé le 23/09, smoke prod fait dans la Classe Test)
 
 Trois défauts mesurés sur le quiz de T5 (bonne réponse la plus longue 8/15, applications sur les exemples des cartes, prémisse perdue), puis une revue adversariale et deux décisions de Louis (réhabillage accepté ; formulation de la carte refusée). Le code contrôle désormais chaque question générée, la fait réécrire une fois, et écarte ce qui échoue encore ; 20 % de marge. Aucune migration, aucune porte. Détail et mesures : `SUIVI_tests_manuels.md`, même date.
 

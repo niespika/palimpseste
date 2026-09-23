@@ -1,6 +1,6 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
-## Quazian — le générateur de QCM contrôlé par le code : longueur, exemple du cours, prémisses, copie de carte (23/09/2026 ; commité sur la branche `claude/suspicious-borg-2fa8eb`, NON poussé)
+## Quazian — le générateur de QCM contrôlé par le code : longueur, exemple du cours, prémisses, copie de carte (23/09/2026 ; POUSSÉ par Louis et déployé le 23/09, smoke prod fait)
 
 Demande de Louis du 23/09, à partir du constat de la ligne du 23/09 d'`IDEES_post_rentree.md` ; conduite point par point avec lui. Aucune migration, aucune porte (correctif du générateur existant, arbitrage accepté par Louis).
 
@@ -11,7 +11,10 @@ Demande de Louis du 23/09, à partir du constat de la ligne du 23/09 d'`IDEES_po
 - **Revue adversariale** (code, heuristiques, avocat de l'élève) : 1 bloquant corrigé — « Nouveaux distracteurs » laissait le modèle raccourcir la bonne réponse du professeur et l'enregistrait validée ; corrigés aussi : réécrites appariées par numéro, nature et notion imposées, relecture incomplète signalée, faux positifs des tournures du cours, « 15h » / formules / `{{…}}`, lot entièrement écarté dit avec ses motifs, réponses allongées pour égaliser.
 - **Contrôles** : `tsc` propre, eslint des fichiers du lot propre, **2 824 tests verts** après fusion de `main` dans la branche.
 - **Limites** : pas vu à l'écran (il faut une session professeur et des cartes au bac à sable) ; pas éprouvé en prod ; le relecteur ne trouve que 3 des 7 doubles réponses relevées à la main ; une application étiquetée « connaissance » par le modèle échappe aux contrôles d'exemple et de relecture ; les scripts du banc sont restés dans le dossier temporaire de la séance.
-- **Reste à Louis** : pousser (fusionner la branche dans `main`), puis créer un quiz et le relire.
+- **Smoke en PRODUCTION (23/09, 23:29–23:33 UTC, session professeur de Louis, déploiement de `c33b606` vérifié « completed »)** : création d'un quiz dans la **Classe Test** (jamais T5), mêmes trois contenus que le quiz de T5, 15 questions → **15 retenues, aucun avis**, ~70 s, 4 appels, **0,108 $** ; bonne réponse plus longue de plus de 2 mots **0/15** (5/15 sur le quiz de T5), réponse > 90 caractères **0** (3), copie forte **0** (5). « Nouveaux distracteurs » sur une question : bonne réponse **identique mot pour mot**, déplacée de D à C, leurres de 78 à 84 caractères (bonne : 83), 0,0075 $. « Ajouter des questions » (2) : « 2 questions ajoutées sur 2 demandées. », < 30 s, 4 appels, 0,066 $, compteur 17.
+- **Relecture des 17 questions réelles** (3 regards, une phase) : une question à **deux réponses défendables** (la thérapeute et le pragmatisme : la clé suit l'objection de la carte 56, la carte 55 permet « non »), vérifiée sur les cartes ; restent des indices que les contrôles ne voient pas : leurre qui se réfute par l'énoncé seul (4 questions), réponse dans l'énoncé (« CVJ », « philo-sophie »), une question qui donne la réponse d'une autre (« épistémologie »), forme différente de la bonne réponse, absolus dans les leurres. « Nouveaux distracteurs » a produit un leurre absurde (« …si elle porte sur de la culture générale »).
+- **Traces laissées en prod** : le quiz d'essai **en brouillon** dans la Classe Test (`7aa8f3f1…`, 17 questions, invisible des élèves) et son exercice au plan de la Classe Test (semaine du 21/09, `a_concevoir`) ; 9 lignes `api_couts` (0,18 $). Suppression laissée à Louis.
+- **Reste à Louis** : décider des indices restants ; supprimer le quiz d'essai (le bouton « Supprimer » remet l'exercice du plan à `a_concevoir` sans le retirer).
 
 ## Quazian — retours du premier quiz en classe : points 1 à 8, recette au bac à sable (22-23/09/2026) ; migrations jouées en PRODUCTION le 23/09, portes OFF
 
