@@ -105,7 +105,9 @@ function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ec
       return { data: q.filtres.some(f => f[0] === 'contenu_id') ? Array.from({ length: cartes }, () => carte) : [], error: null }
     }
     if (q.table !== 'quazian_questions') throw new Error(q.table)
-    const filtrees = lignes.filter(l => q.filtres.every(([cle, valeur]) => l[cle as keyof Question] === valeur))
+    // `.in(col, liste)` arrive ici comme un filtre dont la valeur est un tableau.
+    const filtrees = lignes.filter(l => q.filtres.every(([cle, valeur]) =>
+      Array.isArray(valeur) ? valeur.includes(l[cle as keyof Question]) : l[cle as keyof Question] === valeur))
     // La garde `refusSiNonModifiable` : la question et le statut de son quiz.
     // La lecture de « Nouveaux distracteurs » : la question entière.
     if (q.op === 'select' && q.colonnes?.includes('options')) return { data: filtrees[0] ?? null, error: null }
@@ -730,4 +732,43 @@ test('nouveaux distracteurs — écriture vérifiée : réussie, en échec, ou s
   assert.deepEqual(echec.synchronisations, [])
   const vide = decor({ erreur: 'update-vide' })
   assert.equal((await vide.actions.regenererDisctracteurs(geste())).error, 'Cette question ne fait plus partie de ce quiz.')
+})
+
+// 23/09 — « ✓ Tout valider » confirme, et ne valide que ce que le professeur a vu.
+function toutValider(ids: string[], quizId = 'quiz') {
+  const f = new FormData()
+  f.set('quizId', quizId)
+  for (const id of ids) f.append('id', id)
+  return f
+}
+function aRelire(d: ReturnType<typeof decor>, ids: string[]) {
+  for (const l of d.lignes) if (ids.includes(l.id)) l.statut_validation = 'suggere'
+}
+test('tout valider — seules les questions confirmées passent en validées, dans ce quiz', async () => {
+  const d = decor()
+  aRelire(d, ['q1', 'q2', 'q3', 'q5'])
+  // q5 est arrivée depuis un autre onglet après l'affichage : elle n'est pas dans la confirmation.
+  const r = await d.actions.validerToutesQuestions(toutValider(['q1', 'q2', 'q3', 'q2']))
+  assert.ok('success' in r && r.success)
+  assert.deepEqual(d.lignes.filter(l => l.statut_validation === 'suggere').map(l => l.id), ['q5'])
+  const ecriture = d.requetes.find(q => q.table === 'quazian_questions' && q.op === 'update')
+  assert.deepEqual(js(ecriture?.filtres), [['quiz_id', 'quiz'], ['id', ['q1', 'q2', 'q3']]], 'ids dédoublonnés, filtre par quiz')
+  assert.deepEqual(d.synchronisations, ['quiz'])
+  assert.ok(d.revalidations.includes('/prof/quazian/quizz/quiz'))
+})
+test('tout valider — rien à valider, quiz lancé, antichambre ouverte : refusé avant d’écrire', async () => {
+  const vide = decor()
+  assert.equal((await vide.actions.validerToutesQuestions(toutValider([]))).error, 'Aucune question à valider.')
+  const lance = decor({ statut: 'lance' })
+  assert.equal((await lance.actions.validerToutesQuestions(toutValider(['q1']))).error, 'Seul un brouillon se modifie.')
+  const attente = decor({ antichambre: true })
+  assert.equal((await attente.actions.validerToutesQuestions(toutValider(['q1']))).error, 'L’antichambre de ce quiz est ouverte : referme-la avant de le modifier.')
+  for (const d of [vide, lance, attente]) assert.ok(!d.requetes.some(q => q.table === 'quazian_questions' && q.op === 'update'))
+})
+test('tout valider — une écriture en échec ou sans ligne se dit', async () => {
+  const echec = decor({ erreur: 'update-question' })
+  assert.equal((await echec.actions.validerToutesQuestions(toutValider(['q1']))).error, 'Les questions n’ont pas pu être validées. Réessaie.')
+  assert.deepEqual(echec.synchronisations, [])
+  const disparues = decor()
+  assert.equal((await disparues.actions.validerToutesQuestions(toutValider(['q99']))).error, 'Ces questions ne font plus partie de ce quiz : recharge la page.')
 })

@@ -523,15 +523,31 @@ export async function regenererDisctracteurs(formData: FormData) {
   return { success: true }
 }
 
-// Valider toutes les questions d'un quizz
+// Valider d'un seul geste les questions d'un quizz — celles que le professeur a
+// vues « à valider » en confirmant (23/09 : un clic sans confirmation validait
+// tout, y compris ce qu'il n'avait pas relu). Les ids viennent de la
+// confirmation : une question ajoutée depuis un autre onglet entre-temps reste à
+// relire. Brouillon seulement, antichambre fermée ; l'écriture se LIT.
 export async function validerToutesQuestions(formData: FormData) {
   const { supabase } = await verifierProf()
   const quizId = formData.get('quizId') as string
+  const ids = [...new Set(formData.getAll('id').map(String).filter(Boolean))]
+  if (ids.length === 0) return { error: 'Aucune question à valider.' }
 
-  await supabase
+  const { data: quiz, error: erreurQuiz } = await supabase
+    .from('quazian_quizzes').select('statut').eq('id', quizId).single()
+  if (erreurQuiz) return { error: 'Impossible de lire le quiz.' }
+  if (quiz?.statut !== 'brouillon') return { error: 'Seul un brouillon se modifie.' }
+  if (await antichambreOuverte(quizId)) return { error: REFUS_ANTICHAMBRE }
+
+  const { data: validees, error } = await supabase
     .from('quazian_questions')
     .update({ statut_validation: 'valide' })
     .eq('quiz_id', quizId)
+    .in('id', ids)
+    .select('id')
+  if (error) return { error: 'Les questions n’ont pas pu être validées. Réessaie.' }
+  if (!validees?.length) return { error: 'Ces questions ne font plus partie de ce quiz : recharge la page.' }
 
   await synchroniserStatutExerciceQuiz(createAdminClient(), quizId) // Q4
   revalidatePath(`/prof/quazian/quizz/${quizId}`)

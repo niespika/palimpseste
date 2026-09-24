@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { libellesCibles } from '@/utils/quazian-cibles'
-import { validerToutesQuestions } from '../actions'
 import { QuestionCard } from './QuestionCard'
+import { ToutValider } from './ToutValider'
 import { AjouterQuestions } from './AjouterQuestions'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-antichambre-serveur'
@@ -11,11 +11,6 @@ import { lireAntichambreAt, lirePorteAntichambre } from '@/utils/quazian-anticha
 // « Ajouter des questions » part d'ici : génération contrôlée (génération, relecture
 // à l'aveugle, réécriture, relecture), jusqu'à ~1 min au banc du 23/09.
 export const maxDuration = 300
-
-async function actionValiderToutes(formData: FormData): Promise<void> {
-  'use server'
-  await validerToutesQuestions(formData)
-}
 
 export default async function QuizzDetailPage({
   params,
@@ -60,6 +55,7 @@ export default async function QuizzDetailPage({
   const labelsMap = await libellesCibles(supabase, scope)
 
   const nbValidees = (questions ?? []).filter((q) => q.statut_validation === 'valide').length
+  const aValider = (questions ?? []).filter((q) => q.statut_validation !== 'valide').map((q) => q.id)
   const total = (questions ?? []).length
   const toutValide = nbValidees === total && total > 0
   // L'antichambre ouverte (22/09) fige le quiz comme un lancement : des élèves
@@ -100,16 +96,10 @@ export default async function QuizzDetailPage({
 
         {/* Actions principales */}
         <div className="flex gap-2 shrink-0 flex-wrap">
-          {!readOnly && (
-            <form action={actionValiderToutes}>
-              <input type="hidden" name="quizId" value={quizId} />
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm bg-parchemin-fonce text-encre-douce rounded-lg hover:bg-bordure transition-colors"
-              >
-                ✓ Tout valider
-              </button>
-            </form>
+          {!readOnly && aValider.length > 0 && (
+            // La clé suit la liste : si elle change (question ajoutée, validée,
+            // refusée), la confirmation se referme au lieu de changer de chiffre.
+            <ToutValider key={aValider.join(',')} quizId={quizId} ids={aValider} total={total} />
           )}
           {toutValide && quizz.statut === 'brouillon' && (
             <Link

@@ -132,7 +132,9 @@ export function QuestionCard({
 
   if (mode === 'edit') {
     return (
-      <div className="bg-surface border border-bordure rounded-xl p-4">
+      // `data-edition-ouverte` : « ✓ Tout valider » le lit pour prévenir qu'une
+      // correction n'est pas encore enregistrée (23/09).
+      <div className="bg-surface border border-bordure rounded-xl p-4" data-edition-ouverte={question.id} data-numero={numero}>
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-muet font-mono">Q{numero}</span>
           <input
