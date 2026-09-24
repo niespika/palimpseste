@@ -38,11 +38,17 @@ export default async function QuizzDetailPage({
     return c ? (c as { nom: string }).nom : null
   })()
 
+  // ⛔ 23/09 — les questions d'une génération sont insérées d'un seul coup, à la
+  //    MÊME date (prod : 17 questions, 2 dates). Triées sur la date seule, leur
+  //    ordre était arbitraire et changeait à chaque modification : la question
+  //    corrigée sautait, les numéros se rebattaient. L'id départage, l'ordre tient.
+  //    (Les élèves ne sont pas concernés : leur ordre est tiré et gardé par session.)
   const { data: questions } = await supabase
     .from('quazian_questions')
     .select('id, enonce, options, index_correct, concept_tag, statut_validation')
     .eq('quiz_id', quizId)
     .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
 
   // Périmètre BI-SOURCE (C7·L1) : contenus de bibliothèque d'abord, unités
   // héritées ensuite. Un id que ni l'une ni l'autre table ne connaît retombe sur
