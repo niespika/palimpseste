@@ -1,5 +1,9 @@
 # PLAN DE CHANTIER — l'ordre des lots, et la fabrique de leurs prompts
 
+## État courant — Codex : l'épreuve à sujet libre, projetée, minutée (24/09/2026 ; COMMITÉ `a21ee28` + handoff `2a77539`, NON poussé — Louis pousse ; SQL au bac à sable seulement, porte OFF)
+
+Demande directe de Louis pour l'examen 1HLP du mardi 29/09 (hors lot du plan). Sujet libre, page projetée (heure, temps restant par paliers, sujet, consignes), durées de rédaction et de relecture, **dépôt automatique à la moitié de la rédaction** (`02-` v6.10, étape `4 bis`, accord de Louis), confirmation avant validation, tablette qui suit l'épreuve, découplage d'`exercices_actif`. Codé, éprouvé au bac à sable aux trois largeurs, passé en revue adversariale (une phase, cinq regards). Restent : relecture des textes élève par Louis, commit, SQL en prod, push, porte en prod. Détail : `SUIVI_tests_manuels.md` (section du 24/09) et `REPRISE_Codex_epreuve_minutee.md`.
+
 ## État courant — Quazian : le générateur de QCM contrôlé par le code (23/09/2026 ; POUSSÉ et déployé le 23/09, smoke prod fait dans la Classe Test)
 
 Trois défauts mesurés sur le quiz de T5 (bonne réponse la plus longue 8/15, applications sur les exemples des cartes, prémisse perdue), puis une revue adversariale et deux décisions de Louis (réhabillage accepté ; formulation de la carte refusée). Le code contrôle désormais chaque question générée, la fait réécrire une fois, et écarte ce qui échoue encore ; 20 % de marge. Aucune migration, aucune porte. Détail et mesures : `SUIVI_tests_manuels.md`, même date. Suite le même soir (`a66b4f5`) : « Modifier » à la main garde la saisie sur un refus ou une panne et vérifie son écriture — Louis corrigera les indices restants à la main. Puis « ✓ Tout valider » demande confirmation et ne valide que ce qu'elle annonce (`d057468`).
