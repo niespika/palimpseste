@@ -1,5 +1,15 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Quazian — « ✓ Tout valider » demande confirmation (23-24/09/2026 ; commité `d057468`, NON poussé, pas vu à l'écran)
+
+Demande de Louis (ligne du 23/09 d'`IDEES_post_rentree.md`, point 1) : un clic validait sans confirmation toutes les questions « à valider », non relues comprises, et faisait apparaître « Lancer le quizz ». Aucune migration, aucune porte.
+
+- **Fait** : confirmation en ligne « N questions sur T ne sont pas encore validées. Les valider sans les relire une à une ? » — « Valider les N » / « Annuler » ; avis si une question est ouverte en modification (sa version enregistrée sera validée) ; clavier : focus sur « Annuler », Échap referme, focus rendu au bouton. `validerToutesQuestions` ne valide que les ids annoncés, brouillon seulement, antichambre fermée, écriture lue ; la confirmation se referme si la liste change dans l'onglet (clé tirée de la liste) ; le bouton disparaît quand il ne reste rien à valider.
+- **Passe adversariale** (2 regards, une phase) : 3 constats mineurs corrigés (chiffre qui changeait sous les yeux après un ajout dans le même onglet, correction en cours non signalée, focus clavier) ; vérifiés sains : aucun autre appelant, lancement et antichambre exigent déjà 0 question « à valider », 60 ids tiennent dans la requête.
+- **Contrôles** : `tsc` propre, eslint des fichiers du lot propre, **2 837 tests verts** (8 nouveaux).
+- **À savoir** : un onglet de quiz ouvert AVANT le déploiement garde l'ancien bouton, sans confirmation — recharger les onglets ouverts après le push.
+- **Non fait** : vu à l'écran — à vérifier après le push sur le quiz d'essai de la Classe Test (1280 / 768 / 375 px, Annuler, Échap, avis de modification en cours). « Tout valider » des flashcards (cartes suggérées) non touché, sans confirmation.
+
 ## Quazian — « Modifier » une question à la main : la saisie ne se perd plus, les échecs se disent (23/09/2026 ; `a66b4f5` et tri des questions `3fb2f9c` POUSSÉS, vus à l'écran en prod)
 
 Suite du générateur contrôlé : Louis corrigera à la main les indices restants, donc « Modifier » devient l'outil principal. Aucune migration, aucune porte.
