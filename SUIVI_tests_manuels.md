@@ -1,6 +1,6 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
-## Quazian — « ✓ Tout valider » demande confirmation (23-24/09/2026 ; commité `d057468`, NON poussé, pas vu à l'écran)
+## Quazian — « ✓ Tout valider » demande confirmation (23-24/09/2026 ; `d057468` POUSSÉ, vu à l'écran en prod à 375 / 768 / 1280 px)
 
 Demande de Louis (ligne du 23/09 d'`IDEES_post_rentree.md`, point 1) : un clic validait sans confirmation toutes les questions « à valider », non relues comprises, et faisait apparaître « Lancer le quizz ». Aucune migration, aucune porte.
 
@@ -8,7 +8,8 @@ Demande de Louis (ligne du 23/09 d'`IDEES_post_rentree.md`, point 1) : un clic v
 - **Passe adversariale** (2 regards, une phase) : 3 constats mineurs corrigés (chiffre qui changeait sous les yeux après un ajout dans le même onglet, correction en cours non signalée, focus clavier) ; vérifiés sains : aucun autre appelant, lancement et antichambre exigent déjà 0 question « à valider », 60 ids tiennent dans la requête.
 - **Contrôles** : `tsc` propre, eslint des fichiers du lot propre, **2 837 tests verts** (8 nouveaux).
 - **À savoir** : un onglet de quiz ouvert AVANT le déploiement garde l'ancien bouton, sans confirmation — recharger les onglets ouverts après le push.
-- **Non fait** : vu à l'écran — à vérifier après le push sur le quiz d'essai de la Classe Test (1280 / 768 / 375 px, Annuler, Échap, avis de modification en cours). « Tout valider » des flashcards (cartes suggérées) non touché, sans confirmation.
+- **Vu à l'écran en PRODUCTION (24/09, déploiement de `66cf95c` vérifié « completed », onglet neuf)**, sur le quiz d'essai de la Classe Test (15 questions sur 17 à valider), la page chargée dans des cadres de même origine à 375, 768 et 1280 px : « 15 questions sur 17 ne sont pas encore validées. Les valider sans les relire une à une ? » ; aucun débordement (375 : boîte de 16 à 336 px ; 768 : sous le titre ; 1280 : à droite du titre) ; focus sur « Annuler » ; Échap referme et rend le focus au bouton ; Entrée réflexe sur « Annuler » ne valide rien (toujours 2/17) ; Q1 ouverte en modification → avis « Q1 est ouverte en modification : sa correction n'est pas enregistrée… » ; « Valider les 15 » → 17/17, bouton disparu, « Lancer le quizz → » affiché, quiz toujours en brouillon ; en base 17 « valide », exercice du plan de la Classe Test passé à `concu`.
+- **Reste** : « Tout valider » des flashcards (cartes suggérées) non touché, sans confirmation. Outil de recette : dans Chrome, la capture et le JavaScript de l'extension échouaient sur la page elle-même après l'ouverture de la confirmation (« Cannot access a chrome-extension:// URL of different extension ») — contourné en chargeant la page dans des cadres de même origine.
 
 ## Quazian — « Modifier » une question à la main : la saisie ne se perd plus, les échecs se disent (23/09/2026 ; `a66b4f5` et tri des questions `3fb2f9c` POUSSÉS, vus à l'écran en prod)
 
