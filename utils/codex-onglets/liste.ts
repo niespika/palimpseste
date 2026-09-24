@@ -474,7 +474,8 @@ async function passationsRemisesDeLEleve(
  * L'onglet EXAMENS de l'élève, dans l'atelier demandé et pour la classe en
  * contexte.
  *
- * ⭐ LA LISTE NAÎT DERRIÈRE LES **DEUX** PORTES, LE PLUS FERMÉ GAGNANT —
+ * ⭐ LA LISTE NAÎT DERRIÈRE LA PORTE DE LA PASSATION (une seule depuis le 24/09 :
+ *    `exercices_actif` ne ferme plus la classe, décision de Louis) —
  *    `passationOuverteAEleve`, exactement celle que `garderEleve` applique à
  *    l'écran de passation lui-même. **Un lien qui mènerait à une page fermée
  *    est un lien qui promet une porte close** : l'écran répondrait « Cet écran

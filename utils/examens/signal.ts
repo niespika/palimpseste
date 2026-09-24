@@ -68,13 +68,13 @@ export interface SignalDeLancement {
 export async function signauxDeLancement(
   admin: Admin, eleveId: string, module: ModulePassation,
 ): Promise<SignalDeLancement[]> {
-  // ⭐ LE CÔTÉ ÉLÈVE NAÎT DERRIÈRE SES PORTES, ET IL Y EN A DEUX : `exercices_actif`
-  //    — « les élèves peuvent-ils faire des exercices ? » (§1.5, au professeur) —
-  //    et `passation_classe_actif`, l'interrupteur propre de C4-L4. LE PLUS FERMÉ
-  //    GAGNE, et c'est exactement ce que `garderEleve` applique à la page de
-  //    passation elle-même : un signal qui mènerait à une page fermée serait un
-  //    lien qui promet une porte close. On réutilise LEUR lecture, on n'en écrit
-  //    pas une seconde — et ce lot n'ouvre aucun interrupteur, ni n'en crée.
+  // ⭐ LE CÔTÉ ÉLÈVE NAÎT DERRIÈRE SA PORTE : `passation_classe_actif`,
+  //    l'interrupteur propre de C4-L4 — exactement ce que `garderEleve` applique
+  //    à la page de passation elle-même : un signal qui mènerait à une page
+  //    fermée serait un lien qui promet une porte close. On réutilise SA
+  //    lecture, on n'en écrit pas une seconde.
+  //    ⚠️ 24/09 — `exercices_actif` ne la ferme plus (décision de Louis : fermer
+  //    la maison ne ferme pas la classe, `utils/passation/acces.ts`).
   if (!(await passationOuverteAEleve(admin))) return []
 
   const { data, error } = await admin

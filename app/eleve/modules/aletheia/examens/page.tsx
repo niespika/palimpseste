@@ -21,9 +21,9 @@
 //    est une ÉCRITURE (`06-` §1), elle vit dans Codex, et « son nom est "la
 //    synthèse en classe", et pas un autre » (`01-` §10).
 //
-// ⚠️ LES DEUX PORTES DU SIGNAL SE LISENT DANS `signauxDeLancement`, jamais ici :
-//    `exercices_actif` ET `passation_classe_actif`, LE PLUS FERMÉ GAGNANT
-//    (`passationOuverteAEleve`) — c'est exactement ce que `garderEleve` applique
+// ⚠️ LA PORTE DU SIGNAL SE LIT DANS `signauxDeLancement`, jamais ici :
+//    `passation_classe_actif` (`passationOuverteAEleve` ; `exercices_actif` ne la
+//    ferme plus depuis le 24/09) — c'est exactement ce que `garderEleve` applique
 //    à la page de passation elle-même. « Une garde qu'on peut oublier en
 //    écrivant un second écran n'est pas une garde. »
 // ============================================================================

@@ -82,7 +82,7 @@ export const FICHES: Record<Interrupteur, FicheDInterrupteur> = {
     commande: [
       'le déroulé de l’élève à la maison — sans lui, l’écran se ferme poliment',
       'le module Codex côté élève, et la liste de ses exercices',
-      'la face élève de la passation en classe, avec `passation_classe_actif`',
+      // ⚠️ 24/09 — plus la passation en classe : découplée sur décision de Louis.
     ],
     avertissement: null,
   },
@@ -162,10 +162,10 @@ export const FICHES: Record<Interrupteur, FicheDInterrupteur> = {
       'la TRANSCRIPTION dans la file (`transcription_v1`)',
     ],
     avertissement:
-      '⚠️ LE PLUS FERMÉ GAGNE, ET IL NE GAGNE QUE D’UN CÔTÉ. Pour l’ÉLÈVE, la '
-      + 'passation demande celui-ci ET `exercices_actif` : ouvrir l’un sans l’autre '
-      + 'ne lui montre rien. Pour le PROFESSEUR, celui-ci suffit — il corrige avant '
-      + 'que les élèves aient accès à quoi que ce soit.',
+      '⚠️ IL OUVRE LES DEUX CÔTÉS. Pour l’ÉLÈVE comme pour le PROFESSEUR, la passation '
+      + 'en classe ne dépend que de lui : `exercices_actif` ne la ferme plus (décision du '
+      + '24/09 — fermer les exercices à la maison ne ferme pas la classe). Le fermer après '
+      + 'un examen retire aussi aux élèves l’accès à leur retour.',
   },
 }
 

@@ -179,9 +179,13 @@ function Ouverture({ vue }: { vue: VueProf }) {
         1 · Ouvrir, puis clore le dépôt
       </h2>
       <p className="mt-2 text-sm text-encre-douce">
+        {/* 24/09 — « la durée affichée aux élèves reste indicative » était faux (aucune
+            durée n'était affichée), et une épreuve minutée de Codex ouvre désormais son
+            dépôt toute seule, à la moitié de la rédaction (bandeau au-dessus). */}
         C’est <strong>votre geste</strong>, jamais une fenêtre calendaire : rien ne se ferme tout
-        seul, et la durée affichée aux élèves reste indicative. L’ouverture commande deux choses —
-        le dépôt des photos, et la relecture de la transcription.
+        seul. Sur une épreuve minutée de Codex, le dépôt s’ouvre aussi tout seul, à la moitié de
+        la rédaction. L’ouverture commande deux choses — le dépôt des photos, et la relecture de
+        la transcription.
       </p>
 
       {/* Les deux drapeaux, ICI, au moment où le professeur ouvre : « le geste

@@ -376,6 +376,15 @@ export async function enregistrerLesPhotos(
   const rangees = renumeroter(photos)
   const mauvais = refuserPhotos(rangees)
   if (mauvais) return refus(mauvais.motif)
+  // ⛔ REVUE DU 24/09 — LE CHEMIN VIENT DE L'ÉCRAN, DONC DE L'ÉLÈVE. Rien ne
+  //    vérifiait qu'il désigne SES pages : une requête forgée pouvait y écrire le
+  //    chemin de la copie d'un autre élève — que la transcription lisait déjà, et
+  //    que la relecture aurait signé. Une page déposée vit dans le bucket de la
+  //    passation, sous le préfixe de CE dépôt, et nulle part ailleurs.
+  const prefixe = `${prefixeDepot(eleveId, depotId)}/`
+  const etrangere = rangees.find((p) => !p.page_manquante
+    && ((p.bucket ?? BUCKET) !== BUCKET || !p.chemin || !p.chemin.startsWith(prefixe)))
+  if (etrangere) return refus(`La page ${etrangere.ordre} ne vient pas de ce dépôt : renvoie tes photos.`)
 
   const { error } = await admin.from('exercices_depots')
     .update({ photos_v1: rangees, updated_at: new Date().toISOString() })

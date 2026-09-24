@@ -29,7 +29,11 @@ export default function SignalDeLancement({ signaux }: { signaux: Signal[] }) {
                 Passation en classe ouverte — {s.titre}
               </p>
               <p className="text-xs text-ok">
-                Ton professeur a ouvert le dépôt → appuie pour déposer ta copie
+                {/* 24/09 — le dépôt s'ouvre aussi tout seul, à la moitié d'une épreuve minutée :
+                    « ton professeur a ouvert » ne dit plus toujours vrai. Le verbe reste
+                    « déposer » (revue du 24/09) : le signal sert aussi Aletheia, et l'élève
+                    exempté tape sa copie, il ne la photographie pas. */}
+                Le dépôt est ouvert → appuie pour déposer ta copie
               </p>
             </div>
           </div>

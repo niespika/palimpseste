@@ -2,13 +2,19 @@ import { lirePromptsCodex } from './actions'
 import { PROMPT_V1_DEFAUT, PROMPT_VF_DEFAUT } from '@/utils/codex-analyse'
 import { CONSIGNE_V1_DEFAUT, CONSIGNE_VF_DEFAUT } from '@/app/eleve/modules/codex/consignes'
 import FormulaireParametresCodex from './FormulaireParametresCodex'
+import PorteEpreuve from './PorteEpreuve'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lireLaPorteEpreuve } from '@/utils/examens/epreuve-serveur'
 
 export default async function ParametresCodexPage() {
+  // `lirePromptsCodex` garde (professeur) : la porte se lit après elle.
   const prompts = await lirePromptsCodex()
+  const epreuveActive = await lireLaPorteEpreuve(createAdminClient())
 
   return (
     <div className="max-w-3xl">
       <h3 className="text-base font-medium text-encre-douce mb-6">Paramètres</h3>
+      <PorteEpreuve actif={epreuveActive} />
       <FormulaireParametresCodex
         promptV1Initial={prompts.prompt_suggestions_v1 ?? ''}
         promptVfInitial={prompts.prompt_retour_vf ?? ''}

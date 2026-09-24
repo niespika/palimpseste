@@ -410,11 +410,15 @@ export async function enregistrerSeJuger(
   }, { onConflict: 'depot_id' })
   if (error) return refus(`Les réponses n’ont pas été enregistrées : ${error.message}`)
 
-  await admin.from('exercices_depots').update({
+  // ⭐ 24/09 — vérifiée : `juger_fin_at` est le fait qui fait tourner la page de
+  //    l'épreuve de Codex (« se juger » fait). Ignorée, une panne laissait l'élève
+  //    sur la même page, sans un mot, ses réponses pourtant enregistrées.
+  const { error: eFin } = await admin.from('exercices_depots').update({
     juger_debut_at: d.juger_debut_at ?? maintenant,
     juger_fin_at: maintenant,
     updated_at: maintenant,
   }).eq('id', depotId)
+  if (eFin) return refus(`Tes réponses sont enregistrées, mais l’étape n’a pas pu se clore : ${eFin.message}. Réessaie.`)
   return ok(undefined)
 }
 

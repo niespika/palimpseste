@@ -20,7 +20,14 @@ import 'server-only'
 //    exercices ? ». Celui-ci répond à « le flux de la passation en classe
 //    est-il construit et éprouvé ? ». Ce sont deux questions.
 //
-// Les deux se lisent donc ensemble côté élève, et le plus fermé gagne.
+// ⭐⭐ 24/09 — DÉCOUPLÉS, SUR DÉCISION DE LOUIS. Les deux se lisaient ensemble
+//    côté élève, « le plus fermé gagne ». Mesuré en production le 24/09 :
+//    `exercices_actif` à OFF — EXPRÈS, les exercices à la maison sont fermés —
+//    et `passation_classe_actif` à ON. L'examen 1HLP du 29/09 aurait été
+//    invisible : le professeur ouvre le dépôt, AUCUN élève ne voit rien (ni
+//    signal, ni page, ni transcription). Louis : fermer la maison ne ferme pas
+//    la classe. La face élève de la passation ne lit plus que SON interrupteur ;
+//    `exercices_actif` garde tout ce qu'il gardait à la maison.
 // ============================================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -31,7 +38,10 @@ type Admin = SupabaseClient
 export interface EtatDesPortes {
   /** L'interrupteur propre de C4-L4. */
   passationActive: boolean
-  /** `exercices_actif` — le premier des trois du §1.5, qui est au professeur. */
+  /**
+   * `exercices_actif` — le premier des trois du §1.5, qui est au professeur.
+   * ⚠️ Lu, mais il ne ferme PLUS la passation en classe (24/09).
+   */
   exercicesActifs: boolean
 }
 
@@ -50,10 +60,12 @@ export async function lireLesPortes(admin: Admin): Promise<EtatDesPortes> {
   }
 }
 
-/** Côté ÉLÈVE : les deux portes, et le plus fermé gagne. */
+/**
+ * Côté ÉLÈVE : l'interrupteur de la passation, SEUL (découplé le 24/09 —
+ * voir l'en-tête). `exercices_actif` ne ferme plus la classe.
+ */
 export async function passationOuverteAEleve(admin: Admin): Promise<boolean> {
-  const p = await lireLesPortes(admin)
-  return p.passationActive && p.exercicesActifs
+  return (await lireLesPortes(admin)).passationActive
 }
 
 /**

@@ -11,7 +11,8 @@
 // ⭐ C4-L4 — ELLE DRAINE DEUX ÉTAPES, ET LEURS PORTES NE SONT PAS LES MÊMES.
 //    · les MESURES (`mesure_v1`, `mesure_vf`) obéissent à `chaine_actif` ;
 //    · la TRANSCRIPTION (`transcription_v1`) obéit à `passation_classe_actif`
-//      ET à `exercices_actif` (`utils/passation/acces.ts`).
+//      (`utils/passation/acces.ts` ; `exercices_actif` ne la ferme plus depuis
+//      le 24/09, décision de Louis).
 //    Les lier aurait un mode de panne précis : la coupure automatique de facture
 //    bascule `chaine_actif` (C4-L5), et une classe entière se retrouverait sans
 //    transcription, pendant l'heure de cours, parce que la facture du mois a

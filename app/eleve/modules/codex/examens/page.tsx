@@ -22,12 +22,18 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { seuilModule } from '@/app/eleve/seuil-module'
+import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
 import { chargerSyntheseActive, chargerHistorique } from '../actions'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { signauxDeLancement } from '@/utils/examens/signal'
 import SignalDeLancement from '@/components/examens/SignalDeLancement'
 import { examensEnClasseDeLEleve } from '@/utils/codex-onglets/liste'
 import MesExamensPasses from '@/components/examens/MesExamensPasses'
+import { epreuvesDeLEleve } from '@/utils/examens/epreuve-serveur'
+import VeilleDesEpreuves from '@/components/examens/VeilleDesEpreuves'
+import { chargerVueEleve } from '@/utils/passation/vues'
+import { EcranEleve } from '@/components/passation/EcranEleve'
+import { CONFIRMATION_AVANT_VALIDATION } from '@/utils/examens/epreuve'
 
 export default async function ExamensCodexElevePage() {
   const supabase = await createClient()
@@ -49,8 +55,34 @@ export default async function ExamensCodexElevePage() {
     )
   }
 
+  // ⭐ 24/09 — L'ÉPREUVE ACTIVE PASSE AVANT LE SEUIL DE CLASSE (revue du 24/09) :
+  //    elle appartient à l'élève, pas à la classe choisie dans l'en-tête. Un élève
+  //    de deux classes resté sur « Toutes » (ou sur l'autre) la voit quand même,
+  //    au-dessus de l'écran-seuil. Seules comptent les classes où il est INSCRIT.
+  const admin = createAdminClient()
+  const { inscriptions } = await contexteClasseEleve(supabase, user.id)
+  const epreuves = await epreuvesDeLEleve(admin, user.id, inscriptions.map((i) => i.classe_id))
+  const vues = (await Promise.all(epreuves.enCours.map((e) =>
+    chargerVueEleve(admin, e.depotId, user.id, { avecPhotos: true }))))
+    .filter((v) => v !== null)
+  const ecransDEpreuve = (
+    <>
+      {vues.map((vue) => (
+        <div key={vue.depotId} className="mb-10">
+          <EcranEleve vue={vue} refonte confirmation={CONFIRMATION_AVANT_VALIDATION} />
+        </div>
+      ))}
+      {/* Le jour prévu, l'onglet se relit seul jusqu'au lancement — même si une autre
+          épreuve est déjà à l'écran (revue du 24/09 : sinon la nouvelle n'apparaissait
+          pas sans recharger). L'écran d'une épreuve se relit lui-même. */}
+      <VeilleDesEpreuves veille={epreuves.aVenir > 0} />
+    </>
+  )
+
   const seuil = await seuilModule(supabase, user.id, module.id, 'Codex')
-  if (seuil.type === 'ecran') return seuil.noeud
+  if (seuil.type === 'ecran') {
+    return vues.length === 0 && epreuves.aVenir === 0 ? seuil.noeud : <div>{ecransDEpreuve}{seuil.noeud}</div>
+  }
 
   // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
   // C6-L2). Lecture par le SERVEUR, filtrée sur `eleve_id` : le moteur ne
@@ -61,10 +93,18 @@ export default async function ExamensCodexElevePage() {
   //    l'onglet Exercices filtre `lieu = 'maison'` : quatorze retours publiés
   //    étaient lisibles PAR PERSONNE, faute de lien. La liste naît derrière ses
   //    DEUX portes, lues dans `liste.ts` et non ici.
+  // ⭐ 24/09 — L'ÉPREUVE MINUTÉE (porte `epreuve_minutee_actif`) : lue plus haut,
+  //    AVANT le signal, parce que sa lecture OUVRE le dépôt si la moitié du temps
+  //    est passée — le signal dit alors l'état vrai. Porte fermée : rien.
+  // ⭐ 24/09 — commentaires de Louis sur la planche : l'onglet DEVIENT l'écran de
+  //    l'épreuve active (« si le dépôt est ouvert, il ne faut pas que l'élève ait à
+  //    appuyer, on doit directement voir le bouton pour faire le dépôt »). Le même
+  //    écran que la page du dépôt, chargé par la même fonction, qui refuse un
+  //    dépôt qui n'est pas le sien.
   const [synthese, historique, signaux, examens] = await Promise.all([
     chargerSyntheseActive(), chargerHistorique(),
-    signauxDeLancement(createAdminClient(), user.id, 'codex'),
-    examensEnClasseDeLEleve(createAdminClient(), user.id, seuil.inscription.classe_id, 'codex'),
+    signauxDeLancement(admin, user.id, 'codex'),
+    examensEnClasseDeLEleve(admin, user.id, seuil.inscription.classe_id, 'codex'),
   ])
   const live = synthese && (synthese.statut === 'phase_1' || synthese.statut === 'phase_2') ? synthese : null
 
@@ -75,11 +115,16 @@ export default async function ExamensCodexElevePage() {
 
   return (
     <div>
-      <p className="text-sm text-muet mb-6">
-        Ce qui se rédige <strong>en classe</strong> : la synthèse en classe et les examens diagnostiques.
-      </p>
+      {/* Une épreuve active occupe le haut de l'onglet : rien ne passe avant elle. */}
+      {vues.length === 0 && (
+        <p className="text-sm text-muet mb-6">
+          Ce qui se rédige <strong>en classe</strong> : la synthèse en classe et les examens diagnostiques.
+        </p>
+      )}
 
-      <SignalDeLancement signaux={signaux} />
+      {ecransDEpreuve}
+      {/* L'épreuve active est déjà à l'écran : son signal se tait. */}
+      <SignalDeLancement signaux={signaux.filter((s) => !epreuves.enCours.some((e) => e.depotId === s.depotId))} />
 
       {live && (
         <Link
@@ -118,7 +163,8 @@ export default async function ExamensCodexElevePage() {
       {/* Les examens diagnostiques passés, et la porte de leur retour. ⚠️ AVANT
           les synthèses : c'est là que vit l'obligation de lecture du `02-` §6.D. */}
       <div className="mb-6">
-        <MesExamensPasses examens={examens} />
+        {/* L'épreuve encore à l'écran n'est pas « passée » : pas de double (revue du 24/09). */}
+        <MesExamensPasses examens={examens.filter((e) => !vues.some((v) => v.depotId === e.depotId))} />
       </div>
 
       {historique.length > 0 && (
@@ -145,7 +191,8 @@ export default async function ExamensCodexElevePage() {
         </section>
       )}
 
-      {!live && signaux.length === 0 && historique.length === 0 && examens.length === 0 && (
+      {!live && signaux.length === 0 && vues.length === 0 && historique.length === 0
+        && examens.length === 0 && (
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center">
           <p className="text-muet text-sm">
             Rien en classe pour le moment. Ton professeur t&apos;indiquera quand une synthèse

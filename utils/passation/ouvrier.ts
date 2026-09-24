@@ -65,7 +65,7 @@ export async function transcrireDepot(
 
   if (!(await passationOuverteAEleve(admin))) {
     throw new PassationSuspendue(
-      '`passation_classe_actif` (ou `exercices_actif`) est à OFF — les dépôts restent en file.')
+      '`passation_classe_actif` est à OFF — les dépôts restent en file.')
   }
 
   const { data, error } = await admin.from('exercices_depots')

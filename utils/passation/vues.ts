@@ -25,6 +25,10 @@ import type { VueEleve } from '@/components/passation/EcranEleve'
 import type { VueProf, LigneCopie } from '@/components/passation/EcranProf'
 import type { PointRetour } from '@/utils/chaine/types'
 import type { Doute } from './transcription-calcul'
+import { BUCKET, prefixeDepot } from './chemins'
+import type { Photo } from './photos'
+import { lireEtOuvrirSiVenue, estPreparee, friseDe } from '@/utils/examens/epreuve-serveur'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 
 type Admin = SupabaseClient
 
@@ -42,13 +46,26 @@ type Admin = SupabaseClient
 export const RAPPEL_LISIBILITE =
   'Écris lisiblement : ce que la machine ne déchiffre pas, tu devras le corriger toi-même.'
 
+/**
+ * `avecPhotos` : signer les photos de l'élève pour la relecture refaite (24/09).
+ * Posé par la seule page de CODEX, porte `epreuve_minutee_actif` ouverte —
+ * Aletheia et l'essai de Fragments gardent l'écran d'hier.
+ */
 export async function chargerVueEleve(
-  admin: Admin, depotId: string, eleveId: string,
+  admin: Admin, depotId: string, eleveId: string, options: { avecPhotos?: boolean } = {},
 ): Promise<VueEleve | null> {
-  const d = await lireDepot(admin, depotId)
-  if (!d || d.eleve_id !== eleveId) return null
+  const premier = await lireDepot(admin, depotId)
+  if (!premier || premier.eleve_id !== eleveId) return null
   // Le `lieu` commande, jamais le module : un dépôt de maison n'a rien à faire ici.
-  if (d.exercice.lieu !== 'classe') return null
+  if (premier.exercice.lieu !== 'classe') return null
+
+  // ⭐ 24/09 — L'ÉPREUVE MINUTÉE (porte `epreuve_minutee_actif`). Sa lecture OUVRE
+  //    le dépôt si la moitié du temps de rédaction est passée — AVANT que la vue
+  //    ne se construise, pour qu'elle dise l'état vrai. Porte fermée : null.
+  const [{ epreuve, ouverts }, fuseau] = await Promise.all([
+    lireEtOuvrirSiVenue(admin, premier.exercice_id), lireFuseau(),
+  ])
+  const d = ouverts > 0 ? (await lireDepot(admin, depotId)) ?? premier : premier
 
   const [seJuger, confiance, credence, messageReporte, auClavier, attente] = await Promise.all([
     offreSeJuger(admin, depotId),
@@ -95,7 +112,112 @@ export async function chargerVueEleve(
     attente: attente.map((a) => ({
       etape: a.etape, statut: a.statut, echec_definitif: a.echec_definitif, message: a.message,
     })),
+    epreuve: vueDeLEpreuve(epreuve, fuseau),
+    // Les photos ne se montrent qu'à la RELECTURE : avant l'ouverture, il n'y en a pas.
+    photosLisibles: options.avecPhotos && d.ouvert_par_prof_at != null && !clos
+      ? await photosLisibles(admin, d.photos_v1, prefixeDepot(eleveId, depotId))
+      : [],
+    gestes: {
+      // `juger_fin_at` n'est posé que par l'enregistrement de « se juger » ;
+      // `confiance_declaree` que par celui de la confiance de remise.
+      jugerFait: d.juger_fin_at != null,
+      confianceFaite: d.confiance_declaree != null,
+      credenceFaite: credence.servie ? await credenceDonnee(admin, depotId) : false,
+    },
   }
+}
+
+/**
+ * ⭐ 24/09 — la crédence est-elle déjà donnée ? Elle vit sur la ligne de
+ *    métacognition (`credence`, une entrée par cas). Lue seulement quand l'offre
+ *    est servie — jamais pour l'essai d'examen, qui n'a pas de cran. Une lecture
+ *    ratée se lit « pas donnée » : l'écran la redemande, l'action tranche.
+ */
+async function credenceDonnee(admin: Admin, depotId: string): Promise<boolean> {
+  const { data, error } = await admin.from('exercices_metacognition')
+    .select('credence').eq('depot_id', depotId).maybeSingle()
+  if (error) {
+    console.error(`[passation] crédence illisible ${depotId} — ${error.code} ${error.message}`)
+    return false
+  }
+  return Array.isArray(data?.credence) && data.credence.length > 0
+}
+
+/**
+ * ⭐ 24/09 — ce que la tablette sait de l'épreuve : préparée (durée fixée),
+ *    lancée, l'heure d'ouverture du dépôt, les consignes pratiques. Null quand
+ *    la porte est fermée ou que l'examen n'est pas minuté : l'écran est alors
+ *    celui d'hier.
+ */
+function vueDeLEpreuve(
+  e: Awaited<ReturnType<typeof lireEtOuvrirSiVenue>>['epreuve'], fuseau: string,
+): VueEleve['epreuve'] {
+  if (!e || !e.estUnEssaiCodex) return null
+  // ⭐ Revue du 24/09 : les consignes pratiques se montrent à l'élève MÊME sans
+  //    durée fixée — la projection les montre, la tablette aussi.
+  if (!estPreparee(e)) {
+    return e.consignesPratiques
+      ? { preparee: false, lancee: false, ouverture: null, consignesPratiques: e.consignesPratiques, fuseau }
+      : null
+  }
+  const frise = e.debut ? friseDe(e, Date.now()) : null
+  return {
+    preparee: true,
+    lancee: !!e.debut,
+    ouverture: frise?.ouvertureMs != null ? new Date(frise.ouvertureMs).toISOString() : null,
+    consignesPratiques: e.consignesPratiques,
+    fuseau,
+  }
+}
+
+/**
+ * ⭐ 24/09 — LES PHOTOS DE L'ÉLÈVE, LISIBLES À CÔTÉ DE SON TEXTE (handoff, écran
+ *    « Relire ») : aucun lecteur du bucket n'existait, l'élève corrigeait la
+ *    lecture de la machine sans pouvoir regarder sa page. URL signées, UNE heure
+ *    — le temps d'une relecture. Une URL ratée laisse la page sans image, jamais
+ *    l'écran sans texte.
+ * ⛔ REVUE DU 24/09 — posséder le dépôt ne dit RIEN du chemin des photos :
+ *    `photos_v1` porte ce que l'ÉCRAN a envoyé, et une requête forgée pouvait y
+ *    écrire le chemin de la copie d'un autre élève, que la clé de service aurait
+ *    signé. On ne signe donc QUE sous le préfixe du dépôt, dans le bucket de la
+ *    passation — et `enregistrerLesPhotos` refuse désormais le reste à l'écriture.
+ */
+/**
+ * ⚠️ Revue du 24/09 : UNE heure ne suffisait pas — rien ne relit la page pendant la
+ *    relecture, et une page photographiée à la moitié d'une rédaction de 90 min
+ *    se relisait encore une heure plus tard. Huit heures couvrent l'épreuve la
+ *    plus longue que la conception admet (rédaction 300 min + relecture 120 min).
+ *    Ce sont les photos de l'élève, signées pour lui seul.
+ */
+const DUREE_URL_PHOTO = 8 * 3600
+
+async function photosLisibles(
+  admin: Admin, photos: Photo[] | null, prefixe: string,
+): Promise<VueEleve['photosLisibles']> {
+  const pages = [...(photos ?? [])].sort((a, b) => a.ordre - b.ordre)
+  if (pages.length === 0) return []
+  const parBucket = new Map<string, string[]>()
+  for (const p of pages) {
+    if (p.page_manquante || !p.chemin) continue
+    const b = p.bucket ?? BUCKET
+    if (b !== BUCKET || !p.chemin.startsWith(`${prefixe}/`)) continue
+    parBucket.set(b, [...(parBucket.get(b) ?? []), p.chemin])
+  }
+  const url = new Map<string, string>()
+  for (const [bucket, chemins] of parBucket) {
+    const { data, error } = await admin.storage.from(bucket).createSignedUrls(chemins, DUREE_URL_PHOTO)
+    if (error) {
+      console.error(`[passation] photos illisibles (${bucket}) — ${error.message}`)
+      continue
+    }
+    for (const s of data ?? []) if (s.path && s.signedUrl) url.set(`${bucket}/${s.path}`, s.signedUrl)
+  }
+  return pages.map((p) => ({
+    ordre: p.ordre,
+    rotation: p.rotation,
+    manquante: p.page_manquante,
+    url: p.chemin ? url.get(`${p.bucket ?? BUCKET}/${p.chemin}`) ?? null : null,
+  }))
 }
 
 export async function chargerVueProf(

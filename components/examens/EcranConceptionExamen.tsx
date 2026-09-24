@@ -23,6 +23,7 @@ import { useActionState, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { concevoirExamen, type RetourExamen } from '@/app/prof/examens-diagnostiques/actions'
 import type { EcranConception } from '@/utils/examens/conception'
+import { BORNES_REDACTION, BORNES_RELECTURE, CONSIGNES_PRATIQUES_MAX } from '@/utils/examens/epreuve'
 
 const CHAMP = 'rounded-md border border-bordure-bouton bg-parchemin px-2 py-1 font-ui text-sm text-encre'
 
@@ -37,15 +38,35 @@ export default function EcranConceptionExamen({ vue, actif }: { vue: EcranConcep
   const servables = useMemo(() => vue.choix.filter((c) => c.refus === null), [vue.choix])
   const refusés = useMemo(() => vue.choix.filter((c) => c.refus !== null), [vue.choix])
   const [choisi, setChoisi] = useState(servables[0]?.id ?? '')
+  // ⭐ 24/09 — LE SUJET LIBRE (porte `epreuve_minutee_actif`, Codex seulement) :
+  //    le professeur ÉCRIT le sujet au lieu de le choisir au corpus. La première
+  //    ligne part de l'intitulé de la ligne de plan : c'est elle qui titre la
+  //    tuile de l'élève et les listes.
+  const departLibre = `${vue.titrePlan ?? vue.intitule}\n\n`
+  const [libre, setLibre] = useState(vue.epreuveOuverte && servables.length === 0)
   // La consigne suit le matériau tant que le professeur ne l'a pas touchée :
   // c'est un POINT DE DÉPART, et c'est lui qui l'arrête (`02-` §6 B.1, point 7).
   const [touchée, setTouchée] = useState(false)
-  const [consigne, setConsigne] = useState(servables[0]?.consigne ?? '')
+  const [consigne, setConsigne] = useState(
+    vue.epreuveOuverte && servables.length === 0 ? departLibre : servables[0]?.consigne ?? '')
+  const [pratiques, setPratiques] = useState('')
+  // ⭐ Revue du 24/09 — CONTRÔLÉES : React 19 réinitialise un formulaire après
+  //    chaque action, refus compris ; en `defaultValue`, les durées tapées
+  //    revenaient vides en silence et l'examen naissait non minuté.
+  const [redaction, setRedaction] = useState(vue.dureeEstimee != null ? String(vue.dureeEstimee) : '')
+  const [relecture, setRelecture] = useState('')
+  const enonceChoisi = vue.choix.find((c) => c.id === choisi)?.libelle ?? ''
 
   function changerDeMatiere(id: string) {
     setChoisi(id)
     if (touchée) return
     setConsigne(vue.choix.find((c) => c.id === id)?.consigne ?? '')
+  }
+
+  function changerDeMode(versLibre: boolean) {
+    setLibre(versLibre)
+    if (touchée) return
+    setConsigne(versLibre ? departLibre : vue.choix.find((c) => c.id === choisi)?.consigne ?? '')
   }
 
   const motDeLaMatiere = vue.matiere === 'sujet' ? 'énoncé de sujet' : 'texte'
@@ -119,15 +140,25 @@ export default function EcranConceptionExamen({ vue, actif }: { vue: EcranConcep
               className="rounded-md border border-bordure-bouton px-3 py-1.5 font-ui text-sm text-encre">
               L’écran de passation →
             </Link>
+            {vue.epreuveOuverte && (
+              <Link href={`/prof/codex/passation/${retour?.exerciceId}/projection`}
+                className="rounded-md border border-bordure-bouton px-3 py-1.5 font-ui text-sm text-encre">
+                La page projetée →
+              </Link>
+            )}
             <Link href={`/prof/${vue.module}`}
               className="font-ui text-sm text-encre-douce underline self-center">
               retour à {vue.module === 'codex' ? 'Codex' : 'Aletheia'}
             </Link>
           </div>
           <p className="font-ui text-xs text-encre-douce">
-            Les dépôts naissent <strong>à l’assignation</strong>, pas au dépôt ; le jour de
-            l’épreuve, c’est <strong>l’ouverture manuelle</strong> qui lance l’élève — et c’est
-            elle qu’il voit dans son module.
+            Les dépôts naissent <strong>à l’assignation</strong>, pas au dépôt ;{' '}
+            {vue.epreuveOuverte
+              ? <>le jour de l’épreuve, vous la <strong>lancez depuis la page projetée</strong> : le
+                sujet s’affiche sur les tablettes, et le dépôt s’ouvre tout seul à la moitié de la
+                rédaction (si vous avez fixé sa durée).</>
+              : <>le jour de l’épreuve, c’est <strong>l’ouverture manuelle</strong> qui lance
+                l’élève — et c’est elle qu’il voit dans son module.</>}
           </p>
         </section>
       ) : (
@@ -135,18 +166,41 @@ export default function EcranConceptionExamen({ vue, actif }: { vue: EcranConcep
           <input type="hidden" name="planifie_id" value={vue.planifieId} />
           <input type="hidden" name="module" value={vue.module} />
 
+          {vue.epreuveOuverte && <input type="hidden" name="epreuve" value="oui" />}
+          {libre && <input type="hidden" name="sujet_libre" value="oui" />}
+
           <div className="space-y-1">
             <h2 className="font-titre text-lg text-encre">
               {vue.matiere === 'sujet' ? 'L’énoncé de sujet' : 'Le texte'}
             </h2>
             <p className="font-ui text-xs text-encre-douce">
               {vue.matiere === 'sujet'
-                ? 'La banque des sujets déposés, bornée par les genres que ce type admet. Le dépôt d’un sujet se fait au corpus ; ici, on choisit dedans.'
+                ? vue.epreuveOuverte
+                  ? 'Choisissez un sujet dans le corpus, ou écrivez le vôtre : un sujet écrit ici reste propre à cet examen, il n’entre pas dans le corpus.'
+                  : 'La banque des sujets déposés, bornée par les genres que ce type admet. Le dépôt d’un sujet se fait au corpus ; ici, on choisit dedans.'
                 : 'Les textes déposés au corpus. Un texte dont la référence décomposée n’est pas validée est refusé, et le motif la nomme.'}
             </p>
           </div>
 
-          {servables.length === 0 ? (
+          {vue.epreuveOuverte && (
+            <div role="radiogroup" aria-label="D’où vient le sujet" className="flex flex-wrap gap-2">
+              {([['corpus', 'Choisir dans le corpus'], ['libre', 'Écrire mon sujet']] as const).map(([cle, libelle]) => {
+                const actif = (cle === 'libre') === libre
+                return (
+                  <button key={cle} type="button" role="radio" aria-checked={actif}
+                    disabled={enCours || (cle === 'corpus' && servables.length === 0)}
+                    onClick={() => changerDeMode(cle === 'libre')}
+                    className={`min-h-11 rounded-md border px-3 py-2 font-ui text-sm disabled:opacity-40 ${actif
+                      ? 'border-pigment bg-pigment-teinte text-encre'
+                      : 'border-bordure-bouton bg-surface text-encre-douce hover:bg-parchemin-fonce'}`}>
+                    {libelle}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {libre ? null : servables.length === 0 ? (
             <p className="rounded-lg border border-attention bg-attention-teinte px-3 py-2 font-ui text-sm text-encre">
               Aucun {motDeLaMatiere} n’est servable. {vue.matiere === 'texte'
                 ? 'Une référence décomposée validée est nécessaire — validez-en une, puis revenez.'
@@ -170,7 +224,7 @@ export default function EcranConceptionExamen({ vue, actif }: { vue: EcranConcep
           )}
 
           {/* ⭐ LE REFUS EST MONTRÉ, PAS CACHÉ : « le motif nomme la référence ». */}
-          {refusés.length > 0 && (
+          {!libre && refusés.length > 0 && (
             <details className="rounded-md border border-bordure p-3">
               <summary className="cursor-pointer font-ui text-sm text-encre">
                 {refusés.length} {motDeLaMatiere}{refusés.length > 1 ? 's' : ''}{' '}
@@ -186,12 +240,76 @@ export default function EcranConceptionExamen({ vue, actif }: { vue: EcranConcep
 
           <label className="block space-y-0.5">
             <span className="block font-ui text-xs text-muet">
-              ce que l’élève lit — <strong>c’est le texte que vous arrêtez ici</strong>
+              {vue.epreuveOuverte
+                ? <>le sujet et les consignes de travail — <strong>ce que l’élève lit, ce que la page projetée affiche, et ce que la correction automatique reçoit</strong></>
+                : <>ce que l’élève lit — <strong>c’est le texte que vous arrêtez ici</strong></>}
             </span>
             <textarea name="consigne" rows={12} value={consigne} disabled={enCours}
               onChange={(e) => { setTouchée(true); setConsigne(e.target.value) }}
               className={`${CHAMP} w-full font-mono text-[13px]`} required />
+            {vue.epreuveOuverte && (
+              <span className="block font-ui text-xs text-muet">
+                La première ligne titre l’examen dans les listes de l’élève.
+              </span>
+            )}
+            {/* ⭐ Revue du 24/09 : revenir au corpus en gardant un texte écrit rattache
+                l'examen à un sujet que la classe n'aura pas lu — on le DIT, sans
+                effacer ce qui a été tapé. */}
+            {vue.epreuveOuverte && !libre && touchée && enonceChoisi
+              && !consigne.includes(enonceChoisi.trim()) && (
+              <span className="block rounded-md border border-attention bg-attention-teinte px-2 py-1 font-ui text-xs text-encre">
+                Ce texte ne contient plus l’énoncé du sujet choisi (« {enonceChoisi} ») : l’examen
+                y restera rattaché quand même. Pour un sujet que vous écrivez, choisissez « Écrire mon sujet ».
+              </span>
+            )}
           </label>
+
+          {/* ⭐ 24/09 — L'ÉPREUVE MINUTÉE : les consignes PRATIQUES (jamais envoyées
+              à la correction) et les deux durées. Porte fermée : rien de tout ça. */}
+          {vue.epreuveOuverte && (
+            <fieldset className="space-y-3 rounded-md border border-bordure p-3">
+              <legend className="px-1 font-ui text-xs uppercase tracking-wide text-muet-clair">
+                l’épreuve en classe
+              </legend>
+              <label className="block space-y-0.5">
+                <span className="block font-ui text-xs text-muet">
+                  consignes pratiques — <strong>projetées et montrées à l’élève, jamais envoyées à la correction</strong> (facultatif)
+                </span>
+                <textarea name="consignes_pratiques" rows={4} value={pratiques} disabled={enCours}
+                  maxLength={CONSIGNES_PRATIQUES_MAX}
+                  onChange={(e) => setPratiques(e.target.value)}
+                  placeholder="Par exemple : numérotez vos pages ; aucun document n’est autorisé."
+                  className={`${CHAMP} w-full text-[13px]`} />
+                <span className="block text-right font-ui text-[11px] text-muet">
+                  {pratiques.length} / {CONSIGNES_PRATIQUES_MAX}
+                </span>
+              </label>
+              <div className="flex flex-wrap gap-4">
+                <label className="block space-y-0.5">
+                  <span className="block font-ui text-xs text-muet">rédaction (minutes)</span>
+                  <input type="number" name="redaction_min" inputMode="numeric" disabled={enCours}
+                    min={BORNES_REDACTION.min} max={BORNES_REDACTION.max} step={1}
+                    value={redaction} onChange={(e) => setRedaction(e.target.value)}
+                    className={`${CHAMP} w-28`} />
+                </label>
+                <label className="block space-y-0.5">
+                  <span className="block font-ui text-xs text-muet">relecture (minutes)</span>
+                  <input type="number" name="relecture_min" inputMode="numeric" disabled={enCours}
+                    min={BORNES_RELECTURE.min} max={BORNES_RELECTURE.max} step={1}
+                    required={redaction.trim() !== ''}
+                    value={relecture} onChange={(e) => setRelecture(e.target.value)}
+                    className={`${CHAMP} w-28`} />
+                </label>
+              </div>
+              <p className="font-ui text-xs text-encre-douce">
+                Le dépôt des photos <strong>s’ouvre tout seul à la moitié de la rédaction</strong> :
+                qui a fini photographie sa copie, puis la relit. À la fin de la rédaction, tout le
+                monde pose son stylo, photographie, puis relit : c’est le temps de relecture. Rien ne
+                se ferme à la fin — la clôture reste votre geste. Les durées se règlent encore sur la
+                page projetée, jusqu’au lancement.
+              </p>
+            </fieldset>
+          )}
 
           {/* ⭐ LES DEUX DRAPEAUX D'OPT-IN DE CLASSE — sans eux, une passation en
               classe ne produit AUCUN signal de Monitoring, et « une année de
@@ -225,7 +343,7 @@ export default function EcranConceptionExamen({ vue, actif }: { vue: EcranConcep
 
           <div className="flex items-center gap-3">
             <button type="submit"
-              disabled={enCours || servables.length === 0 || vue.empechement !== null}
+              disabled={enCours || (!libre && servables.length === 0) || vue.empechement !== null}
               className="rounded-md bg-bouton px-4 py-2 font-ui text-sm text-surface disabled:opacity-50">
               {enCours ? 'Conception…' : 'Concevoir l’examen'}
             </button>

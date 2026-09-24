@@ -24,6 +24,7 @@ import { CHAMPS_IDENTITE, ecartsDIdentite, tracesPresentes } from '@/utils/exame
 import { depotPorteDuTravail, depotsQuiBloquent, type DepotPourRetrait } from '@/utils/examens/retrait'
 import { ETAPES_DE_MESURE } from '@/utils/chaine/file'
 import { lireEtatDeConception } from '@/utils/examens/residu-serveur'
+import { lireDuree, BORNES_REDACTION, BORNES_RELECTURE } from '@/utils/examens/epreuve'
 
 export interface RetourExamen {
   ok: boolean
@@ -47,6 +48,23 @@ export async function concevoirExamen(
     return { ok: false, message: 'Module inconnu : un examen diagnostique vit dans Codex ou dans Aletheia.' }
   }
 
+  // ⭐ 24/09 — L'ÉPREUVE MINUTÉE : les champs n'existent à l'écran que porte
+  //    ouverte et dans Codex ; `concevoirExamenDiagnostique` les ignore sinon.
+  //    Une durée mal saisie est un REFUS nommé, jamais une valeur corrigée.
+  let epreuve: Parameters<typeof concevoirExamenDiagnostique>[5]
+  if (form.has('epreuve')) {
+    const redaction = lireDuree(form.get('redaction_min'), BORNES_REDACTION)
+    if (!redaction.ok) return { ok: false, message: `Durée de rédaction : ${redaction.message}` }
+    const relecture = lireDuree(form.get('relecture_min'), BORNES_RELECTURE)
+    if (!relecture.ok) return { ok: false, message: `Durée de relecture : ${relecture.message}` }
+    epreuve = {
+      sujetLibre: form.get('sujet_libre') === 'oui',
+      consignesPratiques: String(form.get('consignes_pratiques') ?? ''),
+      redactionMin: redaction.valeur,
+      relectureMin: relecture.valeur,
+    }
+  }
+
   const issue = await concevoirExamenDiagnostique(admin, planifieId, matiereId, consigne, {
     // ⭐ LES DEUX DRAPEAUX D'OPT-IN DE CLASSE (`02-` §5 ; §1.1). L'écran DOIT
     //    les offrir : sans eux, « une passation en classe ne produit AUCUN
@@ -55,7 +73,7 @@ export async function concevoirExamen(
     //    (C4-L4, `leverLesDrapeaux`) — ici, c'est la première occasion.
     seJuger: form.get('optin_se_juger') === 'oui',
     confianceRemise: form.get('optin_confiance_remise') === 'oui',
-  })
+  }, epreuve)
   if (!issue.ok) {
     return { ok: false, message: issue.message, ...(issue.empechements ? { empechements: issue.empechements } : {}) }
   }

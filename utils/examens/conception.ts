@@ -38,6 +38,10 @@ import { consigneANoter, consigneDepuisLeSujet, consigneDepuisLeTexte, enTete } 
 import {
   SELECT_REFERENCE_VALIDEE, motifDeRefusDeLaReference,
 } from '@/utils/reference-validee'
+import { lireLaPorteEpreuve } from './epreuve-serveur'
+import {
+  BORNES_REDACTION, BORNES_RELECTURE, CONSIGNES_PRATIQUES_MAX,
+} from './epreuve'
 
 type Admin = SupabaseClient
 type Ligne = Record<string, unknown>
@@ -88,6 +92,17 @@ export interface EcranConception {
   choix: ChoixMatiere[]
   /** Une lecture ratée n'est pas une liste vide : l'écran montre l'incident. */
   incidents: string[]
+  /**
+   * ⭐ 24/09 — L'ÉPREUVE MINUTÉE (porte `epreuve_minutee_actif`) : sujet libre,
+   *    consignes pratiques, durées. Vrai seulement porte ouverte ET dans Codex
+   *    — dans Aletheia, un texte libre contournerait la garde absolue de la
+   *    référence validée (`02-` §6 A).
+   */
+  epreuveOuverte: boolean
+  /** L'intitulé de la ligne de plan (agenda), pour pré-remplir un sujet libre. */
+  titrePlan: string | null
+  /** La durée estimée au plan, pour pré-remplir la durée de rédaction. */
+  dureeEstimee: number | null
 }
 
 /**
@@ -103,7 +118,7 @@ export async function chargerConception(
   const { data: ligneBrute, error: eLigne } = await admin
     .from('scriptorium_exercices_planifies')
     .select('id, plan_id, type_exercice, diagnostique, statut, lieu, semaine_lundi, '
-      + 'jour_prevu, fenetre_diagnostique, supprime_at')
+      + 'jour_prevu, fenetre_diagnostique, supprime_at, titre, duree_estimee_min')
     .eq('id', planifieId).maybeSingle()
   if (eLigne || !ligneBrute) return null
   const l = ligneBrute as unknown as Ligne
@@ -128,7 +143,9 @@ export async function chargerConception(
     .from('exercices').select('id').eq('exercice_planifie_id', planifieId).maybeSingle()
 
   const empechement = motifDEmpechement(l, txt(lig(dejaLa).id) || null)
-  const { choix, incidents } = await lireLaMatiere(admin, mod)
+  const [{ choix, incidents }, porteEpreuve] = await Promise.all([
+    lireLaMatiere(admin, mod), lireLaPorteEpreuve(admin),
+  ])
 
   return {
     planifieId,
@@ -145,6 +162,9 @@ export async function chargerConception(
     matiere: MATIERE[mod],
     choix,
     incidents,
+    epreuveOuverte: porteEpreuve && mod === 'codex',
+    titrePlan: txt(l.titre).trim() || null,
+    dureeEstimee: typeof l.duree_estimee_min === 'number' ? l.duree_estimee_min : null,
   }
 }
 
@@ -282,28 +302,82 @@ export interface Conçu { exerciceId: string; classeId: string }
  *    Et jamais un `annule` : « ne ressuscite jamais un exercice `annule` ».
  *    Le claim manqué ⇒ **l'instance est retirée** : rien d'incomplet ne reste.
  */
+/**
+ * ⭐ 24/09 — CE QUE L'ÉPREUVE MINUTÉE AJOUTE À LA CONCEPTION (porte
+ *    `epreuve_minutee_actif`, Codex seulement). Absent = la conception d'hier.
+ */
+export interface ReglageDeConception {
+  /** Le sujet est ÉCRIT par le professeur, pas choisi au corpus. */
+  sujetLibre: boolean
+  /** Projetées et montrées à l'élève, JAMAIS envoyées au juge. */
+  consignesPratiques: string | null
+  redactionMin: number | null
+  relectureMin: number | null
+}
+
 export async function concevoirExamenDiagnostique(
   admin: Admin, planifieId: string, matiereId: string, consigneSaisie: string,
   drapeaux: { seJuger: boolean; confianceRemise: boolean },
+  epreuve?: ReglageDeConception,
 ): Promise<Issue<Conçu>> {
   const ecran = await chargerConception(admin, planifieId)
   if (!ecran) return refus('Cette ligne de plan n’est pas un examen diagnostique.')
   if (ecran.empechement) return refus(ecran.empechement)
 
-  const choisi = ecran.choix.find((c) => c.id === matiereId)
-  if (!choisi) {
+  // ⭐ 24/09 — le réglage de l'épreuve ne passe QUE porte ouverte, et QUE dans
+  //    Codex : sinon il est ignoré, et la conception est celle d'hier, à l'octet.
+  const reglage = epreuve && ecran.epreuveOuverte ? epreuve : null
+  // ⭐ LE SUJET LIBRE : le professeur l'ÉCRIT (« tiré d'une banque déposée OU
+  //    SAISI À LA CONCEPTION », `02-` §2.3.3). Il ne va PAS au corpus — un sujet
+  //    déposé là pourrait être servi en devoir maison par le pilote argument —,
+  //    et il ne laisse AUCUNE trace de matériau : c'est le patron de l'essai de
+  //    Fragments (`utils/essai/branchement-serveur.ts`), et une trace qui
+  //    nommerait un sujet du corpus que la classe n'a pas eu serait fausse.
+  const sujetLibre = reglage?.sujetLibre === true && ecran.matiere === 'sujet'
+
+  const choisi = sujetLibre ? null : ecran.choix.find((c) => c.id === matiereId)
+  if (!sujetLibre && !choisi) {
     return refus(ecran.matiere === 'sujet'
       ? 'Aucun sujet choisi : dans Codex, l’examen diagnostique se conçoit sur un énoncé de sujet.'
       : 'Aucun texte choisi : dans Aletheia, l’examen diagnostique se conçoit sur un texte.')
   }
   // ⭐ LE REFUS, ET SON MOTIF NOMME LA RÉFÉRENCE.
-  if (choisi.refus) {
+  if (choisi?.refus) {
     return refus(choisi.refus, ['valider la référence avant de concevoir (`02-` §6 A ; `05-` §4)'])
   }
 
-  const consigne = consigneANoter(consigneSaisie || choisi.consigne)
+  const consigne = consigneANoter(consigneSaisie || choisi?.consigne || '')
   if (consigne.trim() === '') {
-    return refus('La consigne est vide : c’est le texte que l’élève lit, il ne part pas vide.')
+    return refus(sujetLibre
+      ? 'Le sujet est vide : écrivez-le — c’est le texte que l’élève lit et que la correction reçoit.'
+      : 'La consigne est vide : c’est le texte que l’élève lit, il ne part pas vide.')
+  }
+  if (reglage) {
+    const r = reglage.redactionMin
+    if (r != null && (r < BORNES_REDACTION.min || r > BORNES_REDACTION.max)) {
+      return refus(`La rédaction dure entre ${BORNES_REDACTION.min} et ${BORNES_REDACTION.max} minutes.`)
+    }
+    const y = reglage.relectureMin
+    if (y != null && (y < BORNES_RELECTURE.min || y > BORNES_RELECTURE.max)) {
+      return refus(`La relecture dure entre ${BORNES_RELECTURE.min} et ${BORNES_RELECTURE.max} minutes.`)
+    }
+    if ((reglage.consignesPratiques ?? '').replace(/\r\n?/g, '\n').trim().length > CONSIGNES_PRATIQUES_MAX) {
+      return refus(`Les consignes pratiques tiennent en ${CONSIGNES_PRATIQUES_MAX} caractères au plus.`)
+    }
+    if (y != null && r == null) {
+      return refus('Une durée de relecture sans durée de rédaction ne minute rien : fixez d’abord la rédaction.')
+    }
+    // ⭐ Revue du 24/09 : sans temps de relecture, la projection passait de la
+    //    rédaction à « Temps écoulé : valide » sans laisser photographier ni relire.
+    if (r != null && y == null) {
+      return refus('Fixez aussi la durée de relecture : c’est le temps où la classe photographie sa copie et la relit.')
+    }
+  }
+  // ⭐ Revue du 24/09 : en sujet libre, la zone part pré-remplie de l'intitulé de
+  //    la ligne de plan — un clic trop rapide concevait un examen dont le « sujet »
+  //    n'était que ce titre. Il faut au moins une ligne APRÈS la première.
+  if (sujetLibre && consigne.split('\n').map((x) => x.trim()).filter(Boolean).length < 2) {
+    return refus('Écrivez le sujet sous l’intitulé : la première ligne titre l’examen, le sujet vient dessous.')
   }
 
   const { data: type } = await admin
@@ -354,7 +428,21 @@ export async function concevoirExamenDiagnostique(
     //  · `borne_amont` — le non-spoiler borne le ROUTEUR (`01-` §4), et un
     //    examen diagnostique est « imposé en classe, HORS ROUTAGE » (`01-` §10).
   }
-  const materiau = ecran.matiere === 'sujet'
+  // ⭐ 24/09 — les colonnes de l'épreuve ne s'écrivent QUE porte ouverte : porte
+  //    fermée, elles peuvent ne pas exister (migration non jouée).
+  const colonnesEpreuve = reglage
+    ? {
+        epreuve_redaction_min: reglage.redactionMin,
+        epreuve_relecture_min: reglage.redactionMin == null ? null : reglage.relectureMin,
+        // ⚠️ Le piège CRLF : un `<textarea>` passé par FormData rend ses retours à
+        //    la ligne en `\r\n` (mesuré le 24/09 : 124 caractères en base pour 122
+        //    saisis). Même normalisation que `reglerLEpreuve`.
+        consignes_pratiques: (reglage.consignesPratiques ?? '').replace(/\r\n?/g, '\n').trim() || null,
+      }
+    : {}
+  const materiau = sujetLibre
+    ? {}
+    : ecran.matiere === 'sujet'
     ? { materiau_source_provenance: 'sujet', materiau_source_sujet_id: matiereId }
     : {
         materiau_source_provenance: 'texte_auteur',
@@ -366,7 +454,7 @@ export async function concevoirExamenDiagnostique(
       }
 
   const { data: instance, error: eIns } = await admin
-    .from('exercices').insert({ ...commun, ...materiau }).select('id').single()
+    .from('exercices').insert({ ...commun, ...materiau, ...colonnesEpreuve }).select('id').single()
   if (eIns) {
     // 23505 = violation d'unicité : `uk_exercices_planifie` a fait son office.
     if (eIns.code === '23505') {

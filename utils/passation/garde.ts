@@ -44,7 +44,10 @@ export async function garderProf(redirection = true): Promise<AccesProf> {
 export interface AccesEleve {
   admin: Admin
   userId: string
-  /** Les DEUX portes, et le plus fermé gagne (`utils/passation/acces.ts`). */
+  /**
+   * L'interrupteur de la passation, SEUL — `exercices_actif` ne ferme plus la
+   * classe (découplés le 24/09, décision de Louis : `utils/passation/acces.ts`).
+   */
   ouvert: boolean
 }
 
@@ -57,5 +60,5 @@ export async function garderEleve(redirection = true): Promise<AccesEleve> {
   }
   const admin = createAdminClient()
   const portes = await lireLesPortes(admin)
-  return { admin, userId: user.id, ouvert: portes.passationActive && portes.exercicesActifs }
+  return { admin, userId: user.id, ouvert: portes.passationActive }
 }

@@ -33,6 +33,7 @@ import { toISODate } from '@/utils/calendrier-grille'
 import { lundiDuCycle } from '@/utils/deroule/echeance'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { transcrireMaintenant } from '@/utils/passation/ouvrier'
+import { remettreEnFile } from '@/utils/chaine/file'
 import { leverLesDrapeaux, offreSeJuger, enregistrerSeJuger,
   enregistrerConfianceRemise, offreCredence, enregistrerCredence } from '@/utils/passation/metacognition'
 import {
@@ -339,6 +340,17 @@ export async function actionEnvoyerLesPhotos(
 
   const file = await mettreLaTranscriptionEnFile(admin, depotId)
   if (!file.ok) return echec(file.message)
+  // ⭐ Revue du 24/09 — UN RENVOI DOIT RELIRE LES NOUVELLES PAGES. La clé
+  //    d'idempotence (dépôt × étape) rendait le job DÉJÀ ABOUTI : rien n'était
+  //    relu, et l'écran attendait sans fin une transcription qui ne venait pas.
+  //    Même geste que le re-dépôt de l'essai de Fragments (`branchement-serveur`).
+  if (file.data.deja) {
+    const remis = await remettreEnFile(admin, depotId, 'transcription_v1', 'nouvelles photos déposées')
+    if (!remis.remis && remis.motif !== 'deja_en_file') {
+      return echec(`Tes photos sont arrivées, mais la machine ne peut pas les relire (${remis.raison}). `
+        + 'Préviens ton professeur : ta copie papier reste la preuve.')
+    }
+  }
 
   const { bilan, motif } = await transcrireMaintenant(admin, depotId)
   rafraichir()
