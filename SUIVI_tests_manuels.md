@@ -1,6 +1,6 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
-## Quazian — « Modifier » une question à la main : la saisie ne se perd plus, les échecs se disent (23/09/2026 ; commité `a66b4f5`, NON poussé, pas vu à l'écran)
+## Quazian — « Modifier » une question à la main : la saisie ne se perd plus, les échecs se disent (23/09/2026 ; `a66b4f5` POUSSÉ et vu à l'écran en prod ; tri des questions `3fb2f9c` NON poussé)
 
 Suite du générateur contrôlé : Louis corrigera à la main les indices restants, donc « Modifier » devient l'outil principal. Aucune migration, aucune porte.
 
@@ -8,7 +8,8 @@ Suite du générateur contrôlé : Louis corrigera à la main les indices restan
 - **Fait** : l'éditeur reste ouvert avec le texte et la raison ; Valider, Modifier et Nouveaux distracteurs rattrapent l'exception et libèrent la carte (message neutre : connexion ou session) ; `modifierQuestion` refuse les champs vides et les réponses identiques, nettoie les espaces, filtre par quiz, lit l'UPDATE ; « Nouveaux distracteurs » lit aussi son écriture et dit l'échec du modèle comme tel ; énoncé en 4 lignes agrandissables (prod : 32 énoncés, médiane 86, 9e décile 131, max 343 caractères).
 - **Passe adversariale** (3 regards, une phase) : les constats du lot corrigés ; restent hors lot, préexistants (ligne du 23/09 d'`IDEES_post_rentree.md`) : « Tout valider » sans confirmation ; saisie perdue par « Annuler », par « Lancer le quizz » ou en quittant la page ; « Nouveaux distracteurs » remplace sans confirmation des leurres écrits à la main ; pas d'avis de longueur sur une saisie à la main ; course garde/écriture entre deux onglets ; compteur « validées » de la liste non paginé ; `concept_tag` vide accepté.
 - **Contrôles** : `tsc` propre, eslint des fichiers du lot propre, **2 831 tests verts** (7 nouveaux).
-- **Non fait** : vu à l'écran — à vérifier après le push sur le quiz d'essai de la Classe Test (réponse vidée, panne simulée, vrai enregistrement).
+- **Vu à l'écran en PRODUCTION (23/09, déploiement de `9c7df5e` vérifié « completed », onglet ouvert après)**, sur la question de Tom du quiz d'essai de la Classe Test : (1) réponse A vidée + phrase ajoutée à l'énoncé → refus « L'énoncé et les quatre réponses doivent être remplis. », éditeur ouvert, saisie intacte ; (2) doublon de B à la casse et à un espace près → « Deux réponses sont identiques… », saisie intacte ; (3) coupure simulée (requêtes POST de la page bloquées) → « La modification n'a pas abouti (connexion coupée, ou session expirée)… Ton texte est gardé ici », boutons actifs ; (4) vrai enregistrement → éditeur refermé, en base le leurre absurde « …culture générale » remplacé, bonne réponse inchangée (C), question validée ; énoncé sur 4 lignes agrandissables.
+- **Trouvé à l'écran, corrigé (`3fb2f9c`)** : après l'enregistrement, la question corrigée passait de Q15 à Q1 et les numéros se rebattaient — les questions d'une génération partagent la même date de création (prod : 17 questions, 2 dates) et la page ne triait que sur elle. L'id départage : ordre stable (même requête relue deux fois en prod, même ordre). Élèves non concernés (ordre tiré et gardé par session). Non revu à l'écran après ce commit.
 
 ## Quazian — le générateur de QCM contrôlé par le code : longueur, exemple du cours, prémisses, copie de carte (23/09/2026 ; POUSSÉ par Louis et déployé le 23/09, smoke prod fait)
 
