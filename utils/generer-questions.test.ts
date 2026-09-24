@@ -65,10 +65,10 @@ test('prompt — consigne absente et balises saisies inoffensives', () => {
   assert.ok(prompt.includes('Texte &amp; texte'))
 })
 
-type Question = { id: string; quiz_id: string; enonce: string; concept_tag: string; statut_validation: string }
-type Requete = { table: string; op: string; payload?: unknown; filtres: unknown[][]; head?: boolean }
-function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ecartees = 0, relecture = true, role = 'prof', authentifie = true, retarderPremierUpdate = false } = {}) {
-  const lignes: Question[] = Array.from({ length: 15 }, (_, i) => ({ id: `q${i}`, quiz_id: 'quiz', enonce: `Énoncé ${i}`, concept_tag: `tag ${i}`, statut_validation: 'valide' }))
+type Question = { id: string; quiz_id: string; enonce: string; concept_tag: string; statut_validation: string; options?: string[]; index_correct?: number }
+type Requete = { table: string; op: string; payload?: unknown; filtres: unknown[][]; head?: boolean; colonnes?: string }
+function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ecartees = 0, relecture = true, antichambre = false, role = 'prof', authentifie = true, retarderPremierUpdate = false } = {}) {
+  const lignes: Question[] = Array.from({ length: 15 }, (_, i) => ({ id: `q${i}`, quiz_id: 'quiz', enonce: `Énoncé ${i}`, concept_tag: `tag ${i}`, statut_validation: 'valide', options: [`juste ${i}`, 'b', 'c', 'd'], index_correct: 0 }))
   lignes.push({ id: 'autre', quiz_id: 'autre-quiz', enonce: 'Autre quiz', concept_tag: 'autre', statut_validation: 'valide' })
   let compteur = 15
   let statutCourant = statut
@@ -106,6 +106,19 @@ function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ec
     }
     if (q.table !== 'quazian_questions') throw new Error(q.table)
     const filtrees = lignes.filter(l => q.filtres.every(([cle, valeur]) => l[cle as keyof Question] === valeur))
+    // La garde `refusSiNonModifiable` : la question et le statut de son quiz.
+    // La lecture de « Nouveaux distracteurs » : la question entière.
+    if (q.op === 'select' && q.colonnes?.includes('options')) return { data: filtrees[0] ?? null, error: null }
+    if (q.op === 'select' && q.colonnes?.includes('quazian_quizzes!inner')) {
+      const l = filtrees[0]
+      return { data: l ? { quiz_id: l.quiz_id, quazian_quizzes: { statut: statutCourant } } : null, error: null }
+    }
+    if (q.op === 'update') {
+      if (erreur === 'update-question') return { data: null, error: { code: 'XX000' } }
+      if (erreur === 'update-vide') return { data: [], error: null }
+      filtrees.forEach(l => Object.assign(l, q.payload))
+      return { data: filtrees.map(l => ({ id: l.id })), error: null }
+    }
     if (q.op === 'delete') {
       if (erreur === 'delete' || erreur === 'fk') return { error: { code: erreur === 'fk' ? '23503' : 'XX000' }, data: null }
       filtrees.forEach(l => lignes.splice(lignes.indexOf(l), 1))
@@ -140,7 +153,10 @@ function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ec
           return (...args: unknown[]) => {
             if (['insert', 'update', 'delete'].includes(String(k))) { q.op = String(k); q.payload = args[0] }
             if (['eq', 'in', 'is'].includes(String(k))) q.filtres.push(args)
-            if (k === 'select') q.head = !!(args[1] as { head?: boolean } | undefined)?.head
+            if (k === 'select') {
+              q.head = !!(args[1] as { head?: boolean } | undefined)?.head
+              q.colonnes = String(args[0] ?? '')
+            }
             return chaine
           }
         },
@@ -158,6 +174,11 @@ function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ec
         appels.push(args)
         return generation()
       },
+      regenererQuestion: async (enonce: string, bonne: string, tag: string) => {
+        appels.push([enonce, bonne, tag])
+        if (erreur === 'regeneration') throw new Error('Question régénérée invalide.')
+        return { enonce, options: ['leurre 1', bonne, 'leurre 2', 'leurre 3'], index_correct: 1, concept_tag: tag }
+      },
       genererQuestions: async (...args: unknown[]) => {
         appels.push(args)
         return generation()
@@ -172,7 +193,10 @@ function decor({ statut = 'brouillon', cartes = 5, erreur = '', generees = 3, ec
     '@/utils/quazian-cibles': { resoudreCible: async (_: unknown, id: string) => ({ bras: 'contenu', id }) },
     '@/utils/acces': { classeAModule: async () => true },
     // 22/09 — l'antichambre fige le brouillon ; porte fermée ici, comme en prod par défaut.
-    '@/utils/quazian-antichambre-serveur': { lirePorteAntichambre: async () => false, lireAntichambreAt: async () => null },
+    '@/utils/quazian-antichambre-serveur': {
+      lirePorteAntichambre: async () => antichambre,
+      lireAntichambreAt: async () => (antichambre ? '2026-09-23T20:00:00Z' : null),
+    },
   })
   const fdCreation = () => {
     const f = new FormData()
@@ -627,4 +651,83 @@ test('marge — plus de retenues que demandé : les premières, dans l’ordre',
   // 4 demandées : il faut la réécrite, qui reprend sa place en tête.
   const r4 = await fauxModele([TROP_LONGUE, SAINE, SAINE2, SAINE3], [B2]).g.genererQuestions([CARTE_NOE], 4)
   assert.deepEqual(js(r4.questions.map(bonneDe)), ['juste B2', 'juste A', 'juste E', 'juste F'])
+})
+
+// 23/09 — « Modifier » à la main : une réponse vide passait, et une écriture en
+// échec répondait « succès ».
+function saisie(champs: Record<string, string> = {}) {
+  const f = new FormData()
+  const valeurs = { id: 'q4', quizId: 'quiz', enonce: '  Énoncé récrit ?  ', opt0: ' A ', opt1: 'B', opt2: 'C', opt3: 'D ', index_correct: '2', concept_tag: ' notion ', ...champs }
+  for (const [cle, valeur] of Object.entries(valeurs)) f.set(cle, valeur)
+  return f
+}
+test('modifier — texte nettoyé, écrit sur la bonne question du bon quiz, validé, synchronisé', async () => {
+  const d = decor()
+  const r = await d.actions.modifierQuestion(saisie())
+  assert.ok('success' in r && r.success)
+  const ecriture = d.requetes.find(q => q.table === 'quazian_questions' && q.op === 'update')
+  assert.deepEqual(js(ecriture?.payload), { enonce: 'Énoncé récrit ?', options: ['A', 'B', 'C', 'D'], index_correct: 2, concept_tag: 'notion', statut_validation: 'valide' })
+  assert.deepEqual(js(ecriture?.filtres), [['id', 'q4'], ['quiz_id', 'quiz']])
+  assert.equal(d.lignes.find(l => l.id === 'q4')?.enonce, 'Énoncé récrit ?')
+  assert.deepEqual(d.synchronisations, ['quiz'])
+  assert.ok(d.revalidations.includes('/prof/quazian/quizz/quiz'))
+})
+test('modifier — un énoncé ou une réponse vide est refusé, rien n’est écrit', async () => {
+  const vides: Record<string, string>[] = [{ enonce: '   ' }, { opt2: '' }, { opt3: '  ' }]
+  for (const champs of vides) {
+    const d = decor()
+    const r = await d.actions.modifierQuestion(saisie(champs))
+    assert.equal('error' in r && r.error, 'L’énoncé et les quatre réponses doivent être remplis.')
+    assert.ok(!d.requetes.some(q => q.op === 'update'), JSON.stringify(champs))
+  }
+})
+test('modifier — une écriture en échec ou sans ligne se dit, jamais « succès »', async () => {
+  const echec = decor({ erreur: 'update-question' })
+  assert.equal((await echec.actions.modifierQuestion(saisie())).error, 'La modification n’a pas pu être enregistrée. Réessaie.')
+  assert.deepEqual(echec.synchronisations, [])
+  const vide = decor({ erreur: 'update-vide' })
+  assert.equal((await vide.actions.modifierQuestion(saisie())).error, 'Cette question ne fait plus partie de ce quiz.')
+})
+test('modifier — hors brouillon, ou question d’un autre quiz : refusé avant d’écrire', async () => {
+  const lance = decor({ statut: 'lance' })
+  assert.equal((await lance.actions.modifierQuestion(saisie())).error, 'Seul un brouillon se modifie.')
+  assert.ok(!lance.requetes.some(q => q.op === 'update'))
+  const autre = decor()
+  assert.equal((await autre.actions.modifierQuestion(saisie({ id: 'autre' }))).error, 'Cette question ne fait plus partie de ce quiz.')
+  assert.ok(!autre.requetes.some(q => q.op === 'update'), 'refusée par la garde, pas par le filtre de l’écriture')
+  const attente = decor({ antichambre: true })
+  assert.equal((await attente.actions.modifierQuestion(saisie())).error, 'L’antichambre de ce quiz est ouverte : referme-la avant de le modifier.')
+  assert.ok(!attente.requetes.some(q => q.op === 'update'))
+})
+
+test('modifier — deux réponses identiques après nettoyage : refusé', async () => {
+  const d = decor()
+  const r = await d.actions.modifierQuestion(saisie({ opt0: ' Kant ', opt1: 'kant' }))
+  assert.equal('error' in r && r.error, 'Deux réponses sont identiques : l’élève ne pourrait pas les distinguer.')
+  assert.ok(!d.requetes.some(q => q.op === 'update'))
+})
+function geste(id = 'q4') {
+  const f = new FormData()
+  f.set('id', id); f.set('quizId', 'quiz')
+  return f
+}
+test('nouveaux distracteurs — un échec du modèle se dit comme tel, rien n’est écrit', async () => {
+  const d = decor({ erreur: 'regeneration' })
+  assert.equal((await d.actions.regenererDisctracteurs(geste())).error, 'La génération des nouveaux distracteurs a échoué. Réessaie.')
+  assert.ok(!d.requetes.some(q => q.op === 'update'))
+  assert.deepEqual(d.synchronisations, [])
+})
+test('nouveaux distracteurs — écriture vérifiée : réussie, en échec, ou sans ligne', async () => {
+  const d = decor()
+  assert.ok('success' in (await d.actions.regenererDisctracteurs(geste())))
+  const ecriture = d.requetes.find(q => q.table === 'quazian_questions' && q.op === 'update')
+  assert.deepEqual(js(ecriture?.filtres), [['id', 'q4'], ['quiz_id', 'quiz']])
+  assert.deepEqual(js(d.lignes.find(l => l.id === 'q4')?.options), ['leurre 1', 'juste 4', 'leurre 2', 'leurre 3'])
+  assert.deepEqual(d.synchronisations, ['quiz'])
+
+  const echec = decor({ erreur: 'update-question' })
+  assert.equal((await echec.actions.regenererDisctracteurs(geste())).error, 'Les nouveaux distracteurs n’ont pas pu être enregistrés. Réessaie.')
+  assert.deepEqual(echec.synchronisations, [])
+  const vide = decor({ erreur: 'update-vide' })
+  assert.equal((await vide.actions.regenererDisctracteurs(geste())).error, 'Cette question ne fait plus partie de ce quiz.')
 })

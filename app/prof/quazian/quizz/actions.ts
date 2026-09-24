@@ -432,29 +432,40 @@ export async function modifierQuestion(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
   const quizId = formData.get('quizId') as string
-  const enonce = formData.get('enonce') as string
-  const opt0 = formData.get('opt0') as string
-  const opt1 = formData.get('opt1') as string
-  const opt2 = formData.get('opt2') as string
-  const opt3 = formData.get('opt3') as string
+  const texte = (cle: string) => String(formData.get(cle) ?? '').trim()
+  const enonce = texte('enonce')
+  const options = [0, 1, 2, 3].map((i) => texte(`opt${i}`))
   const indexCorrect = parseInt(formData.get('index_correct') as string, 10)
   if (!Number.isInteger(indexCorrect) || indexCorrect < 0 || indexCorrect > 3) {
     return { error: 'Réponse correcte invalide (attendu : 0 à 3).' }
   }
+  // 23/09 — une réponse vide passait, et s'affichait telle quelle aux élèves ;
+  // deux réponses identiques aussi (« Kant » et « kant ») : une seule rapportait.
+  if (!enonce || options.some((o) => !o)) {
+    return { error: 'L’énoncé et les quatre réponses doivent être remplis.' }
+  }
+  if (new Set(options.map((o) => o.toLocaleLowerCase('fr'))).size < options.length) {
+    return { error: 'Deux réponses sont identiques : l’élève ne pourrait pas les distinguer.' }
+  }
   const refus = await refusSiNonModifiable(supabase, quizId, id)
   if (refus) return { error: refus }
-  const conceptTag = formData.get('concept_tag') as string
 
-  await supabase
+  // supabase-js ne lève pas : l'échec d'une écriture se LIT. Avant (revue du
+  // 23/09), une modification perdue répondait « succès ».
+  const { data, error } = await supabase
     .from('quazian_questions')
     .update({
       enonce,
-      options: [opt0, opt1, opt2, opt3],
+      options,
       index_correct: indexCorrect,
-      concept_tag: conceptTag,
+      concept_tag: texte('concept_tag'),
       statut_validation: 'valide',
     })
     .eq('id', id)
+    .eq('quiz_id', quizId)
+    .select('id')
+  if (error) return { error: 'La modification n’a pas pu être enregistrée. Réessaie.' }
+  if (!data?.length) return { error: 'Cette question ne fait plus partie de ce quiz.' }
 
   await synchroniserStatutExerciceQuiz(createAdminClient(), quizId) // Q4
   revalidatePath(`/prof/quazian/quizz/${quizId}`)
@@ -478,14 +489,23 @@ export async function regenererDisctracteurs(formData: FormData) {
   if (!question) return { error: 'Question introuvable' }
 
   const bonneReponse = question.options[question.index_correct]
-  const nouvelle = await regenererQuestion(question.enonce, bonneReponse, question.concept_tag)
+  // Un échec du modèle se DIT comme tel (revue du 23/09) : l'exception remontait
+  // à la carte, qui parlait d'une panne de connexion.
+  let nouvelle
+  try {
+    nouvelle = await regenererQuestion(question.enonce, bonneReponse, question.concept_tag)
+  } catch (e) {
+    console.error('[quazian] nouveaux distracteurs :', e)
+    return { error: 'La génération des nouveaux distracteurs a échoué. Réessaie.' }
+  }
   // L'appel IA dure 5 à 30 s : le quiz a pu être lancé entre-temps. On relit
   // AVANT d'écrire — sinon des élèves répondraient à une question dont la bonne
   // réponse change de place sous leurs points (revue finale du 23/09).
   const refusApres = await refusSiNonModifiable(supabase, quizId, id)
   if (refusApres) return { error: refusApres }
 
-  await supabase
+  // L'écriture se LIT, comme dans `modifierQuestion`.
+  const { data: ecrites, error } = await supabase
     .from('quazian_questions')
     .update({
       options: nouvelle.options,
@@ -493,6 +513,10 @@ export async function regenererDisctracteurs(formData: FormData) {
       statut_validation: 'valide',
     })
     .eq('id', id)
+    .eq('quiz_id', quizId)
+    .select('id')
+  if (error) return { error: 'Les nouveaux distracteurs n’ont pas pu être enregistrés. Réessaie.' }
+  if (!ecrites?.length) return { error: 'Cette question ne fait plus partie de ce quiz.' }
 
   await synchroniserStatutExerciceQuiz(createAdminClient(), quizId) // Q4
   revalidatePath(`/prof/quazian/quizz/${quizId}`)

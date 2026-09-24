@@ -13,6 +13,11 @@ interface Question {
 }
 
 const LETTRES = ['A', 'B', 'C', 'D']
+// Une panne pendant un appel laissait la carte figée, boutons inactifs et sans un
+// mot (23/09) : chaque geste rattrape l'exception et libère la carte. Le message
+// ne présume pas la cause — connexion coupée, ou session expirée ; les échecs
+// connus (refus, modèle en échec) reviennent en `{ error }`, avec leur phrase.
+const SANS_REPONSE = 'L’opération n’a pas abouti (connexion coupée, ou session expirée). Recharge la page pour voir ce qui a été enregistré, puis réessaie.'
 
 export function QuestionCard({
   question,
@@ -62,40 +67,65 @@ export function QuestionCard({
   }
 
   async function handleValider() {
+    if (pending) return
     setPending(true)
-    const fd = new FormData()
-    fd.append('id', question.id)
-    fd.append('quizId', quizId)
-    await validerQuestion(fd)
-    setPending(false)
+    setErreur(null)
+    try {
+      const fd = new FormData()
+      fd.append('id', question.id)
+      fd.append('quizId', quizId)
+      await validerQuestion(fd)
+    } catch {
+      setErreur(SANS_REPONSE)
+    } finally {
+      setPending(false)
+    }
   }
 
   async function handleModifier() {
+    if (pending) return
     setPending(true)
-    const fd = new FormData()
-    fd.append('id', question.id)
-    fd.append('quizId', quizId)
-    fd.append('enonce', enonce)
-    options.forEach((o, i) => fd.append(`opt${i}`, o))
-    fd.append('index_correct', String(correct))
-    fd.append('concept_tag', tag)
-    // Le refus se DIT (revue finale du 23/09) : hors brouillon ou antichambre
-    // ouverte, l'action refuse désormais — sans ce message, la correction
-    // disparaissait sans un mot.
-    const res = await modifierQuestion(fd)
-    setErreur(res && 'error' in res && res.error ? res.error : null)
-    setMode('vue')
-    setPending(false)
+    setErreur(null)
+    try {
+      const fd = new FormData()
+      fd.append('id', question.id)
+      fd.append('quizId', quizId)
+      fd.append('enonce', enonce)
+      options.forEach((o, i) => fd.append(`opt${i}`, o))
+      fd.append('index_correct', String(correct))
+      fd.append('concept_tag', tag)
+      // ⛔ 23/09 — un refus (brouillon lancé, antichambre ouverte, champ vide) ou
+      //    une panne GARDE l'éditeur ouvert avec la saisie : avant, il se
+      //    refermait, et « Modifier » repartait de la question enregistrée —
+      //    le texte tapé était perdu.
+      const res = await modifierQuestion(fd)
+      if (res && 'error' in res && res.error) {
+        setErreur(res.error)
+        return
+      }
+      setMode('vue')
+    } catch {
+      setErreur('La modification n’a pas abouti (connexion coupée, ou session expirée) : elle n’est peut-être pas enregistrée. Ton texte est gardé ici ; réessaie.')
+    } finally {
+      setPending(false)
+    }
   }
 
   async function handleRegenerer() {
+    if (pending) return
     setPending(true)
-    const fd = new FormData()
-    fd.append('id', question.id)
-    fd.append('quizId', quizId)
-    const res = await regenererDisctracteurs(fd)
-    setErreur(res && 'error' in res && res.error ? res.error : null)
-    setPending(false)
+    setErreur(null)
+    try {
+      const fd = new FormData()
+      fd.append('id', question.id)
+      fd.append('quizId', quizId)
+      const res = await regenererDisctracteurs(fd)
+      setErreur(res && 'error' in res && res.error ? res.error : null)
+    } catch {
+      setErreur(SANS_REPONSE)
+    } finally {
+      setPending(false)
+    }
   }
 
   const estValide = question.statut_validation === 'valide'
@@ -113,11 +143,13 @@ export function QuestionCard({
             placeholder="concept_tag"
           />
         </div>
+        {/* 4 lignes, agrandissables : en prod (23/09), énoncés de 86 caractères en
+            médiane, 131 au 9e décile, 343 au plus — deux lignes en cachaient un tiers. */}
         <textarea
           value={enonce}
           onChange={(e) => setEnonce(e.target.value)}
-          rows={2}
-          className="w-full px-3 py-2 text-sm border border-bordure rounded-lg mb-3 resize-none"
+          rows={4}
+          className="w-full px-3 py-2 text-sm border border-bordure rounded-lg mb-3 resize-y"
         />
         <div className="space-y-2 mb-4">
           {options.map((opt, i) => (
@@ -148,15 +180,17 @@ export function QuestionCard({
             disabled={pending}
             className="px-3 py-1 text-xs bg-bouton text-surface rounded-lg hover:opacity-90 disabled:opacity-50"
           >
-            Sauvegarder
+            {pending ? 'Enregistrement…' : 'Sauvegarder'}
           </button>
           <button
-            onClick={() => setMode('vue')}
-            className="px-3 py-1 text-xs bg-parchemin-fonce text-encre-douce rounded-lg hover:bg-bordure"
+            onClick={() => { setErreur(null); setMode('vue') }}
+            disabled={pending}
+            className="px-3 py-1 text-xs bg-parchemin-fonce text-encre-douce rounded-lg hover:bg-bordure disabled:opacity-50"
           >
             Annuler
           </button>
         </div>
+        {erreur && <p role="alert" className="mt-2 text-sm text-retard">{erreur}</p>}
       </div>
     )
   }
