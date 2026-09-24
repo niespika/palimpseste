@@ -2,7 +2,7 @@
 
 ## État courant — Quazian : le générateur de QCM contrôlé par le code (23/09/2026 ; POUSSÉ et déployé le 23/09, smoke prod fait dans la Classe Test)
 
-Trois défauts mesurés sur le quiz de T5 (bonne réponse la plus longue 8/15, applications sur les exemples des cartes, prémisse perdue), puis une revue adversariale et deux décisions de Louis (réhabillage accepté ; formulation de la carte refusée). Le code contrôle désormais chaque question générée, la fait réécrire une fois, et écarte ce qui échoue encore ; 20 % de marge. Aucune migration, aucune porte. Détail et mesures : `SUIVI_tests_manuels.md`, même date.
+Trois défauts mesurés sur le quiz de T5 (bonne réponse la plus longue 8/15, applications sur les exemples des cartes, prémisse perdue), puis une revue adversariale et deux décisions de Louis (réhabillage accepté ; formulation de la carte refusée). Le code contrôle désormais chaque question générée, la fait réécrire une fois, et écarte ce qui échoue encore ; 20 % de marge. Aucune migration, aucune porte. Détail et mesures : `SUIVI_tests_manuels.md`, même date. Suite le même soir (`a66b4f5`) : « Modifier » à la main garde la saisie sur un refus ou une panne et vérifie son écriture — Louis corrigera les indices restants à la main.
 
 ## État courant — Quazian : les retours du premier quiz en classe (22-23/09/2026 ; TOUT poussé et déployé le 23/09 à 23:14 UTC)
 

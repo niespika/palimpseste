@@ -1,5 +1,15 @@
 # SUIVI_tests_manuels — validation humaine avant merge
 
+## Quazian — « Modifier » une question à la main : la saisie ne se perd plus, les échecs se disent (23/09/2026 ; commité `a66b4f5`, NON poussé, pas vu à l'écran)
+
+Suite du générateur contrôlé : Louis corrigera à la main les indices restants, donc « Modifier » devient l'outil principal. Aucune migration, aucune porte.
+
+- **Défauts trouvés en lisant le code** : un refus refermait l'éditeur et la saisie était perdue en rouvrant ; une panne figeait la carte ; l'écriture n'était pas vérifiée (échec = « succès », réponse vide acceptée).
+- **Fait** : l'éditeur reste ouvert avec le texte et la raison ; Valider, Modifier et Nouveaux distracteurs rattrapent l'exception et libèrent la carte (message neutre : connexion ou session) ; `modifierQuestion` refuse les champs vides et les réponses identiques, nettoie les espaces, filtre par quiz, lit l'UPDATE ; « Nouveaux distracteurs » lit aussi son écriture et dit l'échec du modèle comme tel ; énoncé en 4 lignes agrandissables (prod : 32 énoncés, médiane 86, 9e décile 131, max 343 caractères).
+- **Passe adversariale** (3 regards, une phase) : les constats du lot corrigés ; restent hors lot, préexistants (ligne du 23/09 d'`IDEES_post_rentree.md`) : « Tout valider » sans confirmation ; saisie perdue par « Annuler », par « Lancer le quizz » ou en quittant la page ; « Nouveaux distracteurs » remplace sans confirmation des leurres écrits à la main ; pas d'avis de longueur sur une saisie à la main ; course garde/écriture entre deux onglets ; compteur « validées » de la liste non paginé ; `concept_tag` vide accepté.
+- **Contrôles** : `tsc` propre, eslint des fichiers du lot propre, **2 831 tests verts** (7 nouveaux).
+- **Non fait** : vu à l'écran — à vérifier après le push sur le quiz d'essai de la Classe Test (réponse vidée, panne simulée, vrai enregistrement).
+
 ## Quazian — le générateur de QCM contrôlé par le code : longueur, exemple du cours, prémisses, copie de carte (23/09/2026 ; POUSSÉ par Louis et déployé le 23/09, smoke prod fait)
 
 Demande de Louis du 23/09, à partir du constat de la ligne du 23/09 d'`IDEES_post_rentree.md` ; conduite point par point avec lui. Aucune migration, aucune porte (correctif du générateur existant, arbitrage accepté par Louis).
