@@ -1,6 +1,6 @@
 # PLAN DE CHANTIER — l'ordre des lots, et la fabrique de leurs prompts
 
-## État courant — Codex : l'épreuve à sujet libre, projetée, minutée (24/09/2026 ; COMMITÉ `a21ee28` + handoff `2a77539`, NON poussé — Louis pousse ; SQL au bac à sable seulement, porte OFF)
+## État courant — Codex : l'épreuve à sujet libre, projetée, minutée (24/09/2026 ; `a21ee28` + `2a77539` POUSSÉS par Louis ; correctifs de la 3ᵉ revue `7effd82` commités, NON poussés ; SQL au bac à sable seulement, porte OFF)
 
 Demande directe de Louis pour l'examen 1HLP du mardi 29/09 (hors lot du plan). Sujet libre, page projetée (heure, temps restant par paliers, sujet, consignes), durées de rédaction et de relecture, **dépôt automatique à la moitié de la rédaction** (`02-` v6.10, étape `4 bis`, accord de Louis), confirmation avant validation, tablette qui suit l'épreuve, découplage d'`exercices_actif`. Codé, éprouvé au bac à sable aux trois largeurs, passé en revue adversariale (une phase, cinq regards). Restent : relecture des textes élève par Louis, commit, SQL en prod, push, porte en prod. Détail : `SUIVI_tests_manuels.md` (section du 24/09) et `REPRISE_Codex_epreuve_minutee.md`.
 
