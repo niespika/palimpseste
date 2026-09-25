@@ -18,9 +18,11 @@ import { lireDepot, ouvrirLesDepots } from '@/utils/passation/depots'
 import { depotClos } from '@/utils/passation/statuts'
 import {
   lireEtOuvrirSiVenue, compterLesCopies, reglerLEpreuve, lancerLEpreuve, annulerLeLancement,
-  ajouterDuTemps, lireLaPorteEpreuve, basculerLaPorteEpreuve,
+  ajouterDuTemps, lireLaPorteEpreuve, basculerLaPorteEpreuve, epreuvesDeLEleve, signatureDesEpreuves,
 } from '@/utils/examens/epreuve-serveur'
 import { lireDuree, BORNES_REDACTION, BORNES_RELECTURE } from '@/utils/examens/epreuve'
+import { createClient } from '@/utils/supabase/server'
+import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
 
 export interface ReponseEpreuve { ok: boolean; message: string }
 
@@ -166,6 +168,25 @@ export async function actionBasculerLEpreuve(
  * page projetée n'est qu'une — la première qui passe après l'heure ouvre la
  * classe entière, par le geste du professeur (`ouvrirLesDepots`).
  */
+/**
+ * ⭐ 24/09 (3ᵉ revue) — LA VEILLE DE L'ONGLET EXAMENS, en action légère. Avant,
+ *    l'onglet se RECHARGEAIT entier toutes les 15 s, et seulement si un dépôt
+ *    `assigne` à durée fixée était prévu le jour même AU MOMENT DU RENDU : des
+ *    durées fixées juste avant le lancement (la page projetée y invite), une
+ *    assignation en début d'heure ou un jour prévu déplacé laissaient les
+ *    tablettes sur « Rien en classe » après « Lancer ». Désormais : armée dès que
+ *    la porte est ouverte, elle lit la signature des épreuves actives, et l'onglet
+ *    ne se recharge qu'à un changement. Sa lecture ouvre aussi le dépôt à l'heure.
+ */
+export async function actionSignatureDesEpreuves(): Promise<string | null> {
+  const { admin, userId, ouvert } = await garderEleve(false)
+  if (!ouvert) return null
+  const supabase = await createClient()
+  const { inscriptions } = await contexteClasseEleve(supabase, userId)
+  const epreuves = await epreuvesDeLEleve(admin, userId, inscriptions.map((i) => i.classe_id))
+  return signatureDesEpreuves(epreuves)
+}
+
 export async function actionEtatDeMonEpreuve(depotId: string): Promise<EtatDeMonEpreuve | null> {
   const { admin, userId, ouvert } = await garderEleve(false)
   if (!ouvert) return null

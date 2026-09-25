@@ -32,7 +32,7 @@
 //    rien ici ne l'invite à signaler une incompréhension.
 // ============================================================================
 
-import { useState, useRef, useTransition, useActionState, useEffect, useId } from 'react'
+import { useState, useRef, useTransition, useActionState, useEffect, useId, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { traiterImage, libererPreview, type ImageTraitee } from '@/utils/imageProcessing'
@@ -407,6 +407,45 @@ function Bascule({ onglets }: { onglets: Onglet[] }) {
 }
 
 type Volet = 'travail' | 'photo' | 'sujet'
+
+/**
+ * ⭐ 24/09 (3ᵉ revue) — UNE ACTION QUI NE FAIT PAS TOMBER LA PAGE. Un appel qui
+ *    échoue au RÉSEAU (Wi-Fi de classe saturé, tablette verrouillée pendant
+ *    l'appel, déploiement en cours) REJETTE sa promesse ; React 19 relance ce
+ *    rejet au rendu suivant et, sans limite d'erreur dans `app/`, la page entière
+ *    tombait — les corrections non enregistrées de la relecture avec elle. Ici,
+ *    l'échec devient une réponse, et le texte reste à l'écran.
+ */
+const PANNE_RESEAU = 'La connexion a coupé : ce qui est à l’écran n’est pas perdu. Réessaie.'
+type ActionDeFormulaire = (precedent: Reponse | null, form: FormData) => Promise<Reponse>
+function sansPanne(action: ActionDeFormulaire): ActionDeFormulaire {
+  return async (precedent, form) => {
+    try {
+      return await action(precedent, form)
+    } catch {
+      return { ok: false, message: PANNE_RESEAU }
+    }
+  }
+}
+const validerLaTranscription = sansPanne(actionValiderLaTranscription)
+const seJuger = sansPanne(actionSeJuger)
+const confianceRemise = sansPanne(actionConfianceRemise)
+
+/**
+ * ⭐ 24/09 (3ᵉ revue) — SOUMETTRE SANS RÉINITIALISER. Passée à `<form action>`,
+ *    une action fait réinitialiser le formulaire par React 19 à la fin de l'appel
+ *    (`form.reset()`) : les champs contrôlés gardent leur état React, mais le DOM
+ *    revient à sa valeur de départ — après un refus, les réponses paraissaient
+ *    choisies et ne partaient plus. On soumet donc par `onSubmit`, dans une
+ *    transition : pas de réinitialisation, et `enCours` dit toujours l'attente.
+ */
+function soumettreSans(action: (form: FormData) => void) {
+  return (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    startTransition(() => action(form))
+  }
+}
 
 function Encart({ children, ton = 'info' }: { children: React.ReactNode; ton?: 'info' | 'attention' }) {
   const cls = ton === 'attention'
@@ -812,7 +851,7 @@ function Relecture({ vue, confirmation, sujet, volet: voletChoisi, setVolet }: {
   volet: Volet; setVolet: (v: Volet) => void
 }) {
   const [texte, setTexte] = useState(vue.transcription ?? '')
-  const [etat, action, enCours] = useActionState(actionValiderLaTranscription, null as Reponse | null)
+  const [etat, action, enCours] = useActionState(validerLaTranscription, null as Reponse | null)
   const [, demarrer] = useTransition()
   const [sauve, setSauve] = useState<string | null>(null)
   const [confirmer, setConfirmer] = useState(false)
@@ -833,8 +872,13 @@ function Relecture({ vue, confirmation, sujet, volet: voletChoisi, setVolet }: {
 
   function enregistrer() {
     demarrer(async () => {
-      const r = await actionEnregistrerLaTranscription(vue.depotId, texte)
-      setSauve(r.ok ? 'Enregistré.' : r.message)
+      // 3ᵉ revue : une panne de réseau ne fait plus tomber la page (voir `sansPanne`).
+      try {
+        const r = await actionEnregistrerLaTranscription(vue.depotId, texte)
+        setSauve(r.ok ? 'Enregistré.' : r.message)
+      } catch {
+        setSauve(PANNE_RESEAU)
+      }
     })
   }
 
@@ -897,7 +941,7 @@ function Relecture({ vue, confirmation, sujet, volet: voletChoisi, setVolet }: {
               </div>
             )}
 
-            <form action={action}>
+            <form onSubmit={soumettreSans(action)}>
               <input type="hidden" name="depot_id" value={vue.depotId} />
               {/* ⚠️ UN `<textarea>`, et rien d'autre : il préserve les retours à la
                   ligne et les lignes vides tels quels, de bout en bout. */}
@@ -1022,14 +1066,18 @@ function PhotosDeLaCopie({ photos }: { photos: VueEleve['photosLisibles'] }) {
   // quart de tour se met en page sur SES dimensions tournées (revue du 24/09 :
   // `rotate()` ne change pas la mise en page, et la boîte coupait ses bords).
   const [tailles, setTailles] = useState<Record<number, { l: number; h: number }>>({})
+  // 3ᵉ revue : une URL qui échoue (expirée, refusée) affichait l'icône cassée.
+  const [ratees, setRatees] = useState<Record<number, boolean>>({})
   const p = photos[Math.min(i, photos.length - 1)]
   if (!p) return null
   const taille = tailles[i]
   const quart = p.rotation % 180 !== 0
-  const lue = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { naturalWidth: l, naturalHeight: h } = e.currentTarget
+  const mesurer = (img: HTMLImageElement | null) => {
+    if (!img || !img.complete) return
+    const { naturalWidth: l, naturalHeight: h } = img
     if (l > 0 && h > 0) setTailles((t) => (t[i] ? t : { ...t, [i]: { l, h } }))
   }
+  const ratee = () => setRatees((r) => (r[i] ? r : { ...r, [i]: true }))
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
@@ -1039,21 +1087,24 @@ function PhotosDeLaCopie({ photos }: { photos: VueEleve['photosLisibles'] }) {
       <div className="flex min-h-[376px] items-center justify-center overflow-hidden rounded-lg border border-bordure-bouton bg-parchemin-fonce">
         {p.manquante ? (
           <p className="px-4 text-center text-sm italic text-attention">Page déclarée manquante</p>
-        ) : p.url ? (
+        ) : p.url && !ratees[i] ? (
           quart && taille ? (
             // Une boîte aux proportions de la page TOURNÉE ; l'image y est posée à
             // plat (largeur ↔ hauteur échangées), puis tournée en son centre.
             <a href={p.url} target="_blank" rel="noopener noreferrer" title="Ouvrir la photo en grand"
               className="relative block w-full [container-type:size]"
               style={{ aspectRatio: `${taille.h} / ${taille.l}`, maxWidth: `calc(70vh * ${taille.h / taille.l})` }}>
-              <img src={p.url} alt={`Ta page ${i + 1}`}
+              <img src={p.url} alt={`Ta page ${i + 1}`} onError={ratee}
                 className="absolute left-1/2 top-1/2 max-w-none object-contain"
                 style={{ width: '100cqh', height: '100cqw',
                   transform: `translate(-50%, -50%) rotate(${p.rotation}deg)` }} />
             </a>
           ) : (
             <a href={p.url} target="_blank" rel="noopener noreferrer" title="Ouvrir la photo en grand">
-              <img src={p.url} alt={`Ta page ${i + 1}`} onLoad={lue}
+              {/* 3ᵉ revue : une photo déjà chargée AVANT l'hydratation ne déclenche plus
+                  `onLoad` — le `ref` la mesure alors à la pose. */}
+              <img ref={mesurer} src={p.url} alt={`Ta page ${i + 1}`} onError={ratee}
+                onLoad={(e) => mesurer(e.currentTarget)}
                 style={{ transform: `rotate(${p.rotation}deg)` }}
                 className="max-h-[70vh] w-full object-contain" />
             </a>
@@ -1211,7 +1262,7 @@ function Choix({ name, value, coche, choisir, children }: {
       has-[:focus-visible]:outline-bouton-plan ${coche
         ? 'border-pigment bg-pigment-teinte font-semibold text-pigment'
         : 'border-bordure-bouton bg-surface text-encre-douce'}`}>
-      <input type="radio" name={name} value={value} checked={coche} onChange={choisir} required
+      <input type="radio" name={name} value={value} checked={coche} onChange={choisir}
         className="sr-only" />
       {children}
     </label>
@@ -1220,12 +1271,12 @@ function Choix({ name, value, coche, choisir, children }: {
 
 /** Étape 9 — « se juger » : deux questions, jamais trois, et une liste fermée de réponses. */
 function EtapeSeJuger({ vue, continuer }: { vue: VueEleve; continuer: boolean }) {
-  const [etat, action, enCours] = useActionState(actionSeJuger, null as Reponse | null)
+  const [etat, action, enCours] = useActionState(seJuger, null as Reponse | null)
   const [choix, setChoix] = useState<Record<string, string>>({})
   const questions = vue.seJuger.questions
   const complet = questions.every((q) => choix[q.observable_code])
   return (
-    <form action={action} className="space-y-5">
+    <form onSubmit={soumettreSans(action)} className="space-y-5">
       <input type="hidden" name="depot_id" value={vue.depotId} />
       <p className="text-encre-douce">
         Ta copie est validée : elle ne bouge plus. Relis-la dans « Mon texte » si tu veux, puis
@@ -1257,13 +1308,13 @@ function EtapeSeJuger({ vue, continuer }: { vue: VueEleve; continuer: boolean })
  * celle que Louis a récrite pour les exercices (05/09), reprise telle quelle.
  */
 function EtapeConfiance({ vue, continuer }: { vue: VueEleve; continuer: boolean }) {
-  const [etat, action, enCours] = useActionState(actionConfianceRemise, null as Reponse | null)
+  const [etat, action, enCours] = useActionState(confianceRemise, null as Reponse | null)
   const [choix, setChoix] = useState<Record<string, string>>({})
   const competences = vue.confiance.competences
   const complet = competences.every((c) => choix[c])
   const plusieurs = competences.length > 1
   return (
-    <form action={action} className="space-y-5">
+    <form onSubmit={soumettreSans(action)} className="space-y-5">
       <input type="hidden" name="depot_id" value={vue.depotId} />
       <div>
         <h3 className="font-titre text-[22px] font-semibold leading-tight text-encre">

@@ -449,8 +449,8 @@ export async function epreuvesDeLEleve(
    * lancement, et sa lecture ouvrait le dépôt de cette classe.
    */
   classesInscrites: readonly string[],
-): Promise<{ enCours: EpreuveEnCours[]; aVenir: number }> {
-  const vide = { enCours: [], aVenir: 0 }
+): Promise<{ enCours: EpreuveEnCours[]; aVenir: number; porteOuverte: boolean }> {
+  const vide = { enCours: [], aVenir: 0, porteOuverte: false }
   if (!(await lireLaPorteEpreuve(admin))) return vide
   // ⚠️ La passation d'abord : une carte qui mènerait à « Cet écran n'est pas
   //    encore ouvert » serait un lien qui promet une porte close (revue du 24/09).
@@ -498,7 +498,16 @@ export async function epreuvesDeLEleve(
     enCours.push({ depotId: txt(d.id), valide, debutMs: Date.parse(epreuve.debut) })
   }
   enCours.sort((a, b) => b.debutMs - a.debutMs || a.depotId.localeCompare(b.depotId))
-  return { enCours, aVenir }
+  return { enCours, aVenir, porteOuverte: true }
+}
+
+/**
+ * ⭐ 24/09 (3ᵉ revue) — CE QUI DOIT CHANGER L'ONGLET : les épreuves actives, par
+ *    leur dépôt. L'onglet compare cette signature à celle de son rendu et ne se
+ *    recharge qu'à la différence — une épreuve lancée, une épreuve finie.
+ */
+export function signatureDesEpreuves(e: { enCours: readonly EpreuveEnCours[] }): string {
+  return e.enCours.map((x) => x.depotId).join(',')
 }
 
 /**

@@ -484,6 +484,13 @@ export async function actionCredence(_prec: Reponse | null, form: FormData): Pro
   //    maison — `lireDepot` + `eleve_id !== userId` — posé au plus tôt.
   const d = await lireDepot(admin, depotId)
   if (!d || d.eleve_id !== userId) return echec('Ce dépôt n’est pas le vôtre.')
+  // ⛔ 24/09 (3ᵉ revue) — LE LIEU. Tant qu'`exercices_actif` gardait aussi cette
+  //    action, un dépôt de maison n'y arrivait pas avec la maison fermée. Depuis le
+  //    découplage, seule la porte de la passation la garde : une requête forgée
+  //    réécrivait en bloc la crédence d'un exercice de maison, même rendu, en
+  //    effaçant ce que la maison fusionne cas par cas (`utils/deroule/gestes.ts`).
+  //    `offreSeJuger` et `offreConfianceRemise` refusaient déjà ce qui n'est pas en classe.
+  if (d.exercice.lieu !== 'classe') return echec('Ce dépôt n’est pas une passation en classe.')
   const offre = await offreCredence(admin, depotId)
   if (!offre.servie) return echec(`La crédence n’est pas servie ici : ${offre.motif}`)
 

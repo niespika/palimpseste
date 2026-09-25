@@ -29,7 +29,7 @@ import { signauxDeLancement } from '@/utils/examens/signal'
 import SignalDeLancement from '@/components/examens/SignalDeLancement'
 import { examensEnClasseDeLEleve } from '@/utils/codex-onglets/liste'
 import MesExamensPasses from '@/components/examens/MesExamensPasses'
-import { epreuvesDeLEleve } from '@/utils/examens/epreuve-serveur'
+import { epreuvesDeLEleve, signatureDesEpreuves } from '@/utils/examens/epreuve-serveur'
 import VeilleDesEpreuves from '@/components/examens/VeilleDesEpreuves'
 import { chargerVueEleve } from '@/utils/passation/vues'
 import { EcranEleve } from '@/components/passation/EcranEleve'
@@ -72,16 +72,16 @@ export default async function ExamensCodexElevePage() {
           <EcranEleve vue={vue} refonte confirmation={CONFIRMATION_AVANT_VALIDATION} />
         </div>
       ))}
-      {/* Le jour prévu, l'onglet se relit seul jusqu'au lancement — même si une autre
-          épreuve est déjà à l'écran (revue du 24/09 : sinon la nouvelle n'apparaissait
-          pas sans recharger). L'écran d'une épreuve se relit lui-même. */}
-      <VeilleDesEpreuves veille={epreuves.aVenir > 0} />
+      {/* La veille : porte ouverte, l'onglet sonde les épreuves actives et ne se
+          recharge qu'à un changement — une épreuve lancée apparaît sans que l'élève
+          recharge, même si ses durées ont été fixées au dernier moment (3ᵉ revue). */}
+      <VeilleDesEpreuves actif={epreuves.porteOuverte} signature={signatureDesEpreuves(epreuves)} />
     </>
   )
 
   const seuil = await seuilModule(supabase, user.id, module.id, 'Codex')
   if (seuil.type === 'ecran') {
-    return vues.length === 0 && epreuves.aVenir === 0 ? seuil.noeud : <div>{ecransDEpreuve}{seuil.noeud}</div>
+    return <div>{ecransDEpreuve}{seuil.noeud}</div>
   }
 
   // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
@@ -123,8 +123,10 @@ export default async function ExamensCodexElevePage() {
       )}
 
       {ecransDEpreuve}
-      {/* L'épreuve active est déjà à l'écran : son signal se tait. */}
-      <SignalDeLancement signaux={signaux.filter((s) => !epreuves.enCours.some((e) => e.depotId === s.depotId))} />
+      {/* L'épreuve active est déjà à l'écran : son signal se tait — mais seulement
+          si son écran s'est RÉELLEMENT rendu (3ᵉ revue : une lecture ratée ne laisse
+          plus l'élève sans l'écran ET sans le lien). */}
+      <SignalDeLancement signaux={signaux.filter((s) => !vues.some((v) => v.depotId === s.depotId))} />
 
       {live && (
         <Link
