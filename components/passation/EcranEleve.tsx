@@ -721,7 +721,8 @@ function DepotEtRelecture({ vue, confirmation, sujet }: {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-bordure pt-4">
-        <p className="min-w-0 flex-1 text-sm italic text-muet">
+        {/* `min-w-48`, comme à la relecture : à 304 px, la phrase s'écrasait en colonne à côté du bouton. */}
+        <p className="min-w-48 flex-1 text-sm italic text-muet">
           Après l’envoi, la machine lira ta copie : tu corrigeras ensuite ce qu’elle a mal lu.
         </p>
         <button type="button" onClick={envoyer} disabled={envoi || nbPages === 0} className={VALIDER}>
